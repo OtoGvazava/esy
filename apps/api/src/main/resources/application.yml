@@ -71,7 +71,8 @@ spring:
             user-name-attribute: sub
 
 server:
-  port: 8080
+  # PaaS hosts (Render, etc.) inject the port via $PORT; default to 8080 locally.
+  port: ${PORT:8080}
 
 # Multi-tenant configuration
 tenant:

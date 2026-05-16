@@ -40,7 +40,11 @@ public class SecurityConfig {
                 .requestMatchers("/oauth2/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/error").permitAll()
-                .anyRequest().authenticated()
+                // The SPA + storefront are public; admin product mutations are
+                // still locked down by @PreAuthorize("hasRole('ADMIN')")
+                // (@EnableMethodSecurity), so static assets / client routes /
+                // public GET APIs can all be open.
+                .anyRequest().permitAll()
             )
             .oauth2Login(oauth2 -> oauth2
                 .successHandler(oauth2SuccessHandler)

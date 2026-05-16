@@ -1,0 +1,45 @@
+{
+  "Version": "2012-10-17",
+  "Comment": "Least-privilege policy for the GitHub Actions deploy user. Replace the <PLACEHOLDERS> with your values before attaching.",
+  "Statement": [
+    {
+      "Sid": "WebBucketSync",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:DeleteObject", "s3:ListBucket", "s3:GetBucketLocation"],
+      "Resource": [
+        "arn:aws:s3:::<WEB_BUCKET>",
+        "arn:aws:s3:::<WEB_BUCKET>/*"
+      ]
+    },
+    {
+      "Sid": "ArtifactsBucketPut",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::<ARTIFACTS_BUCKET>",
+        "arn:aws:s3:::<ARTIFACTS_BUCKET>/*"
+      ]
+    },
+    {
+      "Sid": "CloudFrontInvalidate",
+      "Effect": "Allow",
+      "Action": ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"],
+      "Resource": "arn:aws:cloudfront::<ACCOUNT_ID>:distribution/<DISTRIBUTION_ID>"
+    },
+    {
+      "Sid": "SsmRollBackend",
+      "Effect": "Allow",
+      "Action": ["ssm:SendCommand"],
+      "Resource": [
+        "arn:aws:ec2:<REGION>:<ACCOUNT_ID>:instance/<EC2_INSTANCE_ID>",
+        "arn:aws:ssm:<REGION>::document/AWS-RunShellScript"
+      ]
+    },
+    {
+      "Sid": "SsmReadResult",
+      "Effect": "Allow",
+      "Action": ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations", "ssm:ListCommands"],
+      "Resource": "*"
+    }
+  ]
+}

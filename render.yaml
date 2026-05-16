@@ -1,0 +1,20 @@
+# Render Blueprint — one free Docker web service that serves the SPA + API.
+# Render auto-detects this when you create a Blueprint from the repo.
+# Free plan note: the instance sleeps after ~15 min idle (cold start on next
+# hit) and the H2 DB is in-memory, so data resets on restart/redeploy —
+# DataInitializer reseeds products and dev-login still works each run.
+services:
+  - type: web
+    name: esy
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/products
+    autoDeploy: true
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JPA_DDL_AUTO
+        value: create-drop
