@@ -1,52 +1,32 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useOrders } from "../contexts/OrdersContext";
 import { useSaved } from "../contexts/SavedContext";
 import { useThemeMode } from "../contexts/ThemeModeContext";
 import { useGlow } from "../styles/glow";
-import { Icon, PoweredBy } from "../components/glow/GlowPrimitives";
+import { Icon, PoweredBy, langInfo } from "../components/glow/GlowPrimitives";
 import { GlowScreen, GlowTopNav, money } from "../components/glow/GlowChrome";
+import SignIn from "./SignIn";
 
 export default function Account() {
   const { T, tenant } = useGlow();
   const navigate = useNavigate();
-  const { user, isAuthenticated, isAdmin, logout, loginDev } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { orders, getTotalOrders, getTotalSpent } = useOrders();
   const { count: savedCount } = useSaved();
-  const { mode, toggle: toggleTheme } = useThemeMode();
-  const [email, setEmail] = useState("");
-  const [busy, setBusy] = useState(false);
+  const { mode, language } = useThemeMode();
 
-  if (!isAuthenticated) {
-    const signIn = async () => {
-      if (!email.trim()) return;
-      setBusy(true);
-      await loginDev(email.trim());
-      setBusy(false);
-    };
-    return (
-      <GlowScreen T={T}>
-        <GlowTopNav T={T} title="Account" onBack={() => navigate(-1)} />
-        <div style={{ maxWidth: 380, margin: "0 auto", padding: "40px 24px", display: "flex", flexDirection: "column", gap: 14, alignItems: "center", textAlign: "center" }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: T.grad, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center" }}><Icon.user width="26" height="26" /></div>
-          <div style={{ font: `700 20px ${T.font}`, color: T.text, letterSpacing: "-0.02em" }}>Sign in to {tenant.name}</div>
-          <div style={{ font: `400 13px/1.5 ${T.font}`, color: T.textDim }}>Use any email to continue. An email containing <b>admin</b> grants the shop-owner dashboard.</div>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && signIn()} placeholder="you@esy.shop" style={{ width: "100%", height: 48, padding: "0 16px", borderRadius: 14, border: `1px solid ${T.border}`, background: T.surface, color: T.text, font: `500 14px ${T.font}`, outline: "none" }} />
-          <button onClick={signIn} disabled={busy} style={{ width: "100%", height: 48, borderRadius: 14, border: "none", background: T.grad, color: "#fff", font: `700 13.5px ${T.font}`, cursor: busy ? "default" : "pointer", boxShadow: `0 10px 24px ${T.accent}55` }}>{busy ? "Signing in…" : "Continue"}</button>
-        </div>
-      </GlowScreen>
-    );
-  }
+  if (!isAuthenticated) return <SignIn />;
 
   const name = user?.name || user?.email || "Member";
   const initial = (name || "M").charAt(0).toUpperCase();
   const recent = (orders || []).slice(0, 3);
 
   const settings = [
+    { k: "Language & region", v: langInfo(language).native, onClick: () => navigate("/settings/language") },
+    { k: "Appearance", v: mode === "dark" ? "Dark" : "Light", onClick: () => navigate("/settings/appearance") },
     { k: "Addresses", v: null, onClick: null },
     { k: "Payment methods", v: null, onClick: null },
-    { k: mode === "dark" ? "Light mode" : "Dark mode", v: null, onClick: toggleTheme },
     ...(isAdmin ? [{ k: "Shop dashboard", v: "Admin", onClick: () => navigate("/admin") }] : []),
     { k: "Help & support", v: null, onClick: null },
     { k: "Sign out", v: null, danger: true, onClick: () => { logout(); navigate("/"); } },

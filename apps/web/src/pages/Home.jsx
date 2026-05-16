@@ -8,6 +8,7 @@ import { Icon, PoweredBy, GlowToken } from "../components/glow/GlowPrimitives";
 import GlowSearchBar from "../components/glow/GlowSearchBar";
 import GlowProductCard from "../components/glow/GlowProductCard";
 import GlowLoadMore from "../components/glow/GlowLoadMore";
+import { ThemePill, LangPill } from "../components/glow/GlowPills";
 
 const PAGE_SIZE = 12;
 
@@ -40,7 +41,7 @@ export default function Home() {
   const { T, isDesktop, tenant } = useGlow();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { mode, toggle: toggleTheme } = useThemeMode();
+  const { mode, toggle: toggleTheme, language } = useThemeMode();
   const [searchParams] = useSearchParams();
 
   const [query, setQuery] = useState(searchParams.get("search") || "");
@@ -137,8 +138,8 @@ export default function Home() {
       <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", padding: `28px ${gutter}px 0` }}>
         <GlowLogo T={T} tenant={tenant} size={isDesktop ? 22 : 20} />
         <div style={{ display: "flex", gap: 8 }}>
-          <button aria-label="saved" onClick={() => navigate("/saved")} style={{ width: 36, height: 36, borderRadius: 12, border: `1px solid ${T.border}`, background: "transparent", color: T.text, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Icon.heart /></button>
-          <button aria-label="toggle theme" onClick={toggleTheme} style={{ width: 36, height: 36, borderRadius: 12, border: `1px solid ${T.border}`, background: "transparent", color: T.text, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>{mode === "dark" ? <Icon.sun /> : <Icon.moon />}</button>
+          <ThemePill T={T} dark={mode === "dark"} onClick={toggleTheme} />
+          <LangPill T={T} lang={language} onClick={() => navigate("/settings/language")} />
         </div>
       </div>
 
