@@ -11,6 +11,7 @@ import Orders from "./pages/Orders";
 import Admin from "./pages/Admin";
 import SignIn from "./pages/SignIn";
 import SignInVerify from "./pages/SignInVerify";
+import AuthCallback from "./pages/AuthCallback";
 import LanguageSettings from "./pages/LanguageSettings";
 import AppearanceSettings from "./pages/AppearanceSettings";
 import AppProviders from "./providers/AppProviders";
@@ -34,6 +35,7 @@ function AppShell() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signin/verify" element={<SignInVerify />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/settings/language" element={<LanguageSettings />} />
         <Route path="/settings/appearance" element={<AppearanceSettings />} />
       </Routes>

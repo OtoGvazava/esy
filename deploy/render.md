@@ -33,10 +33,37 @@ to configure.
   Gmail/iCloud buttons. Admin product CRUD works.
 - Deep links (e.g. `/product/5`, `/cart`) load directly (SPA fallback).
 
+## Gmail (Google OAuth) sign-in
+
+The code is fully wired (server-side Google OAuth2 → JWT → SPA). It only needs
+a Google OAuth client — **you** create this; I can't make accounts or hold the
+secret. "Continue with Gmail" stays inert until these env vars are set.
+
+1. **Google Cloud Console** (https://console.cloud.google.com) → create/select a
+   project → **APIs & Services → OAuth consent screen**: External, app name
+   `esy`, your support email; scopes `openid`, `email`, `profile`. While it's in
+   *Testing*, add your Google account under **Test users** (or Publish the app).
+2. **Credentials → Create credentials → OAuth client ID → Web application**.
+   **Authorized redirect URIs** (exact, both):
+   - `https://<YOUR-RENDER-HOST>/login/oauth2/code/google`
+   - `http://localhost:8080/login/oauth2/code/google`  (local dev)
+   (No "Authorized JavaScript origins" needed — it's a server-side flow.)
+3. Copy the **Client ID** and **Client secret**.
+4. **Render** → your service → **Environment** → add:
+   - `GOOGLE_CLIENT_ID` = …
+   - `GOOGLE_CLIENT_SECRET` = …
+   Leave `APP_OAUTH2_REDIRECT_BASE` unset (same-origin). Save → it redeploys.
+5. **Local dev**: run the backend with
+   `GOOGLE_CLIENT_ID=… GOOGLE_CLIENT_SECRET=… APP_OAUTH2_REDIRECT_BASE=http://localhost:5173`
+   plus `npm run dev` for the web. "Continue with Gmail" → Google → back signed in.
+
+Notes: the JWT, cookie-based OAuth state (works under stateless sessions), and
+`{baseUrl}` redirect resolution behind Render's TLS proxy are all handled in
+code and verified. iCloud stays a dev stand-in (Apple OAuth not configured).
+
 ## Redeploy
 
-`autoDeploy: true` — every push to `main` rebuilds and redeploys automatically
-(same as the GitHub Actions workflow would, but Render does it natively).
+`autoDeploy: true` — every push to `main` rebuilds and redeploys automatically.
 
 ## If you later want persistence
 

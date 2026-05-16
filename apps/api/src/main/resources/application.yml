@@ -46,7 +46,9 @@ spring:
               - openid
               - profile
               - email
-            redirect-uri: "https://{subdomain}.esy.ge/login/oauth2/code/{registrationId}"
+            # Host-agnostic: resolves to the real external URL per request
+            # (needs server.forward-headers-strategy below behind Render's proxy).
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
           apple:
             client-id: ${APPLE_CLIENT_ID:your-apple-client-id}
             client-secret: ${APPLE_CLIENT_SECRET:your-apple-client-secret}
@@ -57,7 +59,7 @@ spring:
               - openid
               - profile
               - email
-            redirect-uri: "https://{subdomain}.esy.ge/login/oauth2/code/{registrationId}"
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           google:
             authorization-uri: https://accounts.google.com/o/oauth2/auth
@@ -73,6 +75,16 @@ spring:
 server:
   # PaaS hosts (Render, etc.) inject the port via $PORT; default to 8080 locally.
   port: ${PORT:8080}
+  # Honor X-Forwarded-* from Render's TLS proxy so OAuth redirect URIs are
+  # built as https://<external-host>/... (must match Google Cloud config).
+  forward-headers-strategy: framework
+
+# Where the OAuth2 success/failure handler sends the browser back to. Empty =
+# same origin (Render: the jar serves the SPA). For local dev set
+# APP_OAUTH2_REDIRECT_BASE=http://localhost:5173 (the Vite dev origin).
+app:
+  oauth2:
+    redirect-base: ${APP_OAUTH2_REDIRECT_BASE:}
 
 # Multi-tenant configuration
 tenant:

@@ -1,8 +1,10 @@
 package com.esyback.ecommerce.config;
 
+import com.esyback.ecommerce.security.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.esyback.ecommerce.security.JwtAuthenticationFilter;
 import com.esyback.ecommerce.security.OAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -25,6 +27,10 @@ public class SecurityConfig {
     
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final OAuth2AuthenticationSuccessHandler oauth2SuccessHandler;
+    private final HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository;
+
+    @Value("${app.oauth2.redirect-base:}")
+    private String redirectBase;
     
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -47,7 +53,11 @@ public class SecurityConfig {
                 .anyRequest().permitAll()
             )
             .oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(ae -> ae
+                    .authorizationRequestRepository(cookieAuthorizationRequestRepository))
                 .successHandler(oauth2SuccessHandler)
+                .failureHandler((req, res, ex) ->
+                    res.sendRedirect(redirectBase + "/signin?error=oauth"))
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable())); // For H2 console

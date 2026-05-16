@@ -36,6 +36,15 @@ export default function SignIn() {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState("");
 
+  // Real Google OAuth2: full-page redirect to the backend's authorization
+  // endpoint. Same origin in prod (Render serves the SPA); in Vite dev (:5173)
+  // hit the backend directly on :8080.
+  const googleSignIn = () => {
+    const base = window.location.port === "5173" ? "http://localhost:8080" : "";
+    window.location.href = `${base}/oauth2/authorization/google`;
+  };
+
+  // iCloud stays a dev stand-in (Apple OAuth not configured).
   const sso = async (which) => {
     setBusy(which);
     const res = which === "gmail" ? await loginWithGoogle() : await loginWithApple();
@@ -68,7 +77,7 @@ export default function SignIn() {
         </div>
 
         <div style={{ padding: "8px 20px 0", display: "flex", flexDirection: "column", gap: 10 }}>
-          <SsoButton T={T} label={busy === "gmail" ? "Signing in…" : "Continue with Gmail"} glyph={GmailGlyph} glyphBg={T.dark ? "rgba(255,255,255,0.06)" : "#ffffff"} glyphFg={T.dark ? "#cfd0d8" : "#5a5a66"} onClick={() => sso("gmail")} busy={!!busy} />
+          <SsoButton T={T} label={busy === "gmail" ? "Signing in…" : "Continue with Gmail"} glyph={GmailGlyph} glyphBg={T.dark ? "rgba(255,255,255,0.06)" : "#ffffff"} glyphFg={T.dark ? "#cfd0d8" : "#5a5a66"} onClick={googleSignIn} busy={!!busy} />
           <SsoButton T={T} label={busy === "icloud" ? "Signing in…" : "Continue with iCloud"} glyph={ICloudGlyph} glyphBg={T.dark ? "#f2f2f7" : "#0b0b14"} glyphFg={T.dark ? "#0b0b14" : "#ffffff"} onClick={() => sso("icloud")} busy={!!busy} />
         </div>
 
