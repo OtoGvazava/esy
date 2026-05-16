@@ -1,0 +1,93 @@
+name: deploy
+
+# Build + deploy on push to main.
+#   Frontend: build -> S3 sync -> CloudFront invalidation
+#   Backend:  build jar -> upload to private artifacts bucket -> SSM tells the
+#             EC2 instance to pull it and restart (no SSH / no open port 22).
+#
+# Required GitHub repo settings:
+#   Secrets:   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+#   Variables: AWS_REGION, S3_BUCKET, ARTIFACTS_BUCKET,
+#              CLOUDFRONT_DISTRIBUTION_ID, EC2_INSTANCE_ID
+# (EC2 must have the SSM instance profile from deploy/aws-iam-setup.sh.)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Build backend (fat jar)
+        run: mvn -q -B -DskipTests -f apps/api/pom.xml clean package
+
+      - name: Build frontend (dist)
+        run: |
+          cd apps/web
+          npm ci
+          npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy frontend (S3 + CloudFront invalidation)
+        run: |
+          aws s3 sync apps/web/dist "s3://${{ vars.S3_BUCKET }}" --delete \
+            --exclude index.html --cache-control "public,max-age=31536000,immutable"
+          aws s3 cp apps/web/dist/index.html "s3://${{ vars.S3_BUCKET }}/index.html" \
+            --cache-control "no-cache" --content-type text/html
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/*"
+
+      - name: Upload backend jar to artifacts bucket
+        run: |
+          aws s3 cp apps/api/target/ecommerce-platform-0.0.1-SNAPSHOT.jar \
+            "s3://${{ vars.ARTIFACTS_BUCKET }}/esy-api.jar"
+
+      - name: Roll backend on EC2 via SSM
+        run: |
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "esy backend deploy ${{ github.sha }}" \
+            --parameters commands='[
+              "set -e",
+              "aws s3 cp s3://${{ vars.ARTIFACTS_BUCKET }}/esy-api.jar /opt/esy/esy-api.jar",
+              "chown esy:esy /opt/esy/esy-api.jar",
+              "systemctl restart esy-api",
+              "sleep 8",
+              "curl -sf -o /dev/null http://localhost:8080/api/products"
+            ]' \
+            --query "Command.CommandId" --output text)
+          echo "SSM command: $CMD_ID"
+          aws ssm wait command-executed \
+            --command-id "$CMD_ID" --instance-id "${{ vars.EC2_INSTANCE_ID }}"
+          aws ssm get-command-invocation \
+            --command-id "$CMD_ID" --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+            --query "Status" --output text
