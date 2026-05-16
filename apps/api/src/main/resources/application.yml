@@ -78,6 +78,12 @@ server:
   # Honor X-Forwarded-* from Render's TLS proxy so OAuth redirect URIs are
   # built as https://<external-host>/... (must match Google Cloud config).
   forward-headers-strategy: framework
+  # TEMP DIAGNOSTIC — surface the real exception on the error page so the
+  # OAuth 500 can be diagnosed without server-log access. Revert after.
+  error:
+    include-message: always
+    include-exception: true
+    include-stacktrace: always
 
 # Where the OAuth2 success/failure handler sends the browser back to. Empty =
 # same origin (Render: the jar serves the SPA). For local dev set
