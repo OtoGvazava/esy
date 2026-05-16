@@ -65,7 +65,10 @@ spring:
             authorization-uri: https://accounts.google.com/o/oauth2/auth
             token-uri: https://oauth2.googleapis.com/token
             user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
-            user-name-attribute: id
+            # With the openid scope Spring treats Google as OIDC; the subject
+            # claim is "sub" (there is no "id"), so this must be "sub" or
+            # DefaultOidcUser construction throws "Missing attribute 'id'".
+            user-name-attribute: sub
           apple:
             authorization-uri: https://appleid.apple.com/auth/authorize
             token-uri: https://appleid.apple.com/auth/token
@@ -78,12 +81,6 @@ server:
   # Honor X-Forwarded-* from Render's TLS proxy so OAuth redirect URIs are
   # built as https://<external-host>/... (must match Google Cloud config).
   forward-headers-strategy: framework
-  # TEMP DIAGNOSTIC — surface the real exception on the error page so the
-  # OAuth 500 can be diagnosed without server-log access. Revert after.
-  error:
-    include-message: always
-    include-exception: true
-    include-stacktrace: always
 
 # Where the OAuth2 success/failure handler sends the browser back to. Empty =
 # same origin (Render: the jar serves the SPA). For local dev set
