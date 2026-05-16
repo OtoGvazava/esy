@@ -1,0 +1,2 @@
+-- This file is for additional data initialization if needed
+-- The main data initialization is handled by DataInitializer.java
