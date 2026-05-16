@@ -8,6 +8,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +26,16 @@ public class JwtUtil {
     private Long expiration;
     
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        // Derive a fixed 64-byte key from the configured secret so HS512 works
+        // regardless of the secret's length (Render's generated JWT_SECRET, a
+        // short dev value, etc. would otherwise trip Keys.hmacShaKeyFor).
+        try {
+            byte[] key = MessageDigest.getInstance("SHA-512")
+                .digest(secret.getBytes(StandardCharsets.UTF_8));
+            return Keys.hmacShaKeyFor(key);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-512 unavailable", e);
+        }
     }
     
     public String generateToken(Authentication authentication) {
