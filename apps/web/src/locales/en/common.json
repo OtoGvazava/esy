@@ -1,0 +1,29 @@
+{
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "We encountered an unexpected error. Please try again.",
+    "retry": "Try Again"
+  },
+  "loading": {
+    "default": "Loading...",
+    "products": "Loading products...",
+    "orders": "Loading orders...",
+    "profile": "Loading profile..."
+  },
+  "errors": {
+    "networkError": "Network error occurred",
+    "authenticationError": "Authentication failed",
+    "validationError": "Validation failed",
+    "unknownError": "An unknown error occurred"
+  },
+  "success": {
+    "orderCreated": "Order created successfully",
+    "profileUpdated": "Profile updated successfully",
+    "cartUpdated": "Cart updated successfully"
+  },
+  "platform": {
+    "title": "Discover Beauty",
+    "subtitle": "Your premium destination for cosmetics and skincare",
+    "tagline": "Where beauty meets quality"
+  }
+}

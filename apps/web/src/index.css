@@ -1,0 +1,31 @@
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Clip the decorative Glow hero gradient so it never creates a horizontal
+   scrollbar; no min-width so narrow viewports don't overflow. */
+html,
+body {
+  margin: 0;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* Glow components are inline-styled; keep global element styles out of the way
+   (the old Vite template added button borders/hover that fought the design). */
+button {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* MUI ThemeProvider / Glow tokens control all colors. */

@@ -1,0 +1,63 @@
+// Persistent bottom dock — Shop · Search · Bag · Saved · Account. Each item is
+// a real route; Bag shows a live cart-count badge.
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Icon } from './GlowPrimitives';
+import { useGlow } from '../../styles/glow';
+import { useCart } from '../../contexts/CartContext';
+
+export default function GlowDock() {
+  const { T } = useGlow();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const { getTotalItems } = useCart();
+  const cartCount = getTotalItems();
+
+  const items = [
+    { key: 'shop', icon: <Icon.grid />, label: 'Shop', to: '/', active: pathname === '/' || pathname.startsWith('/product') },
+    { key: 'search', icon: <Icon.search />, label: 'Search', to: '/search', active: pathname === '/search' },
+    { key: 'bag', icon: <Icon.bag />, label: 'Bag', to: '/cart', badge: cartCount, active: ['/cart', '/checkout', '/success'].includes(pathname) },
+    { key: 'saved', icon: <Icon.heart />, label: 'Saved', to: '/saved', active: pathname === '/saved' },
+    { key: 'account', icon: <Icon.user />, label: 'Account', to: '/account', active: pathname === '/account' },
+  ];
+
+  return (
+    <div style={{
+      position: 'fixed', left: 16, right: 16, bottom: 18, maxWidth: 520, margin: '0 auto',
+      height: 64, borderRadius: 22, zIndex: 1200,
+      background: T.dark ? 'rgba(18,18,28,0.78)' : 'rgba(255,255,255,0.78)',
+      backdropFilter: 'saturate(180%) blur(22px)',
+      WebkitBackdropFilter: 'saturate(180%) blur(22px)',
+      border: `1px solid ${T.border}`,
+      boxShadow: T.dark ? '0 12px 40px rgba(0,0,0,0.45)' : '0 12px 40px rgba(20,20,60,0.10)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 14px',
+    }}>
+      {items.map((it) => (
+        <div
+          key={it.key}
+          onClick={() => navigate(it.to)}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            color: it.active ? T.accentFg : T.textDim, cursor: 'pointer',
+          }}
+        >
+          <div style={{
+            width: 36, height: 36, borderRadius: 12, position: 'relative',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: it.active ? T.accentBg : 'transparent',
+          }}>
+            {it.icon}
+            {it.badge ? (
+              <span style={{
+                position: 'absolute', top: -2, right: -4, minWidth: 16, height: 16, padding: '0 4px',
+                borderRadius: 999, background: T.accent, color: '#fff',
+                font: `700 9.5px ${T.font}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: `2px solid ${T.dark ? '#12121c' : '#ffffff'}`, lineHeight: 1,
+              }}>{it.badge}</span>
+            ) : null}
+          </div>
+          <div style={{ font: `600 9.5px ${T.font}`, letterSpacing: '-0.005em' }}>{it.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}

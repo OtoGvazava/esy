@@ -1,0 +1,17 @@
+{
+  "title": "Cart",
+  "empty": "Your cart is empty.",
+  "addToCart": "Add to Cart",
+  "inCart": "In Cart",
+  "remove": "Remove",
+  "quantity": "Quantity",
+  "subtotal": "Subtotal",
+  "total": "Total",
+  "checkout": "Checkout",
+  "clearCart": "Clear Cart",
+  "items": "items",
+  "item": "item"
+}
+
+
+
