@@ -1,4 +1,5 @@
 {
+  "poweredBy": "powered by",
   "errorBoundary": {
     "title": "Something went wrong",
     "message": "We encountered an unexpected error. Please try again.",

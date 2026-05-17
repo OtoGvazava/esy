@@ -1,6 +1,8 @@
 // Glow shared primitives — ported verbatim from the handoff (shared.jsx):
 // the inline-SVG Icon set, striped Placeholder, "powered by esy" mark, and
 // the removable filter token pill.
+/* eslint-disable react-refresh/only-export-components */
+import { useTranslation } from 'react-i18next';
 import { GLOW_MONO } from '../../styles/glow';
 
 export const Icon = {
@@ -56,6 +58,7 @@ export function Placeholder({ label, hue = 240, dark = false, style = {}, radius
 }
 
 export function PoweredBy({ T, align = 'center', size = 10 }) {
+  const { t } = useTranslation('common');
   return (
     <div style={{
       display: 'flex', alignItems: 'center',
@@ -63,7 +66,7 @@ export function PoweredBy({ T, align = 'center', size = 10 }) {
       color: T.textMute, font: `500 ${size}px ${GLOW_MONO}`,
       letterSpacing: '0.12em', textTransform: 'uppercase',
     }}>
-      <span style={{ opacity: 0.7 }}>powered by</span>
+      <span style={{ opacity: 0.7 }}>{t('poweredBy')}</span>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: T.text, opacity: 0.85 }}>
         <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'currentColor' }} />
         esy

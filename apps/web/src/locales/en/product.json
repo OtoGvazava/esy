@@ -12,8 +12,20 @@
   "inStock": "in stock",
   "outOfStock": "Out of stock",
   "brand": "Brand",
-  "share": "Share"
+  "share": "Share",
+  "backToShop": "Back to shop",
+  "badgeNew": "New",
+  "inStockBadge": "In stock",
+  "defaultDescription": "Hand-picked and shipped by an independent maker on esy. Made in small batches — every order supports a small business.",
+  "rowPrice": "Price",
+  "rowAvailability": "Availability",
+  "availabilityInStock": "{{count}} in stock",
+  "shipsFrom": "Ships from",
+  "addToBag": "Add to bag · {{price}}",
+  "youMayAlsoLike": "You may also like",
+  "add": "Add",
+  "tagBest": "best",
+  "tagLow": "low stock",
+  "tagNew": "new",
+  "tagSale": "sale"
 }
-
-
-

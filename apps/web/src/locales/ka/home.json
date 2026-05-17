@@ -10,5 +10,8 @@
   "productCount_other": "{{count}} პროდუქტი",
   "shown": "{{count}} ნაჩვენები",
   "noProducts": "პროდუქტი ვერ მოიძებნა.",
-  "noProductsQuery": "„{{query}}“-ისთვის პროდუქტი ვერ მოიძებნა."
+  "noProductsQuery": "„{{query}}“-ისთვის პროდუქტი ვერ მოიძებნა.",
+  "reachedEnd": "სია დასრულდა",
+  "loadingMore": "იტვირთება…",
+  "loadingMoreN": "იტვირთება კიდევ {{count}}…"
 }

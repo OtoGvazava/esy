@@ -1,14 +1,17 @@
 // Glow flexible search — the pill input that drives navigation (no category
 // chips, per the design). Active filter tokens render inside the field.
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Icon, GlowToken } from './GlowPrimitives';
 import { GLOW_MONO } from '../../styles/glow';
 
 export default function GlowSearchBar({
   T, value, onChange, onSubmit, compact = false,
-  placeholder = 'try "under $50" or "in stock"…', tokens = [], autoFocus = false,
+  placeholder, tokens = [], autoFocus = false,
 }) {
   const inputRef = useRef(null);
+  const { t } = useTranslation('storefront');
+  const ph = placeholder ?? t('searchBar.defaultPlaceholder');
   return (
     <div
       onClick={() => inputRef.current?.focus()}
@@ -31,7 +34,7 @@ export default function GlowSearchBar({
           autoFocus={autoFocus}
           onChange={(e) => onChange?.(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') onSubmit?.(value); }}
-          placeholder={placeholder}
+          placeholder={ph}
           aria-label="search"
           style={{
             flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent',

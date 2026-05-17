@@ -1,6 +1,7 @@
 // Persistent bottom dock — Shop · Search · Bag · Saved · Account. Each item is
 // a real route; Bag shows a live cart-count badge.
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Icon } from './GlowPrimitives';
 import { useGlow } from '../../styles/glow';
 import { useCart } from '../../contexts/CartContext';
@@ -10,14 +11,15 @@ export default function GlowDock() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { getTotalItems } = useCart();
+  const { t } = useTranslation('navbar');
   const cartCount = getTotalItems();
 
   const items = [
-    { key: 'shop', icon: <Icon.grid />, label: 'Shop', to: '/', active: pathname === '/' || pathname.startsWith('/product') },
-    { key: 'search', icon: <Icon.search />, label: 'Search', to: '/search', active: pathname === '/search' },
-    { key: 'bag', icon: <Icon.bag />, label: 'Bag', to: '/cart', badge: cartCount, active: ['/cart', '/checkout', '/success'].includes(pathname) },
-    { key: 'saved', icon: <Icon.heart />, label: 'Saved', to: '/saved', active: pathname === '/saved' },
-    { key: 'account', icon: <Icon.user />, label: 'Account', to: '/account', active: pathname === '/account' },
+    { key: 'shop', icon: <Icon.grid />, label: t('dock.shop'), to: '/', active: pathname === '/' || pathname.startsWith('/product') },
+    { key: 'search', icon: <Icon.search />, label: t('dock.search'), to: '/search', active: pathname === '/search' },
+    { key: 'bag', icon: <Icon.bag />, label: t('dock.bag'), to: '/cart', badge: cartCount, active: ['/cart', '/checkout', '/success'].includes(pathname) },
+    { key: 'saved', icon: <Icon.heart />, label: t('dock.saved'), to: '/saved', active: pathname === '/saved' },
+    { key: 'account', icon: <Icon.user />, label: t('dock.account'), to: '/account', active: pathname === '/account' },
   ];
 
   return (

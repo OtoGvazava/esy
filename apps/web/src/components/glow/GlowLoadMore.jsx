@@ -1,5 +1,8 @@
 // Infinite-scroll continuation hint — ported from direction-a.jsx GlowLoadMore.
+import { useTranslation } from 'react-i18next';
+
 export default function GlowLoadMore({ T, count, done = false }) {
+  const { t } = useTranslation('home');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '24px 0 6px' }}>
       <div style={{
@@ -13,9 +16,9 @@ export default function GlowLoadMore({ T, count, done = false }) {
             animation: 'glow-spin 1s linear infinite',
           }} />
         )}
-        {done ? 'You’ve reached the end' : `loading ${count > 0 ? count : ''} more…`}
+        {done ? t('reachedEnd') : (count > 0 ? t('loadingMoreN', { count }) : t('loadingMore'))}
       </div>
-      <style>{`@keyframes glow-spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{'@keyframes glow-spin{to{transform:rotate(360deg)}}'}</style>
     </div>
   );
 }

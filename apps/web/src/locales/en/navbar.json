@@ -10,7 +10,12 @@
   "home": "Home",
   "cart": "Cart",
   "account": "My Account",
-  "contact": "Contact"
+  "contact": "Contact",
+  "dock": {
+    "shop": "Shop",
+    "search": "Search",
+    "bag": "Bag",
+    "saved": "Saved",
+    "account": "Account"
+  }
 }
-
-

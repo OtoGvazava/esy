@@ -2,15 +2,25 @@
 // product photo when present, falling back to the striped Placeholder (the
 // design's intended slot for missing imagery).
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Icon, Placeholder } from './GlowPrimitives';
+import { money } from './GlowChrome';
 import { useSaved } from '../../contexts/SavedContext';
 
 const tagBg = (tag, T) =>
   tag === 'new' ? T.accent : tag === 'sale' ? T.danger : tag === 'low' ? T.warn : T.text;
 
+const tagLabel = (tag, t) =>
+  tag === 'best' ? `★ ${t('tagBest')}`
+    : tag === 'low' ? t('tagLow')
+      : tag === 'new' ? t('tagNew')
+        : tag === 'sale' ? t('tagSale')
+          : tag;
+
 export default function GlowProductCard({ T, p, hue = 240, compact = false, onOpen, onAdd }) {
   const [imgOk, setImgOk] = useState(Boolean(p.image));
   const { isSaved, toggleSaved } = useSaved();
+  const { t } = useTranslation('product');
   const saved = isSaved(p.id);
   return (
     <div
@@ -47,7 +57,7 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
             position: 'absolute', top: 10, left: 10, padding: '3px 8px', borderRadius: 999,
             background: tagBg(p.tag, T), color: p.tag === 'best' ? T.bg : '#fff',
             font: `700 9.5px ${T.font}`, letterSpacing: '0.06em', textTransform: 'uppercase',
-          }}>{p.tag === 'best' ? '★ best' : p.tag === 'low' ? 'low stock' : p.tag}</div>
+          }}>{tagLabel(p.tag, t)}</div>
         )}
       </div>
       <div style={{ padding: compact ? '10px 12px 12px' : '14px 14px 14px' }}>
@@ -56,7 +66,7 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
           <div style={{ font: `400 ${compact ? 11 : 12}px ${T.font}`, color: T.textMute, marginBottom: 10, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.blurb}</div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: p.blurb ? 0 : 10 }}>
-          <div style={{ font: `700 ${compact ? 15 : 17}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>${p.price}</div>
+          <div style={{ font: `700 ${compact ? 15 : 17}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(p.price)}</div>
           <button
             onClick={(e) => { e.stopPropagation(); onAdd?.(p); }}
             style={{
@@ -64,7 +74,7 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
               borderRadius: 999, border: 'none', background: T.grad, color: '#fff',
               font: `600 ${compact ? 11 : 12}px ${T.font}`, cursor: 'pointer',
             }}
-          ><Icon.plus /> Add</button>
+          ><Icon.plus /> {t('add')}</button>
         </div>
       </div>
     </div>
