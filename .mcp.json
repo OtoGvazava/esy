@@ -18,6 +18,10 @@
       "headers": {
         "Authorization": "Bearer ${RENDER_API_KEY}"
       }
+    },
+    "browsermcp": {
+      "command": "npx",
+      "args": ["@browsermcp/mcp@latest"]
     }
   }
 }
