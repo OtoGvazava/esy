@@ -1,8 +1,11 @@
 package com.esyback.ecommerce.controller;
 
 import com.esyback.ecommerce.entity.User;
+import com.esyback.ecommerce.security.AuthCookie;
 import com.esyback.ecommerce.security.JwtUtil;
 import com.esyback.ecommerce.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -64,7 +67,11 @@ public class AuthController {
     }
     
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout() {
+    public ResponseEntity<Map<String, String>> logout(HttpServletRequest request,
+                                                      HttpServletResponse response) {
+        // Expire the shared esy.ge session cookie so logout takes effect on
+        // every subdomain, not just the store the user clicked it on.
+        AuthCookie.clear(request, response);
         SecurityContextHolder.clearContext();
         return ResponseEntity.ok(Map.of("message", "Successfully logged out"));
     }

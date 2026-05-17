@@ -1,31 +1,9 @@
 // Centralized API client for the Spring Boot backend.
 // Requests go to /api/* which Vite proxies to http://localhost:8080 in dev.
-import { STORAGE_KEYS } from '../constants';
-
-// ---- Auth token storage -----------------------------------------------------
-export const getToken = () => {
-  try {
-    return localStorage.getItem(STORAGE_KEYS.TOKEN);
-  } catch {
-    return null;
-  }
-};
-
-export const setToken = (token) => {
-  try {
-    if (token) localStorage.setItem(STORAGE_KEYS.TOKEN, token);
-  } catch {
-    /* ignore storage errors */
-  }
-};
-
-export const clearToken = () => {
-  try {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
-  } catch {
-    /* ignore storage errors */
-  }
-};
+//
+// Auth is a server-set HttpOnly cookie (esy_token, Domain=esy.ge) — never
+// readable from JS — so requests just need to carry cookies; there is no
+// token in localStorage. "Am I signed in?" is answered by /api/auth/user.
 
 // ---- Low-level client -------------------------------------------------------
 export class ApiError extends Error {
@@ -42,16 +20,17 @@ class ApiClient {
   }
 
   async request(endpoint, options = {}) {
-    const token = getToken();
     const headers = {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     };
 
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
       headers,
+      // Send the esy_token cookie (same-origin per subdomain; explicit so it
+      // also works if the API is ever called cross-origin — CORS allows it).
+      credentials: 'include',
     });
 
     if (!response.ok) {

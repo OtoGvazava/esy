@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { productApi, handleApiError, followApi, getToken } from '../utils/api';
+import { productApi, handleApiError, followApi } from '../utils/api';
+import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useTenant } from '../contexts/TenantContext';
@@ -18,6 +19,7 @@ const PAGE_SIZE = 12;
 // hub). Signed-out taps route to sign-in.
 function FollowPill({ T }) {
   const { tenant } = useTenant();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('home');
   const sub = tenant?.subdomain;
@@ -29,14 +31,14 @@ function FollowPill({ T }) {
   };
 
   useEffect(() => {
-    if (!getToken() || !sub) { setFollowing(false); return; }
+    if (!isAuthenticated || !sub) { setFollowing(false); return; }
     followApi.list()
       .then((l) => setFollowing(Array.isArray(l) && l.some((s) => s.subdomain === sub)))
       .catch(() => setFollowing(false));
-  }, [sub]);
+  }, [sub, isAuthenticated]);
 
   const toggle = async () => {
-    if (!getToken()) { navigate('/signin'); return; }
+    if (!isAuthenticated) { navigate('/signin'); return; }
     if (busy) return;
     setBusy(true);
     const next = !following;

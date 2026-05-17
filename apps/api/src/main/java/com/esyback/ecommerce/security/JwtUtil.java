@@ -38,6 +38,10 @@ public class JwtUtil {
         }
     }
     
+    public long getExpirationSeconds() {
+        return expiration / 1000;
+    }
+
     public String generateToken(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
         Map<String, Object> claims = new HashMap<>();

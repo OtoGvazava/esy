@@ -1,5 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { savedApi, getToken } from '../utils/api';
+import { savedApi } from '../utils/api';
+import { useAuth } from './AuthContext';
 
 // Wishlist. Signed-in: backed by /api/saved (shows in the cross-store account
 // hub, syncs across devices). Guest/offline: localStorage fallback so the
@@ -13,22 +15,28 @@ const devTenant = () => {
 };
 
 export const SavedProvider = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [items, setItems] = useState([]);
 
-  // Fast paint from localStorage, then (if signed in) reconcile with server.
+  // Fast paint from localStorage.
   useEffect(() => {
-    let local = [];
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) { local = JSON.parse(raw); setItems(local); }
+      if (raw) setItems(JSON.parse(raw));
     } catch { /* ignore */ }
+  }, []);
 
-    if (!getToken()) return;
+  // Signed in (cookie session restored): server is authoritative and syncs
+  // across devices/stores. Re-runs when auth resolves on mount.
+  useEffect(() => {
+    if (!isAuthenticated) return;
     savedApi.list()
       .then((rows) => {
         if (!Array.isArray(rows)) return;
+        let local = [];
+        try { local = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { /* ignore */ }
         const byId = new Map(local.map((p) => [String(p.id), p]));
-        // Server is authoritative; keep the local thumbnail where we have it.
+        // Keep the local thumbnail where we have it.
         setItems(rows.map((r) => ({
           ...(byId.get(String(r.productId)) || {}),
           id: r.productId,
@@ -36,8 +44,8 @@ export const SavedProvider = ({ children }) => {
           price: r.price,
         })));
       })
-      .catch(() => { /* not signed in / offline — keep localStorage */ });
-  }, []);
+      .catch(() => { /* offline — keep localStorage */ });
+  }, [isAuthenticated]);
 
   useEffect(() => {
     try { localStorage.setItem(KEY, JSON.stringify(items)); } catch { /* ignore */ }

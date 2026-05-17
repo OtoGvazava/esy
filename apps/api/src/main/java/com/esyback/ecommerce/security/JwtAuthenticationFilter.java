@@ -29,12 +29,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         
         final String authorizationHeader = request.getHeader("Authorization");
-        
+
         String username = null;
         String jwt = null;
-        
+
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
+        } else {
+            // Browser SPA: the session rides in the HttpOnly esy_token cookie
+            // (shared across esy.ge + every *.esy.ge store). The Bearer header
+            // still works for non-browser/test clients.
+            jwt = AuthCookie.read(request);
+        }
+
+        if (jwt != null) {
             try {
                 username = jwtUtil.extractUsername(jwt);
             } catch (Exception e) {

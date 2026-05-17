@@ -14,8 +14,6 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Component
@@ -53,14 +51,19 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         User user = userService.findOrCreateUser(provider, providerId, email, firstName, lastName, profileImageUrl);
         String token = jwtUtil.generateToken(user.getUsername());
 
-        // Auth completed on the canonical host; send the JWT back to the tenant
-        // store the user actually started on. Falls back to redirectBase (same
-        // origin in prod, the Vite origin in local dev) when there's no funnel.
+        // The handshake runs on the canonical host (the funnel); set the JWT as
+        // a Domain=esy.ge HttpOnly cookie here so it's already present when the
+        // browser follows the redirect to the originating tenant subdomain —
+        // and stays valid on every other *.esy.ge store (single sign-on).
+        AuthCookie.add(request, response, token, jwtUtil.getExpirationSeconds());
+
+        // Send the browser back to the tenant store it started on (falls back
+        // to redirectBase: same origin in prod, the Vite origin in local dev).
+        // No token in the URL — the cookie carries it (no leak via history /
+        // Referer / server logs).
         String tenantOrigin = HttpCookieOAuth2AuthorizationRequestRepository.readTenantOrigin(request);
         String base = tenantOrigin != null ? tenantOrigin : redirectBase;
 
-        String target = base + "/auth/callback?token="
-                + URLEncoder.encode(token, StandardCharsets.UTF_8);
-        response.sendRedirect(target);
+        response.sendRedirect(base + "/auth/callback");
     }
 }

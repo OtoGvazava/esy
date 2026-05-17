@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { STORAGE_KEYS } from '../constants';
-import { authApi, clearToken, getToken } from '../utils/api';
+import { authApi } from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -44,24 +45,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Restore the session from the stored JWT on mount.
+  // Restore the session from the esy_token cookie on mount. The cookie is
+  // HttpOnly (invisible to JS) and shared across esy.ge + every *.esy.ge
+  // store, so we always ask the server who we are — signing in on one store
+  // restores here on all of them.
   useEffect(() => {
     const restore = async () => {
-      if (!getToken()) {
-        setLoading(false);
-        return;
-      }
       try {
         const res = await authApi.me();
         if (res?.authenticated && res.user) {
           persistUser(mapBackendUser(res.user));
         } else {
-          clearToken();
           localStorage.removeItem(STORAGE_KEYS.USER);
         }
       } catch (error) {
         console.error('Session restore failed:', error);
-        clearToken();
         localStorage.removeItem(STORAGE_KEYS.USER);
       } finally {
         setLoading(false);
@@ -90,8 +88,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Server expires the shared esy.ge cookie → signed out on every subdomain.
     authApi.logout().catch(() => {});
-    clearToken();
     setUser(null);
     localStorage.removeItem(STORAGE_KEYS.USER);
   };
