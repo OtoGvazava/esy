@@ -1,13 +1,16 @@
+/* eslint-disable react-refresh/only-export-components */
 // Platform-site shared primitives. Reuses the Glow design tokens with the
 // platform indigo as the default accent; tenant brand colors only ever appear
 // on store cards (the "wall of brands against calm indigo chrome" rule).
+// (Shared module: intentionally exports hooks + components together.)
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useGlow, glowTokens, shiftHue } from '../styles/glow';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { tenantApi } from '../utils/api';
-import { PLATFORM_ACCENT, tr, storeInitials } from './platformData';
+import { PLATFORM_ACCENT, storeInitials } from './platformData';
 
 export { shiftHue };
 
@@ -63,7 +66,6 @@ export function EsyMark({ T, size = 26, suffix = '.ge', onClick }) {
 // Store mark — gradient tile when no logo, brand-outline monogram otherwise.
 export function StoreMark({ store, size = 40, radius = 12, ring = false }) {
   const initials = storeInitials(store);
-  const filled = !store.logoUrl || store.logoUrl === 'mono' ? !store.logoUrl : true;
   const useFill = !store.logoUrl; // null logo → filled gradient tile
   const bg = useFill
     ? `linear-gradient(135deg, ${store.primaryColor} 0%, ${store.secondaryColor || store.primaryColor} 100%)`
@@ -96,7 +98,7 @@ export function StatusPill({ T, kind, children }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px',
       borderRadius: 999, background: v.bg, color: v.fg,
-      font: `700 10px Inter, sans-serif`, letterSpacing: '0.06em', textTransform: 'uppercase',
+      font: '700 10px Inter, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase',
     }}>
       <span style={{ width: 5, height: 5, borderRadius: '50%', background: v.fg }} />
       {children}
@@ -124,6 +126,7 @@ const ThemeIcon = ({ dark }) => (dark
 // Responsive top bar — full nav on desktop, compact on mobile.
 export function PTopBar({ current = 'home' }) {
   const { T, dark, isDesktop, lang, setLang, toggleTheme } = usePlatform();
+  const { t } = useTranslation('platform');
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const signedIn = isAuthenticated;
@@ -156,7 +159,7 @@ export function PTopBar({ current = 'home' }) {
             <button onClick={() => navigate('/signin')} style={{
               height: 36, padding: '0 14px', borderRadius: 999, border: `1px solid ${T.border}`,
               background: 'transparent', color: T.text, font: `600 12.5px ${T.font}`, cursor: 'pointer',
-            }}>{tr(lang, 'signIn')}</button>
+            }}>{t('nav.signIn')}</button>
           )}
         </div>
       </div>
@@ -174,9 +177,9 @@ export function PTopBar({ current = 'home' }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
         <EsyMark T={T} size={26} onClick={() => navigate('/')} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
-          {link(tr(lang, 'browse'), 'browse', '/stores')}
-          {link(tr(lang, 'sell'), 'sell', '/sell')}
-          {link('Account', 'account', '/account')}
+          {link(t('nav.browse'), 'browse', '/stores')}
+          {link(t('nav.sell'), 'sell', '/sell')}
+          {link(t('nav.account'), 'account', '/account')}
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -207,12 +210,12 @@ export function PTopBar({ current = 'home' }) {
             <button onClick={() => navigate('/signin')} style={{
               height: 34, padding: '0 14px', borderRadius: 999, border: `1px solid ${T.border}`,
               background: 'transparent', color: T.text, font: `600 12.5px ${T.font}`, cursor: 'pointer',
-            }}>{tr(lang, 'signIn')}</button>
+            }}>{t('nav.signIn')}</button>
             <button onClick={() => navigate('/sell')} style={{
               height: 34, padding: '0 14px', borderRadius: 999, border: 'none',
               background: T.grad, color: '#fff', font: `700 12.5px ${T.font}`, cursor: 'pointer',
               boxShadow: `0 10px 28px ${T.accent}55`, display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}>{tr(lang, 'openStore')}
+            }}>{t('nav.openStore')}
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
             </button>
           </>
@@ -224,11 +227,12 @@ export function PTopBar({ current = 'home' }) {
 
 export function PFooter({ compact = false }) {
   const { T, isDesktop } = usePlatform();
+  const { t } = useTranslation('platform');
   const cols = [
-    { title: 'esy.ge', items: ['About', 'Brand', 'Careers', 'Press'] },
-    { title: 'For sellers', items: ['Open a store', 'Pricing', 'Seller docs', 'API'] },
-    { title: 'For shoppers', items: ['Browse stores', 'Gift cards', 'Order status', 'Refunds'] },
-    { title: 'Resources', items: ['Help center', 'Status', 'Terms', 'Privacy'] },
+    { title: t('footer.col.esy'), items: [t('footer.link.about'), t('footer.link.brand'), t('footer.link.careers'), t('footer.link.press')] },
+    { title: t('footer.col.sellers'), items: [t('footer.link.openStore'), t('footer.link.pricing'), t('footer.link.sellerDocs'), t('footer.link.api')] },
+    { title: t('footer.col.shoppers'), items: [t('footer.link.browseStores'), t('footer.link.giftCards'), t('footer.link.orderStatus'), t('footer.link.refunds')] },
+    { title: t('footer.col.resources'), items: [t('footer.link.helpCenter'), t('footer.link.status'), t('footer.link.terms'), t('footer.link.privacy')] },
   ];
   const darkT = { ...T, text: '#f2f2f7', textDim: 'rgba(242,242,247,0.6)', textMute: 'rgba(242,242,247,0.4)' };
   if (!isDesktop) {
@@ -236,15 +240,15 @@ export function PFooter({ compact = false }) {
       <div style={{ padding: '32px 22px 26px', background: '#0b0b14', color: '#cfd0d8', font: `400 12.5px ${T.font}` }}>
         <EsyMark T={darkT} size={24} />
         <div style={{ marginTop: 12, color: 'rgba(242,242,247,0.55)', font: `400 12px/1.5 ${T.font}` }}>
-          The home of independent shops on the web.
+          {t('footer.taglineShort')}
         </div>
         <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px', font: `500 12px ${T.font}` }}>
-          {['About', 'Pricing', 'Help center', 'Open a store', 'Browse stores', 'Terms'].map((it) => (
+          {[t('footer.link.about'), t('footer.link.pricing'), t('footer.link.helpCenter'), t('footer.link.openStore'), t('footer.link.browseStores'), t('footer.link.terms')].map((it) => (
             <span key={it} style={{ color: '#cfd0d8' }}>{it}</span>
           ))}
         </div>
         <div style={{ marginTop: 22, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', font: `400 10.5px ${T.font}`, color: 'rgba(242,242,247,0.4)' }}>
-          <span>© 2026 esy ge</span><span>EN · ქართული</span>
+          <span>{t('footer.rightsShort')}</span><span>{t('footer.langs')}</span>
         </div>
       </div>
     );
@@ -255,10 +259,10 @@ export function PFooter({ compact = false }) {
         <div>
           <EsyMark T={darkT} size={28} />
           <div style={{ marginTop: 16, color: 'rgba(242,242,247,0.6)', font: `400 13px/1.55 ${T.font}`, maxWidth: 280 }}>
-            The home of independent shops on the web. Open yours in minutes, keep 98% of every sale.
+            {t('footer.tagline')}
           </div>
           <div style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', font: `600 10.5px ${T.mono}`, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(242,242,247,0.7)' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3f8a4a' }} />All systems operational
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3f8a4a' }} />{t('footer.status')}
           </div>
         </div>
         {cols.map((col) => (
@@ -271,8 +275,8 @@ export function PFooter({ compact = false }) {
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 22, borderTop: '1px solid rgba(255,255,255,0.1)', font: `400 11.5px ${T.font}`, color: 'rgba(242,242,247,0.45)' }}>
-        <div>© 2026 esy ge llc · Tbilisi, Georgia</div>
-        <div style={{ display: 'flex', gap: 18 }}><span>English · ქართული</span><span>v0.42.1</span></div>
+        <div>{t('footer.rights')}</div>
+        <div style={{ display: 'flex', gap: 18 }}><span>{t('footer.langs')}</span><span>{t('footer.version')}</span></div>
       </div>
     </div>
   );

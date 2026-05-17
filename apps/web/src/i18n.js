@@ -18,6 +18,8 @@ import enAccount from './locales/en/account.json';
 import kaAccount from './locales/ka/account.json';
 import enCommon from './locales/en/common.json';
 import kaCommon from './locales/ka/common.json';
+import enPlatform from './locales/en/platform.json';
+import kaPlatform from './locales/ka/platform.json';
 
 const resources = {
   en: {
@@ -29,6 +31,7 @@ const resources = {
     orders: enOrders,
     account: enAccount,
     common: enCommon,
+    platform: enPlatform,
   },
   ka: {
     navbar: kaNavbar,
@@ -39,6 +42,7 @@ const resources = {
     orders: kaOrders,
     account: kaAccount,
     common: kaCommon,
+    platform: kaPlatform,
   },
 };
 
@@ -49,7 +53,7 @@ i18n
     lng: (typeof window !== 'undefined' && window.localStorage.getItem(STORAGE_KEYS.LANGUAGE)) || LANGUAGES.EN,
     fallbackLng: LANGUAGES.EN,
     interpolation: { escapeValue: false },
-    ns: ['navbar', 'home', 'cart', 'product', 'auth', 'orders', 'account', 'common'],
+    ns: ['navbar', 'home', 'cart', 'product', 'auth', 'orders', 'account', 'common', 'platform'],
     defaultNS: 'navbar',
   });
 

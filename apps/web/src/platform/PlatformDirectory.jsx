@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { usePlatform, useStores, PTopBar, PFooter, StoreMark, StoreArtStrip, StatusPill } from './PlatformShared';
-import { tr, CATEGORIES, storeInitials, storeUrl } from './platformData';
+import { CATEGORIES, storeInitials, storeUrl } from './platformData';
 
-function StoreCard({ T, store, onOpen, layout = 'tall' }) {
+function StoreCard({ T, t, store, onOpen, layout = 'tall' }) {
   return (
     <div onClick={onOpen} style={{
       background: T.surface, borderRadius: 18, border: `1px solid ${T.border}`,
@@ -22,12 +23,12 @@ function StoreCard({ T, store, onOpen, layout = 'tall' }) {
         </div>
       </div>
       <div style={{ font: `400 12.5px/1.45 ${T.font}`, color: T.textDim, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden', minHeight: 36 }}>
-        {store.description || 'An independent shop on esy.'}
+        {store.description || t('directory.anIndependentShop')}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
-        <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{store.category || 'shop'}</div>
+        <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{store.category ? t(`directory.cat.${store.category}`) : t('directory.shop')}</div>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, font: `700 11.5px ${T.font}`, color: store.primaryColor }}>
-          {tr('en', 'visit')}
+          {t('directory.visit')}
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
         </span>
       </div>
@@ -53,7 +54,7 @@ function CardSkeleton({ T, layout = 'tall' }) {
   );
 }
 
-function QuickView({ T, store, onClose }) {
+function QuickView({ T, t, store, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: T.dark ? 'rgba(10,10,18,0.75)' : 'rgba(15,15,35,0.45)', backdropFilter: 'blur(8px)' }} />
@@ -71,10 +72,10 @@ function QuickView({ T, store, onClose }) {
             <span style={{ font: `500 11.5px ${T.mono}`, color: T.textDim }}>{store.subdomain}.esy.ge</span>
           </div>
           <div style={{ marginTop: 8, display: 'flex', gap: 10, alignItems: 'center', font: `500 11.5px ${T.font}`, color: T.textMute }}>
-            {store.category && <span style={{ textTransform: 'capitalize' }}>{store.category}</span>}
-            <StatusPill T={T} kind="live">live</StatusPill>
+            {store.category && <span style={{ textTransform: 'capitalize' }}>{t(`directory.cat.${store.category}`)}</span>}
+            <StatusPill T={T} kind="live">{t('directory.live')}</StatusPill>
           </div>
-          <div style={{ marginTop: 16, font: `400 14px/1.55 ${T.font}`, color: T.textDim }}>{store.description || 'An independent shop on esy.'}</div>
+          <div style={{ marginTop: 16, font: `400 14px/1.55 ${T.font}`, color: T.textDim }}>{store.description || t('directory.anIndependentShop')}</div>
           <div style={{ marginTop: 22, display: 'flex', gap: 10 }}>
             <button onClick={() => { window.location.href = storeUrl(store); }} style={{
               flex: 1, height: 50, borderRadius: 14, border: 'none',
@@ -82,7 +83,7 @@ function QuickView({ T, store, onClose }) {
               color: '#fff', font: `700 14px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${store.primaryColor}55`,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
-              Visit {store.subdomain}.esy.ge
+              {t('directory.visitStore', { host: `${store.subdomain}.esy.ge` })}
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
             </button>
           </div>
@@ -93,7 +94,8 @@ function QuickView({ T, store, onClose }) {
 }
 
 export default function PlatformDirectory() {
-  const { T, isDesktop, lang } = usePlatform();
+  const { T, isDesktop } = usePlatform();
+  const { t } = useTranslation('platform');
   const navigate = useNavigate();
   const { subdomain } = useParams();
   const { stores, loading } = useStores();
@@ -118,7 +120,6 @@ export default function PlatformDirectory() {
   const open = subdomain ? list.find((s) => s.subdomain === subdomain) : null;
   const isEmpty = !loading && filtered.length === 0;
   const cols = isDesktop ? 4 : 2;
-  const pad = isDesktop ? '0 56px' : '0 22px';
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}` }}>
@@ -130,23 +131,23 @@ export default function PlatformDirectory() {
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 11px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `600 10.5px ${T.font}`, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 16 }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#3f8a4a' }} />
-              {tr(lang, 'storeCount', { n: list.length })}
+              {t('directory.storeCount', { n: list.length })}
             </div>
-            <h1 style={{ font: `700 ${isDesktop ? 52 : 30}px/1 ${T.font}`, color: T.text, letterSpacing: '-0.04em', margin: 0 }}>{tr(lang, 'everyStore')}.</h1>
+            <h1 style={{ font: `700 ${isDesktop ? 52 : 30}px/1 ${T.font}`, color: T.text, letterSpacing: '-0.04em', margin: 0 }}>{t('directory.everyStore')}.</h1>
           </div>
           {isDesktop && (
-            <button onClick={() => navigate('/sell')} style={{ height: 44, padding: '0 18px', borderRadius: 14, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55`, whiteSpace: 'nowrap' }}>+ {tr(lang, 'openStore')}</button>
+            <button onClick={() => navigate('/sell')} style={{ height: 44, padding: '0 18px', borderRadius: 14, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55`, whiteSpace: 'nowrap' }}>+ {t('directory.openStore')}</button>
           )}
         </div>
 
         <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: isDesktop ? '1.4fr auto' : '1fr', gap: 12, alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 52, padding: '0 14px 0 18px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}` }}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ color: T.textDim }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`${tr(lang, 'search')}… try "ceramic" or "olive oil"`} style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', color: T.text, font: `400 14px ${T.font}` }} />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('directory.searchPlaceholder')} style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', color: T.text, font: `400 14px ${T.font}` }} />
           </div>
           <button onClick={() => setSort(sort === 'new' ? 'az' : 'new')} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 52, padding: '0 16px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, font: `600 13px ${T.font}`, color: T.text, cursor: 'pointer', whiteSpace: 'nowrap' }}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 6h18M6 12h12M10 18h4" /></svg>
-            Sort: <span style={{ color: T.textDim }}>{sort === 'new' ? tr(lang, 'sortNew') : tr(lang, 'sortAZ')}</span>
+            {t('directory.sort')} <span style={{ color: T.textDim }}>{sort === 'new' ? t('directory.sortNew') : t('directory.sortAZ')}</span>
           </button>
         </div>
 
@@ -160,7 +161,7 @@ export default function PlatformDirectory() {
                 border: active ? 'none' : `1px solid ${T.border}`, background: active ? T.accent : 'transparent',
                 color: active ? '#fff' : T.text, font: `600 12.5px ${T.font}`, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
               }}>
-                {c.label}
+                {t(`directory.cat.${c.id}`)}
                 <span style={{ font: `700 10.5px ${T.mono}`, color: active ? 'rgba(255,255,255,0.7)' : T.textMute }}>{count}</span>
               </button>
             );
@@ -178,7 +179,7 @@ export default function PlatformDirectory() {
         {!loading && !isEmpty && (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: isDesktop ? 18 : 12 }}>
             {filtered.map((s) => (
-              <StoreCard key={s.subdomain} T={T} store={s} layout={isDesktop ? 'tall' : 'short'} onOpen={() => navigate(`/stores/${s.subdomain}`)} />
+              <StoreCard key={s.subdomain} T={T} t={t} store={s} layout={isDesktop ? 'tall' : 'short'} onOpen={() => navigate(`/stores/${s.subdomain}`)} />
             ))}
           </div>
         )}
@@ -188,18 +189,18 @@ export default function PlatformDirectory() {
             <div style={{ width: 60, height: 60, borderRadius: 16, background: T.surface2, color: T.textDim, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             </div>
-            <div style={{ font: `700 ${isDesktop ? 24 : 18}px ${T.font}`, color: T.text, letterSpacing: '-0.03em', marginBottom: 10 }}>No stores match{q ? ` "${q}"` : ' that filter'}</div>
-            <div style={{ font: `400 14px/1.55 ${T.font}`, color: T.textDim, maxWidth: 380, margin: '0 auto 24px' }}>Try a broader term, drop the category, or open a store that fills the gap.</div>
+            <div style={{ font: `700 ${isDesktop ? 24 : 18}px ${T.font}`, color: T.text, letterSpacing: '-0.03em', marginBottom: 10 }}>{q ? t('directory.noMatchQuery', { q }) : t('directory.noMatchFilter')}</div>
+            <div style={{ font: `400 14px/1.55 ${T.font}`, color: T.textDim, maxWidth: 380, margin: '0 auto 24px' }}>{t('directory.noMatchBody')}</div>
             <div style={{ display: 'inline-flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button onClick={() => { setQ(''); setCat('all'); }} style={{ height: 42, padding: '0 18px', borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, font: `600 13px ${T.font}`, cursor: 'pointer' }}>Clear search</button>
-              <button onClick={() => navigate('/sell')} style={{ height: 42, padding: '0 18px', borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55` }}>+ Open a store</button>
+              <button onClick={() => { setQ(''); setCat('all'); }} style={{ height: 42, padding: '0 18px', borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, font: `600 13px ${T.font}`, cursor: 'pointer' }}>{t('directory.clearSearch')}</button>
+              <button onClick={() => navigate('/sell')} style={{ height: 42, padding: '0 18px', borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55` }}>{t('directory.openAStore')}</button>
             </div>
           </div>
         )}
       </div>
 
       <PFooter compact />
-      {open && <QuickView T={T} store={open} onClose={() => navigate('/stores')} />}
+      {open && <QuickView T={T} t={t} store={open} onClose={() => navigate('/stores')} />}
     </div>
   );
 }

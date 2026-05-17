@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createTheme } from '@mui/material/styles';
+import i18n from '../i18n';
 import { STORAGE_KEYS, THEME_MODES, LANGUAGES } from '../constants';
 
 export const useAppTheme = () => {
@@ -28,13 +29,16 @@ export const useAppTheme = () => {
     }
   }, [mode]);
 
-  // Save language to localStorage
+  // Persist language AND drive react-i18next, so every toggle (Glow LangPill,
+  // platform globe, Language settings) localizes t() live — not just the
+  // settings page.
   useEffect(() => {
     try {
       window.localStorage.setItem(STORAGE_KEYS.LANGUAGE, language);
     } catch (error) {
       console.warn('Failed to save language to localStorage:', error);
     }
+    if (i18n.language !== language) i18n.changeLanguage(language);
   }, [language]);
 
   const theme = useMemo(() => createTheme({
