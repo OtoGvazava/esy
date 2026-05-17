@@ -18,7 +18,6 @@ const LoadingSpinner = () => (
 export const LazyProductDetails = lazy(() => import('../pages/ProductDetails'));
 export const LazyMyAccount = lazy(() => import('../pages/MyAccount'));
 export const LazyMyOrders = lazy(() => import('../pages/MyOrders'));
-export const LazyMultiStepRegistration = lazy(() => import('./MultiStepRegistration'));
 
 // Higher-order component for lazy loading with suspense
 export const withSuspense = (Component) => {
@@ -33,5 +32,4 @@ export const withSuspense = (Component) => {
 export const ProductDetails = withSuspense(LazyProductDetails);
 export const MyAccount = withSuspense(LazyMyAccount);
 export const MyOrders = withSuspense(LazyMyOrders);
-export const MultiStepRegistration = withSuspense(LazyMultiStepRegistration);
 

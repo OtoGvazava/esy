@@ -158,9 +158,6 @@ export const productApi = {
 
 // ---- Auth API ---------------------------------------------------------------
 export const authApi = {
-  devLogin({ email, name, admin } = {}) {
-    return api.post('/api/auth/dev-login', { email, name, admin });
-  },
   me() {
     return api.get('/api/auth/user');
   },

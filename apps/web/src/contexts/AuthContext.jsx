@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { STORAGE_KEYS } from '../constants';
-import { authApi, setToken, clearToken, getToken } from '../utils/api';
+import { authApi, clearToken, getToken } from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -27,9 +27,7 @@ const mapBackendUser = (u) => {
     profileImageUrl: u.profileImageUrl,
     roles,
     role: roles.includes('ADMIN') ? 'admin' : 'user',
-    provider: 'dev',
-    isNewUser: false,
-    registrationCompleted: true,
+    provider: 'google',
   };
 };
 
@@ -72,21 +70,13 @@ export const AuthProvider = ({ children }) => {
     restore();
   }, []);
 
-  // Core login: exchange an email for a real JWT via the backend dev-login.
-  const loginDev = async (email, name, admin = false) => {
-    try {
-      const res = await authApi.devLogin({ email, name, admin });
-      if (!res?.token) {
-        return { success: false, error: 'No token returned' };
-      }
-      setToken(res.token);
-      const mapped = mapBackendUser(res.user);
-      persistUser(mapped);
-      return { success: true, user: mapped };
-    } catch (error) {
-      console.error('Dev login failed:', error);
-      return { success: false, error: error.message };
-    }
+  // The only sign-in: real Google OAuth. Full-page redirect to the backend
+  // authorization endpoint; it returns a JWT to /auth/callback, which the
+  // session-restore effect above then exchanges for the user.
+  const signInWithGoogle = () => {
+    const base = window.location.port === '5173' ? 'http://localhost:8080' : '';
+    const origin = encodeURIComponent(window.location.origin);
+    window.location.href = `${base}/oauth2/authorization/google?tenant_origin=${origin}`;
   };
 
   // Kept for API compatibility with components that call login(userData) directly.
@@ -104,26 +94,6 @@ export const AuthProvider = ({ children }) => {
     clearToken();
     setUser(null);
     localStorage.removeItem(STORAGE_KEYS.USER);
-  };
-
-  // OAuth buttons map to dev-login locally (real Google/Apple needs credentials).
-  const loginWithGoogle = () => loginDev('googleuser@esy.dev', 'Google User');
-  const loginWithApple = () => loginDev('appleuser@esy.dev', 'Apple User');
-
-  const completeRegistration = async (userData) => {
-    try {
-      const updatedUser = {
-        ...user,
-        ...userData,
-        isNewUser: false,
-        registrationCompleted: true,
-      };
-      persistUser(updatedUser);
-      return { success: true };
-    } catch (error) {
-      console.error('Error completing registration:', error);
-      return { success: false, error: error.message };
-    }
   };
 
   const updateProfile = async (userData) => {
@@ -156,16 +126,11 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
-    loginDev,
     logout,
-    loginWithGoogle,
-    loginWithApple,
-    completeRegistration,
+    signInWithGoogle,
     updateProfile,
     changePassword,
     isAuthenticated: !!user,
-    isNewUser: user?.isNewUser || false,
-    registrationCompleted: user?.registrationCompleted || false,
     isAdmin: user?.role === 'admin',
     isUser: user?.role === 'user' || !user?.role,
   };

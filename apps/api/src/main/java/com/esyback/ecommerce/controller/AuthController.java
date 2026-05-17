@@ -1,6 +1,5 @@
 package com.esyback.ecommerce.controller;
 
-import com.esyback.ecommerce.dto.DevLoginRequest;
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.security.JwtUtil;
 import com.esyback.ecommerce.service.UserService;
@@ -39,45 +38,6 @@ public class AuthController {
         response.put("authenticated", true);
         response.put("user", userPayload(user));
 
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Local development login. Issues a real JWT for the given email without
-     * requiring Google/Apple OAuth2 credentials. Creates the user in the current
-     * tenant on first use. An email containing "admin" (or admin=true) gets the
-     * ADMIN role so the admin product CRUD flow can be exercised end to end.
-     */
-    @PostMapping("/dev-login")
-    public ResponseEntity<Map<String, Object>> devLogin(@RequestBody DevLoginRequest request) {
-        String email = request.getEmail() == null ? "" : request.getEmail().trim().toLowerCase();
-        if (email.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
-        }
-
-        String name = request.getName() == null ? "" : request.getName().trim();
-        String firstName = "Dev";
-        String lastName = "User";
-        if (!name.isEmpty()) {
-            String[] parts = name.split("\\s+", 2);
-            firstName = parts[0];
-            lastName = parts.length > 1 ? parts[1] : "";
-        }
-
-        User user = userService.findOrCreateUser("dev", email, email, firstName, lastName, null);
-
-        boolean wantsAdmin = Boolean.TRUE.equals(request.getAdmin()) || email.contains("admin");
-        boolean alreadyAdmin = user.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getName()));
-        if (wantsAdmin && !alreadyAdmin) {
-            userService.assignAdminRole(user.getId());
-            user = userService.findByUsername(user.getUsername()).orElse(user);
-        }
-
-        String token = jwtUtil.generateToken(user.getUsername());
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-        response.put("user", userPayload(user));
         return ResponseEntity.ok(response);
     }
 

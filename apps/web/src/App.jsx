@@ -10,7 +10,6 @@ import Account from "./pages/Account";
 import Orders from "./pages/Orders";
 import Admin from "./pages/Admin";
 import SignIn from "./pages/SignIn";
-import SignInVerify from "./pages/SignInVerify";
 import CreateStore from "./pages/CreateStore";
 import AuthCallback from "./pages/AuthCallback";
 import LanguageSettings from "./pages/LanguageSettings";
@@ -37,7 +36,6 @@ function AppShell() {
         <Route path="/orders" element={<Orders />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/signin" element={<SignIn />} />
-        <Route path="/signin/verify" element={<SignInVerify />} />
         <Route path="/create-store" element={<CreateStore />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/settings/language" element={<LanguageSettings />} />
