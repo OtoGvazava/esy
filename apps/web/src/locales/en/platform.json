@@ -152,6 +152,7 @@
     "signInTitle": "Sign in to your esy account",
     "signInBody": "One account for the stores you own and everything you shop across esy.",
     "signIn": "Sign in",
+    "signOut": "Sign out",
     "loadError": "Could not load your account",
     "roleBoth": "Seller · Shopper",
     "roleSeller": "Seller",

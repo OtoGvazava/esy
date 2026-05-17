@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { usePlatform, PTopBar, PFooter, StoreMark, StatusPill } from './PlatformShared';
 import { storeUrl } from './platformData';
 import { accountApi, handleApiError } from '../utils/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const money = (v) => {
   if (v == null) return '$0';
@@ -46,6 +47,7 @@ export default function PlatformAccount() {
   const { T, isDesktop } = usePlatform();
   const { t } = useTranslation('platform');
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [state, setState] = useState({ loading: true, data: null, error: null });
 
   useEffect(() => {
@@ -113,9 +115,12 @@ export default function PlatformAccount() {
             <h1 style={{ font: `700 ${isDesktop ? 36 : 22}px/1 ${T.font}`, color: T.text, letterSpacing: '-0.035em', margin: '0 0 6px' }}>{user.name}</h1>
             <div style={{ font: `500 12px ${T.font}`, color: T.textDim }}>{user.email}{ownedStores.length > 0 && ` · ${t(ownedStores.length > 1 ? 'account.storeCountPlural' : 'account.storeCount', { n: ownedStores.length })}`}</div>
           </div>
-          {isDesktop && (
-            <button onClick={() => navigate('/sell')} style={{ height: 38, padding: '0 14px', borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 12.5px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55`, flexShrink: 0 }}>+ {t('account.openStore')}</button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {isDesktop && (
+              <button onClick={() => navigate('/sell')} style={{ height: 38, padding: '0 14px', borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 12.5px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55` }}>+ {t('account.openStore')}</button>
+            )}
+            <button onClick={() => { logout(); navigate('/'); }} style={{ height: 38, padding: '0 14px', borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, font: `600 12.5px ${T.font}`, cursor: 'pointer', whiteSpace: 'nowrap' }}>{t('account.signOut')}</button>
+          </div>
         </div>
       </div>
 
