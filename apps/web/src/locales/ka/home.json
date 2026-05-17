@@ -1,7 +1,14 @@
 {
   "noMore": "სხვა პროდუქტები აღარ არის",
-  "failedToLoad": "პროდუქტების ჩატვირთვა ვერ მოხერხდა"
+  "failedToLoad": "პროდუქტების ჩატვირთვა ვერ მოხერხდა",
+  "follow": "გამოწერა",
+  "following": "გამოწერილია",
+  "established": "დაარსდა {{year}}",
+  "addFilter": "ფილტრის დამატება",
+  "sortNewest": "დალაგება: უახლესი",
+  "productCount_one": "{{count}} პროდუქტი",
+  "productCount_other": "{{count}} პროდუქტი",
+  "shown": "{{count}} ნაჩვენები",
+  "noProducts": "პროდუქტი ვერ მოიძებნა.",
+  "noProductsQuery": "„{{query}}“-ისთვის პროდუქტი ვერ მოიძებნა."
 }
-
-
-

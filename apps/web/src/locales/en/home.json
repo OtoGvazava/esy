@@ -1,7 +1,14 @@
 {
   "noMore": "No more products",
-  "failedToLoad": "Failed to load products"
+  "failedToLoad": "Failed to load products",
+  "follow": "Follow",
+  "following": "Following",
+  "established": "est {{year}}",
+  "addFilter": "Add filter",
+  "sortNewest": "Sort: Newest",
+  "productCount_one": "{{count}} product",
+  "productCount_other": "{{count}} products",
+  "shown": "{{count}} shown",
+  "noProducts": "No products found.",
+  "noProductsQuery": "No products found for “{{query}}”."
 }
-
-
-

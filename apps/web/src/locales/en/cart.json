@@ -10,8 +10,19 @@
   "checkout": "Checkout",
   "clearCart": "Clear Cart",
   "items": "items",
-  "item": "item"
+  "item": "item",
+  "bag": "Your bag",
+  "bagCount": "Your bag · {{count}}",
+  "emptyTitle": "Your bag is empty",
+  "emptyBody": "Add something you love from the storefront — the cart updates live.",
+  "browse": "Browse {{name}}",
+  "freeShipAway": "You're {{amount}} away from free shipping",
+  "freeShipUnlocked": "You’ve unlocked free shipping",
+  "promoPlaceholder": "Promo code",
+  "apply": "Apply",
+  "shipping": "Shipping",
+  "free": "Free",
+  "tax": "Tax",
+  "taxNote": "calculated at checkout",
+  "continueCheckout": "Continue to checkout"
 }
-
-
-
