@@ -50,7 +50,17 @@
     "tax": "Tax",
     "total": "Total",
     "placing": "Placing order…",
-    "payNow": "Pay now"
+    "payNow": "Pay now",
+    "verifyTitle": "Before you can pay",
+    "needSignIn": "Sign in to place an order.",
+    "signIn": "Sign in",
+    "completeProfileHint": "Complete your profile to continue.",
+    "needPhone": "Add a phone number to your account to place an order.",
+    "addPhone": "Add phone number",
+    "verifyPhoneHint": "Verify {{phone}} to place your order.",
+    "signInToPay": "Sign in to pay",
+    "completeProfile": "Complete your profile",
+    "verifyToPay": "Verify phone to pay"
   },
   "saved": {
     "title": "Saved",
@@ -112,7 +122,7 @@
     "seeAll": "See all",
     "itemCount_one": "{{count}} item",
     "itemCount_other": "{{count}} items",
-    "setLanguage": "Language & region",
+    "setLanguage": "Language",
     "setAppearance": "Appearance",
     "appearanceDark": "Dark",
     "appearanceLight": "Light",
@@ -121,7 +131,20 @@
     "setDashboard": "Shop dashboard",
     "dashboardValue": "Admin",
     "setHelp": "Help & support",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "personal": {
+      "title": "Personal information",
+      "edit": "Edit",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "dob": "Date of birth",
+      "phone": "Phone number",
+      "required": "Name, surname and date of birth are required.",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "saveError": "Could not save. Please try again."
+    }
   },
   "search": {
     "cancel": "Cancel",
@@ -159,5 +182,36 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System · Auto"
+  },
+  "profileGate": {
+    "title": "Complete your profile",
+    "subtitle": "We need a few details before you continue.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "dob": "Date of birth",
+    "save": "Save and continue",
+    "saving": "Saving…",
+    "required": "Please fill in your name, surname and date of birth.",
+    "error": "Could not save. Please try again."
+  },
+  "phone": {
+    "title": "Phone number",
+    "change": "Change",
+    "add": "Add",
+    "reverifyNote": "Number changed — verify it again.",
+    "verified": "Verified",
+    "unverified": "Not verified",
+    "addPrompt": "Add a phone number to verify it before checkout.",
+    "verifyCta": "Verify phone number",
+    "sending": "Sending…",
+    "sentHint": "We sent a 6-digit code to your phone.",
+    "devCode": "Dev code: {{code}}",
+    "confirm": "Confirm",
+    "checking": "Checking…"
+  },
+  "dob": {
+    "day": "Day",
+    "month": "Month",
+    "year": "Year"
   }
 }

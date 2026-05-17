@@ -6,7 +6,7 @@ import {
   Typography, 
   useTheme,
   Paper,
-  Fade
+  Fade,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -14,14 +14,14 @@ import { useTranslation } from 'react-i18next';
 import { useIslandStyles } from '../styles/islandStyles';
 
 const GoogleStyleSearch = ({ 
-  searchQuery = "", 
+  searchQuery = '', 
   onSearchChange, 
   onSearchSubmit,
-  placeholder = "Search products...",
+  placeholder = 'Search products...',
   disabled = false,
   showSuggestions = true,
   actionButtons = null,
-  sx = {} 
+  sx = {}, 
 }) => {
   const { t } = useTranslation('navbar');
   const theme = useTheme();
@@ -60,12 +60,12 @@ const GoogleStyleSearch = ({
       'retinol cream',
       'sunscreen',
       'face mask',
-      'exfoliator'
+      'exfoliator',
     ];
 
     const filtered = allSuggestions
       .filter(suggestion => 
-        suggestion.toLowerCase().includes(query.toLowerCase())
+        suggestion.toLowerCase().includes(query.toLowerCase()),
       )
       .slice(0, 10); // Show max 10 suggestions like Google
 
@@ -93,7 +93,7 @@ const GoogleStyleSearch = ({
 
   const handleClear = () => {
     if (onSearchChange) {
-      onSearchChange("");
+      onSearchChange('');
     }
     // Focus back to input after clearing
     if (inputRef.current) {
@@ -145,7 +145,7 @@ const GoogleStyleSearch = ({
         position: 'relative',
         width: '100%',
         maxWidth: 1400,
-        ...sx
+        ...sx,
       }}
     >
       {/* Main Search Container */}
@@ -158,7 +158,7 @@ const GoogleStyleSearch = ({
           width: '100%',
           px: 0,
           border: isFocused 
-            ? `1px solid rgba(99, 102, 241, 0.5)` 
+            ? '1px solid rgba(99, 102, 241, 0.5)' 
             : islandStyles.container.border,
           boxShadow: isFocused 
             ? theme.palette.mode === 'dark' 
@@ -169,11 +169,11 @@ const GoogleStyleSearch = ({
           overflow: 'hidden',
           '&:hover': {
             transform: 'translateY(-2px)',
-            border: `1px solid rgba(99, 102, 241, 0.5)`,
+            border: '1px solid rgba(99, 102, 241, 0.5)',
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(99, 102, 241, 0.3)' 
               : '0 12px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(99, 102, 241, 0.2)',
-          }
+          },
         }}
       >
         {/* Search Icon */}
@@ -183,7 +183,7 @@ const GoogleStyleSearch = ({
           alignItems: 'center', 
           ml: 2,
           color: 'inherit',
-          opacity: 0.7
+          opacity: 0.7,
         }}>
           <SearchIcon />
         </Box>
@@ -197,23 +197,23 @@ const GoogleStyleSearch = ({
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          inputProps={{ "aria-label": "search" }}
+          inputProps={{ 'aria-label': 'search' }}
           disabled={disabled}
           sx={{ 
-            color: "inherit",
+            color: 'inherit',
             width: '100%', 
             flex: 1,
-            fontSize: { xs: "1.1rem", sm: "1.2rem" },
+            fontSize: { xs: '1.1rem', sm: '1.2rem' },
             fontWeight: 400,
             opacity: disabled ? 0.5 : 1,
             px: 1,
-            "& .MuiInputBase-input": {
-              "&::placeholder": {
+            '& .MuiInputBase-input': {
+              '&::placeholder': {
                 opacity: 0.6,
-                fontSize: { xs: "1.1rem", sm: "1.2rem" },
+                fontSize: { xs: '1.1rem', sm: '1.2rem' },
               },
-              "&:disabled": {
-                cursor: "not-allowed",
+              '&:disabled': {
+                cursor: 'not-allowed',
               },
             },
           }}
@@ -226,14 +226,14 @@ const GoogleStyleSearch = ({
             aria-label="Clear search"
             onClick={handleClear}
             sx={{
-              color: "inherit",
+              color: 'inherit',
               mr: 1,
               opacity: 0.7,
               transition: 'opacity 0.2s ease',
-              "&:hover": {
+              '&:hover': {
                 opacity: 1,
                 backgroundColor: 'transparent',
-              }
+              },
             }}
           >
             <ClearIcon fontSize="small" />
@@ -250,7 +250,7 @@ const GoogleStyleSearch = ({
             borderLeft: `1px solid ${theme.palette.mode === 'dark' 
               ? 'rgba(255,255,255,0.1)' 
               : 'rgba(0,0,0,0.1)'}`,
-            pl: 1
+            pl: 1,
           }}>
             {actionButtons}
           </Box>
@@ -281,7 +281,7 @@ const GoogleStyleSearch = ({
             maxHeight: 300,
             overflow: 'hidden',
             zIndex: 1000,
-            display: showDropdown ? 'block' : 'none'
+            display: showDropdown ? 'block' : 'none',
           }}
         >
           {filteredSuggestions.length > 0 ? filteredSuggestions.map((suggestion, index) => (
@@ -309,7 +309,7 @@ const GoogleStyleSearch = ({
                 },
                 '&:last-child': {
                   borderBottom: 'none',
-                }
+                },
               }}
             >
               <SearchIcon 
@@ -317,7 +317,7 @@ const GoogleStyleSearch = ({
                   fontSize: '1rem', 
                   opacity: 0.6,
                   color: theme.palette.mode === 'dark' ? '#f5f5f7' : '#111',
-                  flexShrink: 0
+                  flexShrink: 0,
                 }} 
               />
               <Typography
@@ -328,7 +328,7 @@ const GoogleStyleSearch = ({
                   flex: 1,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {suggestion}
@@ -352,7 +352,7 @@ const GoogleStyleSearch = ({
               fontSize: '1rem', 
               opacity: 0.6,
               color: theme.palette.mode === 'dark' ? '#f5f5f7' : '#111',
-              flexShrink: 0
+              flexShrink: 0,
             }} 
           />
           <Typography

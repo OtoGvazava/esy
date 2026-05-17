@@ -44,7 +44,7 @@ export const useIslandStyles = () => {
         boxShadow: theme.palette.mode === 'dark' 
           ? '0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(99, 102, 241, 0.3)' 
           : '0 12px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(99, 102, 241, 0.2)',
-      }
+      },
     },
 
     // Gradient overlay for hover effects
@@ -63,14 +63,14 @@ export const useIslandStyles = () => {
       },
       '&:hover::before': {
         opacity: 1,
-      }
+      },
     },
 
     // Content positioning for islands with overlays
     content: {
       position: 'relative',
       zIndex: 1,
-    }
+    },
   };
 };
 

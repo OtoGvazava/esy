@@ -2,9 +2,11 @@ package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.dto.PagedResponse;
 import com.esyback.ecommerce.dto.ProductDto;
+import com.esyback.ecommerce.dto.ProductImageDto;
 import com.esyback.ecommerce.dto.ProductListDto;
 import com.esyback.ecommerce.entity.Product;
 import com.esyback.ecommerce.entity.Tenant;
+import com.esyback.ecommerce.repository.ProductImageRepository;
 import com.esyback.ecommerce.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,14 +17,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class ProductService {
-    
+
     private final ProductRepository productRepository;
+    private final ProductImageRepository productImageRepository;
     private final TenantContextService tenantContextService;
     
     public PagedResponse<ProductListDto> getProducts(int page, int size, String sortBy, String sortDir,
@@ -57,7 +62,9 @@ public class ProductService {
         Product product = new Product();
         product.setTitle(productDto.getTitle());
         product.setDescription(productDto.getDescription());
-        product.setImageUrl(productDto.getImageUrl());
+        // imageUrl is no longer user-set: it's the primary-thumbnail pointer
+        // managed by ProductImageService (set on first upload, repointed on
+        // delete). Legacy seeded products keep their existing imageUrl.
         product.setPrice(productDto.getPrice());
         product.setQuantity(productDto.getQuantity());
         product.setTenant(currentTenant);
@@ -73,7 +80,7 @@ public class ProductService {
             .map(existingProduct -> {
                 existingProduct.setTitle(productDto.getTitle());
                 existingProduct.setDescription(productDto.getDescription());
-                existingProduct.setImageUrl(productDto.getImageUrl());
+                // imageUrl intentionally untouched — managed by image upload/delete.
                 existingProduct.setPrice(productDto.getPrice());
                 existingProduct.setQuantity(productDto.getQuantity());
                 
@@ -103,6 +110,15 @@ public class ProductService {
     }
     
     private ProductDto convertToProductDto(Product product) {
-        return new ProductDto(product);
+        ProductDto dto = new ProductDto(product);
+        List<ProductImageDto> images = productImageRepository
+            .findMetaByProductId(product.getId()).stream()
+            .map(m -> new ProductImageDto(
+                m.getId(),
+                ProductImageService.imageUrl(product.getId(), m.getId()),
+                m.getPosition()))
+            .collect(Collectors.toList());
+        dto.setImages(images);
+        return dto;
     }
 }

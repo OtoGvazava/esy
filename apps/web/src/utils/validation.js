@@ -38,7 +38,7 @@ export const validators = {
       return age - 1 >= minAge;
     }
     return age >= minAge;
-  }
+  },
 };
 
 // Form validation helper
@@ -66,33 +66,33 @@ export const validateForm = (data, rules) => {
   
   return {
     isValid: Object.keys(errors).length === 0,
-    errors
+    errors,
   };
 };
 
 // Common validation rules
 export const commonRules = {
   firstName: [
-    { validator: validators.required, message: 'First name is required' }
+    { validator: validators.required, message: 'First name is required' },
   ],
   lastName: [
-    { validator: validators.required, message: 'Last name is required' }
+    { validator: validators.required, message: 'Last name is required' },
   ],
   email: [
     { validator: validators.required, message: 'Email is required' },
-    { validator: validators.email, message: 'Please enter a valid email' }
+    { validator: validators.email, message: 'Please enter a valid email' },
   ],
   phone: [
     { validator: validators.required, message: 'Phone number is required' },
-    { validator: validators.phone, message: 'Please enter a valid Georgian phone number' }
+    { validator: validators.phone, message: 'Please enter a valid Georgian phone number' },
   ],
   personalNumber: [
     { validator: validators.required, message: 'Personal number is required' },
-    { validator: validators.personalNumber, message: 'Personal number must be 11 digits' }
+    { validator: validators.personalNumber, message: 'Personal number must be 11 digits' },
   ],
   dateOfBirth: [
     { validator: validators.required, message: 'Date of birth is required' },
-    { validator: (value) => validators.age(value), message: 'You must be at least 18 years old' }
-  ]
+    { validator: (value) => validators.age(value), message: 'You must be at least 18 years old' },
+  ],
 };
 

@@ -9,15 +9,15 @@ export const createSampleOrders = () => {
           name: 'iPhone 15 Pro',
           price: 999.99,
           quantity: 1,
-          image: 'https://via.placeholder.com/60x60?text=iPhone'
+          image: 'https://via.placeholder.com/60x60?text=iPhone',
         },
         {
           id: '2',
           name: 'AirPods Pro',
           price: 249.99,
           quantity: 1,
-          image: 'https://via.placeholder.com/60x60?text=AirPods'
-        }
+          image: 'https://via.placeholder.com/60x60?text=AirPods',
+        },
       ],
       total: 1249.98,
       status: 'delivered',
@@ -28,9 +28,9 @@ export const createSampleOrders = () => {
         street: '123 Main St',
         city: 'Tbilisi',
         postalCode: '0100',
-        country: 'Georgia'
+        country: 'Georgia',
       },
-      paymentMethod: 'Credit Card'
+      paymentMethod: 'Credit Card',
     },
     {
       id: `order_${Date.now() - 172800000}_sample2`,
@@ -40,8 +40,8 @@ export const createSampleOrders = () => {
           name: 'MacBook Pro 16"',
           price: 2499.99,
           quantity: 1,
-          image: 'https://via.placeholder.com/60x60?text=MacBook'
-        }
+          image: 'https://via.placeholder.com/60x60?text=MacBook',
+        },
       ],
       total: 2499.99,
       status: 'shipped',
@@ -52,9 +52,9 @@ export const createSampleOrders = () => {
         street: '123 Main St',
         city: 'Tbilisi',
         postalCode: '0100',
-        country: 'Georgia'
+        country: 'Georgia',
       },
-      paymentMethod: 'Credit Card'
+      paymentMethod: 'Credit Card',
     },
     {
       id: `order_${Date.now() - 259200000}_sample3`,
@@ -64,15 +64,15 @@ export const createSampleOrders = () => {
           name: 'iPad Air',
           price: 599.99,
           quantity: 1,
-          image: 'https://via.placeholder.com/60x60?text=iPad'
+          image: 'https://via.placeholder.com/60x60?text=iPad',
         },
         {
           id: '5',
           name: 'Apple Pencil',
           price: 129.99,
           quantity: 1,
-          image: 'https://via.placeholder.com/60x60?text=Pencil'
-        }
+          image: 'https://via.placeholder.com/60x60?text=Pencil',
+        },
       ],
       total: 729.98,
       status: 'processing',
@@ -83,9 +83,9 @@ export const createSampleOrders = () => {
         street: '123 Main St',
         city: 'Tbilisi',
         postalCode: '0100',
-        country: 'Georgia'
+        country: 'Georgia',
       },
-      paymentMethod: 'Credit Card'
+      paymentMethod: 'Credit Card',
     },
     {
       id: `order_${Date.now() - 345600000}_sample4`,
@@ -95,8 +95,8 @@ export const createSampleOrders = () => {
           name: 'Apple Watch Series 9',
           price: 399.99,
           quantity: 1,
-          image: 'https://via.placeholder.com/60x60?text=Watch'
-        }
+          image: 'https://via.placeholder.com/60x60?text=Watch',
+        },
       ],
       total: 399.99,
       status: 'pending',
@@ -107,10 +107,10 @@ export const createSampleOrders = () => {
         street: '123 Main St',
         city: 'Tbilisi',
         postalCode: '0100',
-        country: 'Georgia'
+        country: 'Georgia',
       },
-      paymentMethod: 'Credit Card'
-    }
+      paymentMethod: 'Credit Card',
+    },
   ];
 
   return sampleOrders;

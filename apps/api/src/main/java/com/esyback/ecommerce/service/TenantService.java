@@ -1,6 +1,7 @@
 package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.dto.CreateTenantRequest;
+import com.esyback.ecommerce.dto.UpdateStoreRequest;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
@@ -96,6 +97,25 @@ public class TenantService {
         tenant.setSecondaryColor(normalizeColor(req.getSecondaryColor(), DEFAULT_SECONDARY));
         tenant.setCategory(normalizeCategory(req.getCategory()));
         tenant.setIsActive(true);
+        return tenantRepository.save(tenant);
+    }
+
+    /**
+     * Owner-editable branding only. Subdomain + unique name are not touched
+     * (routing key / SSO cookie domain / directory identity). Blank fields
+     * clear the value; displayName falls back to the store name like signup.
+     */
+    public Tenant updateBranding(Tenant tenant, UpdateStoreRequest req) {
+        if (tenant == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No store in context");
+        }
+        String displayName = blankToNull(req.getDisplayName());
+        tenant.setDisplayName(displayName == null ? tenant.getName() : displayName);
+        tenant.setDescription(blankToNull(req.getDescription()));
+        tenant.setLogoUrl(blankToNull(req.getLogoUrl()));
+        tenant.setPrimaryColor(normalizeColor(req.getPrimaryColor(), DEFAULT_PRIMARY));
+        tenant.setSecondaryColor(normalizeColor(req.getSecondaryColor(), DEFAULT_SECONDARY));
+        tenant.setCategory(normalizeCategory(req.getCategory()));
         return tenantRepository.save(tenant);
     }
 

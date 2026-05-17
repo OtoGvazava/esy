@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeSampleOrders } from '../utils/sampleOrders';
 
@@ -56,7 +57,7 @@ export const OrdersProvider = ({ children }) => {
         ...orderData,
         createdAt: new Date().toISOString(),
         status: 'pending',
-        trackingNumber: `TRK${Date.now().toString().slice(-8)}`
+        trackingNumber: `TRK${Date.now().toString().slice(-8)}`,
       };
 
       setOrders(prevOrders => [newOrder, ...prevOrders]);
@@ -72,8 +73,8 @@ export const OrdersProvider = ({ children }) => {
   const updateOrderStatus = (orderId, status) => {
     setOrders(prevOrders =>
       prevOrders.map(order =>
-        order.id === orderId ? { ...order, status } : order
-      )
+        order.id === orderId ? { ...order, status } : order,
+      ),
     );
   };
 
@@ -101,7 +102,7 @@ export const OrdersProvider = ({ children }) => {
     getOrderById,
     getOrdersByStatus,
     getTotalOrders,
-    getTotalSpent
+    getTotalSpent,
   };
 
   return (

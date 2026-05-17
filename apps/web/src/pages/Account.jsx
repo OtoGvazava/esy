@@ -7,6 +7,7 @@ import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useGlow } from '../styles/glow';
 import { Icon, PoweredBy, langInfo } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, money } from '../components/glow/GlowChrome';
+import PersonalInfo from '../components/PersonalInfo';
 import SignIn from './SignIn';
 
 export default function Account() {
@@ -41,7 +42,18 @@ export default function Account() {
         {/* profile */}
         <div style={{ padding: '6px 16px 16px' }}>
           <div style={{ padding: '18px 16px', borderRadius: 18, background: `linear-gradient(135deg, ${T.accent}1c, transparent 70%), ${T.surface}`, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: T.grad, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `800 22px ${T.font}` }}>{initial}</div>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', position: 'relative', overflow: 'hidden', background: T.grad, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `800 22px ${T.font}`, flexShrink: 0 }}>
+              {initial}
+              {user?.avatar && (
+                <img
+                  src={user.avatar}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              )}
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ font: `700 17px ${T.font}`, color: T.text, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
               <div style={{ font: `400 12px ${T.font}`, color: T.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
@@ -65,6 +77,9 @@ export default function Account() {
             </div>
           ))}
         </div>
+
+        {/* personal information + phone verification */}
+        <PersonalInfo />
 
         {/* recent orders */}
         {recent.length > 0 && (

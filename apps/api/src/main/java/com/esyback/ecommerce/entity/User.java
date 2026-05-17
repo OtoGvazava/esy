@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -48,6 +49,16 @@ public class User {
     
     @Column(name = "profile_image_url")
     private String profileImageUrl;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    // Dev stand-in OTP verifies this; required to place an order, not to sign up.
+    @Column(name = "phone_verified")
+    private Boolean phoneVerified = false;
     
     @Column(name = "oauth_provider")
     private String oauthProvider; // "google" or "apple"

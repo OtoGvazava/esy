@@ -40,7 +40,7 @@ export const useDeviceMode = () => {
     
     // Constants
     DEVICE_MODES: device.DEVICE_MODES,
-    BREAKPOINTS: device.BREAKPOINTS
+    BREAKPOINTS: device.BREAKPOINTS,
   };
 };
 

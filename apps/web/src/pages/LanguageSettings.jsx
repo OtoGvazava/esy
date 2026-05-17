@@ -54,7 +54,6 @@ export default function LanguageSettings() {
                 }}>{l.short}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ font: `600 14px ${T.font}`, color: T.text, letterSpacing: '-0.01em' }}>{l.native}</div>
-                  <div style={{ font: `400 11.5px ${T.font}`, color: T.textMute }}>{l.region} · {l.currency}</div>
                 </div>
                 {active ? (
                   <span style={{ width: 24, height: 24, borderRadius: '50%', background: T.accent, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.check /></span>

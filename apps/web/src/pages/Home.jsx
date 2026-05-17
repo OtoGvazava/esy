@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useTenant } from '../contexts/TenantContext';
+import { useOwnerTools } from '../contexts/OwnerToolsContext';
+import OwnerBar from '../components/owner/OwnerBar';
 import { useGlow } from '../styles/glow';
 import { Icon, PoweredBy, GlowToken } from '../components/glow/GlowPrimitives';
 import GlowSearchBar from '../components/glow/GlowSearchBar';
@@ -101,6 +103,7 @@ export default function Home() {
   const { mode, toggle: toggleTheme, language } = useThemeMode();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation('home');
+  const { canManage, editProduct, deleteProduct, version } = useOwnerTools();
 
   const [query, setQuery] = useState(searchParams.get('search') || '');
   const [products, setProducts] = useState([]);
@@ -161,7 +164,8 @@ export default function Home() {
     setError('');
     isLoadingRef.current = false;
     loadMoreProducts(0, debouncedQuery, true);
-  }, [debouncedQuery, loadMoreProducts]);
+    // `version` bumps after an owner add/edit/delete → reload page 0.
+  }, [debouncedQuery, loadMoreProducts, version]);
 
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
@@ -195,7 +199,8 @@ export default function Home() {
       {/* topbar */}
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `28px ${gutter}px 0` }}>
         <GlowLogo T={T} tenant={tenant} size={isDesktop ? 22 : 20} />
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <OwnerBar />
           <FollowPill T={T} />
           <ThemePill T={T} dark={mode === 'dark'} onClick={toggleTheme} />
           <LangPill T={T} lang={language} onClick={() => navigate('/settings/language')} />
@@ -246,6 +251,7 @@ export default function Home() {
           <GlowProductCard
             key={p.id} T={T} p={p} hue={tenant.hue} compact={!isDesktop}
             onOpen={openProduct} onAdd={handleAdd}
+            owner={canManage ? { onEdit: () => editProduct(p), onDelete: () => deleteProduct(p) } : undefined}
           />
         ))}
       </div>

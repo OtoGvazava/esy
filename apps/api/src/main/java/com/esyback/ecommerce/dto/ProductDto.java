@@ -8,6 +8,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class ProductDto {
     
@@ -29,9 +30,13 @@ public class ProductDto {
     private Integer quantity;
     
     private LocalDateTime createdAt;
-    
+
     private LocalDateTime updatedAt;
-    
+
+    // Uploaded gallery (our DB-backed images). `imageUrl` stays the primary
+    // thumbnail used everywhere; this is the additive multi-image list.
+    private List<ProductImageDto> images;
+
     // Constructors
     public ProductDto() {}
     
@@ -109,5 +114,13 @@ public class ProductDto {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<ProductImageDto> getImages() {
+        return images;
+    }
+
+    public void setImages(List<ProductImageDto> images) {
+        this.images = images;
     }
 }

@@ -3,6 +3,7 @@ import { Box, Typography, useTheme } from '@mui/material';
 import { useIslandStyles } from '../styles/islandStyles';
 
 const Logo = ({ onClick, sx = {} }) => {
+  // eslint-disable-next-line no-unused-vars
   const theme = useTheme();
   const islandStyles = useIslandStyles();
 
@@ -27,7 +28,7 @@ const Logo = ({ onClick, sx = {} }) => {
         py: 1.5,
         minWidth: { xs: 120, sm: 140, md: 160 },
         maxWidth: { xs: 200, sm: 240, md: 280 },
-        ...sx
+        ...sx,
       }}
     >
       <Box sx={{ ...islandStyles.content }}>
@@ -50,7 +51,7 @@ const Logo = ({ onClick, sx = {} }) => {
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-            }
+            },
           }}
         >
           esy

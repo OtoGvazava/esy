@@ -28,7 +28,7 @@ import {
   Stack,
   Fade,
   Slide,
-  CardMedia
+  CardMedia,
 } from '@mui/material';
 import {
   ShoppingBagOutlined,
@@ -39,7 +39,7 @@ import {
   VisibilityOutlined,
   CloseOutlined,
   TrendingUpOutlined,
-  ReceiptOutlined
+  ReceiptOutlined,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useOrders } from '../contexts/OrdersContext';
@@ -75,7 +75,7 @@ const MyOrders = () => {
       shipped: 'secondary',
       delivered: 'success',
       cancelled: 'error',
-      refunded: 'default'
+      refunded: 'default',
     };
     return colors[status] || 'default';
   };
@@ -88,7 +88,7 @@ const MyOrders = () => {
       shipped: <LocalShippingOutlined />,
       delivered: <CheckCircleOutlined />,
       cancelled: <CancelOutlined />,
-      refunded: <RefreshOutlined />
+      refunded: <RefreshOutlined />,
     };
     return icons[status] || <ShoppingBagOutlined />;
   };
@@ -99,7 +99,7 @@ const MyOrders = () => {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -126,7 +126,7 @@ const MyOrders = () => {
     t('status.processing'),
     t('status.shipped'),
     t('status.delivered'),
-    t('status.cancelled')
+    t('status.cancelled'),
   ];
 
   if (!user) {
@@ -141,7 +141,7 @@ const MyOrders = () => {
               color: '#6366f1',
               mb: 3,
               border: '2px solid rgba(99, 102, 241, 0.2)',
-              mx: 'auto'
+              mx: 'auto',
             }}
           >
             <ShoppingBagOutlined sx={{ fontSize: 40 }} />
@@ -180,7 +180,7 @@ const MyOrders = () => {
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.02em'
+            letterSpacing: '-0.02em',
           }}
         >
           {t('myOrders')}
@@ -199,21 +199,21 @@ const MyOrders = () => {
               textAlign: 'center',
               borderRadius: 3,
               border: theme.palette.mode === 'dark'
-                ? "1px solid rgba(255, 255, 255, 0.1)"
-                : "1px solid rgba(0, 0, 0, 0.08)",
+                ? '1px solid rgba(255, 255, 255, 0.1)'
+                : '1px solid rgba(0, 0, 0, 0.08)',
               background: theme.palette.mode === 'dark'
-                ? "rgba(255, 255, 255, 0.05)"
-                : "rgba(255, 255, 255, 0.9)",
-              backdropFilter: "blur(10px)",
+                ? 'rgba(255, 255, 255, 0.05)'
+                : 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(10px)',
               boxShadow: theme.palette.mode === 'dark'
-                ? "0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)"
-                : "0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+                : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': { 
-                transform: "translateY(-4px)", 
+                transform: 'translateY(-4px)', 
                 boxShadow: theme.palette.mode === 'dark'
-                  ? "0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.2)"
-                  : "0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.2)",
+                  ? '0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.2)'
+                  : '0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.2)',
               },
             })}
           >
@@ -224,8 +224,8 @@ const MyOrders = () => {
                   background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                   color: 'white',
                   fontWeight: 600,
-                  border: '2px solid white'
-                }
+                  border: '2px solid white',
+                },
               }}
             >
               <Avatar
@@ -252,21 +252,21 @@ const MyOrders = () => {
               textAlign: 'center',
               borderRadius: 3,
               border: theme.palette.mode === 'dark'
-                ? "1px solid rgba(255, 255, 255, 0.1)"
-                : "1px solid rgba(0, 0, 0, 0.08)",
+                ? '1px solid rgba(255, 255, 255, 0.1)'
+                : '1px solid rgba(0, 0, 0, 0.08)',
               background: theme.palette.mode === 'dark'
-                ? "rgba(255, 255, 255, 0.05)"
-                : "rgba(255, 255, 255, 0.9)",
-              backdropFilter: "blur(10px)",
+                ? 'rgba(255, 255, 255, 0.05)'
+                : 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(10px)',
               boxShadow: theme.palette.mode === 'dark'
-                ? "0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)"
-                : "0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+                : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': { 
-                transform: "translateY(-4px)", 
+                transform: 'translateY(-4px)', 
                 boxShadow: theme.palette.mode === 'dark'
-                  ? "0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.2)"
-                  : "0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.2)",
+                  ? '0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.2)'
+                  : '0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.2)',
               },
             })}
           >
@@ -277,7 +277,7 @@ const MyOrders = () => {
                 bgcolor: 'rgba(34, 197, 94, 0.1)',
                 color: '#22c55e',
                 border: '2px solid rgba(34, 197, 94, 0.2)',
-                mx: 'auto'
+                mx: 'auto',
               }}
             >
               <TrendingUpOutlined sx={{ fontSize: 30 }} />
@@ -307,21 +307,21 @@ const MyOrders = () => {
               textAlign: 'center',
               borderRadius: 3,
               border: theme.palette.mode === 'dark'
-                ? "1px solid rgba(255, 255, 255, 0.1)"
-                : "1px solid rgba(0, 0, 0, 0.08)",
+                ? '1px solid rgba(255, 255, 255, 0.1)'
+                : '1px solid rgba(0, 0, 0, 0.08)',
               background: theme.palette.mode === 'dark'
-                ? "rgba(255, 255, 255, 0.05)"
-                : "rgba(255, 255, 255, 0.9)",
-              backdropFilter: "blur(10px)",
+                ? 'rgba(255, 255, 255, 0.05)'
+                : 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(10px)',
               boxShadow: theme.palette.mode === 'dark'
-                ? "0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)"
-                : "0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+                : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': { 
-                transform: "translateY(-4px)", 
+                transform: 'translateY(-4px)', 
                 boxShadow: theme.palette.mode === 'dark'
-                  ? "0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.2)"
-                  : "0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.2)",
+                  ? '0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.2)'
+                  : '0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.2)',
               },
             })}
           >
@@ -332,7 +332,7 @@ const MyOrders = () => {
                 bgcolor: 'rgba(59, 130, 246, 0.1)',
                 color: '#3b82f6',
                 border: '2px solid rgba(59, 130, 246, 0.2)',
-                mx: 'auto'
+                mx: 'auto',
               }}
             >
               <ReceiptOutlined sx={{ fontSize: 30 }} />
@@ -362,20 +362,20 @@ const MyOrders = () => {
         sx={(theme) => ({
           borderRadius: 3,
           border: theme.palette.mode === 'dark'
-            ? "1px solid rgba(255, 255, 255, 0.1)"
-            : "1px solid rgba(0, 0, 0, 0.08)",
+            ? '1px solid rgba(255, 255, 255, 0.1)'
+            : '1px solid rgba(0, 0, 0, 0.08)',
           background: theme.palette.mode === 'dark'
-            ? "rgba(255, 255, 255, 0.05)"
-            : "rgba(255, 255, 255, 0.9)",
-          backdropFilter: "blur(10px)",
+            ? 'rgba(255, 255, 255, 0.05)'
+            : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
           mb: 3,
-          overflow: 'hidden'
+          overflow: 'hidden',
         })}
       >
         <Tabs
           value={selectedTab}
           onChange={handleTabChange}
-          variant={isMobile ? "scrollable" : "standard"}
+          variant={isMobile ? 'scrollable' : 'standard'}
           scrollButtons="auto"
           allowScrollButtonsMobile
           sx={{
@@ -393,13 +393,13 @@ const MyOrders = () => {
               '&.Mui-selected': {
                 color: '#6366f1',
                 background: 'rgba(99, 102, 241, 0.1)',
-              }
+              },
             },
             '& .MuiTabs-indicator': {
               background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
               height: 3,
-              borderRadius: '3px 3px 0 0'
-            }
+              borderRadius: '3px 3px 0 0',
+            },
           }}
         >
           {tabLabels.map((label, index) => (
@@ -416,12 +416,12 @@ const MyOrders = () => {
             py: 8,
             borderRadius: 3,
             border: theme.palette.mode === 'dark'
-              ? "1px solid rgba(255, 255, 255, 0.1)"
-              : "1px solid rgba(0, 0, 0, 0.08)",
+              ? '1px solid rgba(255, 255, 255, 0.1)'
+              : '1px solid rgba(0, 0, 0, 0.08)',
             background: theme.palette.mode === 'dark'
-              ? "rgba(255, 255, 255, 0.05)"
-              : "rgba(255, 255, 255, 0.9)",
-            backdropFilter: "blur(10px)",
+              ? 'rgba(255, 255, 255, 0.05)'
+              : 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)',
           })}
         >
           <Avatar
@@ -432,7 +432,7 @@ const MyOrders = () => {
               color: '#6366f1',
               mb: 3,
               border: '2px solid rgba(99, 102, 241, 0.2)',
-              mx: 'auto'
+              mx: 'auto',
             }}
           >
             <ShoppingBagOutlined sx={{ fontSize: 40 }} />
@@ -485,22 +485,22 @@ const MyOrders = () => {
                 sx={(theme) => ({
                   borderRadius: 3,
                   border: theme.palette.mode === 'dark'
-                    ? "1px solid rgba(255, 255, 255, 0.1)"
-                    : "1px solid rgba(0, 0, 0, 0.08)",
+                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                    : '1px solid rgba(0, 0, 0, 0.08)',
                   background: theme.palette.mode === 'dark'
-                    ? "rgba(255, 255, 255, 0.05)"
-                    : "rgba(255, 255, 255, 0.9)",
-                  backdropFilter: "blur(10px)",
+                    ? 'rgba(255, 255, 255, 0.05)'
+                    : 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(10px)',
                   boxShadow: theme.palette.mode === 'dark'
-                    ? "0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)"
-                    : "0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+                    : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   overflow: 'visible',
                   '&:hover': { 
-                    transform: "translateY(-4px)", 
+                    transform: 'translateY(-4px)', 
                     boxShadow: theme.palette.mode === 'dark'
-                      ? "0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.2)"
-                      : "0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.2)",
+                      ? '0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.2)'
+                      : '0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.2)',
                   },
                 })}
               >
@@ -525,8 +525,8 @@ const MyOrders = () => {
                           fontWeight: 600,
                           border: '2px solid',
                           '& .MuiChip-icon': {
-                            fontSize: '1rem'
-                          }
+                            fontSize: '1rem',
+                          },
                         }}
                       />
                     </Grid>
@@ -574,7 +574,7 @@ const MyOrders = () => {
                             background: 'rgba(99, 102, 241, 0.1)',
                             border: '2px solid rgba(99, 102, 241, 0.5)',
                             transform: 'translateY(-1px)',
-                          }
+                          },
                         }}
                       >
                         {t('viewDetails')}
@@ -599,17 +599,17 @@ const MyOrders = () => {
           sx: (theme) => ({
             borderRadius: 3,
             border: theme.palette.mode === 'dark'
-              ? "1px solid rgba(255, 255, 255, 0.1)"
-              : "1px solid rgba(0, 0, 0, 0.08)",
+              ? '1px solid rgba(255, 255, 255, 0.1)'
+              : '1px solid rgba(0, 0, 0, 0.08)',
             background: theme.palette.mode === 'dark'
-              ? "rgba(255, 255, 255, 0.05)"
-              : "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(20px)",
+              ? 'rgba(255, 255, 255, 0.05)'
+              : 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
             boxShadow: theme.palette.mode === 'dark'
-              ? "0 32px 64px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)"
-              : "0 32px 64px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+              ? '0 32px 64px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 32px 64px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
             overflow: 'hidden',
-          })
+          }),
         }}
       >
         <DialogTitle
@@ -620,7 +620,7 @@ const MyOrders = () => {
             borderBottom: theme.palette.mode === 'dark'
               ? '1px solid rgba(255, 255, 255, 0.1)'
               : '1px solid rgba(0, 0, 0, 0.1)',
-            p: 3
+            p: 3,
           })}
         >
           <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -654,7 +654,7 @@ const MyOrders = () => {
                     : 'rgba(0, 0, 0, 0.1)',
                   transform: 'scale(1.05)',
                   color: 'text.primary',
-                }
+                },
               })}
             >
               <CloseOutlined />
@@ -675,8 +675,8 @@ const MyOrders = () => {
                     fontWeight: 600,
                     border: '2px solid',
                     '& .MuiChip-icon': {
-                      fontSize: '1.2rem'
-                    }
+                      fontSize: '1.2rem',
+                    },
                   }}
                 />
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -704,13 +704,13 @@ const MyOrders = () => {
                     sx={(theme) => ({
                       borderRadius: 2,
                       border: theme.palette.mode === 'dark'
-                        ? "1px solid rgba(255, 255, 255, 0.1)"
-                        : "1px solid rgba(0, 0, 0, 0.08)",
+                        ? '1px solid rgba(255, 255, 255, 0.1)'
+                        : '1px solid rgba(0, 0, 0, 0.08)',
                       background: theme.palette.mode === 'dark'
-                        ? "rgba(255, 255, 255, 0.05)"
-                        : "rgba(255, 255, 255, 0.8)",
-                      backdropFilter: "blur(10px)",
-                      overflow: 'hidden'
+                        ? 'rgba(255, 255, 255, 0.05)'
+                        : 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                      overflow: 'hidden',
                     })}
                   >
                     <List sx={{ p: 0 }}>
@@ -727,7 +727,7 @@ const MyOrders = () => {
                               sx={{
                                 width: 50,
                                 height: 50,
-                                border: '2px solid rgba(99, 102, 241, 0.2)'
+                                border: '2px solid rgba(99, 102, 241, 0.2)',
                               }}
                             />
                           </ListItemAvatar>
@@ -769,12 +769,12 @@ const MyOrders = () => {
                       p: 2,
                       borderRadius: 2,
                       border: theme.palette.mode === 'dark'
-                        ? "1px solid rgba(255, 255, 255, 0.1)"
-                        : "1px solid rgba(0, 0, 0, 0.08)",
+                        ? '1px solid rgba(255, 255, 255, 0.1)'
+                        : '1px solid rgba(0, 0, 0, 0.08)',
                       background: theme.palette.mode === 'dark'
-                        ? "rgba(255, 255, 255, 0.05)"
-                        : "rgba(255, 255, 255, 0.8)",
-                      backdropFilter: "blur(10px)",
+                        ? 'rgba(255, 255, 255, 0.05)'
+                        : 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
                     })}
                   >
                     <Box display="flex" justifyContent="space-between" mb={1}>
@@ -814,12 +814,12 @@ const MyOrders = () => {
                       p: 2,
                       borderRadius: 2,
                       border: theme.palette.mode === 'dark'
-                        ? "1px solid rgba(255, 255, 255, 0.1)"
-                        : "1px solid rgba(0, 0, 0, 0.08)",
+                        ? '1px solid rgba(255, 255, 255, 0.1)'
+                        : '1px solid rgba(0, 0, 0, 0.08)',
                       background: theme.palette.mode === 'dark'
-                        ? "rgba(255, 255, 255, 0.05)"
-                        : "rgba(255, 255, 255, 0.8)",
-                      backdropFilter: "blur(10px)",
+                        ? 'rgba(255, 255, 255, 0.05)'
+                        : 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
                     })}
                   >
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>

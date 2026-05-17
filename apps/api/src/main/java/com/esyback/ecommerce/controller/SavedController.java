@@ -31,10 +31,15 @@ public class SavedController {
     private final UserService userService;
     private final TenantContextService tenantContextService;
 
+    // Storefront wishlist is scoped to THIS store (Host-resolved tenant), so a
+    // store never shows items saved on another store. The cross-store account
+    // hub uses its own (intentionally unscoped) query in AccountController.
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> mySaved(Authentication authentication) {
         User user = currentUser(authentication);
-        return ResponseEntity.ok(savedRepository.findByUserOrderByCreatedAtDesc(user).stream()
+        Tenant tenant = tenantContextService.getCurrentTenant();
+        return ResponseEntity.ok(savedRepository
+            .findByUserAndTenantOrderByCreatedAtDesc(user, tenant).stream()
             .map(SavedController::toMap).collect(Collectors.toList()));
     }
 

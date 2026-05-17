@@ -13,5 +13,6 @@ import java.util.Optional;
 public interface SavedItemRepository extends JpaRepository<SavedItem, Long> {
     List<SavedItem> findByUserOrderByCreatedAtDesc(User user);
     List<SavedItem> findByUserAndTenant(User user, Tenant tenant);
+    List<SavedItem> findByUserAndTenantOrderByCreatedAtDesc(User user, Tenant tenant);
     Optional<SavedItem> findByUserAndTenantAndProductId(User user, Tenant tenant, Long productId);
 }

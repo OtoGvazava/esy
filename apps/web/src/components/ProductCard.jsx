@@ -17,32 +17,32 @@ const ProductCard = memo(({ product, onClick }) => {
   const { addToCart, removeFromCart, items } = useCart();
   const navigate = useNavigate();
   const theme = useTheme();
-  const { dimensions, getAnimationSettings, isSmallMobile, isLargeMobile, isSmallTablet } = useProductCardDimensions();
+  const { dimensions, getAnimationSettings, isSmallMobile, isLargeMobile } = useProductCardDimensions();
   
   const { title, name, price, image, thumbnail, id } = product || {};
   
   const displayTitle = useMemo(() => 
     title || name || t('fallbackTitle'), 
-    [title, name, t]
+    [title, name, t],
   );
   
   const displayImage = useMemo(() => 
     image || thumbnail || PLACEHOLDER_IMAGES.PRODUCT, 
-    [image, thumbnail]
+    [image, thumbnail],
   );
   
   const displayPrice = useMemo(() => {
-    if (typeof price === "number") {
+    if (typeof price === 'number') {
       return new Intl.NumberFormat(
         i18n.language === 'ka' ? CURRENCY.LOCALE.KA : CURRENCY.LOCALE.EN, 
         { 
           style: 'currency', 
           currency: CURRENCY.CODE, 
-          maximumFractionDigits: 0 
-        }
+          maximumFractionDigits: 0, 
+        },
       ).format(price);
     }
-    return price || "";
+    return price || '';
   }, [price, i18n.language]);
 
   // Check if product is already in cart
@@ -103,22 +103,22 @@ const ProductCard = memo(({ product, onClick }) => {
         boxShadow: theme.palette.mode === 'dark'
           ? '0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
           : '0 12px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.08)',
-      } : {}
+      } : {},
     }}>
       <CardActionArea 
         onClick={handleProductClick} 
         sx={{ 
-          height: "100%", 
-          display: "flex", 
-          flexDirection: "column", 
-          alignItems: "stretch" 
+          height: '100%', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'stretch', 
         }}
       >
         <Box sx={{ 
-          position: "relative", 
+          position: 'relative', 
           height: dimensions.imageHeight, 
-          overflow: "hidden", 
-          background: "linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)",
+          overflow: 'hidden', 
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
           '&::before': animationSettings.enableTransitions ? {
             content: '""',
             position: 'absolute',
@@ -133,36 +133,36 @@ const ProductCard = memo(({ product, onClick }) => {
           } : {},
           '&:hover::before': animationSettings.enableHover ? {
             opacity: 1,
-          } : {}
+          } : {},
         }}>
           <CardMedia
             component="img"
             image={displayImage}
             alt={displayTitle || t('fallbackImageAlt')}
             sx={{
-              position: "absolute",
+              position: 'absolute',
               inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              transition: animationSettings.enableTransitions ? "transform 0.3s ease" : "none",
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transition: animationSettings.enableTransitions ? 'transform 0.3s ease' : 'none',
               '&:hover': animationSettings.enableHover ? {
-                transform: "scale(1.05)",
-              } : {}
+                transform: 'scale(1.05)',
+              } : {},
             }}
           />
         </Box>
         
         <CardContent sx={{ 
           p: dimensions.contentPadding || dimensions.padding, 
-          width: "100%", 
+          width: '100%', 
           flex: 1, 
-          display: "flex", 
-          flexDirection: "column", 
-          justifyContent: "space-between",
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'space-between',
           background: theme.palette.mode === 'dark'
-            ? "rgba(255, 255, 255, 0.02)"
-            : "rgba(255, 255, 255, 0.5)",
+            ? 'rgba(255, 255, 255, 0.02)'
+            : 'rgba(255, 255, 255, 0.5)',
         }}>
           <Box>
             <Typography 
@@ -226,8 +226,8 @@ const ProductCard = memo(({ product, onClick }) => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   '& .MuiButton-startIcon': {
-                    margin: 0
-                  }
+                    margin: 0,
+                  },
                 } : {
                   // For text buttons, ensure proper height and padding
                   height: 'auto',
@@ -236,9 +236,9 @@ const ProductCard = memo(({ product, onClick }) => {
                   fontSize: '0.875rem', // Readable font size
                   lineHeight: 1.2,
                   '& .MuiButton-startIcon': {
-                    marginRight: '8px'
-                  }
-                })
+                    marginRight: '8px',
+                  },
+                }),
               }}
               title={shouldShowIconOnly ? t('cart:remove') : undefined} // Tooltip for icon-only button
             >
@@ -263,8 +263,8 @@ const ProductCard = memo(({ product, onClick }) => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   '& .MuiButton-startIcon': {
-                    margin: 0
-                  }
+                    margin: 0,
+                  },
                 } : {
                   // For text buttons, ensure proper height and padding
                   height: 'auto',
@@ -273,9 +273,9 @@ const ProductCard = memo(({ product, onClick }) => {
                   fontSize: '0.875rem', // Readable font size
                   lineHeight: 1.2,
                   '& .MuiButton-startIcon': {
-                    marginRight: '8px'
-                  }
-                })
+                    marginRight: '8px',
+                  },
+                }),
               }}
               title={shouldShowIconOnly ? t('cart:addToCart') : undefined} // Tooltip for icon-only button
             >

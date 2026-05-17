@@ -61,8 +61,9 @@ export const PLACEHOLDER_IMAGES = {
   BANNER: 'https://via.placeholder.com/800x400',
 };
 
+// Single platform currency — every store prices in Georgian Lari (GEL).
 export const CURRENCY = {
-  CODE: 'USD',
+  CODE: 'GEL',
   LOCALE: {
     EN: 'en-US',
     KA: 'ka-GE',

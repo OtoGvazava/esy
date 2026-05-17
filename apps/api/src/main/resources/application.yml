@@ -19,6 +19,13 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:password}
 
+  # Product photo uploads (multipart). Per-file cap is also enforced in
+  # ProductImageService; request cap allows a few images per upload.
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 25MB
+
   h2:
     console:
       enabled: false

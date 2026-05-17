@@ -8,6 +8,7 @@ import { useMediaQuery, useTheme } from '@mui/material';
  */
 export const useProductCardDimensions = () => {
   const { deviceMode, isMobile, isTablet, isDesktop } = useDevice();
+  // eslint-disable-next-line no-unused-vars
   const theme = useTheme();
   
   // Additional breakpoints for fine-tuning
@@ -32,7 +33,7 @@ export const useProductCardDimensions = () => {
         borderRadius: 1.5,
         spacing: 0.8,      // Reduced from 1.2 to 0.8
         buttonHeight: 28,  // Custom smaller button height
-        contentPadding: 0.8 // Reduced content padding
+        contentPadding: 0.8, // Reduced content padding
       };
     }
     
@@ -48,7 +49,7 @@ export const useProductCardDimensions = () => {
         borderRadius: 2,
         spacing: 1.2,      // Reduced from 1.5 to 1.2
         buttonHeight: 32,  // Custom button height
-        contentPadding: 1.2
+        contentPadding: 1.2,
       };
     }
     
@@ -64,7 +65,7 @@ export const useProductCardDimensions = () => {
         borderRadius: 2.2,
         spacing: 1.5,      // Reduced from 1.8 to 1.5
         buttonHeight: 36,
-        contentPadding: 2.0  // Increased to accommodate text buttons
+        contentPadding: 2.0,  // Increased to accommodate text buttons
       };
     }
     
@@ -80,7 +81,7 @@ export const useProductCardDimensions = () => {
         borderRadius: 2.5,
         spacing: 1.8,      // Reduced from 2 to 1.8
         buttonHeight: 38,
-        contentPadding: 2.2  // Increased to accommodate text buttons
+        contentPadding: 2.2,  // Increased to accommodate text buttons
       };
     }
     
@@ -96,7 +97,7 @@ export const useProductCardDimensions = () => {
         borderRadius: 2.8,
         spacing: 2,        // Reduced from 2.2 to 2
         buttonHeight: 40,
-        contentPadding: 2.3  // Increased to accommodate text buttons
+        contentPadding: 2.3,  // Increased to accommodate text buttons
       };
     }
     
@@ -112,7 +113,7 @@ export const useProductCardDimensions = () => {
         borderRadius: 3,
         spacing: 2.2,      // Reduced from 2.5 to 2.2
         buttonHeight: 42,
-        contentPadding: 2.5  // Increased to accommodate text buttons
+        contentPadding: 2.5,  // Increased to accommodate text buttons
       };
     }
 
@@ -129,7 +130,7 @@ export const useProductCardDimensions = () => {
         borderRadius: 2,
         spacing: 1.2,      // Reduced from 1.5
         buttonHeight: 32,
-        contentPadding: 1.2
+        contentPadding: 1.2,
       },
       tablet: {
         width: 260,        // Significantly increased from 230 to 260
@@ -142,7 +143,7 @@ export const useProductCardDimensions = () => {
         borderRadius: 2.5,
         spacing: 1.8,      // Reduced from 2
         buttonHeight: 38,
-        contentPadding: 2.2  // Increased to accommodate larger buttons
+        contentPadding: 2.2,  // Increased to accommodate larger buttons
       },
       desktop: {
         width: 320,        // Significantly increased from 290 to 320
@@ -155,8 +156,8 @@ export const useProductCardDimensions = () => {
         borderRadius: 3,
         spacing: 2.2,      // Reduced from 2.5
         buttonHeight: 42,
-        contentPadding: 2.5  // Increased to accommodate larger buttons
-      }
+        contentPadding: 2.5,  // Increased to accommodate larger buttons
+      },
     };
 
     // Return appropriate config based on device mode
@@ -180,7 +181,7 @@ export const useProductCardDimensions = () => {
         sm: 3,    // 4 cards per row on small mobile
         md: 2.4,  // 5 cards per row on medium
         lg: 2,    // 6 cards per row on large
-        xl: 1.7   // 7 cards per row on extra large
+        xl: 1.7,   // 7 cards per row on extra large
       };
     }
     
@@ -190,7 +191,7 @@ export const useProductCardDimensions = () => {
         sm: 2.4,  // 5 cards per row on small screens
         md: 2,    // 6 cards per row on medium screens
         lg: 1.7,  // 7 cards per row on large screens
-        xl: 1.5   // 8 cards per row on extra large screens
+        xl: 1.5,   // 8 cards per row on extra large screens
       };
     }
     
@@ -200,7 +201,7 @@ export const useProductCardDimensions = () => {
         sm: 2,    // 6 cards per row on small screens
         md: 1.7,  // 7 cards per row on medium screens
         lg: 1.5,  // 8 cards per row on large screens
-        xl: 1.2   // 10 cards per row on extra large screens
+        xl: 1.2,   // 10 cards per row on extra large screens
       };
     }
     
@@ -210,7 +211,7 @@ export const useProductCardDimensions = () => {
         sm: 1.7,  // 7 cards per row on small screens
         md: 1.5,  // 8 cards per row on medium screens
         lg: 1.2,  // 10 cards per row on large screens
-        xl: 1     // 12 cards per row on extra large screens
+        xl: 1,     // 12 cards per row on extra large screens
       };
     }
     
@@ -220,7 +221,7 @@ export const useProductCardDimensions = () => {
         sm: 1.5,  // 8 cards per row on small screens
         md: 1.2,  // 10 cards per row on medium screens
         lg: 1,    // 12 cards per row on large screens
-        xl: 0.8   // 15 cards per row on extra large screens
+        xl: 0.8,   // 15 cards per row on extra large screens
       };
     }
     
@@ -230,7 +231,7 @@ export const useProductCardDimensions = () => {
         sm: 1.2,  // 10 cards per row on small screens
         md: 1,    // 12 cards per row on medium screens
         lg: 0.8,  // 15 cards per row on large screens
-        xl: 0.6   // 20 cards per row on extra large screens
+        xl: 0.6,   // 20 cards per row on extra large screens
       };
     }
 
@@ -241,7 +242,7 @@ export const useProductCardDimensions = () => {
         sm: 2.4,  // 5 cards per row on small screens
         md: 2,    // 6 cards per row on medium screens
         lg: 1.7,  // 7 cards per row on large screens
-        xl: 1.5   // 8 cards per row on extra large screens
+        xl: 1.5,   // 8 cards per row on extra large screens
       };
     } else if (isTablet) {
       return {
@@ -249,7 +250,7 @@ export const useProductCardDimensions = () => {
         sm: 2,    // 6 cards per row on small screens
         md: 1.7,  // 7 cards per row on medium screens
         lg: 1.5,  // 8 cards per row on large screens
-        xl: 1.2   // 10 cards per row on extra large screens
+        xl: 1.2,   // 10 cards per row on extra large screens
       };
     } else {
       // Desktop
@@ -258,7 +259,7 @@ export const useProductCardDimensions = () => {
         sm: 1.7,  // 7 cards per row on small screens
         md: 1.5,  // 8 cards per row on medium screens
         lg: 1.2,  // 10 cards per row on large screens
-        xl: 1     // 12 cards per row on extra large screens
+        xl: 1,     // 12 cards per row on extra large screens
       };
     }
   }, [isMobile, isTablet, isDesktop, isSmallMobile, isLargeMobile, isSmallTablet, isLargeTablet, isSmallDesktop, isLargeDesktop]);
@@ -315,7 +316,7 @@ export const useProductCardDimensions = () => {
       return {
         enableHover: false,
         enableTransitions: false,
-        enableAnimations: false
+        enableAnimations: false,
       };
     }
     
@@ -323,14 +324,14 @@ export const useProductCardDimensions = () => {
       return {
         enableHover: true,
         enableTransitions: true,
-        enableAnimations: false
+        enableAnimations: false,
       };
     }
     
     return {
       enableHover: true,
       enableTransitions: true,
-      enableAnimations: true
+      enableAnimations: true,
     };
   }, [isSmallMobile, isLargeMobile, isSmallTablet, isLargeTablet, isSmallDesktop, isLargeDesktop]);
 
@@ -349,7 +350,7 @@ export const useProductCardDimensions = () => {
     isSmallTablet,
     isLargeTablet,
     isSmallDesktop,
-    isLargeDesktop
+    isLargeDesktop,
   };
 };
 

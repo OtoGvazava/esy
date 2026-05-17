@@ -1,3 +1,4 @@
+/* global process */
 // Performance utilities
 import React, { memo, useMemo, useCallback, useState, useEffect } from 'react';
 
@@ -28,7 +29,7 @@ function debounce(func, wait) {
 export const useDebouncedCallback = (callback, delay, deps = []) => {
   return useCallback(
     debounce(callback, delay),
-    deps
+    deps,
   );
 };
 
@@ -54,7 +55,7 @@ export const useIntersectionObserver = (ref, options = {}) => {
         rootMargin: '200px',
         threshold: 0.1,
         ...options,
-      }
+      },
     );
 
     if (ref.current) {

@@ -3,13 +3,15 @@ import { Box, Typography, useTheme } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useIslandStyles } from '../styles/islandStyles';
 
-const SearchSuggestions = ({ 
-  suggestions = [], 
+const SearchSuggestions = ({
+  // eslint-disable-next-line no-unused-vars
+  suggestions = [],
   onSuggestionClick, 
-  searchQuery = "",
-  sx = {} 
+  searchQuery = '',
+  sx = {}, 
 }) => {
   const theme = useTheme();
+  // eslint-disable-next-line no-unused-vars
   const islandStyles = useIslandStyles();
 
   // Mock suggestions based on search query
@@ -36,12 +38,12 @@ const SearchSuggestions = ({
       'moisturizer',
       'cleanser',
       'toner',
-      'serum'
+      'serum',
     ];
 
     const filtered = allSuggestions
       .filter(suggestion => 
-        suggestion.toLowerCase().includes(query.toLowerCase())
+        suggestion.toLowerCase().includes(query.toLowerCase()),
       )
       .slice(0, 5); // Show max 5 suggestions
 
@@ -64,7 +66,7 @@ const SearchSuggestions = ({
         maxHeight: 200,
         overflow: 'hidden',
         width: '100%',
-        ...sx
+        ...sx,
       }}
     >
       {filteredSuggestions.length > 0 ? filteredSuggestions.map((suggestion, index) => (
@@ -92,7 +94,7 @@ const SearchSuggestions = ({
             },
             '&:last-child': {
               borderBottom: 'none',
-            }
+            },
           }}
         >
           <SearchIcon 
@@ -100,7 +102,7 @@ const SearchSuggestions = ({
               fontSize: '1rem', 
               opacity: 0.6,
               color: theme.palette.mode === 'dark' ? '#f5f5f7' : '#111',
-              flexShrink: 0
+              flexShrink: 0,
             }} 
           />
           <Typography
@@ -111,7 +113,7 @@ const SearchSuggestions = ({
               flex: 1,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
             }}
           >
             {suggestion}
@@ -135,7 +137,7 @@ const SearchSuggestions = ({
               fontSize: '1rem', 
               opacity: 0.6,
               color: theme.palette.mode === 'dark' ? '#f5f5f7' : '#111',
-              flexShrink: 0
+              flexShrink: 0,
             }} 
           />
           <Typography

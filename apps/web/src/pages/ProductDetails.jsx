@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { productApi, handleApiError } from '../utils/api';
+import { renderMarkdown } from '../utils/markdown';
 import { useCart } from '../contexts/CartContext';
 import { useSaved } from '../contexts/SavedContext';
+import { useOwnerTools } from '../contexts/OwnerToolsContext';
 import { useGlow } from '../styles/glow';
 import { Icon, Placeholder, PoweredBy } from '../components/glow/GlowPrimitives';
 import { money } from '../components/glow/GlowChrome';
@@ -25,6 +27,7 @@ export default function ProductDetails() {
   const { t } = useTranslation('product');
   const { addToCart } = useCart();
   const { isSaved, toggleSaved } = useSaved();
+  const { canManage, editProduct, deleteProduct, version } = useOwnerTools();
   const { T, isDesktop, tenant } = useGlow();
 
   const [product, setProduct] = useState(null);
@@ -32,6 +35,7 @@ export default function ProductDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [imgOk, setImgOk] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
   const saved = product ? isSaved(product.id) : false;
   const toggleFav = () => product && toggleSaved({ id: product.id, title: product.title, price: product.price, image: heroImg, thumbnail: product.thumbnail });
 
@@ -44,6 +48,7 @@ export default function ProductDetails() {
         const data = await productApi.get(id);
         if (!alive) return;
         setProduct(data);
+        setImgIdx(0);
         setImgOk(Boolean(data.images?.[0] || data.thumbnail));
         const list = await productApi.list({ page: 0, size: 6 });
         if (alive) setRelated(list.products.filter((p) => String(p.id) !== String(id)));
@@ -54,9 +59,14 @@ export default function ProductDetails() {
       }
     })();
     return () => { alive = false; };
-  }, [id, t]);
+    // `version` bumps after an owner edit/delete → re-pull (a deleted product
+    // 404s into the existing not-found screen).
+  }, [id, t, version]);
 
-  const heroImg = product?.images?.[0] || product?.thumbnail;
+  const gallery = (product?.images && product.images.length)
+    ? product.images
+    : (product?.thumbnail ? [product.thumbnail] : []);
+  const heroImg = gallery[imgIdx] || gallery[0] || product?.thumbnail;
 
   const addAndOpenCart = () => {
     if (!product) return;
@@ -91,6 +101,7 @@ export default function ProductDetails() {
 
   const inStock = (product.quantity ?? product.stock ?? 0) > 0;
   const imageBlock = (
+    <div>
     <div style={{ position: 'relative', height: isDesktop ? 520 : 460, borderRadius: isDesktop ? 22 : 0, overflow: 'hidden' }}>
       {imgOk ? (
         <img src={heroImg} alt={product.title} onError={() => setImgOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -100,10 +111,39 @@ export default function ProductDetails() {
       <div style={{ position: 'absolute', top: isDesktop ? 16 : 50, left: 16, right: 16, display: 'flex', justifyContent: 'space-between' }}>
         <button onClick={() => navigate(-1)} style={iconBtn(T)} aria-label="back"><Icon.arrowR style={{ transform: 'rotate(180deg)' }} /></button>
         <div style={{ display: 'flex', gap: 8 }}>
+          {canManage && (
+            <>
+              <button onClick={() => editProduct(product)} style={iconBtn(T)} aria-label={t('editAria', { defaultValue: 'Edit product' })}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+              </button>
+              <button onClick={() => deleteProduct(product)} style={{ ...iconBtn(T), color: T.danger }} aria-label={t('deleteAria', { defaultValue: 'Delete product' })}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /></svg>
+              </button>
+            </>
+          )}
           <button onClick={toggleFav} style={{ ...iconBtn(T), color: saved ? T.accent : T.text }} aria-label="save"><Icon.heart /></button>
           <button onClick={share} style={iconBtn(T)} aria-label="share"><Icon.share /></button>
         </div>
       </div>
+    </div>
+    {gallery.length > 1 && (
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, overflowX: 'auto', padding: isDesktop ? 0 : '0 16px' }}>
+        {gallery.map((src, i) => (
+          <button
+            key={`${src}-${i}`}
+            onClick={() => { setImgIdx(i); setImgOk(true); }}
+            aria-label={t('viewImage', { defaultValue: 'View image' })}
+            style={{
+              flex: '0 0 auto', width: 64, height: 64, padding: 0, borderRadius: 10,
+              overflow: 'hidden', cursor: 'pointer', background: T.surface,
+              border: i === imgIdx ? `2px solid ${T.accent}` : `1px solid ${T.border}`,
+            }}
+          >
+            <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </button>
+        ))}
+      </div>
+    )}
     </div>
   );
 
@@ -124,9 +164,20 @@ export default function ProductDetails() {
           {inStock ? t('inStockBadge') : t('outOfStock')}
         </span>
       </div>
-      <div style={{ font: `400 13.5px/1.55 ${T.font}`, color: T.textDim, marginBottom: 22 }}>
-        {product.description || t('defaultDescription')}
-      </div>
+      {renderMarkdown(product.description) ? (
+        <>
+          <style>{`.glow-md{margin-bottom:22px}.glow-md p{margin:0 0 10px}.glow-md p:last-child{margin-bottom:0}.glow-md h3,.glow-md h4,.glow-md h5{color:${T.text};margin:14px 0 6px;line-height:1.25}.glow-md h3{font-size:17px}.glow-md h4{font-size:15px}.glow-md h5{font-size:13.5px}.glow-md ul,.glow-md ol{margin:0 0 10px;padding-left:20px}.glow-md li{margin:3px 0}.glow-md a{color:${T.accentFg};text-decoration:underline}.glow-md code{background:${T.surface};border:1px solid ${T.border};border-radius:5px;padding:1px 5px;font-size:12.5px}`}</style>
+          <div
+            className="glow-md"
+            style={{ font: `400 13.5px/1.55 ${T.font}`, color: T.textDim }}
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(product.description) }}
+          />
+        </>
+      ) : (
+        <div style={{ font: `400 13.5px/1.55 ${T.font}`, color: T.textDim, marginBottom: 22 }}>
+          {t('defaultDescription')}
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, overflow: 'hidden', marginBottom: 24 }}>
         {[
           { id: 'price', k: t('rowPrice'), v: money(product.price) },

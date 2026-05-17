@@ -1,29 +1,32 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home";
-import ProductDetails from "./pages/ProductDetails";
-import SearchOverlay from "./pages/SearchOverlay";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import OrderSuccess from "./pages/OrderSuccess";
-import Saved from "./pages/Saved";
-import Account from "./pages/Account";
-import Orders from "./pages/Orders";
-import Admin from "./pages/Admin";
-import SignIn from "./pages/SignIn";
-import CreateStore from "./pages/CreateStore";
-import AuthCallback from "./pages/AuthCallback";
-import LanguageSettings from "./pages/LanguageSettings";
-import AppearanceSettings from "./pages/AppearanceSettings";
-import AppProviders from "./providers/AppProviders";
-import GlowDock from "./components/glow/GlowDock";
-import PlatformShell from "./platform/PlatformShell";
-import { useAppTheme } from "./hooks/useAppTheme";
-import { usePlatformHost } from "./hooks/usePlatformHost";
-import { ThemeModeProvider } from "./contexts/ThemeModeContext";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import ProductDetails from './pages/ProductDetails';
+import SearchOverlay from './pages/SearchOverlay';
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import OrderSuccess from './pages/OrderSuccess';
+import Saved from './pages/Saved';
+import Account from './pages/Account';
+import Orders from './pages/Orders';
+import StoreOrders from './pages/StoreOrders';
+import SignIn from './pages/SignIn';
+import CreateStore from './pages/CreateStore';
+import AuthCallback from './pages/AuthCallback';
+import LanguageSettings from './pages/LanguageSettings';
+import AppearanceSettings from './pages/AppearanceSettings';
+import StoreSettings from './pages/StoreSettings';
+import AppProviders from './providers/AppProviders';
+import GlowDock from './components/glow/GlowDock';
+import ProfileGate from './components/ProfileGate';
+import PlatformShell from './platform/PlatformShell';
+import { useAppTheme } from './hooks/useAppTheme';
+import { usePlatformHost } from './hooks/usePlatformHost';
+import { ThemeModeProvider } from './contexts/ThemeModeContext';
+import { OwnerToolsProvider } from './contexts/OwnerToolsContext';
 
 function AppShell() {
   return (
-    <>
+    <OwnerToolsProvider>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetails />} />
@@ -34,15 +37,17 @@ function AppShell() {
         <Route path="/saved" element={<Saved />} />
         <Route path="/account" element={<Account />} />
         <Route path="/orders" element={<Orders />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/manage/orders" element={<StoreOrders />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/create-store" element={<CreateStore />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/settings/language" element={<LanguageSettings />} />
         <Route path="/settings/appearance" element={<AppearanceSettings />} />
+        <Route path="/settings/store" element={<StoreSettings />} />
       </Routes>
       <GlowDock />
-    </>
+      <ProfileGate />
+    </OwnerToolsProvider>
   );
 }
 

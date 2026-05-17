@@ -59,8 +59,18 @@ public class OrderService {
         return orderRepository.findByUserOrderByCreatedAtDesc(user);
     }
 
+    public List<Order> ordersForTenant(Tenant tenant) {
+        return orderRepository.findByTenantOrderByCreatedAtDesc(tenant);
+    }
+
     public long orderCount(Tenant tenant) {
         return orderRepository.countByTenant(tenant);
+    }
+
+    // "New" = freshly received, not yet acted on (PLACED is the status set on
+    // checkout). Drives the owner-bar Orders badge.
+    public long newOrderCount(Tenant tenant) {
+        return orderRepository.countByTenantAndStatus(tenant, Order.Status.PLACED);
     }
 
     public BigDecimal revenue(Tenant tenant) {

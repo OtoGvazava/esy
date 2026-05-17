@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useGlow } from '../styles/glow';
 import { orderApi } from '../utils/api';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
+import PhoneVerifyBox from '../components/PhoneVerifyBox';
 
 function Field({ T, label, defaultValue, span }) {
   return (
@@ -33,6 +34,9 @@ export default function Checkout() {
   const tax = +(subtotal * 0.08).toFixed(2);
   const total = +(subtotal + shipping + tax).toFixed(2);
   const email = user?.email || 'guest@esy.shop';
+  // Ordering requires a complete profile AND a verified phone (the backend
+  // enforces this too — see OrderController.requireOrderEligible).
+  const eligible = !!user && user.profileComplete && !!user.phoneVerified;
 
   if (items.length === 0) {
     return (
@@ -49,6 +53,7 @@ export default function Checkout() {
   }
 
   const pay = async () => {
+    if (!eligible) return;
     setPlacing(true);
     // Persist a real order so it shows in the cross-store account hub.
     // Best-effort: requires sign-in; guests still complete the local flow.
@@ -133,6 +138,33 @@ export default function Checkout() {
           </div>
         </div>
 
+        {/* order eligibility: complete profile + verified phone */}
+        {!eligible && (
+          <div style={{ padding: '0 16px 14px' }}>
+            <div style={{ padding: 14, borderRadius: 16, background: T.surface, border: `1px solid ${T.danger}55`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ font: `700 13px ${T.font}`, color: T.text }}>{t('checkout.verifyTitle')}</div>
+              {!user ? (
+                <>
+                  <div style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('checkout.needSignIn')}</div>
+                  <button onClick={() => navigate('/signin')} style={{ height: 42, borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer' }}>{t('checkout.signIn')}</button>
+                </>
+              ) : !user.profileComplete ? (
+                <div style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('checkout.completeProfileHint')}</div>
+              ) : !user.phoneNumber ? (
+                <>
+                  <div style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('checkout.needPhone')}</div>
+                  <button onClick={() => navigate('/account')} style={{ height: 42, borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer' }}>{t('checkout.addPhone')}</button>
+                </>
+              ) : (
+                <>
+                  <div style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('checkout.verifyPhoneHint', { phone: user.phoneNumber })}</div>
+                  <PhoneVerifyBox compact />
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* order summary */}
         <div style={{ padding: '0 22px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', font: `500 13px ${T.font}`, color: T.textDim }}><span>{t('checkout.itemCount', { count })}</span><span style={{ color: T.text }}>{money(subtotal)}</span></div>
@@ -142,7 +174,19 @@ export default function Checkout() {
         </div>
       </div>
 
-      <GlowStickyCTA T={T} label={placing ? t('checkout.placing') : t('checkout.payNow')} sub={money(total)} onClick={pay} disabled={placing} />
+      <GlowStickyCTA
+        T={T}
+        label={
+          placing ? t('checkout.placing')
+            : !user ? t('checkout.signInToPay')
+            : !user.profileComplete ? t('checkout.completeProfile')
+            : !user.phoneVerified ? t('checkout.verifyToPay')
+            : t('checkout.payNow')
+        }
+        sub={money(total)}
+        onClick={pay}
+        disabled={placing || !eligible}
+      />
     </GlowScreen>
   );
 }

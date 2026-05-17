@@ -20,7 +20,7 @@ const Card = ({
             transform: 'none',
             boxShadow: theme.cardStyles.boxShadow,
             border: theme.cardStyles.border,
-          }
+          },
         }),
         ...sx,
       }}

@@ -1,4 +1,5 @@
 // Centralized theme utilities and common styles
+// eslint-disable-next-line no-unused-vars
 import { createTheme } from '@mui/material/styles';
 
 // Common color palette
@@ -14,12 +15,12 @@ export const colors = {
     background: {
       light: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%)',
       dark: 'linear-gradient(135deg, rgba(30,30,30,0.95) 0%, rgba(45,45,45,0.95) 100%)',
-    }
+    },
   },
   glass: {
     light: 'rgba(255,255,255,0.7)',
     dark: 'rgba(18,18,20,0.7)',
-  }
+  },
 };
 
 // Common glass morphism styles
@@ -51,7 +52,7 @@ export const buttonStyles = {
     },
     '&:active': {
       transform: 'translateY(0)',
-    }
+    },
   },
   glass: (theme) => ({
     background: theme.palette.mode === 'dark'
@@ -67,8 +68,8 @@ export const buttonStyles = {
         ? 'rgba(255, 255, 255, 0.2)'
         : 'rgba(0, 0, 0, 0.1)',
       transform: 'scale(1.05)',
-    }
-  })
+    },
+  }),
 };
 
 // Common card styles
@@ -92,7 +93,7 @@ export const cardStyles = (theme) => ({
       ? '0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.2)'
       : '0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.2)',
     border: '1px solid rgba(99, 102, 241, 0.3)',
-  }
+  },
 });
 
 // Text gradient styles
@@ -127,7 +128,7 @@ export const animations = {
         backgroundPosition: '200% 0',
       },
     },
-  }
+  },
 };
 
 // Responsive breakpoints

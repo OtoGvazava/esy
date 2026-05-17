@@ -1,4 +1,4 @@
-import { Box, Tooltip, Fab, useTheme } from "@mui/material";
+import { Box, Tooltip, Fab, useTheme } from '@mui/material';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import { WHATSAPP_NUMBER, MESSENGER_PAGE_ID } from '../config/contact';
 
 export default function FloatingContacts({ profileMenuOpen = false }) {
   const { t } = useTranslation('navbar');
+  // eslint-disable-next-line no-unused-vars
   const theme = useTheme();
   const device = useDeviceMode();
   
@@ -24,7 +25,7 @@ export default function FloatingContacts({ profileMenuOpen = false }) {
       display: 'flex',
       flexDirection: 'column',
       gap: 1,
-      zIndex: (theme) => theme.zIndex.appBar + 1
+      zIndex: (theme) => theme.zIndex.appBar + 1,
     }}>
       <Tooltip title={t('contactWhatsApp')} placement="right">
         <Fab
@@ -42,18 +43,18 @@ export default function FloatingContacts({ profileMenuOpen = false }) {
               bgcolor: '#25D366 !important',
               color: '#ffffff !important',
               transform: 'translateY(-2px) scale(1.06)',
-              boxShadow: '0 14px 32px rgba(0,0,0,0.26), 0 0 0 6px rgba(37,211,102,0.18)'
+              boxShadow: '0 14px 32px rgba(0,0,0,0.26), 0 0 0 6px rgba(37,211,102,0.18)',
             },
             '&:active': {
               bgcolor: '#25D366 !important',
               color: '#ffffff !important',
               transform: 'translateY(0) scale(1.02)',
-              boxShadow: '0 10px 26px rgba(0,0,0,0.22), 0 0 0 4px rgba(37,211,102,0.16)'
+              boxShadow: '0 10px 26px rgba(0,0,0,0.22), 0 0 0 4px rgba(37,211,102,0.16)',
             },
             '&:focus': {
               bgcolor: '#25D366 !important',
-              color: '#ffffff !important'
-            }
+              color: '#ffffff !important',
+            },
           }}
         >
           <WhatsAppIcon fontSize="large" />
@@ -75,18 +76,18 @@ export default function FloatingContacts({ profileMenuOpen = false }) {
               bgcolor: '#0084FF !important',
               color: '#ffffff !important',
               transform: 'translateY(-2px) scale(1.06)',
-              boxShadow: '0 14px 32px rgba(0,0,0,0.26), 0 0 0 6px rgba(0,132,255,0.18)'
+              boxShadow: '0 14px 32px rgba(0,0,0,0.26), 0 0 0 6px rgba(0,132,255,0.18)',
             },
             '&:active': {
               bgcolor: '#0084FF !important',
               color: '#ffffff !important',
               transform: 'translateY(0) scale(1.02)',
-              boxShadow: '0 10px 26px rgba(0,0,0,0.22), 0 0 0 4px rgba(0,132,255,0.16)'
+              boxShadow: '0 10px 26px rgba(0,0,0,0.22), 0 0 0 4px rgba(0,132,255,0.16)',
             },
             '&:focus': {
               bgcolor: '#0084FF !important',
-              color: '#ffffff !important'
-            }
+              color: '#ffffff !important',
+            },
           }}
         >
           <FacebookIcon fontSize="large" />

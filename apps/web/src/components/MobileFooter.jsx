@@ -4,8 +4,8 @@ import {
   IconButton, 
   useTheme, 
   Tooltip,
-  Badge
-} from "@mui/material";
+  Badge,
+} from '@mui/material';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import AppsIcon from '@mui/icons-material/Apps';
@@ -23,13 +23,13 @@ export default function MobileFooter({
   onCartToggle, 
   onAccountClick,
   onToggleTheme,
-  themeMode = "light",
+  themeMode = 'light',
   onToggleLanguage,
-  language = "en",
+  language = 'en',
   onProfileMenuToggle,
   onSearchClick,
   mobileSearchEnabled = false,
-  onMobileSearchToggle
+  onMobileSearchToggle,
 }) {
   const theme = useTheme();
   const { t } = useTranslation('navbar');
@@ -75,17 +75,17 @@ export default function MobileFooter({
         left: '50%',
         transform: 'translateX(-50%)',
         height: 80,
-        backgroundColor: theme.palette.mode === "dark" 
-          ? "rgba(18,18,20,0.7)" 
-          : "rgba(255,255,255,0.7)",
+        backgroundColor: theme.palette.mode === 'dark' 
+          ? 'rgba(18,18,20,0.7)' 
+          : 'rgba(255,255,255,0.7)',
         backdropFilter: 'saturate(200%) blur(25px)',
         WebkitBackdropFilter: 'saturate(200%) blur(25px)',
-        border: theme.palette.mode === "dark" 
-          ? "1px solid rgba(255,255,255,0.2)" 
-          : "1px solid rgba(255,255,255,0.3)",
-        boxShadow: theme.palette.mode === "dark" 
-          ? "0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)" 
-          : "0 8px 32px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.5)",
+        border: theme.palette.mode === 'dark' 
+          ? '1px solid rgba(255,255,255,0.2)' 
+          : '1px solid rgba(255,255,255,0.3)',
+        boxShadow: theme.palette.mode === 'dark' 
+          ? '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' 
+          : '0 8px 32px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.5)',
         borderRadius: 20,
         display: 'flex',
         alignItems: 'center',
@@ -103,17 +103,17 @@ export default function MobileFooter({
         display: 'flex', 
         alignItems: 'center', 
         gap: 4,
-        justifyContent: 'center'
+        justifyContent: 'center',
       }}>
         {/* Products Button */}
-        <Tooltip title={isOnProductsPage ? t('products') + ' (Current)' : t('products')} placement="top">
+        <Tooltip title={isOnProductsPage ? `${t('products')} (Current)` : t('products')} placement="top">
           <IconButton
             onClick={onProductsClick}
             disabled={isOnProductsPage}
             sx={{
               color: isOnProductsPage 
-                ? theme.palette.mode === "dark" ? "rgba(245, 245, 247, 0.3)" : "rgba(17, 17, 17, 0.3)"
-                : theme.palette.mode === "dark" ? "#f5f5f7" : "#111",
+                ? theme.palette.mode === 'dark' ? 'rgba(245, 245, 247, 0.3)' : 'rgba(17, 17, 17, 0.3)'
+                : theme.palette.mode === 'dark' ? '#f5f5f7' : '#111',
               bgcolor: isOnProductsPage 
                 ? 'rgba(99, 102, 241, 0.05)' 
                 : 'rgba(99, 102, 241, 0.1)',
@@ -130,7 +130,7 @@ export default function MobileFooter({
               } : {},
               '&:disabled': {
                 cursor: 'not-allowed',
-              }
+              },
             }}
           >
             <InventoryIcon />
@@ -138,7 +138,7 @@ export default function MobileFooter({
         </Tooltip>
 
         {/* Search Button */}
-        <Tooltip title={!isOnProductsPage ? t('search') + ' (Products only)' : t('search')} placement="top">
+        <Tooltip title={!isOnProductsPage ? `${t('search')} (Products only)` : t('search')} placement="top">
           <IconButton
             data-search-button
             onClick={() => {
@@ -152,8 +152,8 @@ export default function MobileFooter({
             disabled={!isOnProductsPage}
             sx={{
               color: !isOnProductsPage 
-                ? theme.palette.mode === "dark" ? "rgba(245, 245, 247, 0.3)" : "rgba(17, 17, 17, 0.3)"
-                : theme.palette.mode === "dark" ? "#f5f5f7" : "#111",
+                ? theme.palette.mode === 'dark' ? 'rgba(245, 245, 247, 0.3)' : 'rgba(17, 17, 17, 0.3)'
+                : theme.palette.mode === 'dark' ? '#f5f5f7' : '#111',
               bgcolor: !isOnProductsPage 
                 ? 'rgba(99, 102, 241, 0.05)' 
                 : 'rgba(99, 102, 241, 0.1)',
@@ -170,7 +170,7 @@ export default function MobileFooter({
               } : {},
               '&:disabled': {
                 cursor: 'not-allowed',
-              }
+              },
             }}
           >
             <SearchIcon />
@@ -189,7 +189,7 @@ export default function MobileFooter({
                 height: 18,
                 borderRadius: '9px',
                 fontWeight: 600,
-              }
+              },
             }}
           >
             <IconButton
@@ -206,7 +206,7 @@ export default function MobileFooter({
                   background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
                   transform: 'scale(1.05)',
                   boxShadow: '0 12px 32px rgba(99, 102, 241, 0.5)',
-                }
+                },
               }}
             >
               <ShoppingCartIcon />
@@ -220,7 +220,7 @@ export default function MobileFooter({
             data-profile-button
             onClick={handleMenuClick}
             sx={{
-              color: theme.palette.mode === "dark" ? "#f5f5f7" : "#111",
+              color: theme.palette.mode === 'dark' ? '#f5f5f7' : '#111',
               bgcolor: 'rgba(99, 102, 241, 0.1)',
               border: '1px solid rgba(99, 102, 241, 0.2)',
               width: 48,
@@ -230,7 +230,7 @@ export default function MobileFooter({
               '&:hover': {
                 bgcolor: 'rgba(99, 102, 241, 0.2)',
                 transform: 'scale(1.05)',
-              }
+              },
             }}
           >
             <AppsIcon sx={{ color: 'inherit' }} />

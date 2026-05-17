@@ -17,7 +17,7 @@ const tagLabel = (tag, t) =>
         : tag === 'sale' ? t('tagSale')
           : tag;
 
-export default function GlowProductCard({ T, p, hue = 240, compact = false, onOpen, onAdd }) {
+export default function GlowProductCard({ T, p, hue = 240, compact = false, onOpen, onAdd, owner }) {
   const [imgOk, setImgOk] = useState(Boolean(p.image));
   const { isSaved, toggleSaved } = useSaved();
   const { t } = useTranslation('product');
@@ -58,6 +58,34 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
             background: tagBg(p.tag, T), color: p.tag === 'best' ? T.bg : '#fff',
             font: `700 9.5px ${T.font}`, letterSpacing: '0.06em', textTransform: 'uppercase',
           }}>{tagLabel(p.tag, t)}</div>
+        )}
+        {owner && (
+          <div style={{ position: 'absolute', left: 10, bottom: 10, display: 'flex', gap: 6 }}>
+            <button
+              aria-label={t('ownerEdit', { ns: 'owner', defaultValue: 'Edit' })}
+              onClick={(e) => { e.stopPropagation(); owner.onEdit?.(); }}
+              style={{
+                width: 28, height: 28, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                background: T.dark ? 'rgba(10,10,18,0.6)' : 'rgba(255,255,255,0.9)',
+                backdropFilter: 'blur(8px)', color: T.text,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+            </button>
+            <button
+              aria-label={t('ownerDelete', { ns: 'owner', defaultValue: 'Delete' })}
+              onClick={(e) => { e.stopPropagation(); owner.onDelete?.(); }}
+              style={{
+                width: 28, height: 28, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                background: T.dark ? 'rgba(10,10,18,0.6)' : 'rgba(255,255,255,0.9)',
+                backdropFilter: 'blur(8px)', color: T.danger,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /></svg>
+            </button>
+          </div>
         )}
       </div>
       <div style={{ padding: compact ? '10px 12px 12px' : '14px 14px 14px' }}>

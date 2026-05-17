@@ -35,4 +35,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findByTenantAndQuantityGreaterThanEqual(Tenant tenant, Integer quantity, Pageable pageable);
     
     Page<Product> findByTenant(Tenant tenant, Pageable pageable);
+
+    long countByTenant(Tenant tenant);
 }

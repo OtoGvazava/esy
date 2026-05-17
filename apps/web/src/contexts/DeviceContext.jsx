@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
 
@@ -5,7 +6,7 @@ import { useMediaQuery, useTheme } from '@mui/material';
 export const DEVICE_MODES = {
   DESKTOP: 'desktop',
   TABLET: 'tablet',
-  MOBILE: 'mobile'
+  MOBILE: 'mobile',
 };
 
 // Breakpoint definitions
@@ -26,6 +27,7 @@ export const useDevice = () => {
 };
 
 export const DeviceProvider = ({ children }) => {
+  // eslint-disable-next-line no-unused-vars
   const theme = useTheme();
   
   // Media queries for different device modes
@@ -63,7 +65,7 @@ export const DeviceProvider = ({ children }) => {
       maxMenuItemsPerRow: 3,
       menuItemSize: 'small',
       containerPadding: { xs: 2, sm: 3 },
-      searchFieldWidth: '100%'
+      searchFieldWidth: '100%',
     },
     [DEVICE_MODES.TABLET]: {
       showMobileFooter: false,
@@ -78,7 +80,7 @@ export const DeviceProvider = ({ children }) => {
       maxMenuItemsPerRow: 4,
       menuItemSize: 'medium',
       containerPadding: { xs: 3, sm: 4 },
-      searchFieldWidth: '80%'
+      searchFieldWidth: '80%',
     },
     [DEVICE_MODES.DESKTOP]: {
       showMobileFooter: false,
@@ -93,8 +95,8 @@ export const DeviceProvider = ({ children }) => {
       maxMenuItemsPerRow: 5,
       menuItemSize: 'large',
       containerPadding: { xs: 4, sm: 5 },
-      searchFieldWidth: '70%'
-    }
+      searchFieldWidth: '70%',
+    },
   };
 
   const currentConfig = deviceConfig[deviceMode];
@@ -121,7 +123,7 @@ export const DeviceProvider = ({ children }) => {
     
     // Constants
     DEVICE_MODES,
-    BREAKPOINTS
+    BREAKPOINTS,
   };
 
   return (

@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { STORAGE_KEYS } from '../constants';
-import { authApi } from '../utils/api';
+import { authApi, accountApi } from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -26,8 +26,15 @@ const mapBackendUser = (u) => {
     name: name || u.email,
     avatar: u.profileImageUrl || undefined,
     profileImageUrl: u.profileImageUrl,
+    dateOfBirth: u.dateOfBirth || undefined,
+    phoneNumber: u.phoneNumber || undefined,
+    phoneVerified: !!u.phoneVerified,
+    // Backend-derived: name + surname + date of birth all present.
+    profileComplete: !!u.profileComplete,
     roles,
     role: roles.includes('ADMIN') ? 'admin' : 'user',
+    // Owner of the store this request resolved to (by host). Backend-derived.
+    ownsCurrentStore: !!u.ownsCurrentStore,
     provider: 'google',
   };
 };
@@ -116,6 +123,39 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Re-pull the canonical user from /api/auth/user (carries ownsCurrentStore +
+  // profileComplete + phone state) and persist it. Used after profile/phone
+  // changes so the gate and UI reflect the new state without a reload.
+  const refreshUser = async () => {
+    const res = await authApi.me();
+    if (res?.authenticated && res.user) {
+      const mapped = mapBackendUser(res.user);
+      persistUser(mapped);
+      return mapped;
+    }
+    return null;
+  };
+
+  // Save the mandatory profile (name/surname/dateOfBirth; phone optional).
+  const saveProfile = async (body) => {
+    await accountApi.updateProfile(body);
+    return refreshUser();
+  };
+
+  // Phone is a separate field from the profile; changing it clears
+  // verification server-side, so the new number must be re-verified.
+  const savePhone = async (phoneNumber) => {
+    await accountApi.updatePhone(phoneNumber);
+    return refreshUser();
+  };
+
+  const sendPhoneCode = () => accountApi.sendPhoneCode();
+
+  const verifyPhone = async (code) => {
+    await accountApi.verifyPhone(code);
+    return refreshUser();
+  };
+
   const changePassword = async () => {
     // The backend has no password endpoint (OAuth/dev-login only); no-op success.
     try {
@@ -134,10 +174,20 @@ export const AuthProvider = ({ children }) => {
     logout,
     signInWithGoogle,
     updateProfile,
+    refreshUser,
+    saveProfile,
+    savePhone,
+    sendPhoneCode,
+    verifyPhone,
     changePassword,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
     isUser: user?.role === 'user' || !user?.role,
+    // Owner of the store currently being viewed.
+    isStoreOwner: !!user?.ownsCurrentStore,
+    // Allowed to manage this store (add/edit products, edit branding):
+    // a global admin, or the store's owner.
+    canManageStore: user?.role === 'admin' || !!user?.ownsCurrentStore,
   };
 
   return (

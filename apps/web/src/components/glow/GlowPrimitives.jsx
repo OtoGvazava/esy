@@ -32,8 +32,8 @@ export const Icon = {
 // App's real supported languages (react-i18next: en + ka), shaped like the
 // design's LANGS so the picker UI ports directly.
 export const LANGS = [
-  { code: 'en', native: 'English', short: 'EN', region: 'United States', currency: 'USD ($)' },
-  { code: 'ka', native: 'ქართული', short: 'KA', region: 'საქართველო', currency: 'GEL (₾)' },
+  { code: 'en', native: 'English', short: 'EN' },
+  { code: 'ka', native: 'ქართული', short: 'KA' },
 ];
 export const langInfo = (code) => LANGS.find((l) => l.code === code) || LANGS[0];
 

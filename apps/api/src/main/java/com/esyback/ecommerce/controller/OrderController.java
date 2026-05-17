@@ -33,6 +33,7 @@ public class OrderController {
     public ResponseEntity<Map<String, Object>> create(@RequestBody CreateOrderRequest request,
                                                       Authentication authentication) {
         User user = currentUser(authentication);
+        requireOrderEligible(user);
         Order order = orderService.createOrder(user, tenantContextService.getCurrentTenant(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(toMap(order));
     }
@@ -42,6 +43,19 @@ public class OrderController {
         User user = currentUser(authentication);
         return ResponseEntity.ok(orderService.ordersForUser(user).stream()
             .map(OrderController::toMap).collect(Collectors.toList()));
+    }
+
+    // Phone verification is not required to sign up, but it (and a complete
+    // profile) is required to place an order.
+    private void requireOrderEligible(User user) {
+        if (!AccountController.profileComplete(user)) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                "Complete your profile before ordering");
+        }
+        if (!Boolean.TRUE.equals(user.getPhoneVerified())) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                "Verify your phone number before ordering");
+        }
     }
 
     private User currentUser(Authentication authentication) {

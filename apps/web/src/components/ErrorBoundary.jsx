@@ -1,3 +1,4 @@
+/* global process */
 import React from 'react';
 import { Box, Typography, Button, Alert } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -9,7 +10,7 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false, error: null, errorInfo: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
@@ -67,7 +68,7 @@ const ErrorFallback = ({ error, onRetry, fallback }) => {
         sx={{ 
           fontSize: 64, 
           color: 'error.main', 
-          mb: 2 
+          mb: 2, 
         }} 
       />
       

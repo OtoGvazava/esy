@@ -1,3 +1,4 @@
+/* global process */
 import React, { useState } from 'react';
 import {
   Container,
@@ -19,7 +20,7 @@ import {
   CardContent,
   Chip,
   Stack,
-  IconButton
+  IconButton,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -34,7 +35,7 @@ import {
   AccountCircle as AccountCircleIcon,
   Settings as SettingsIcon,
   Delete as DeleteIcon,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -44,8 +45,9 @@ import { loginAsAdmin, loginAsUser } from '../utils/adminUtils';
 const MyAccount = () => {
   const theme = useTheme();
   const { t } = useTranslation(['auth', 'account']);
-  const { user, updateProfile, changePassword: changePasswordAPI, login } = useAuth();
+  const { user, updateProfile, login } = useAuth();
   const navigate = useNavigate();
+  // eslint-disable-next-line no-unused-vars
   const isMobile = useMediaQuery('(max-width:600px)');
   
   const [loading, setLoading] = useState(false);
@@ -56,7 +58,7 @@ const MyAccount = () => {
     lastName: false,
     phoneNumber: false,
     personalNumber: false,
-    dateOfBirth: false
+    dateOfBirth: false,
   });
   
   const [formData, setFormData] = useState({
@@ -64,33 +66,33 @@ const MyAccount = () => {
     lastName: user?.lastName || '',
     phoneNumber: user?.phoneNumber || '',
     personalNumber: user?.personalNumber || '',
-    dateOfBirth: user?.dateOfBirth || ''
+    dateOfBirth: user?.dateOfBirth || '',
   });
 
 
   const handleInputChange = (field) => (event) => {
     setFormData(prev => ({
       ...prev,
-      [field]: event.target.value
+      [field]: event.target.value,
     }));
   };
 
   const handleEditField = (field) => {
     setEditingFields(prev => ({
       ...prev,
-      [field]: true
+      [field]: true,
     }));
   };
 
   const handleCancelEdit = (field) => {
     setEditingFields(prev => ({
       ...prev,
-      [field]: false
+      [field]: false,
     }));
     // Reset field to original value
     setFormData(prev => ({
       ...prev,
-      [field]: user?.[field] || ''
+      [field]: user?.[field] || '',
     }));
   };
 
@@ -103,24 +105,24 @@ const MyAccount = () => {
         setSnackbar({
           open: true,
           message: t('account:fieldUpdated'),
-          severity: 'success'
+          severity: 'success',
         });
         setEditingFields(prev => ({
           ...prev,
-          [field]: false
+          [field]: false,
         }));
       } else {
         setSnackbar({
           open: true,
           message: result.error || t('account:updateError'),
-          severity: 'error'
+          severity: 'error',
         });
       }
-    } catch (error) {
+    } catch {
       setSnackbar({
         open: true,
         message: t('account:updateError'),
-        severity: 'error'
+        severity: 'error',
       });
     } finally {
       setLoading(false);
@@ -140,12 +142,13 @@ const MyAccount = () => {
       setSnackbar({
         open: true,
         message: t('account:passwordChangeRedirect'),
-        severity: 'info'
+        severity: 'info',
       });
     }
     setChangePasswordOpen(false);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const formatDate = (dateString) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString();
@@ -167,7 +170,7 @@ const MyAccount = () => {
               color: '#6366f1',
               mb: 3,
               border: '2px solid rgba(99, 102, 241, 0.2)',
-              mx: 'auto'
+              mx: 'auto',
             }}
           >
             <AccountCircleIcon sx={{ fontSize: 40 }} />
@@ -206,7 +209,7 @@ const MyAccount = () => {
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.02em'
+            letterSpacing: '-0.02em',
           }}
         >
           {t('account:myAccount')}
@@ -221,17 +224,17 @@ const MyAccount = () => {
         sx={(theme) => ({
           borderRadius: 3,
           border: theme.palette.mode === 'dark'
-            ? "1px solid rgba(255, 255, 255, 0.1)"
-            : "1px solid rgba(0, 0, 0, 0.08)",
+            ? '1px solid rgba(255, 255, 255, 0.1)'
+            : '1px solid rgba(0, 0, 0, 0.08)',
           background: theme.palette.mode === 'dark'
-            ? "rgba(255, 255, 255, 0.05)"
-            : "rgba(255, 255, 255, 0.9)",
-          backdropFilter: "blur(10px)",
+            ? 'rgba(255, 255, 255, 0.05)'
+            : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
           boxShadow: theme.palette.mode === 'dark'
-            ? "0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)"
-            : "0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+            ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+            : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           mb: 3,
-          overflow: 'hidden'
+          overflow: 'hidden',
         })}
       >
         <CardContent sx={{ p: 3 }}>
@@ -246,7 +249,7 @@ const MyAccount = () => {
                   color: '#6366f1',
                   border: '3px solid rgba(99, 102, 241, 0.2)',
                   fontSize: '2rem',
-                  fontWeight: 600
+                  fontWeight: 600,
                 }}
               >
                 {!user.avatar && getInitials(user.firstName, user.lastName)}
@@ -278,17 +281,17 @@ const MyAccount = () => {
           sx={(theme) => ({
             borderRadius: 3,
             border: theme.palette.mode === 'dark'
-              ? "1px solid rgba(255, 255, 255, 0.1)"
-              : "1px solid rgba(0, 0, 0, 0.08)",
+              ? '1px solid rgba(255, 255, 255, 0.1)'
+              : '1px solid rgba(0, 0, 0, 0.08)',
             background: theme.palette.mode === 'dark'
-              ? "rgba(255, 255, 255, 0.05)"
-              : "rgba(255, 255, 255, 0.9)",
-            backdropFilter: "blur(10px)",
+              ? 'rgba(255, 255, 255, 0.05)'
+              : 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)',
             boxShadow: theme.palette.mode === 'dark'
-              ? "0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)"
-              : "0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+              ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+              : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
             mb: 3,
-            overflow: 'hidden'
+            overflow: 'hidden',
           })}
         >
           <CardContent sx={{ p: 3 }}>
@@ -298,7 +301,7 @@ const MyAccount = () => {
               sx={{ 
                 mb: 3,
                 fontWeight: 600,
-                color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000'
+                color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
               }}
             >
               Development Tools
@@ -341,17 +344,17 @@ const MyAccount = () => {
         sx={(theme) => ({
           borderRadius: 3,
           border: theme.palette.mode === 'dark'
-            ? "1px solid rgba(255, 255, 255, 0.1)"
-            : "1px solid rgba(0, 0, 0, 0.08)",
+            ? '1px solid rgba(255, 255, 255, 0.1)'
+            : '1px solid rgba(0, 0, 0, 0.08)',
           background: theme.palette.mode === 'dark'
-            ? "rgba(255, 255, 255, 0.05)"
-            : "rgba(255, 255, 255, 0.9)",
-          backdropFilter: "blur(10px)",
+            ? 'rgba(255, 255, 255, 0.05)'
+            : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
           boxShadow: theme.palette.mode === 'dark'
-            ? "0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)"
-            : "0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+            ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+            : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           mb: 3,
-          overflow: 'hidden'
+          overflow: 'hidden',
         })}
       >
         <CardContent sx={{ p: 3 }}>
@@ -403,9 +406,9 @@ const MyAccount = () => {
                           : 'rgba(0, 0, 0, 0.02)',
                         '&:hover': {
                           border: '1px solid rgba(99, 102, 241, 0.3)',
-                        }
-                      }
-                    }
+                        },
+                      },
+                    },
                   }}
                   InputProps={{
                     startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />,
@@ -428,7 +431,7 @@ const MyAccount = () => {
                               bgcolor: 'rgba(0, 0, 0, 0.12)',
                               color: 'rgba(0, 0, 0, 0.26)',
                               border: '1px solid rgba(0, 0, 0, 0.12)',
-                            }
+                            },
                           }}
                         >
                           <SaveIcon fontSize="small" />
@@ -444,7 +447,7 @@ const MyAccount = () => {
                             '&:hover': {
                               bgcolor: 'rgba(244, 67, 54, 0.2)',
                               transform: 'scale(1.05)',
-                            }
+                            },
                           }}
                         >
                           <CancelIcon fontSize="small" />
@@ -462,12 +465,12 @@ const MyAccount = () => {
                           '&:hover': {
                             bgcolor: 'rgba(99, 102, 241, 0.2)',
                             transform: 'scale(1.05)',
-                          }
+                          },
                         }}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
-                    )
+                    ),
                   }}
                 />
               </Box>
@@ -504,9 +507,9 @@ const MyAccount = () => {
                           : 'rgba(0, 0, 0, 0.02)',
                         '&:hover': {
                           border: '1px solid rgba(99, 102, 241, 0.3)',
-                        }
-                      }
-                    }
+                        },
+                      },
+                    },
                   }}
                   InputProps={{
                     startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />,
@@ -529,7 +532,7 @@ const MyAccount = () => {
                               bgcolor: 'rgba(0, 0, 0, 0.12)',
                               color: 'rgba(0, 0, 0, 0.26)',
                               border: '1px solid rgba(0, 0, 0, 0.12)',
-                            }
+                            },
                           }}
                         >
                           <SaveIcon fontSize="small" />
@@ -545,7 +548,7 @@ const MyAccount = () => {
                             '&:hover': {
                               bgcolor: 'rgba(244, 67, 54, 0.2)',
                               transform: 'scale(1.05)',
-                            }
+                            },
                           }}
                         >
                           <CancelIcon fontSize="small" />
@@ -563,12 +566,12 @@ const MyAccount = () => {
                           '&:hover': {
                             bgcolor: 'rgba(99, 102, 241, 0.2)',
                             transform: 'scale(1.05)',
-                          }
+                          },
                         }}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
-                    )
+                    ),
                   }}
                 />
               </Box>
@@ -595,11 +598,11 @@ const MyAccount = () => {
                         ? 'rgba(255, 255, 255, 0.02)' 
                         : 'rgba(0, 0, 0, 0.02)',
                       color: 'text.primary',
-                    }
-                  }
+                    },
+                  },
                 }}
                 InputProps={{
-                  startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                  startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />,
                 }}
                 helperText={t('account:emailNotEditable')}
               />
@@ -636,9 +639,9 @@ const MyAccount = () => {
                           : 'rgba(0, 0, 0, 0.02)',
                         '&:hover': {
                           border: '1px solid rgba(99, 102, 241, 0.3)',
-                        }
-                      }
-                    }
+                        },
+                      },
+                    },
                   }}
                   InputProps={{
                     startAdornment: <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />,
@@ -661,7 +664,7 @@ const MyAccount = () => {
                               bgcolor: 'rgba(0, 0, 0, 0.12)',
                               color: 'rgba(0, 0, 0, 0.26)',
                               border: '1px solid rgba(0, 0, 0, 0.12)',
-                            }
+                            },
                           }}
                         >
                           <SaveIcon fontSize="small" />
@@ -677,7 +680,7 @@ const MyAccount = () => {
                             '&:hover': {
                               bgcolor: 'rgba(244, 67, 54, 0.2)',
                               transform: 'scale(1.05)',
-                            }
+                            },
                           }}
                         >
                           <CancelIcon fontSize="small" />
@@ -695,12 +698,12 @@ const MyAccount = () => {
                           '&:hover': {
                             bgcolor: 'rgba(99, 102, 241, 0.2)',
                             transform: 'scale(1.05)',
-                          }
+                          },
                         }}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
-                    )
+                    ),
                   }}
                 />
               </Box>
@@ -737,9 +740,9 @@ const MyAccount = () => {
                           : 'rgba(0, 0, 0, 0.02)',
                         '&:hover': {
                           border: '1px solid rgba(99, 102, 241, 0.3)',
-                        }
-                      }
-                    }
+                        },
+                      },
+                    },
                   }}
                   InputProps={{
                     startAdornment: <BadgeIcon sx={{ mr: 1, color: 'text.secondary' }} />,
@@ -762,7 +765,7 @@ const MyAccount = () => {
                               bgcolor: 'rgba(0, 0, 0, 0.12)',
                               color: 'rgba(0, 0, 0, 0.26)',
                               border: '1px solid rgba(0, 0, 0, 0.12)',
-                            }
+                            },
                           }}
                         >
                           <SaveIcon fontSize="small" />
@@ -778,7 +781,7 @@ const MyAccount = () => {
                             '&:hover': {
                               bgcolor: 'rgba(244, 67, 54, 0.2)',
                               transform: 'scale(1.05)',
-                            }
+                            },
                           }}
                         >
                           <CancelIcon fontSize="small" />
@@ -796,12 +799,12 @@ const MyAccount = () => {
                           '&:hover': {
                             bgcolor: 'rgba(99, 102, 241, 0.2)',
                             transform: 'scale(1.05)',
-                          }
+                          },
                         }}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
-                    )
+                    ),
                   }}
                 />
               </Box>
@@ -840,9 +843,9 @@ const MyAccount = () => {
                           : 'rgba(0, 0, 0, 0.02)',
                         '&:hover': {
                           border: '1px solid rgba(99, 102, 241, 0.3)',
-                        }
-                      }
-                    }
+                        },
+                      },
+                    },
                   }}
                   InputProps={{
                     startAdornment: <CalendarIcon sx={{ mr: 1, color: 'text.secondary' }} />,
@@ -865,7 +868,7 @@ const MyAccount = () => {
                               bgcolor: 'rgba(0, 0, 0, 0.12)',
                               color: 'rgba(0, 0, 0, 0.26)',
                               border: '1px solid rgba(0, 0, 0, 0.12)',
-                            }
+                            },
                           }}
                         >
                           <SaveIcon fontSize="small" />
@@ -881,7 +884,7 @@ const MyAccount = () => {
                             '&:hover': {
                               bgcolor: 'rgba(244, 67, 54, 0.2)',
                               transform: 'scale(1.05)',
-                            }
+                            },
                           }}
                         >
                           <CancelIcon fontSize="small" />
@@ -899,12 +902,12 @@ const MyAccount = () => {
                           '&:hover': {
                             bgcolor: 'rgba(99, 102, 241, 0.2)',
                             transform: 'scale(1.05)',
-                          }
+                          },
                         }}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
-                    )
+                    ),
                   }}
                 />
               </Box>
@@ -919,17 +922,17 @@ const MyAccount = () => {
         sx={(theme) => ({
           borderRadius: 3,
           border: theme.palette.mode === 'dark'
-            ? "1px solid rgba(255, 255, 255, 0.1)"
-            : "1px solid rgba(0, 0, 0, 0.08)",
+            ? '1px solid rgba(255, 255, 255, 0.1)'
+            : '1px solid rgba(0, 0, 0, 0.08)',
           background: theme.palette.mode === 'dark'
-            ? "rgba(255, 255, 255, 0.05)"
-            : "rgba(255, 255, 255, 0.9)",
-          backdropFilter: "blur(10px)",
+            ? 'rgba(255, 255, 255, 0.05)'
+            : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
           boxShadow: theme.palette.mode === 'dark'
-            ? "0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)"
-            : "0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+            ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+            : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           mb: 3,
-          overflow: 'hidden'
+          overflow: 'hidden',
         })}
       >
         <CardContent sx={{ p: 3 }}>
@@ -985,7 +988,7 @@ const MyAccount = () => {
                   background: 'rgba(99, 102, 241, 0.1)',
                   border: '2px solid rgba(99, 102, 241, 0.5)',
                   transform: 'translateY(-1px)',
-                }
+                },
               }}
             >
               {t('account:changePassword')}
@@ -999,16 +1002,16 @@ const MyAccount = () => {
         sx={(theme) => ({
           borderRadius: 3,
           border: theme.palette.mode === 'dark'
-            ? "1px solid rgba(255, 255, 255, 0.1)"
-            : "1px solid rgba(0, 0, 0, 0.08)",
+            ? '1px solid rgba(255, 255, 255, 0.1)'
+            : '1px solid rgba(0, 0, 0, 0.08)',
           background: theme.palette.mode === 'dark'
-            ? "rgba(255, 255, 255, 0.05)"
-            : "rgba(255, 255, 255, 0.9)",
-          backdropFilter: "blur(10px)",
+            ? 'rgba(255, 255, 255, 0.05)'
+            : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
           boxShadow: theme.palette.mode === 'dark'
-            ? "0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)"
-            : "0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)",
-          overflow: 'hidden'
+            ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+            : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+          overflow: 'hidden',
         })}
       >
         <CardContent sx={{ p: 3 }}>
@@ -1046,7 +1049,7 @@ const MyAccount = () => {
                   background: 'rgba(99, 102, 241, 0.1)',
                   border: '2px solid rgba(99, 102, 241, 0.5)',
                   transform: 'translateY(-1px)',
-                }
+                },
               }}
             >
               {t('account:viewOrders')}
@@ -1061,7 +1064,7 @@ const MyAccount = () => {
                   setSnackbar({
                     open: true,
                     message: t('account:deleteAccountSuccess'),
-                    severity: 'info'
+                    severity: 'info',
                   });
                 }
               }}
@@ -1079,7 +1082,7 @@ const MyAccount = () => {
                   background: 'rgba(239, 68, 68, 0.1)',
                   border: '2px solid rgba(239, 68, 68, 0.5)',
                   transform: 'translateY(-1px)',
-                }
+                },
               }}
             >
               {t('account:deleteAccount')}
@@ -1098,17 +1101,17 @@ const MyAccount = () => {
           sx: (theme) => ({
             borderRadius: 3,
             border: theme.palette.mode === 'dark'
-              ? "1px solid rgba(255, 255, 255, 0.1)"
-              : "1px solid rgba(0, 0, 0, 0.08)",
+              ? '1px solid rgba(255, 255, 255, 0.1)'
+              : '1px solid rgba(0, 0, 0, 0.08)',
             background: theme.palette.mode === 'dark'
-              ? "rgba(255, 255, 255, 0.05)"
-              : "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(20px)",
+              ? 'rgba(255, 255, 255, 0.05)'
+              : 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
             boxShadow: theme.palette.mode === 'dark'
-              ? "0 32px 64px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)"
-              : "0 32px 64px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+              ? '0 32px 64px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 32px 64px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
             overflow: 'hidden',
-          })
+          }),
         }}
       >
         <DialogTitle
@@ -1119,7 +1122,7 @@ const MyAccount = () => {
             borderBottom: theme.palette.mode === 'dark'
               ? '1px solid rgba(255, 255, 255, 0.1)'
               : '1px solid rgba(0, 0, 0, 0.1)',
-            p: 3
+            p: 3,
           })}
         >
           <Typography 
@@ -1145,7 +1148,7 @@ const MyAccount = () => {
                 color: '#6366f1',
                 border: '3px solid rgba(99, 102, 241, 0.2)',
                 mx: 'auto',
-                mb: 3
+                mb: 3,
               }}
             >
               <SecurityIcon sx={{ fontSize: 40 }} />
@@ -1181,7 +1184,7 @@ const MyAccount = () => {
                 background: 'rgba(156, 163, 175, 0.1)',
                 border: '2px solid rgba(156, 163, 175, 0.5)',
                 transform: 'translateY(-1px)',
-              }
+              },
             }}
           >
             {t('account:cancel')}
@@ -1203,7 +1206,7 @@ const MyAccount = () => {
                 background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
                 boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
                 transform: 'translateY(-1px)',
-              }
+              },
             }}
           >
             {t('account:continue')}

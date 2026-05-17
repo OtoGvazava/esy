@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from './GlowPrimitives';
 import { useGlow } from '../../styles/glow';
 import { useCart } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function GlowDock() {
   const { T } = useGlow();
@@ -12,14 +13,44 @@ export default function GlowDock() {
   const { pathname } = useLocation();
   const { getTotalItems } = useCart();
   const { t } = useTranslation('navbar');
+  const { isAuthenticated, user } = useAuth();
   const cartCount = getTotalItems();
+
+  // Signed in → mirror the platform avatar: Google photo, else name initials.
+  const initials = (user?.name || user?.firstName || 'You')
+    .split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const accountIcon = isAuthenticated ? (
+    <span style={{
+      width: 26, height: 26, borderRadius: '50%', position: 'relative', overflow: 'hidden',
+      background: T.grad, color: '#fff', flexShrink: 0,
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      font: `700 10.5px ${T.font}`,
+    }}>
+      {initials}
+      {user?.avatar && (
+        <img
+          src={user.avatar}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      )}
+    </span>
+  ) : (
+    <Icon.user />
+  );
+
+  // Signed in → label the tab with the user's first name instead of "Account".
+  const firstName = (user?.firstName || user?.name || '').trim().split(/\s+/)[0];
+  const accountLabel = isAuthenticated && firstName ? firstName : t('dock.account');
 
   const items = [
     { key: 'shop', icon: <Icon.grid />, label: t('dock.shop'), to: '/', active: pathname === '/' || pathname.startsWith('/product') },
     { key: 'search', icon: <Icon.search />, label: t('dock.search'), to: '/search', active: pathname === '/search' },
     { key: 'bag', icon: <Icon.bag />, label: t('dock.bag'), to: '/cart', badge: cartCount, active: ['/cart', '/checkout', '/success'].includes(pathname) },
     { key: 'saved', icon: <Icon.heart />, label: t('dock.saved'), to: '/saved', active: pathname === '/saved' },
-    { key: 'account', icon: <Icon.user />, label: t('dock.account'), to: '/account', active: pathname === '/account' },
+    { key: 'account', icon: accountIcon, label: accountLabel, to: '/account', active: pathname === '/account' },
   ];
 
   return (
@@ -57,7 +88,7 @@ export default function GlowDock() {
               }}>{it.badge}</span>
             ) : null}
           </div>
-          <div style={{ font: `600 9.5px ${T.font}`, letterSpacing: '-0.005em' }}>{it.label}</div>
+          <div style={{ font: `600 9.5px ${T.font}`, letterSpacing: '-0.005em', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</div>
         </div>
       ))}
     </div>

@@ -1,11 +1,13 @@
 package com.esyback.ecommerce.controller;
 
+import com.esyback.ecommerce.dto.UpdateProfileRequest;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.SavedItemRepository;
 import com.esyback.ecommerce.repository.StoreFollowRepository;
 import com.esyback.ecommerce.repository.StoreMembershipRepository;
 import com.esyback.ecommerce.service.OrderService;
+import com.esyback.ecommerce.service.PhoneVerificationService;
 import com.esyback.ecommerce.service.UserService;
 import com.esyback.ecommerce.web.TenantMapper;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +40,7 @@ public class AccountController {
     private final OrderService orderService;
     private final SavedItemRepository savedRepository;
     private final StoreFollowRepository followRepository;
+    private final PhoneVerificationService phoneVerificationService;
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> account(Authentication authentication) {
@@ -78,6 +83,83 @@ public class AccountController {
         return ResponseEntity.ok(body);
     }
 
+    /** Mandatory profile: name, surname and date of birth. Phone is handled
+     *  separately (PUT /phone) so changing it can re-trigger verification. */
+    @PutMapping("/profile")
+    public ResponseEntity<Map<String, Object>> updateProfile(@RequestBody UpdateProfileRequest req,
+                                                             Authentication authentication) {
+        User user = requireUser(authentication);
+        if (isBlank(req.getFirstName()) || isBlank(req.getLastName()) || isBlank(req.getDateOfBirth())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Name, surname and date of birth are required");
+        }
+        LocalDate dob;
+        try {
+            dob = LocalDate.parse(req.getDateOfBirth().trim());
+        } catch (DateTimeParseException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid date of birth");
+        }
+        if (dob.isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date of birth can't be in the future");
+        }
+        user.setFirstName(req.getFirstName().trim());
+        user.setLastName(req.getLastName().trim());
+        user.setDateOfBirth(dob);
+        userService.save(user);
+        return ResponseEntity.ok(userMap(user));
+    }
+
+    /** Phone number is its own field: changing it clears verification so the
+     *  new number must be re-verified before the next order. */
+    @PutMapping("/phone")
+    public ResponseEntity<Map<String, Object>> updatePhone(@RequestBody Map<String, String> body,
+                                                           Authentication authentication) {
+        User user = requireUser(authentication);
+        String raw = body == null ? null : body.get("phoneNumber");
+        String newPhone = raw == null ? "" : raw.trim();
+        String current = user.getPhoneNumber() == null ? "" : user.getPhoneNumber();
+        if (!newPhone.equals(current)) {
+            user.setPhoneNumber(newPhone.isEmpty() ? null : newPhone);
+            user.setPhoneVerified(false);
+            userService.save(user);
+        }
+        return ResponseEntity.ok(userMap(user));
+    }
+
+    /** Dev stand-in: returns the generated code so it can be entered without a
+     *  real SMS. A real provider would only deliver it out-of-band. */
+    @PostMapping("/phone/send-code")
+    public ResponseEntity<Map<String, Object>> sendPhoneCode(Authentication authentication) {
+        User user = requireUser(authentication);
+        String code = phoneVerificationService.sendCode(user);
+        return ResponseEntity.ok(Map.of("sent", true, "devCode", code));
+    }
+
+    @PostMapping("/phone/verify")
+    public ResponseEntity<Map<String, Object>> verifyPhone(@RequestBody Map<String, String> body,
+                                                           Authentication authentication) {
+        User user = requireUser(authentication);
+        phoneVerificationService.verify(user, body == null ? null : body.get("code"));
+        return ResponseEntity.ok(userMap(user));
+    }
+
+    private User requireUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in required");
+        }
+        return userService.findByUsername(authentication.getName())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    /** Name + surname + date of birth all present. */
+    public static boolean profileComplete(User u) {
+        return !isBlank(u.getFirstName()) && !isBlank(u.getLastName()) && u.getDateOfBirth() != null;
+    }
+
     private static Map<String, Object> userMap(User u) {
         String first = u.getFirstName() == null ? "" : u.getFirstName();
         String last = u.getLastName() == null ? "" : u.getLastName();
@@ -93,6 +175,10 @@ public class AccountController {
         m.put("firstName", u.getFirstName());
         m.put("lastName", u.getLastName());
         m.put("profileImageUrl", u.getProfileImageUrl());
+        m.put("dateOfBirth", u.getDateOfBirth() == null ? null : u.getDateOfBirth().toString());
+        m.put("phoneNumber", u.getPhoneNumber());
+        m.put("phoneVerified", Boolean.TRUE.equals(u.getPhoneVerified()));
+        m.put("profileComplete", profileComplete(u));
         m.put("roles", u.getRoles().stream().map(r -> r.getName()).collect(Collectors.toList()));
         return m;
     }

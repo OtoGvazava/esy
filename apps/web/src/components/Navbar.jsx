@@ -1,12 +1,12 @@
-import { AppBar, Toolbar, IconButton, InputBase, Box, useTheme, Button, Tooltip, Menu, MenuItem, Avatar } from "@mui/material";
-import { useRef, useState } from "react";
-import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
-import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
-import ClearIcon from "@mui/icons-material/Clear";
-import SearchIcon from "@mui/icons-material/Search";
-import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
-import LogoutIcon from "@mui/icons-material/Logout";
-import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
+import { AppBar, Toolbar, IconButton, InputBase, Box, useTheme, Button, Tooltip, Menu, MenuItem, Avatar } from '@mui/material';
+import { useRef, useState } from 'react';
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
+import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
+import ClearIcon from '@mui/icons-material/Clear';
+import SearchIcon from '@mui/icons-material/Search';
+import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
+import LogoutIcon from '@mui/icons-material/Logout';
+import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,10 +16,11 @@ import Logo from './Logo';
 import { useNavigate } from 'react-router-dom';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
-export default function Navbar({ searchQuery = "", onSearchChange, onToggleTheme, themeMode = "light", onAccountClick, language = "en", onToggleLanguage, profileMenuOpen = false }) {
+// eslint-disable-next-line no-unused-vars
+export default function Navbar({ searchQuery = '', onSearchChange, onToggleTheme, themeMode = 'light', onAccountClick, language = 'en', onToggleLanguage, profileMenuOpen = false }) {
   const theme = useTheme();
   const { t, i18n } = useTranslation(['navbar', 'auth', 'orders']);
-  const { user, isAuthenticated, logout, isAdmin } = useAuth();
+  const { isAuthenticated, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const device = useDeviceMode();
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -68,9 +69,7 @@ export default function Navbar({ searchQuery = "", onSearchChange, onToggleTheme
   return (
     <AppBar position="fixed" sx={{
       backgroundColor: 'transparent',
-      backdropFilter: 'none',
-      color: theme.palette.mode === "dark" ? "#f5f5f7" : "#111",
-      boxShadow: 'none',
+      color: theme.palette.mode === 'dark' ? '#f5f5f7' : '#111',
       display: 'block',
       top: 20,
       left: '50%',
@@ -79,17 +78,17 @@ export default function Navbar({ searchQuery = "", onSearchChange, onToggleTheme
       minWidth: { xs: 300, sm: 400, md: 500 },
       maxWidth: '95%',
       borderRadius: 20,
-      background: theme.palette.mode === "dark" 
-        ? "rgba(18,18,20,0.7)" 
-        : "rgba(255,255,255,0.7)",
-      backdropFilter: "saturate(200%) blur(25px)",
-      WebkitBackdropFilter: "saturate(200%) blur(25px)",
-      border: theme.palette.mode === "dark" 
-        ? "1px solid rgba(255,255,255,0.2)" 
-        : "1px solid rgba(255,255,255,0.3)",
-      boxShadow: theme.palette.mode === "dark" 
-        ? "0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)" 
-        : "0 8px 32px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.5)",
+      background: theme.palette.mode === 'dark' 
+        ? 'rgba(18,18,20,0.7)' 
+        : 'rgba(255,255,255,0.7)',
+      backdropFilter: 'saturate(200%) blur(25px)',
+      WebkitBackdropFilter: 'saturate(200%) blur(25px)',
+      border: theme.palette.mode === 'dark' 
+        ? '1px solid rgba(255,255,255,0.2)' 
+        : '1px solid rgba(255,255,255,0.3)',
+      boxShadow: theme.palette.mode === 'dark' 
+        ? '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' 
+        : '0 8px 32px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.5)',
     }}>
       <Box sx={{ 
         display: 'flex',
@@ -98,45 +97,45 @@ export default function Navbar({ searchQuery = "", onSearchChange, onToggleTheme
         gap: 2,
         width: '100%',
         py: 2,
-        px: { xs: 2, sm: 3 }
+        px: { xs: 2, sm: 3 },
       }}>
         {/* Logo Component */}
         <Logo onClick={() => window.location.href = '/'} />
         
         {/* Search Field - Takes most of the space */}
         <Box sx={{
-          display: "flex",
-          alignItems: "center",
+          display: 'flex',
+          alignItems: 'center',
           width: '100%',
           maxWidth: { xs: '98%', sm: '98%', md: '95%' },
           backgroundColor: 'transparent',
           borderRadius: 2,
           border: 'none',
-          transition: "all 0.2s ease",
+          transition: 'all 0.2s ease',
         }}>
           <InputBase
             placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-            inputProps={{ "aria-label": "search" }}
+            inputProps={{ 'aria-label': 'search' }}
             inputRef={useRef(null)}
             sx={{ 
-              color: "inherit", 
+              color: 'inherit', 
               width: '100%', 
-              fontSize: { xs: "1.1rem", sm: "1.2rem" },
+              fontSize: { xs: '1.1rem', sm: '1.2rem' },
               px: 3,
               py: 2,
               fontWeight: 400,
-              "& .MuiInputBase-input": {
-                "&::placeholder": {
+              '& .MuiInputBase-input': {
+                '&::placeholder': {
                   opacity: 0.6,
-                  fontSize: { xs: "1.1rem", sm: "1.2rem" },
+                  fontSize: { xs: '1.1rem', sm: '1.2rem' },
                 },
               },
             }}
             startAdornment={
               device.shouldShowSearchIcon && (
-                <Box sx={{ display: "flex", alignItems: "center", mr: 1.5, color: "inherit" }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mr: 1.5, color: 'inherit' }}>
                   <SearchIcon />
                 </Box>
               )
@@ -149,17 +148,17 @@ export default function Navbar({ searchQuery = "", onSearchChange, onToggleTheme
                     size="small"
                     aria-label="Clear search"
                     onClick={() => {
-                      onSearchChange && onSearchChange("");
+                      onSearchChange && onSearchChange('');
                     }}
                     sx={{
-                      color: "inherit",
+                      color: 'inherit',
                       mr: 0.5,
                       opacity: 0.7,
                       transition: 'opacity 0.2s ease',
-                      "&:hover": {
+                      '&:hover': {
                         opacity: 1,
-                        backgroundColor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.1)" : "rgba(17,17,17,0.1)",
-                      }
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(17,17,17,0.1)',
+                      },
                     }}
                   >
                     <ClearIcon fontSize="small" />
@@ -174,7 +173,7 @@ export default function Navbar({ searchQuery = "", onSearchChange, onToggleTheme
                   borderLeft: `1px solid ${theme.palette.mode === 'dark' 
                     ? 'rgba(255,255,255,0.1)' 
                     : 'rgba(0,0,0,0.1)'}`,
-                  pl: 1
+                  pl: 1,
                 }}>
                   {/* Language Toggle */}
                   {device.shouldShowLanguageToggle && (
@@ -186,10 +185,10 @@ export default function Navbar({ searchQuery = "", onSearchChange, onToggleTheme
                         sx={{ 
                           opacity: 0.9,
                           transition: 'opacity 0.2s ease',
-                          "&:hover": {
+                          '&:hover': {
                             opacity: 1,
                             backgroundColor: 'transparent',
-                          }
+                          },
                         }}
                       >
                         {language === 'en' ? (
@@ -211,13 +210,13 @@ export default function Navbar({ searchQuery = "", onSearchChange, onToggleTheme
                       sx={{ 
                         opacity: 0.9,
                         transition: 'opacity 0.2s ease',
-                        "&:hover": {
+                        '&:hover': {
                           opacity: 1,
                           backgroundColor: 'transparent',
-                        }
+                        },
                       }}
                     >
-                      {themeMode === "dark" ? <LightModeOutlinedIcon fontSize="small" /> : <DarkModeOutlinedIcon fontSize="small" />}
+                      {themeMode === 'dark' ? <LightModeOutlinedIcon fontSize="small" /> : <DarkModeOutlinedIcon fontSize="small" />}
                     </IconButton>
                   )}
 
@@ -228,20 +227,20 @@ export default function Navbar({ searchQuery = "", onSearchChange, onToggleTheme
                       size="small"
                       onClick={handleAccountClick}
                       sx={{ 
-                        textTransform: "none", 
+                        textTransform: 'none', 
                         fontWeight: 600, 
                         fontSize: 14,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                         minWidth: 'auto',
                         px: 1,
                         opacity: 0.9,
                         transition: 'opacity 0.2s ease',
-                        "&:hover": {
+                        '&:hover': {
                           opacity: 1,
                           backgroundColor: 'transparent',
-                        }
+                        },
                       }}
                     >
                       {isAuthenticated ? t('auth:myAccount') : t('auth:logIn')}
@@ -273,8 +272,8 @@ export default function Navbar({ searchQuery = "", onSearchChange, onToggleTheme
               : '1px solid rgba(0,0,0,0.1)',
             boxShadow: theme.palette.mode === 'dark'
               ? '0 10px 25px rgba(0,0,0,0.3)'
-              : '0 10px 25px rgba(0,0,0,0.1)'
-          }
+              : '0 10px 25px rgba(0,0,0,0.1)',
+          },
         }}
       >
         <MenuItem onClick={handleMyAccount} sx={{ py: 1.5 }}>

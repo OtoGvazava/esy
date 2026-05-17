@@ -13,4 +13,5 @@ import java.util.Optional;
 public interface StoreFollowRepository extends JpaRepository<StoreFollow, Long> {
     List<StoreFollow> findByUser(User user);
     Optional<StoreFollow> findByUserAndTenant(User user, Tenant tenant);
+    long countByTenant(Tenant tenant);
 }

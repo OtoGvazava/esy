@@ -88,6 +88,14 @@ Account model: one global `User` (unique email/username) + `StoreMembership`
 (OWNER/CUSTOMER) + `Order`/`SavedItem`/`StoreFollow`. `GET /api/account`
 aggregates it. JPA creates the tables; no manual migration.
 
+**Product photos** are stored in the **database** (`product_images`, bytes as
+Postgres `bytea` / H2 `BLOB`) and streamed from
+`GET /api/products/{id}/images/{imageId}` — no object store, no Render disk.
+They therefore persist exactly like everything else: durable on Postgres
+(compose volume / Render PostgreSQL), wiped on every restart on the free
+in-memory H2 plan. If image volume/CDN ever matters, the swap point is
+`ProductImageService` (move bytes to Cloudflare R2 / S3 behind the same API).
+
 ## Wildcard subdomains + OAuth (the platform's multi-tenant path)
 
 Tenant stores resolve by `Host` (`<sub>.esy.ge`); the platform is `esy.ge` /

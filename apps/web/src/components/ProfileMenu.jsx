@@ -5,7 +5,7 @@ import {
   Modal,
   Backdrop,
   Typography,
-  keyframes
+  keyframes,
 } from '@mui/material';
 import { useDeviceMode } from '../hooks/useDeviceMode';
 import {
@@ -17,7 +17,7 @@ import {
   Facebook as FacebookIcon,
   DarkModeOutlined as DarkModeIcon,
   LightModeOutlined as LightModeIcon,
-  Language as LanguageIcon
+  Language as LanguageIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,6 +39,7 @@ const sunRayAnimation = keyframes`
   }
 `;
 
+// eslint-disable-next-line no-unused-vars
 const sunPulseAnimation = keyframes`
   0% {
     opacity: 0;
@@ -65,12 +66,13 @@ const ProfileMenu = ({
   themeMode,
   onToggleTheme,
   language,
-  onToggleLanguage
+  onToggleLanguage,
 }) => {
   const theme = useTheme();
   const { t } = useTranslation('navbar');
   const { logout } = useAuth();
   const navigate = useNavigate();
+  // eslint-disable-next-line no-unused-vars
   const device = useDeviceMode();
   const [animationPhase, setAnimationPhase] = useState('closed');
 
@@ -116,75 +118,75 @@ const ProfileMenu = ({
       icon: <PersonIcon />,
       text: t('myAccount'),
       onClick: handleAccountClick,
-      divider: false
+      divider: false,
     },
     {
       icon: <OrdersIcon />,
       text: t('myOrders', { ns: 'orders' }),
       onClick: handleOrdersClick,
-      divider: true
+      divider: true,
     },
     {
       icon: <WhatsAppIcon />,
       text: 'WhatsApp',
       onClick: () => window.open('https://wa.me/995555123456', '_blank'),
-      divider: false
+      divider: false,
     },
     {
       icon: <FacebookIcon />,
       text: 'Facebook',
       onClick: () => window.open('https://facebook.com', '_blank'),
-      divider: true
+      divider: true,
     },
     {
       icon: themeMode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />,
       text: themeMode === 'dark' ? 'Light Mode' : 'Dark Mode',
       onClick: onToggleTheme,
-      divider: false
+      divider: false,
     },
     {
       icon: <LanguageIcon />,
       text: language === 'en' ? 'ქართული' : 'English',
       onClick: onToggleLanguage,
-      divider: true
+      divider: true,
     },
     {
       icon: <LogoutIcon />,
       text: t('logout', { ns: 'auth' }),
       onClick: handleLogout,
-      divider: false
-    }
+      divider: false,
+    },
   ] : [
     {
       icon: <PersonIcon />,
       text: t('login', { ns: 'auth' }),
       onClick: onAuthModalOpen,
-      divider: false
+      divider: false,
     },
     {
       icon: <WhatsAppIcon />,
       text: 'WhatsApp',
       onClick: () => window.open('https://wa.me/995555123456', '_blank'),
-      divider: false
+      divider: false,
     },
     {
       icon: <FacebookIcon />,
       text: 'Facebook',
       onClick: () => window.open('https://facebook.com', '_blank'),
-      divider: true
+      divider: true,
     },
     {
       icon: themeMode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />,
       text: themeMode === 'dark' ? 'Light Mode' : 'Dark Mode',
       onClick: onToggleTheme,
-      divider: false
+      divider: false,
     },
     {
       icon: <LanguageIcon />,
       text: language === 'en' ? 'ქართული' : 'English',
       onClick: onToggleLanguage,
-      divider: false
-    }
+      divider: false,
+    },
   ];
 
   return (
@@ -203,7 +205,7 @@ const ProfileMenu = ({
           WebkitBackdropFilter: theme.palette.mode === 'dark' 
             ? 'blur(12px)' 
             : 'blur(6px)',
-        })
+        }),
       }}
       sx={{
         display: 'flex',
@@ -212,7 +214,7 @@ const ProfileMenu = ({
         zIndex: (theme) => theme.zIndex.modal,
         '& .MuiBackdrop-root': {
           zIndex: (theme) => theme.zIndex.modal - 1,
-        }
+        },
       }}
     >
       {/* Menu Container */}
@@ -231,7 +233,7 @@ const ProfileMenu = ({
           opacity: open ? 1 : 0,
           transition: 'opacity 0.3s ease-in-out',
           pointerEvents: 'auto',
-          visibility: 'visible'
+          visibility: 'visible',
         }}
       >
         {/* Welcome Text - Above menu items (only for authenticated users) */}
@@ -257,7 +259,7 @@ const ProfileMenu = ({
                 ? '0 -4px 24px rgba(0,0,0,0.5)' 
                 : '0 -4px 24px rgba(0,0,0,0.06)',
               minWidth: 200,
-              maxWidth: 280
+              maxWidth: 280,
             }}
           >
             <Typography
@@ -269,7 +271,7 @@ const ProfileMenu = ({
                 textTransform: 'uppercase',
                 letterSpacing: 0.8,
                 lineHeight: 1,
-                mb: 1
+                mb: 1,
               }}
             >
               {t('heyThere', { ns: 'auth' })}! 👋
@@ -284,7 +286,7 @@ const ProfileMenu = ({
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
-                maxWidth: 200
+                maxWidth: 200,
               }}
             >
               {user?.firstName ? `${user.firstName}` : 'User'}
@@ -302,7 +304,7 @@ const ProfileMenu = ({
             justifyContent: 'center',
             maxWidth: '100%', // Use full screen width
             width: '100%',
-            padding: '0 8px' // Minimal padding to maximize space
+            padding: '0 8px', // Minimal padding to maximize space
           }}
         >
         {/* Menu items in horizontal layout */}
@@ -312,7 +314,7 @@ const ProfileMenu = ({
             sx={{
               animation: open && animationPhase === 'open' 
                 ? `${sunRayAnimation} 0.4s ease-out ${index * 0.05}s both` 
-                : 'none'
+                : 'none',
             }}
           >
             <Box
@@ -352,13 +354,13 @@ const ProfileMenu = ({
                     ? '1px solid rgba(99, 102, 241, 0.3)' 
                     : '1px solid rgba(99, 102, 241, 0.3)',
                   '& .MuiTypography-root': {
-                    color: '#ffffff !important'
+                    color: '#ffffff !important',
                   },
                   '& .MuiBox-root': {
                     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    color: '#ffffff !important'
-                  }
-                }
+                    color: '#ffffff !important',
+                  },
+                },
               }}
             >
               <Box
@@ -372,7 +374,7 @@ const ProfileMenu = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.3rem'
+                  fontSize: '1.3rem',
                 }}
               >
                 {item.icon}
@@ -389,7 +391,7 @@ const ProfileMenu = ({
                   lineHeight: 1.2,
                   maxWidth: '100%',
                   whiteSpace: 'normal', // Allow text to wrap
-                  wordBreak: 'break-word' // Break long words if needed
+                  wordBreak: 'break-word', // Break long words if needed
                 }}
               >
                 {item.text}

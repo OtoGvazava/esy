@@ -8,12 +8,12 @@ import { useIslandStyles } from '../styles/islandStyles';
 import SearchSuggestions from './SearchSuggestions';
 
 const SearchIsland = ({ 
-  searchQuery = "", 
+  searchQuery = '', 
   onSearchChange, 
-  placeholder = "Search products...",
+  placeholder = 'Search products...',
   disabled = false,
   showSuggestions = false,
-  sx = {} 
+  sx = {}, 
 }) => {
   const { t } = useTranslation('navbar');
   const device = useDeviceMode();
@@ -22,7 +22,7 @@ const SearchIsland = ({
 
   const handleClear = () => {
     if (onSearchChange) {
-      onSearchChange("");
+      onSearchChange('');
     }
     // Focus back to input after clearing
     if (inputRef.current) {
@@ -50,7 +50,7 @@ const SearchIsland = ({
         maxWidth: { xs: '100%', sm: '95%', md: '90%' },
         flexGrow: 1,
         overflow: 'hidden',
-        ...sx
+        ...sx,
       }}
     >
       <Box sx={{ ...islandStyles.content }}>
@@ -60,7 +60,7 @@ const SearchIsland = ({
           alignItems: 'center', 
           width: '100%',
           px: 3,
-          py: 0
+          py: 0,
         }}>
           {/* Search Icon */}
           {device.shouldShowSearchIcon && (
@@ -69,7 +69,7 @@ const SearchIsland = ({
               alignItems: 'center', 
               mr: 1.5, 
               color: 'inherit',
-              opacity: 0.7
+              opacity: 0.7,
             }}>
               <SearchIcon />
             </Box>
@@ -81,21 +81,21 @@ const SearchIsland = ({
             placeholder={placeholder || t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-            inputProps={{ "aria-label": "search" }}
+            inputProps={{ 'aria-label': 'search' }}
             disabled={disabled}
             sx={{ 
-              color: "inherit", 
+              color: 'inherit', 
               width: '100%', 
-              fontSize: { xs: "1.1rem", sm: "1.2rem" },
+              fontSize: { xs: '1.1rem', sm: '1.2rem' },
               fontWeight: 400,
               opacity: disabled ? 0.5 : 1,
-              "& .MuiInputBase-input": {
-                "&::placeholder": {
+              '& .MuiInputBase-input': {
+                '&::placeholder': {
                   opacity: 0.6,
-                  fontSize: { xs: "1.1rem", sm: "1.2rem" },
+                  fontSize: { xs: '1.1rem', sm: '1.2rem' },
                 },
-                "&:disabled": {
-                  cursor: "not-allowed",
+                '&:disabled': {
+                  cursor: 'not-allowed',
                 },
               },
             }}
@@ -108,14 +108,14 @@ const SearchIsland = ({
               aria-label="Clear search"
               onClick={handleClear}
               sx={{
-                color: "inherit",
+                color: 'inherit',
                 ml: 0.5,
                 opacity: 0.7,
                 transition: 'opacity 0.2s ease',
-                "&:hover": {
+                '&:hover': {
                   opacity: 1,
                   backgroundColor: 'transparent',
-                }
+                },
               }}
             >
               <ClearIcon fontSize="small" />
@@ -132,7 +132,7 @@ const SearchIsland = ({
               mt: 0,
               borderRadius: 0,
               borderTop: `1px solid ${islandStyles.container.border}`,
-              boxShadow: 'none'
+              boxShadow: 'none',
             }}
           />
         )}

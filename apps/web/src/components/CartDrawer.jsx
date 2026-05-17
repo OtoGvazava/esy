@@ -19,8 +19,8 @@ import {
   Slide,
   Stack,
   Card,
-  CardContent
-} from "@mui/material";
+  CardContent,
+} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -37,7 +37,7 @@ export default function CartDrawer({ open, onClose }) {
   const formatPrice = (price) => {
     return new Intl.NumberFormat(
       i18n.language === 'ka' ? 'ka-GE' : 'en-US', 
-      { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }
+      { style: 'currency', currency: 'GEL', maximumFractionDigits: 2 },
     ).format(price);
   };
 
@@ -66,7 +66,7 @@ export default function CartDrawer({ open, onClose }) {
             : 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
-        })
+        }),
       }}
       sx={{
         display: 'flex',
@@ -79,7 +79,7 @@ export default function CartDrawer({ open, onClose }) {
         '& .MuiPaper-root': {
           zIndex: (theme) => theme.zIndex.modal + 1,
           position: 'relative',
-        }
+        },
       }}
     >
       <Fade in={open} timeout={300}>
@@ -126,7 +126,7 @@ export default function CartDrawer({ open, onClose }) {
               right: 0,
               height: '1px',
               background: 'linear-gradient(90deg, transparent 0%, rgba(99, 102, 241, 0.5) 50%, transparent 100%)',
-            }
+            },
           })}
         >
           <Stack direction="row" alignItems="center" spacing={2}>
@@ -147,7 +147,7 @@ export default function CartDrawer({ open, onClose }) {
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                letterSpacing: '-0.02em'
+                letterSpacing: '-0.02em',
               }}>
                 {t('title')}
               </Typography>
@@ -177,7 +177,7 @@ export default function CartDrawer({ open, onClose }) {
                   : 'rgba(0, 0, 0, 0.1)',
                 transform: 'scale(1.05)',
                 color: 'text.primary',
-              }
+              },
             })}
           >
             <CloseIcon />
@@ -248,7 +248,7 @@ export default function CartDrawer({ open, onClose }) {
                               ? '0 8px 32px rgba(0, 0, 0, 0.1)'
                               : '0 8px 32px rgba(0, 0, 0, 0.08)',
                             border: '1px solid rgba(99, 102, 241, 0.3)',
-                          }
+                          },
                         })}
                       >
                         <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
@@ -268,7 +268,7 @@ export default function CartDrawer({ open, onClose }) {
                             >
                               <CardMedia
                                 component="img"
-                                image={item.image || item.thumbnail || "https://via.placeholder.com/70"}
+                                image={item.image || item.thumbnail || 'https://via.placeholder.com/70'}
                                 alt={item.title || item.name}
                                 sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                               />
@@ -283,7 +283,7 @@ export default function CartDrawer({ open, onClose }) {
                                   mb: 0.5,
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
+                                  whiteSpace: 'nowrap',
                                 }}
                               >
                                 {item.title || item.name}
@@ -311,7 +311,7 @@ export default function CartDrawer({ open, onClose }) {
                                     '&:hover': {
                                       bgcolor: 'rgba(99, 102, 241, 0.2)',
                                       transform: 'scale(1.05)',
-                                    }
+                                    },
                                   }}
                                 >
                                   <RemoveIcon fontSize="small" />
@@ -350,7 +350,7 @@ export default function CartDrawer({ open, onClose }) {
                                     '&:hover': {
                                       bgcolor: 'rgba(99, 102, 241, 0.2)',
                                       transform: 'scale(1.05)',
-                                    }
+                                    },
                                   }}
                                 >
                                   <AddIcon fontSize="small" />
@@ -368,7 +368,7 @@ export default function CartDrawer({ open, onClose }) {
                                 '&:hover': {
                                   bgcolor: 'rgba(244, 67, 54, 0.2)',
                                   transform: 'scale(1.05)',
-                                }
+                                },
                               }}
                             >
                               <DeleteIcon fontSize="small" />
@@ -384,7 +384,7 @@ export default function CartDrawer({ open, onClose }) {
               <Divider sx={(theme) => ({ 
                 borderColor: theme.palette.mode === 'dark'
                   ? 'rgba(255, 255, 255, 0.1)'
-                  : 'rgba(0, 0, 0, 0.1)'
+                  : 'rgba(0, 0, 0, 0.1)',
               })} />
 
               {/* Modern Footer */}
@@ -457,7 +457,7 @@ export default function CartDrawer({ open, onClose }) {
                         color: 'error.main',
                         background: 'rgba(244, 67, 54, 0.1)',
                         transform: 'translateY(-1px)',
-                      }
+                      },
                     })}
                     disabled={items.length === 0}
                   >
@@ -482,7 +482,7 @@ export default function CartDrawer({ open, onClose }) {
                       },
                       '&:active': {
                         transform: 'translateY(0)',
-                      }
+                      },
                     }}
                     disabled={items.length === 0}
                   >

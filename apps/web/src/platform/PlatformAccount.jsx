@@ -7,9 +7,9 @@ import { accountApi, handleApiError } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const money = (v) => {
-  if (v == null) return '$0';
+  if (v == null) return '₾0';
   const n = typeof v === 'number' ? v : Number(v);
-  return Number.isNaN(n) ? String(v) : `$${n.toLocaleString(undefined, { minimumFractionDigits: n % 1 ? 2 : 0 })}`;
+  return Number.isNaN(n) ? String(v) : `₾${n.toLocaleString(undefined, { minimumFractionDigits: n % 1 ? 2 : 0 })}`;
 };
 
 function MyStoreCard({ T, t, store }) {

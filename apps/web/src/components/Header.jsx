@@ -16,21 +16,24 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 const Header = ({ 
-  searchQuery = "", 
+  searchQuery = '', 
   onSearchChange, 
   onToggleTheme, 
-  themeMode = "light", 
+  themeMode = 'light', 
   onAccountClick, 
-  language = "en", 
-  onToggleLanguage, 
+  language = 'en', 
+  onToggleLanguage,
+  // eslint-disable-next-line no-unused-vars
   profileMenuOpen = false,
   mobileSearchEnabled = false,
-  onMobileSearchToggle
+  // eslint-disable-next-line no-unused-vars
+  onMobileSearchToggle,
 }) => {
   const { t, i18n } = useTranslation(['navbar', 'auth', 'orders', 'common']);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const device = useDeviceMode();
+  // eslint-disable-next-line no-unused-vars
   const theme = useTheme();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [accountMenuAnchor, setAccountMenuAnchor] = useState(null);
@@ -123,7 +126,7 @@ const Header = ({
             alignItems: 'center',
             gap: 2,
             width: '100%',
-            py: 2
+            py: 2,
           }}>
             {/* Logo Island */}
             <Logo onClick={handleLogoClick} />
@@ -146,10 +149,10 @@ const Header = ({
                         sx={{ 
                           opacity: 0.9,
                           transition: 'opacity 0.2s ease',
-                          "&:hover": {
+                          '&:hover': {
                             opacity: 1,
                             backgroundColor: 'transparent',
-                          }
+                          },
                         }}
                       >
                         {language === 'en' ? (
@@ -171,13 +174,13 @@ const Header = ({
                       sx={{ 
                         opacity: 0.9,
                         transition: 'opacity 0.2s ease',
-                        "&:hover": {
+                        '&:hover': {
                           opacity: 1,
                           backgroundColor: 'transparent',
-                        }
+                        },
                       }}
                     >
-                      {themeMode === "dark" ? <LightModeOutlinedIcon fontSize="small" /> : <DarkModeOutlinedIcon fontSize="small" />}
+                      {themeMode === 'dark' ? <LightModeOutlinedIcon fontSize="small" /> : <DarkModeOutlinedIcon fontSize="small" />}
                     </IconButton>
                   )}
 
@@ -188,20 +191,20 @@ const Header = ({
                       size="small"
                       onClick={handleAccountClick}
                       sx={{ 
-                        textTransform: "none", 
+                        textTransform: 'none', 
                         fontWeight: 600, 
                         fontSize: 14,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                         minWidth: 'auto',
                         px: 1,
                         opacity: 0.9,
                         transition: 'opacity 0.2s ease',
-                        "&:hover": {
+                        '&:hover': {
                           opacity: 1,
                           backgroundColor: 'transparent',
-                        }
+                        },
                       }}
                     >
                       {isAuthenticated ? t('auth:myAccount') : t('auth:logIn')}
@@ -221,7 +224,7 @@ const Header = ({
             gap: 2, 
             alignItems: 'center',
             width: '100%',
-            maxWidth: '100%'
+            maxWidth: '100%',
           }}>
             {/* Logo Island */}
             <Logo onClick={handleLogoClick} />
@@ -255,8 +258,8 @@ const Header = ({
             background: 'rgba(18,18,20,0.95)',
             backdropFilter: 'blur(20px)',
             border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
-          }
+            boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+          },
         }}
       >
         <MenuItem onClick={handleMyAccount} sx={{ py: 1.5 }}>

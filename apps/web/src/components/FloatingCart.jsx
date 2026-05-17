@@ -1,4 +1,4 @@
-import { Box, Tooltip, Fab, Badge, Zoom, Fade } from "@mui/material";
+import { Box, Tooltip, Fab, Badge, Zoom, Fade } from '@mui/material';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { useTranslation } from 'react-i18next';
 import { useCart } from '../contexts/CartContext';
@@ -19,7 +19,7 @@ export default function FloatingCart({ onCartToggle }) {
       position: 'fixed',
       right: { xs: 20, sm: 32 },
       bottom: { xs: 20, sm: 32 },
-      zIndex: (theme) => theme.zIndex.tooltip + 1
+      zIndex: (theme) => theme.zIndex.tooltip + 1,
     }}>
       <Tooltip 
         title={t('cart')} 
@@ -42,8 +42,8 @@ export default function FloatingCart({ onCartToggle }) {
                 '0%': { transform: 'scale(1)' },
                 '50%': { transform: 'scale(1.2)' },
                 '100%': { transform: 'scale(1)' },
-              }
-            }
+              },
+            },
           }}
         >
           <Fab
@@ -77,16 +77,16 @@ export default function FloatingCart({ onCartToggle }) {
                 border: '2px solid rgba(255,255,255,0.3)',
                 '&::before': {
                   opacity: 1,
-                }
+                },
               },
               '&:active': {
                 transform: 'translateY(-3px) scale(1.02)',
-                boxShadow: '0 20px 44px rgba(99, 102, 241, 0.45), 0 10px 28px rgba(0,0,0,0.18), 0 0 0 8px rgba(99, 102, 241, 0.08)'
+                boxShadow: '0 20px 44px rgba(99, 102, 241, 0.45), 0 10px 28px rgba(0,0,0,0.18), 0 0 0 8px rgba(99, 102, 241, 0.08)',
               },
               '&:focus': {
                 background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-                boxShadow: '0 16px 40px rgba(99, 102, 241, 0.4), 0 8px 20px rgba(0,0,0,0.15), 0 0 0 6px rgba(99, 102, 241, 0.2)'
-              }
+                boxShadow: '0 16px 40px rgba(99, 102, 241, 0.4), 0 8px 20px rgba(0,0,0,0.15), 0 0 0 6px rgba(99, 102, 241, 0.2)',
+              },
             }}
           >
             <Fade in={true} timeout={500}>

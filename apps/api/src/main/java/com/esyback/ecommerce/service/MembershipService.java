@@ -37,4 +37,13 @@ public class MembershipService {
                 return membershipRepository.save(m);
             });
     }
+
+    /** True when this account is the OWNER of the given store. */
+    @Transactional(readOnly = true)
+    public boolean isOwner(User user, Tenant tenant) {
+        if (user == null || tenant == null) return false;
+        return membershipRepository.findByUserAndTenant(user, tenant)
+            .map(m -> m.getRole() == StoreMembership.Role.OWNER)
+            .orElse(false);
+    }
 }

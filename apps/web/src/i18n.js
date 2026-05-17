@@ -22,6 +22,8 @@ import enPlatform from './locales/en/platform.json';
 import kaPlatform from './locales/ka/platform.json';
 import enStorefront from './locales/en/storefront.json';
 import kaStorefront from './locales/ka/storefront.json';
+import enOwner from './locales/en/owner.json';
+import kaOwner from './locales/ka/owner.json';
 
 const resources = {
   en: {
@@ -35,6 +37,7 @@ const resources = {
     common: enCommon,
     platform: enPlatform,
     storefront: enStorefront,
+    owner: enOwner,
   },
   ka: {
     navbar: kaNavbar,
@@ -47,6 +50,7 @@ const resources = {
     common: kaCommon,
     platform: kaPlatform,
     storefront: kaStorefront,
+    owner: kaOwner,
   },
 };
 
@@ -57,7 +61,7 @@ i18n
     lng: (typeof window !== 'undefined' && window.localStorage.getItem(STORAGE_KEYS.LANGUAGE)) || LANGUAGES.EN,
     fallbackLng: LANGUAGES.EN,
     interpolation: { escapeValue: false },
-    ns: ['navbar', 'home', 'cart', 'product', 'auth', 'orders', 'account', 'common', 'platform', 'storefront'],
+    ns: ['navbar', 'home', 'cart', 'product', 'auth', 'orders', 'account', 'common', 'platform', 'storefront', 'owner'],
     defaultNS: 'navbar',
   });
 

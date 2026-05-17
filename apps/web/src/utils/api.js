@@ -78,18 +78,29 @@ const mapListItem = (dto) => ({
   image: dto.imageUrl,
 });
 
-// Backend detail: { id, title, description, imageUrl, price, quantity, ... }
-const mapDetail = (dto) => ({
-  id: dto.id,
-  title: dto.title,
-  description: dto.description,
-  price: dto.price,
-  quantity: dto.quantity,
-  stock: dto.quantity,
-  thumbnail: dto.imageUrl,
-  images: dto.imageUrl ? [dto.imageUrl] : [],
-  category: '',
-});
+// Backend detail: { id, title, description, imageUrl, price, quantity,
+//                    images:[{id,url,position}], ... }
+const mapDetail = (dto) => {
+  const gallery = Array.isArray(dto.images) ? dto.images : [];
+  const urls = gallery.length
+    ? gallery.map((i) => i.url)
+    : (dto.imageUrl ? [dto.imageUrl] : []);
+  return {
+    id: dto.id,
+    title: dto.title,
+    description: dto.description,
+    price: dto.price,
+    quantity: dto.quantity,
+    stock: dto.quantity,
+    thumbnail: dto.imageUrl || urls[0],
+    images: urls,
+    // Raw uploaded images ([{id,url,position}]) — the owner editor needs ids
+    // to delete; empty for legacy URL-only products.
+    imageList: gallery,
+    imageUrl: dto.imageUrl || '',
+    category: '',
+  };
+};
 
 // Admin form { title, description, price, stock, images:[url] } -> backend ProductDto
 const toBackendProduct = (form) => ({
@@ -133,6 +144,31 @@ export const productApi = {
   remove(id) {
     return api.delete(`/api/products/${id}`);
   },
+
+  // Multipart — bypasses the JSON client so the browser sets the multipart
+  // boundary. Cookie auth via credentials:'include'. Returns the fresh product.
+  async uploadImages(id, files) {
+    const fd = new FormData();
+    for (const f of files) fd.append('files', f);
+    const res = await fetch(`/api/products/${id}/images`, {
+      method: 'POST',
+      body: fd,
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      let message = `Upload failed (${res.status})`;
+      try {
+        const b = await res.json();
+        message = b.error || b.message || message;
+      } catch { /* no JSON body */ }
+      throw new ApiError(message, res.status);
+    }
+    return mapDetail(await res.json());
+  },
+
+  async deleteImage(id, imageId) {
+    return mapDetail(await api.delete(`/api/products/${id}/images/${imageId}`));
+  },
 };
 
 // ---- Auth API ---------------------------------------------------------------
@@ -149,6 +185,22 @@ export const authApi = {
 export const accountApi = {
   get() {
     return api.get('/api/account');
+  },
+  // Mandatory profile (name/surname/dateOfBirth). Phone is separate below.
+  updateProfile(body) {
+    return api.put('/api/account/profile', body);
+  },
+  // Separate from the profile: changing the number clears verification.
+  updatePhone(phoneNumber) {
+    return api.put('/api/account/phone', { phoneNumber });
+  },
+  // Dev stand-in OTP: response includes { devCode } so it can be entered
+  // without a real SMS. Swap for a provider later — contract is unchanged.
+  sendPhoneCode() {
+    return api.post('/api/account/phone/send-code', {});
+  },
+  verifyPhone(code) {
+    return api.post('/api/account/phone/verify', { code });
   },
 };
 
@@ -207,6 +259,37 @@ export const tenantApi = {
   },
   create(payload) {
     return api.post('/api/tenant', payload);
+  },
+  // Owner-only branding edit for the current store (server resolves it by
+  // Host; @storeAccess gates it). `devTenant` keeps localhost store switching.
+  update(payload, devTenant) {
+    const path = devTenant
+      ? `/api/tenant/current?tenant=${encodeURIComponent(devTenant)}`
+      : '/api/tenant/current';
+    return api.put(path, payload);
+  },
+  // Owner/admin store stats for the current store (server resolves it by
+  // Host; @storeAccess gates it).
+  stats(devTenant) {
+    const path = devTenant
+      ? `/api/tenant/stats?tenant=${encodeURIComponent(devTenant)}`
+      : '/api/tenant/stats';
+    return api.get(path);
+  },
+  // Owner/admin: orders placed against the current store, newest first.
+  // Same @storeAccess gate as stats().
+  orders(devTenant) {
+    const path = devTenant
+      ? `/api/tenant/orders?tenant=${encodeURIComponent(devTenant)}`
+      : '/api/tenant/orders';
+    return api.get(path);
+  },
+  // Count of new (unhandled) orders — drives the owner-bar Orders badge.
+  newOrderCount(devTenant) {
+    const path = devTenant
+      ? `/api/tenant/orders/new-count?tenant=${encodeURIComponent(devTenant)}`
+      : '/api/tenant/orders/new-count';
+    return api.get(path);
   },
   // Public store directory (active stores).
   list() {

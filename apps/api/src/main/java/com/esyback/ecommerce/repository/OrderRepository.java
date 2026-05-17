@@ -13,4 +13,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserOrderByCreatedAtDesc(User user);
     List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant);
     long countByTenant(Tenant tenant);
+    long countByTenantAndStatus(Tenant tenant, Order.Status status);
 }

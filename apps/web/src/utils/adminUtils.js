@@ -6,7 +6,7 @@ export const setAdminRole = (user) => {
   
   return {
     ...user,
-    role: 'admin'
+    role: 'admin',
   };
 };
 
@@ -15,7 +15,7 @@ export const setUserRole = (user) => {
   
   return {
     ...user,
-    role: 'user'
+    role: 'user',
   };
 };
 
@@ -30,14 +30,14 @@ export const isUser = (user) => {
 // Mock function to simulate admin login
 export const loginAsAdmin = () => {
   const adminUser = {
-    id: 'admin_' + Date.now(),
+    id: `admin_${Date.now()}`,
     name: 'Admin User',
     email: 'admin@example.com',
     provider: 'admin',
     avatar: 'https://via.placeholder.com/40',
     isNewUser: false,
     registrationCompleted: true,
-    role: 'admin'
+    role: 'admin',
   };
   
   return adminUser;
@@ -46,14 +46,14 @@ export const loginAsAdmin = () => {
 // Mock function to simulate regular user login
 export const loginAsUser = () => {
   const regularUser = {
-    id: 'user_' + Date.now(),
+    id: `user_${Date.now()}`,
     name: 'Regular User',
     email: 'user@example.com',
     provider: 'user',
     avatar: 'https://via.placeholder.com/40',
     isNewUser: false,
     registrationCompleted: true,
-    role: 'user'
+    role: 'user',
   };
   
   return regularUser;

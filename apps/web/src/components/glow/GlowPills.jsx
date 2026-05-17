@@ -27,7 +27,7 @@ export function LangPill({ T, lang = 'en', onClick, compact = true }) {
       cursor: 'pointer', whiteSpace: 'nowrap',
     }}>
       <Icon.globe />
-      {compact ? <span>{L.short}</span> : <span>{L.short} · {L.currency.split(' ')[0]}</span>}
+      <span>{compact ? L.short : L.native}</span>
     </button>
   );
 }

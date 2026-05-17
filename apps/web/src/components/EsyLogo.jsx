@@ -26,7 +26,7 @@ const EsyLogo = ({ onClick, sx = {}, size = 'medium' }) => {
     large: {
       height: 80,
       maxWidth: 250,
-    }
+    },
   };
 
   const config = sizeConfig[size] || sizeConfig.medium;
@@ -41,7 +41,7 @@ const EsyLogo = ({ onClick, sx = {}, size = 'medium' }) => {
         '&:hover': {
           transform: 'translateY(-1px)',
         },
-        ...sx
+        ...sx,
       }}
     >
       <Box

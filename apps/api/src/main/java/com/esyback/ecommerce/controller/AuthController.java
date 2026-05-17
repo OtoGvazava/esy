@@ -3,6 +3,8 @@ package com.esyback.ecommerce.controller;
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.security.AuthCookie;
 import com.esyback.ecommerce.security.JwtUtil;
+import com.esyback.ecommerce.service.MembershipService;
+import com.esyback.ecommerce.service.TenantContextService;
 import com.esyback.ecommerce.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,6 +27,12 @@ public class AuthController {
     
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private MembershipService membershipService;
+
+    @Autowired
+    private TenantContextService tenantContextService;
     
     @GetMapping("/user")
     public ResponseEntity<Map<String, Object>> getCurrentUser(Authentication authentication) {
@@ -52,7 +60,17 @@ public class AuthController {
         payload.put("firstName", user.getFirstName());
         payload.put("lastName", user.getLastName());
         payload.put("profileImageUrl", user.getProfileImageUrl());
+        payload.put("dateOfBirth", user.getDateOfBirth() == null ? null : user.getDateOfBirth().toString());
+        payload.put("phoneNumber", user.getPhoneNumber());
+        payload.put("phoneVerified", Boolean.TRUE.equals(user.getPhoneVerified()));
+        payload.put("profileComplete", AccountController.profileComplete(user));
         payload.put("roles", user.getRoles().stream().map(role -> role.getName()).toArray());
+        // Lets the SPA show owner actions for *this* store. Resolved from the
+        // request Host (same tenant the storefront is showing); false on the
+        // platform front door where there's no store to manage.
+        boolean ownsCurrentStore = !tenantContextService.isPlatformHost()
+            && membershipService.isOwner(user, tenantContextService.getCurrentTenant());
+        payload.put("ownsCurrentStore", ownsCurrentStore);
         return payload;
     }
     
