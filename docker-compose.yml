@@ -35,6 +35,11 @@ services:
       SPRING_DATASOURCE_USERNAME: esy
       SPRING_DATASOURCE_PASSWORD: esy
       JPA_DDL_AUTO: update
+      # Real Gmail sign-in: export these in your shell, then `docker compose up`.
+      # Unset (default) → "Continue with Gmail" stays inert; use email dev-login.
+      # No secrets in the repo — they pass through from your environment.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     ports:
       - "8092:8080"
 
