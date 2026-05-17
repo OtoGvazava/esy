@@ -35,11 +35,13 @@ services:
       SPRING_DATASOURCE_USERNAME: esy
       SPRING_DATASOURCE_PASSWORD: esy
       JPA_DDL_AUTO: update
-      # Real Gmail sign-in: export these in your shell, then `docker compose up`.
-      # Unset (default) → "Continue with Gmail" stays inert; use email dev-login.
-      # No secrets in the repo — they pass through from your environment.
+      # Real Gmail sign-in: `cp .env.example .env`, fill it, `docker compose up`
+      # (Compose auto-reads .env). Or export in the shell. Unset → Gmail inert;
+      # email dev-login still works. No secrets in the repo (.env is gitignored).
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # Prod only — keep unset on localhost (enabling it breaks local sign-in).
+      APP_OAUTH2_CANONICAL_ORIGIN: ${APP_OAUTH2_CANONICAL_ORIGIN:-}
     ports:
       - "8092:8080"
 
