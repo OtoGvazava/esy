@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { productApi, handleApiError } from "../utils/api";
+import { productApi, handleApiError, followApi, getToken } from "../utils/api";
 import { useCart } from "../contexts/CartContext";
 import { useThemeMode } from "../contexts/ThemeModeContext";
+import { useTenant } from "../contexts/TenantContext";
 import { useGlow } from "../styles/glow";
 import { Icon, PoweredBy, GlowToken } from "../components/glow/GlowPrimitives";
 import GlowSearchBar from "../components/glow/GlowSearchBar";
@@ -11,6 +12,58 @@ import GlowLoadMore from "../components/glow/GlowLoadMore";
 import { ThemePill, LangPill } from "../components/glow/GlowPills";
 
 const PAGE_SIZE = 12;
+
+// Follow this store → real /api/follows (shows in the cross-store account
+// hub). Signed-out taps route to sign-in.
+function FollowPill({ T }) {
+  const { tenant } = useTenant();
+  const navigate = useNavigate();
+  const sub = tenant?.subdomain;
+  const [following, setFollowing] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const devTenant = () => {
+    try { return new URLSearchParams(window.location.search).get("tenant") || undefined; }
+    catch { return undefined; }
+  };
+
+  useEffect(() => {
+    if (!getToken() || !sub) { setFollowing(false); return; }
+    followApi.list()
+      .then((l) => setFollowing(Array.isArray(l) && l.some((s) => s.subdomain === sub)))
+      .catch(() => setFollowing(false));
+  }, [sub]);
+
+  const toggle = async () => {
+    if (!getToken()) { navigate("/signin"); return; }
+    if (busy) return;
+    setBusy(true);
+    const next = !following;
+    setFollowing(next);
+    try {
+      if (next) await followApi.follow(devTenant());
+      else await followApi.unfollow(devTenant());
+    } catch {
+      setFollowing(!next); // revert on failure
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const active = following === true;
+  return (
+    <button onClick={toggle} disabled={busy} aria-pressed={active} style={{
+      height: 32, padding: "0 12px", borderRadius: 999,
+      border: `1px solid ${active ? T.accent : T.border}`,
+      background: active ? T.accentBg : "transparent",
+      color: active ? T.accentFg : T.text,
+      font: `600 12px ${T.font}`, cursor: busy ? "default" : "pointer",
+      display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
+    }}>
+      <svg viewBox="0 0 24 24" width="13" height="13" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" /></svg>
+      {active ? "Following" : "Follow"}
+    </button>
+  );
+}
 
 function GlowLogo({ T, tenant, size = 20 }) {
   return (
@@ -137,7 +190,8 @@ export default function Home() {
       {/* topbar */}
       <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", padding: `28px ${gutter}px 0` }}>
         <GlowLogo T={T} tenant={tenant} size={isDesktop ? 22 : 20} />
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <FollowPill T={T} />
           <ThemePill T={T} dark={mode === "dark"} onClick={toggleTheme} />
           <LangPill T={T} lang={language} onClick={() => navigate("/settings/language")} />
         </div>
