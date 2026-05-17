@@ -145,5 +145,20 @@
   },
   "searchBar": {
     "defaultPlaceholder": "try \"under $50\" or \"in stock\"…"
+  },
+  "settings": {
+    "cancel": "Cancel",
+    "done": "Done"
+  },
+  "languageSettings": {
+    "title": "Choose language",
+    "note": "We translate the storefront UI. Seller content (product titles, bios) stays in its source language."
+  },
+  "appearanceSettings": {
+    "title": "Choose appearance",
+    "note": "Pick how the storefront looks. System follows your device setting.",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System · Auto"
   }
 }
