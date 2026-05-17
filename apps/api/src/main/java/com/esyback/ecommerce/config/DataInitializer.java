@@ -28,41 +28,70 @@ public class DataInitializer implements CommandLineRunner {
     }
     
     private void initializeTenants() {
-        if (!tenantRepository.existsBySubdomain("main")) {
-            Tenant mainTenant = new Tenant();
-            mainTenant.setName("Main Store");
-            mainTenant.setSubdomain("main");
-            mainTenant.setDisplayName("Main Ecommerce Store");
-            mainTenant.setDescription("The main ecommerce store");
-            mainTenant.setPrimaryColor("#007bff");
-            mainTenant.setSecondaryColor("#6c757d");
-            mainTenant.setIsActive(true);
-            tenantRepository.save(mainTenant);
+        // Dev storefronts (reachable locally via ?tenant=<sub>).
+        seedStore("main", "Main Store", "Main Ecommerce Store",
+            "The main ecommerce store", null, "#007bff", "#6c757d");
+        seedStore("electronics", "Electronics Store", "Electronics & Gadgets",
+            "Specialized electronics and gadgets store", "electronics", "#28a745", "#17a2b8");
+        seedStore("fashion", "Fashion Store", "Fashion & Style",
+            "Latest fashion trends and clothing", "fashion", "#dc3545", "#fd7e14");
+
+        // Directory seed — independent shops across categories so esy.ge/stores
+        // is populated with real, varied tenants.
+        seedStore("aurora", "Aurora Audio", "Aurora Audio",
+            "Hand-tuned studio headphones from a workshop in Porto. Small-run, shipped worldwide.",
+            "electronics", "#6366f1", "#a06ed8");
+        seedStore("studio-form", "Studio Form", "Studio Form",
+            "Hand-thrown stoneware from a small studio in Kyoto. Each piece signed.",
+            "home", "#c95b30", "#e8a26b");
+        seedStore("verde", "Verde Goods", "Verde Goods",
+            "Cold-pressed olive oil and pantry essentials from family groves in Crete.",
+            "food", "#3f8a4a", "#7fb96b");
+        seedStore("maris", "Maris Apothecary", "Maris Apothecary",
+            "Botanical skincare batched by hand on the Devon coast. Plastic-free packaging.",
+            "home", "#0f766e", "#5eb3ab");
+        seedStore("kura", "Kura Knives", "Kura Knives",
+            "Forged carbon-steel kitchen knives. Hand-finished, lifetime sharpened.",
+            "home", "#0d0d0d", "#737373");
+        seedStore("lemon-press", "Lemon Press", "Lemon Press",
+            "Cold-press juices, syrups, and shrubs out of a sunny Lisbon kitchen.",
+            "food", "#f59e0b", "#fcd34d");
+        seedStore("okra", "Okra & Co.", "Okra & Co.",
+            "Slow-made linen clothing for everyday wear. Cut and sewn in Porto.",
+            "fashion", "#a23b72", "#d77ba6");
+        seedStore("noor-rugs", "Noor Rugs", "Noor Rugs",
+            "Hand-knotted Berber rugs from women-led co-ops in the Atlas Mountains.",
+            "home", "#7c3aed", "#a78bfa");
+        seedStore("plana", "Plana Bicycles", "Plana Bicycles",
+            "Custom steel frames built in a Tbilisi workshop. Made-to-measure, six-week lead.",
+            "electronics", "#dc2626", "#f87171");
+        seedStore("foglio", "Foglio Press", "Foglio Press",
+            "Letterpress prints, postcards, and limited-edition art books. Pulled in Bologna.",
+            "art", "#1e40af", "#7aa3f0");
+        seedStore("salt-stoneware", "Salt Stoneware", "Salt Stoneware",
+            "Coastal-glazed tableware thrown on a wheel in a Cornwall studio.",
+            "home", "#0891b2", "#67e8f9");
+        seedStore("meadow", "Meadow Studio", "Meadow Studio",
+            "Original watercolours and risograph editions from a meadow-side studio in Wales.",
+            "art", "#65a30d", "#bef264");
+    }
+
+    private void seedStore(String subdomain, String name, String displayName,
+                           String description, String category,
+                           String primaryColor, String secondaryColor) {
+        if (tenantRepository.existsBySubdomain(subdomain)) {
+            return;
         }
-        
-        if (!tenantRepository.existsBySubdomain("electronics")) {
-            Tenant electronicsTenant = new Tenant();
-            electronicsTenant.setName("Electronics Store");
-            electronicsTenant.setSubdomain("electronics");
-            electronicsTenant.setDisplayName("Electronics & Gadgets");
-            electronicsTenant.setDescription("Specialized electronics and gadgets store");
-            electronicsTenant.setPrimaryColor("#28a745");
-            electronicsTenant.setSecondaryColor("#17a2b8");
-            electronicsTenant.setIsActive(true);
-            tenantRepository.save(electronicsTenant);
-        }
-        
-        if (!tenantRepository.existsBySubdomain("fashion")) {
-            Tenant fashionTenant = new Tenant();
-            fashionTenant.setName("Fashion Store");
-            fashionTenant.setSubdomain("fashion");
-            fashionTenant.setDisplayName("Fashion & Style");
-            fashionTenant.setDescription("Latest fashion trends and clothing");
-            fashionTenant.setPrimaryColor("#dc3545");
-            fashionTenant.setSecondaryColor("#fd7e14");
-            fashionTenant.setIsActive(true);
-            tenantRepository.save(fashionTenant);
-        }
+        Tenant t = new Tenant();
+        t.setSubdomain(subdomain);
+        t.setName(name);
+        t.setDisplayName(displayName);
+        t.setDescription(description);
+        t.setCategory(category);
+        t.setPrimaryColor(primaryColor);
+        t.setSecondaryColor(secondaryColor);
+        t.setIsActive(true);
+        tenantRepository.save(t);
     }
     
     private void initializeRoles() {

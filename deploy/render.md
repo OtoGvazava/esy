@@ -65,9 +65,44 @@ code and verified. iCloud stays a dev stand-in (Apple OAuth not configured).
 
 `autoDeploy: true` — every push to `main` rebuilds and redeploys automatically.
 
-## If you later want persistence
+## Persistence (required for real signup / accounts / orders)
 
-Upgrade the Render service to a paid instance + add a Render PostgreSQL, then
-set `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` /
-`SPRING_DATASOURCE_PASSWORD` and `JPA_DDL_AUTO=update` env vars on the service
-(the backend already reads them — see `application.yml`).
+H2 is in-memory → every redeploy/restart wipes signed-up stores, accounts,
+memberships and orders. The platform (store signup, the cross-store account
+hub, orders) is only "real" with a database.
+
+**Local (one command):** `docker compose up --build` → http://localhost:8092.
+Runs Postgres + the app with `JPA_DDL_AUTO=update`; data survives restarts
+(named volume `esy_pgdata`; `docker compose down -v` wipes it).
+
+**Render:** add a **Render PostgreSQL**, then on the web service set
+`SPRING_DATASOURCE_URL` (jdbc:postgresql://…), `SPRING_DATASOURCE_USERNAME`,
+`SPRING_DATASOURCE_PASSWORD`, `JPA_DDL_AUTO=update`. The backend already reads
+these (`application.yml`); the postgres driver is bundled. The free Render
+plan has no managed Postgres for long — this is the paid path.
+
+Account model: one global `User` (unique email/username) + `StoreMembership`
+(OWNER/CUSTOMER) + `Order`/`SavedItem`/`StoreFollow`. `GET /api/account`
+aggregates it. JPA creates the tables; no manual migration.
+
+## Wildcard subdomains + OAuth (the platform's multi-tenant path)
+
+Tenant stores resolve by `Host` (`<sub>.esy.ge`); the platform is `esy.ge` /
+`www.esy.ge`. To run real wildcard tenants with working Gmail sign-in:
+
+1. **Render paid instance** + add the apex and a wildcard custom domain
+   (`esy.ge`, `www.esy.ge`, `*.esy.ge`). Wildcard certs need a paid plan.
+2. **DNS**: `A`/`ALIAS` apex + `CNAME *` → the Render host, plus the ACME
+   validation record Render shows for the wildcard cert.
+3. **One** Google redirect URI only — the canonical host:
+   `https://www.esy.ge/login/oauth2/code/google` (Google forbids wildcard
+   redirect URIs). Set `APP_OAUTH2_CANONICAL_ORIGIN=https://www.esy.ge` on the
+   service. `OAuthCanonicalHostRedirectFilter` funnels every tenant's OAuth
+   through that host and returns the JWT to the originating store — already
+   coded + tested; it's a no-op when the env var is unset (local/dev).
+4. Keep `APP_OAUTH2_REDIRECT_BASE` unset in prod (same-origin).
+
+## Redeploy note
+
+`autoDeploy: true` — pushing to `main` rebuilds + redeploys automatically.
+Per project convention, deploys need explicit per-change approval.

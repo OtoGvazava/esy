@@ -1,6 +1,7 @@
 package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.entity.Role;
+import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.RoleRepository;
@@ -11,76 +12,76 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+/**
+ * One global account per identity. email/username are globally unique, so
+ * lookups are global (the old tenant-scoped variants were effectively buggy
+ * for multi-tenant). Store relationships live in StoreMembership: signing in
+ * on a storefront records a CUSTOMER membership; creating a store records an
+ * OWNER one (see TenantController).
+ */
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class UserService {
-    
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final TenantContextService tenantContextService;
-    
-    public User findOrCreateUser(String oauthProvider, String oauthProviderId, String email, 
+    private final MembershipService membershipService;
+
+    public User findOrCreateUser(String oauthProvider, String oauthProviderId, String email,
                                  String firstName, String lastName, String profileImageUrl) {
-        
-        Tenant currentTenant = tenantContextService.getCurrentTenant();
-        
-        // Try to find existing user by OAuth provider and ID within tenant
-        Optional<User> existingUser = userRepository.findByOauthProviderAndOauthProviderIdAndTenant(oauthProvider, oauthProviderId, currentTenant);
-        if (existingUser.isPresent()) {
-            return existingUser.get();
-        }
-        
-        // Try to find existing user by email within tenant
-        Optional<User> userByEmail = userRepository.findByEmailAndTenant(email, currentTenant);
-        if (userByEmail.isPresent()) {
-            User user = userByEmail.get();
-            // Update OAuth information for existing user
-            user.setOauthProvider(oauthProvider);
-            user.setOauthProviderId(oauthProviderId);
-            user.setProfileImageUrl(profileImageUrl);
-            return userRepository.save(user);
-        }
-        
-        // Create new user
-        User newUser = new User();
-        newUser.setUsername(email); // Use email as username initially
-        newUser.setEmail(email);
-        newUser.setFirstName(firstName);
-        newUser.setLastName(lastName);
-        newUser.setProfileImageUrl(profileImageUrl);
-        newUser.setOauthProvider(oauthProvider);
-        newUser.setOauthProviderId(oauthProviderId);
-        newUser.setIsActive(true);
-        newUser.setTenant(currentTenant);
-        
-        // Assign default role (USER)
-        Role userRole = roleRepository.findByName("USER")
+
+        User user = userRepository.findByOauthProviderAndOauthProviderId(oauthProvider, oauthProviderId)
+            .or(() -> userRepository.findByEmail(email))
+            .map(existing -> {
+                existing.setOauthProvider(oauthProvider);
+                existing.setOauthProviderId(oauthProviderId);
+                if (profileImageUrl != null) existing.setProfileImageUrl(profileImageUrl);
+                return userRepository.save(existing);
+            })
             .orElseGet(() -> {
-                Role role = new Role();
-                role.setName("USER");
-                role.setDescription("Regular user role");
-                return roleRepository.save(role);
+                User u = new User();
+                u.setUsername(email); // email is the stable global handle
+                u.setEmail(email);
+                u.setFirstName(firstName);
+                u.setLastName(lastName);
+                u.setProfileImageUrl(profileImageUrl);
+                u.setOauthProvider(oauthProvider);
+                u.setOauthProviderId(oauthProviderId);
+                u.setIsActive(true);
+                Role userRole = roleRepository.findByName("USER")
+                    .orElseGet(() -> {
+                        Role role = new Role();
+                        role.setName("USER");
+                        role.setDescription("Regular user role");
+                        return roleRepository.save(role);
+                    });
+                u.addRole(userRole);
+                return userRepository.save(u);
             });
-        newUser.addRole(userRole);
-        
-        return userRepository.save(newUser);
+
+        // Signing in on an actual storefront makes you a CUSTOMER of it.
+        if (!tenantContextService.isPlatformHost()) {
+            Tenant tenant = tenantContextService.getCurrentTenant();
+            if (user.getTenant() == null) user.setTenant(tenant); // home pointer
+            membershipService.ensure(user, tenant, StoreMembership.Role.CUSTOMER);
+        }
+        return user;
     }
-    
+
     public Optional<User> findByUsername(String username) {
-        Tenant currentTenant = tenantContextService.getCurrentTenant();
-        return userRepository.findByUsernameAndTenant(username, currentTenant);
+        return userRepository.findByUsername(username);
     }
-    
+
     public Optional<User> findByEmail(String email) {
-        Tenant currentTenant = tenantContextService.getCurrentTenant();
-        return userRepository.findByEmailAndTenant(email, currentTenant);
+        return userRepository.findByEmail(email);
     }
-    
+
     public User save(User user) {
         return userRepository.save(user);
     }
-    
+
     public void assignAdminRole(Long userId) {
         User user = userRepository.findById(userId).orElse(null);
         if (user != null) {

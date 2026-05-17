@@ -53,8 +53,13 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         User user = userService.findOrCreateUser(provider, providerId, email, firstName, lastName, profileImageUrl);
         String token = jwtUtil.generateToken(user.getUsername());
 
-        // Hand the JWT back to the SPA, which stores it and restores the session.
-        String target = redirectBase + "/auth/callback?token="
+        // Auth completed on the canonical host; send the JWT back to the tenant
+        // store the user actually started on. Falls back to redirectBase (same
+        // origin in prod, the Vite origin in local dev) when there's no funnel.
+        String tenantOrigin = HttpCookieOAuth2AuthorizationRequestRepository.readTenantOrigin(request);
+        String base = tenantOrigin != null ? tenantOrigin : redirectBase;
+
+        String target = base + "/auth/callback?token="
                 + URLEncoder.encode(token, StandardCharsets.UTF_8);
         response.sendRedirect(target);
     }

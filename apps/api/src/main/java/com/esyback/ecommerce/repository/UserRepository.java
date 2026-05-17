@@ -11,7 +11,18 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    
+
+    // Global lookups — one account per identity (email/username are globally
+    // unique). These supersede the tenant-scoped variants below for auth.
+    Optional<User> findByUsername(String username);
+
+    Optional<User> findByEmail(String email);
+
+    Optional<User> findByOauthProviderAndOauthProviderId(String oauthProvider, String oauthProviderId);
+
+    @Query("SELECT u FROM User u JOIN FETCH u.roles WHERE u.username = :username")
+    Optional<User> findByUsernameWithRoles(@Param("username") String username);
+
     Optional<User> findByUsernameAndTenant(String username, Tenant tenant);
     
     Optional<User> findByEmailAndTenant(String email, Tenant tenant);

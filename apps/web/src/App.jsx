@@ -11,12 +11,15 @@ import Orders from "./pages/Orders";
 import Admin from "./pages/Admin";
 import SignIn from "./pages/SignIn";
 import SignInVerify from "./pages/SignInVerify";
+import CreateStore from "./pages/CreateStore";
 import AuthCallback from "./pages/AuthCallback";
 import LanguageSettings from "./pages/LanguageSettings";
 import AppearanceSettings from "./pages/AppearanceSettings";
 import AppProviders from "./providers/AppProviders";
 import GlowDock from "./components/glow/GlowDock";
+import PlatformShell from "./platform/PlatformShell";
 import { useAppTheme } from "./hooks/useAppTheme";
+import { usePlatformHost } from "./hooks/usePlatformHost";
 import { ThemeModeProvider } from "./contexts/ThemeModeContext";
 
 function AppShell() {
@@ -35,6 +38,7 @@ function AppShell() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signin/verify" element={<SignInVerify />} />
+        <Route path="/create-store" element={<CreateStore />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/settings/language" element={<LanguageSettings />} />
         <Route path="/settings/appearance" element={<AppearanceSettings />} />
@@ -44,13 +48,19 @@ function AppShell() {
   );
 }
 
+// esy.ge → platform front door; <sub>.esy.ge → tenant storefront. Same bundle,
+// host-selected shell (see usePlatformHost).
+function Shell() {
+  return usePlatformHost() ? <PlatformShell /> : <AppShell />;
+}
+
 function App() {
   const { mode, theme, toggleTheme, setMode, language, setLanguage } = useAppTheme();
   return (
     <Router>
       <AppProviders theme={theme} mode={mode}>
         <ThemeModeProvider value={{ mode, toggle: toggleTheme, setMode, language, setLanguage }}>
-          <AppShell />
+          <Shell />
         </ThemeModeProvider>
       </AppProviders>
     </Router>

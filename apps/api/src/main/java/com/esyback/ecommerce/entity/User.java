@@ -72,8 +72,11 @@ public class User {
     )
     private Set<Role> roles = new HashSet<>();
     
+    // One global account (email/username are globally unique). tenant is now
+    // an optional "home" pointer only — cross-store identity lives in
+    // StoreMembership. Nullable so platform-only accounts need no tenant.
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", nullable = false)
+    @JoinColumn(name = "tenant_id")
     private Tenant tenant;
     
     @PrePersist

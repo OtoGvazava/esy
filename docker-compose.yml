@@ -1,0 +1,42 @@
+# Local "real persistence" stack: Postgres + the esy app (SPA + API).
+# H2 (the default) is in-memory and resets on restart — fine for a demo, not
+# for dynamic store signup / accounts / orders. This runs the app against
+# Postgres with JPA_DDL_AUTO=update so created stores, users, memberships and
+# orders survive restarts. Mirrors the Render paid setup (Render PostgreSQL).
+#
+#   docker compose up --build         # http://localhost:8092
+#   docker compose down               # keep data (named volume)
+#   docker compose down -v            # wipe data
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: esy
+      POSTGRES_USER: esy
+      POSTGRES_PASSWORD: esy
+    volumes:
+      - esy_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U esy -d esy"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/esy
+      SPRING_DATASOURCE_USERNAME: esy
+      SPRING_DATASOURCE_PASSWORD: esy
+      JPA_DDL_AUTO: update
+    ports:
+      - "8092:8080"
+
+volumes:
+  esy_pgdata:

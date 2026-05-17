@@ -1,0 +1,120 @@
+package com.esyback.ecommerce.service;
+
+import com.esyback.ecommerce.dto.CreateTenantRequest;
+import com.esyback.ecommerce.entity.Tenant;
+import com.esyback.ecommerce.repository.TenantRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+/**
+ * Self-serve tenant (store) creation. Subdomain rules are stricter than the
+ * entity's @Pattern on purpose: a subdomain becomes a public DNS label and
+ * the tenant's whole identity, so it must be host-safe and not collide with
+ * platform-reserved names (auth funnel host, api, www, …).
+ */
+@Service
+@RequiredArgsConstructor
+public class TenantService {
+
+    private final TenantRepository tenantRepository;
+
+    private static final Pattern SUBDOMAIN = Pattern.compile("^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])$");
+
+    // Names that must never become a tenant: infra hosts, the OAuth canonical
+    // host, common service labels, and the default tenant.
+    private static final Set<String> RESERVED = Set.of(
+        "main", "www", "api", "auth", "admin", "app", "mail", "smtp", "imap",
+        "static", "assets", "cdn", "oauth2", "login", "logout", "esy", "support",
+        "help", "status", "blog", "docs", "store", "shop", "account", "accounts",
+        "dashboard", "billing", "checkout", "cart", "test", "dev", "staging",
+        "internal", "ns", "ns1", "ns2", "ftp", "vpn", "render"
+    );
+
+    private static final String DEFAULT_PRIMARY = "#6366f1";
+    private static final String DEFAULT_SECONDARY = "#8b5cf6";
+
+    private static final Set<String> CATEGORIES = Set.of(
+        "fashion", "electronics", "home", "food", "art");
+
+    /**
+     * Live subdomain check for the registration wizard.
+     * Returns: available | invalid | reserved | taken.
+     */
+    public String subdomainStatus(String raw) {
+        String s = raw == null ? "" : raw.trim().toLowerCase();
+        if (!SUBDOMAIN.matcher(s).matches()) return "invalid";
+        if (RESERVED.contains(s)) return "reserved";
+        if (tenantRepository.existsBySubdomain(s)) return "taken";
+        return "available";
+    }
+
+    /** Public store directory — active stores only, newest first. */
+    public List<Tenant> listActiveStores() {
+        return tenantRepository.findAll().stream()
+            .filter(t -> Boolean.TRUE.equals(t.getIsActive()))
+            .sorted(Comparator.comparing(Tenant::getCreatedAt,
+                Comparator.nullsLast(Comparator.reverseOrder())))
+            .collect(Collectors.toList());
+    }
+
+    public Tenant createTenant(CreateTenantRequest req) {
+        String name = req.getName() == null ? "" : req.getName().trim();
+        if (name.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Store name is required");
+        }
+
+        String subdomain = req.getSubdomain() == null ? "" : req.getSubdomain().trim().toLowerCase();
+        if (!SUBDOMAIN.matcher(subdomain).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Subdomain must be 3–30 chars, lowercase letters/numbers/hyphens, and not start or end with a hyphen");
+        }
+        if (RESERVED.contains(subdomain)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That subdomain is reserved");
+        }
+        if (tenantRepository.existsBySubdomain(subdomain)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "That subdomain is already taken");
+        }
+        if (tenantRepository.existsByName(name)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "That store name is already taken");
+        }
+
+        Tenant tenant = new Tenant();
+        tenant.setName(name);
+        tenant.setSubdomain(subdomain);
+        tenant.setDisplayName(blankToNull(req.getDisplayName()) == null ? name : req.getDisplayName().trim());
+        tenant.setDescription(blankToNull(req.getDescription()));
+        tenant.setLogoUrl(blankToNull(req.getLogoUrl()));
+        tenant.setPrimaryColor(normalizeColor(req.getPrimaryColor(), DEFAULT_PRIMARY));
+        tenant.setSecondaryColor(normalizeColor(req.getSecondaryColor(), DEFAULT_SECONDARY));
+        tenant.setCategory(normalizeCategory(req.getCategory()));
+        tenant.setIsActive(true);
+        return tenantRepository.save(tenant);
+    }
+
+    private static String blankToNull(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private static String normalizeColor(String color, String fallback) {
+        String c = blankToNull(color);
+        if (c == null) return fallback;
+        return c.matches("^#[0-9a-fA-F]{6}$") ? c : fallback;
+    }
+
+    private static String normalizeCategory(String category) {
+        String c = blankToNull(category);
+        if (c == null) return null;
+        c = c.toLowerCase();
+        return CATEGORIES.contains(c) ? c : null;
+    }
+}

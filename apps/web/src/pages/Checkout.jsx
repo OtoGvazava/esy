@@ -4,6 +4,7 @@ import { useCart } from "../contexts/CartContext";
 import { useOrders } from "../contexts/OrdersContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useGlow } from "../styles/glow";
+import { orderApi } from "../utils/api";
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from "../components/glow/GlowChrome";
 
 function Field({ T, label, defaultValue, span }) {
@@ -47,6 +48,17 @@ export default function Checkout() {
 
   const pay = async () => {
     setPlacing(true);
+    // Persist a real order so it shows in the cross-store account hub.
+    // Best-effort: requires sign-in; guests still complete the local flow.
+    try {
+      const devTenant = new URLSearchParams(window.location.search).get("tenant");
+      await orderApi.create(
+        items.map((i) => ({ productId: i.id, title: i.title, price: i.price, quantity: i.quantity })),
+        devTenant,
+      );
+    } catch {
+      /* not signed in / offline — local order flow below still works */
+    }
     const res = await createOrder({
       items: items.map((i) => ({ id: i.id, title: i.title, price: i.price, quantity: i.quantity, image: i.image || i.thumbnail })),
       subtotal, shipping, tax, total, count,

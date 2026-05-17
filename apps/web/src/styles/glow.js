@@ -1,6 +1,8 @@
 // Glow design system — ported from the Claude Design handoff (direction-a.jsx
 // GlowTokens). Single-tenant storefront template; accent is the tenant brand.
+import { useContext } from 'react';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { TenantContext } from '../contexts/TenantContext';
 
 export const GLOW_FONT =
   "'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -52,10 +54,17 @@ export function glowTokens(dark, accent = TENANT.accent) {
   };
 }
 
-// Tokens bound to the app's current MUI palette mode (light/dark toggle).
+// Tokens bound to the app's current MUI palette mode (light/dark toggle) and
+// the resolved tenant brand (accent/name come from TenantContext; falls back
+// to the default brand until /api/tenant/current resolves).
 export function useGlow() {
   const theme = useTheme();
   const dark = theme.palette.mode === 'dark';
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  return { T: glowTokens(dark, TENANT.accent), dark, isDesktop, tenant: TENANT };
+  const { tenant } = useContext(TenantContext);
+  const accent = tenant?.primaryColor || TENANT.accent;
+  const brand = tenant
+    ? { ...TENANT, name: tenant.name || TENANT.name, accent }
+    : TENANT;
+  return { T: glowTokens(dark, accent), dark, isDesktop, tenant: brand };
 }

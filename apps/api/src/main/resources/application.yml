@@ -13,8 +13,9 @@ spring:
     # Prod (EC2): override SPRING_DATASOURCE_URL to a file path so data
     # persists across restarts, e.g.
     #   jdbc:h2:file:/var/lib/esy/esydb;DB_CLOSE_DELAY=-1
+    # Driver + Hibernate dialect are auto-detected from the URL, so the same
+    # build runs on H2 (default) or Postgres just by setting SPRING_DATASOURCE_*.
     url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
-    driver-class-name: org.h2.Driver
     username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:password}
 
@@ -31,7 +32,6 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
   
   security:
@@ -85,9 +85,14 @@ server:
 # Where the OAuth2 success/failure handler sends the browser back to. Empty =
 # same origin (Render: the jar serves the SPA). For local dev set
 # APP_OAUTH2_REDIRECT_BASE=http://localhost:5173 (the Vite dev origin).
+#
+# canonical-origin: the single host the whole Google handshake runs on so its
+# one registered redirect URI matches for every wildcard tenant subdomain
+# (e.g. https://www.esy.ge). Empty = no funnel (local/dev, single host).
 app:
   oauth2:
     redirect-base: ${APP_OAUTH2_REDIRECT_BASE:}
+    canonical-origin: ${APP_OAUTH2_CANONICAL_ORIGIN:}
 
 # Multi-tenant configuration
 tenant:

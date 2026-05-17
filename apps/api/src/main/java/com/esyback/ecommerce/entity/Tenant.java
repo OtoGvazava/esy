@@ -47,6 +47,10 @@ public class Tenant {
     
     @Column(name = "logo_url")
     private String logoUrl;
+
+    // Directory facet (fashion / electronics / home / food / art). Nullable.
+    @Column(name = "category")
+    private String category;
     
     @Column(name = "primary_color")
     private String primaryColor;

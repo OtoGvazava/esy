@@ -41,7 +41,11 @@ export default function SignIn() {
   // hit the backend directly on :8080.
   const googleSignIn = () => {
     const base = window.location.port === "5173" ? "http://localhost:8080" : "";
-    window.location.href = `${base}/oauth2/authorization/google`;
+    // tenant_origin: the backend funnels OAuth through one canonical host
+    // (Google redirect URIs can't be wildcards), then returns the JWT to the
+    // store the user actually started on.
+    const origin = encodeURIComponent(window.location.origin);
+    window.location.href = `${base}/oauth2/authorization/google?tenant_origin=${origin}`;
   };
 
   // iCloud stays a dev stand-in (Apple OAuth not configured).
@@ -78,7 +82,9 @@ export default function SignIn() {
 
         <div style={{ padding: "8px 20px 0", display: "flex", flexDirection: "column", gap: 10 }}>
           <SsoButton T={T} label={busy === "gmail" ? "Signing in…" : "Continue with Gmail"} glyph={GmailGlyph} glyphBg={T.dark ? "rgba(255,255,255,0.06)" : "#ffffff"} glyphFg={T.dark ? "#cfd0d8" : "#5a5a66"} onClick={googleSignIn} busy={!!busy} />
-          <SsoButton T={T} label={busy === "icloud" ? "Signing in…" : "Continue with iCloud"} glyph={ICloudGlyph} glyphBg={T.dark ? "#f2f2f7" : "#0b0b14"} glyphFg={T.dark ? "#0b0b14" : "#ffffff"} onClick={() => sso("icloud")} busy={!!busy} />
+          {/* TEMP: iCloud sign-in hidden until a paid Apple Developer account is set up.
+              To restore, uncomment the line below.
+          <SsoButton T={T} label={busy === "icloud" ? "Signing in…" : "Continue with iCloud"} glyph={ICloudGlyph} glyphBg={T.dark ? "#f2f2f7" : "#0b0b14"} glyphFg={T.dark ? "#0b0b14" : "#ffffff"} onClick={() => sso("icloud")} busy={!!busy} /> */}
         </div>
 
         <div style={{ padding: "22px 24px 14px", display: "flex", alignItems: "center", gap: 12 }}>
@@ -102,6 +108,10 @@ export default function SignIn() {
           <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, font: `500 12px ${T.font}`, color: T.textDim }}>
             <span>New to {tenant.name}?</span>
             <span onClick={continueEmail} style={{ color: T.accentFg, fontWeight: 700, cursor: "pointer" }}>Create one</span>
+          </div>
+          <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, font: `500 12px ${T.font}`, color: T.textDim }}>
+            <span>Want to sell on esy?</span>
+            <span onClick={() => navigate("/create-store")} style={{ color: T.accentFg, fontWeight: 700, cursor: "pointer" }}>Open your store</span>
           </div>
         </div>
 

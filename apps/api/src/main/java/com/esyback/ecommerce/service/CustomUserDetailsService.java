@@ -1,7 +1,6 @@
 package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.entity.Role;
-import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,12 +20,11 @@ import java.util.stream.Collectors;
 public class CustomUserDetailsService implements UserDetailsService {
     
     private final UserRepository userRepository;
-    private final TenantContextService tenantContextService;
-    
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Tenant currentTenant = tenantContextService.getCurrentTenant();
-        User user = userRepository.findByUsernameWithRoles(username, currentTenant)
+        // Global lookup — one account per username across all stores.
+        User user = userRepository.findByUsernameWithRoles(username)
             .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
         
         return org.springframework.security.core.userdetails.User.builder()

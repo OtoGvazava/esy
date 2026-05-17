@@ -56,4 +56,33 @@ public class TenantContextService {
         Tenant tenant = getCurrentTenant();
         return tenant.getIsActive();
     }
+
+    /**
+     * True when the request targets the platform front door (esy.ge) rather
+     * than a tenant storefront: the apex/www host, or localhost without an
+     * explicit ?tenant=. The SPA uses this to pick the platform vs storefront
+     * shell.
+     */
+    public boolean isPlatformHost() {
+        ServletRequestAttributes attributes =
+            (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            return true;
+        }
+        HttpServletRequest request = attributes.getRequest();
+        String host = request.getHeader("Host");
+        if (host == null) {
+            return true;
+        }
+        String h = host.split(":")[0].toLowerCase();
+
+        if (h.equals("esy.ge") || h.equals("www.esy.ge")) {
+            return true;
+        }
+        if (h.equals("localhost") || h.equals("127.0.0.1")) {
+            return request.getParameter("tenant") == null;
+        }
+        // <sub>.esy.ge → storefront unless the sub is the platform "www".
+        return false;
+    }
 }

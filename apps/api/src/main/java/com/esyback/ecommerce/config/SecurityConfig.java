@@ -3,6 +3,7 @@ package com.esyback.ecommerce.config;
 import com.esyback.ecommerce.security.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.esyback.ecommerce.security.JwtAuthenticationFilter;
 import com.esyback.ecommerce.security.OAuth2AuthenticationSuccessHandler;
+import com.esyback.ecommerce.security.OAuthCanonicalHostRedirectFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -11,6 +12,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -28,6 +30,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final OAuth2AuthenticationSuccessHandler oauth2SuccessHandler;
     private final HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository;
+    private final OAuthCanonicalHostRedirectFilter oauthCanonicalHostRedirectFilter;
 
     @Value("${app.oauth2.redirect-base:}")
     private String redirectBase;
@@ -60,6 +63,9 @@ public class SecurityConfig {
                     res.sendRedirect(redirectBase + "/signin?error=oauth"))
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // Bounce OAuth starts to the canonical host before Spring builds
+            // the authorization request (so redirect_uri matches Google).
+            .addFilterBefore(oauthCanonicalHostRedirectFilter, OAuth2AuthorizationRequestRedirectFilter.class)
             .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable())); // For H2 console
         
         return http.build();
