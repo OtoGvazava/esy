@@ -71,9 +71,12 @@ H2 is in-memory → every redeploy/restart wipes signed-up stores, accounts,
 memberships and orders. The platform (store signup, the cross-store account
 hub, orders) is only "real" with a database.
 
-**Local (one command):** `docker compose up --build` → http://localhost:8092.
-Runs Postgres + the app with `JPA_DDL_AUTO=update`; data survives restarts
-(named volume `esy_pgdata`; `docker compose down -v` wipes it).
+**Local (one command):** `docker compose up --build` → http://lvh.me:8092
+(platform) and http://&lt;sub&gt;.lvh.me:8092 (tenant stores — `*.lvh.me`
+resolves to 127.0.0.1 via public DNS, no `/etc/hosts`). Runs Postgres + the
+app with `JPA_DDL_AUTO=update`; data survives restarts (named volume
+`esy_pgdata`; `docker compose down -v` wipes it). See CLAUDE.md
+"Multi-tenant + real Google sign-in (lvh.me)" for the full clean setup.
 
 **Render:** add a **Render PostgreSQL**, then on the web service set
 `SPRING_DATASOURCE_URL` (jdbc:postgresql://…), `SPRING_DATASOURCE_USERNAME`,
@@ -101,6 +104,14 @@ Tenant stores resolve by `Host` (`<sub>.esy.ge`); the platform is `esy.ge` /
    through that host and returns the JWT to the originating store — already
    coded + tested; it's a no-op when the env var is unset (local/dev).
 4. Keep `APP_OAUTH2_REDIRECT_BASE` unset in prod (same-origin).
+
+**Locally the same funnel runs on `lvh.me`:** set
+`APP_OAUTH2_CANONICAL_ORIGIN=http://lvh.me:8092` and register
+`http://lvh.me:8092/login/oauth2/code/google` in Google Console. `lvh.me` is a
+real registrable domain (`*.lvh.me` → 127.0.0.1, public DNS), so the
+`Domain=lvh.me` SSO cookie behaves exactly like prod's `Domain=esy.ge`. The
+host allowlist (`AuthCookie` / `TenantOrigins` / `TenantContextService` /
+`SecurityConfig`, plus web `storeUrl` / `isPlatformHost`) already covers it.
 
 ## Redeploy note
 

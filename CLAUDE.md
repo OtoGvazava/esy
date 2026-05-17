@@ -23,6 +23,29 @@ Dev sign-in: `POST /api/auth/dev-login {"email":"..."}` — an email containing
 `admin` gets the ADMIN role. UI: Account → email field (or "Continue with Gmail"
 for real Google OAuth once `GOOGLE_CLIENT_ID/SECRET` are set).
 
+### Multi-tenant + real Google sign-in (lvh.me) — clean setup
+
+The Vite flow above is single-host. For wildcard tenant subdomains **and** real
+Google OAuth, use the docker compose stack on **`lvh.me:8092`**. `*.lvh.me`
+resolves to `127.0.0.1` via public DNS, so there is **no `/etc/hosts` /
+dnsmasq** to configure:
+
+```bash
+cp .env.example .env          # set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET;
+                              # keep APP_OAUTH2_CANONICAL_ORIGIN=http://lvh.me:8092
+docker compose up --build     # Postgres-backed; data persists (named volume)
+```
+
+- Platform front door: `http://lvh.me:8092`
+- A tenant store: `http://<sub>.lvh.me:8092` (e.g. `studio-form.lvh.me:8092`)
+- **Google Cloud Console** → OAuth client → Authorized redirect URIs, add this
+  exact URI: `http://lvh.me:8092/login/oauth2/code/google` (Google accepts
+  `.me`; it rejects `.local`).
+- One Gmail sign-in is shared across the platform **and every** `*.lvh.me`
+  store — HttpOnly `Domain=lvh.me` cookie, mirroring prod `Domain=esy.ge` over
+  `*.esy.ge`. Sign out once = signed out everywhere.
+- `docker compose down` keeps data; `docker compose down -v` wipes it.
+
 ## Build & deploy
 
 - Artifacts: `./deploy/build.sh` (jar + web dist).
@@ -45,6 +68,16 @@ for real Google OAuth once `GOOGLE_CLIENT_ID/SECRET` are set).
 - **Google = OIDC** (the `openid` scope). `application.yml` must keep
   `google.user-name-attribute: sub` (not `id`) or `DefaultOidcUser` throws
   "Missing attribute 'id'". Provider is taken from the registrationId.
+- **Local OAuth uses `lvh.me`, not `localhost`/`esy.local`.** Google rejects
+  `.local` (not a public TLD); a `Domain=` cookie can't span `*.localhost`, so
+  cross-subdomain SSO would break. `lvh.me` (`*.lvh.me` → 127.0.0.1 via public
+  DNS) is a real registrable domain Google accepts, zero DNS setup. The host
+  allowlist lives in `AuthCookie`, `TenantOrigins`, `TenantContextService`,
+  `SecurityConfig` (backend) + `storeUrl`/`isPlatformHost` (web) — change all
+  of them together if you add a domain.
+- **The SPA is baked into the jar** in the docker/Render image. After editing
+  `apps/web` you must rebuild (`docker compose up --build`) — it is not
+  hot-reloaded in that stack (only the standalone Vite `:5173` flow is).
 - iCloud/Apple sign-in is a **dev stand-in** (real Apple needs a paid
   $99/yr Apple Developer account); the button is temporarily commented out
   in `apps/web/src/pages/SignIn.jsx`.

@@ -14,7 +14,6 @@
     "errCreate": "Could not create the store",
     "liveTitle": "{{name}} is live",
     "liveBody": "Your store responds at this address.",
-    "liveDevHint": "Local dev: open /?tenant={{sub}}",
     "backToStorefront": "Back to storefront",
     "title": "Open your store",
     "subtitle": "Pick a name and a subdomain. Your storefront goes live on esy instantly.",

@@ -23,6 +23,10 @@ public final class TenantOrigins {
     private static final Pattern LOCAL_HOST = Pattern.compile(
         "^http://(localhost|127\\.0\\.0\\.1|[a-z0-9-]+\\.localhost)(:\\d{1,5})?$");
 
+    // http://lvh.me[:port] | http://<sub>.lvh.me[:port]  (local dev: *.lvh.me → 127.0.0.1 via public DNS)
+    private static final Pattern LVH_ME = Pattern.compile(
+        "^http://([a-z0-9][a-z0-9-]*\\.)?lvh\\.me(:\\d{1,5})?$");
+
     private static final Set<String> EXTRA = Set.of(
         "https://esy.ge",
         "https://www.esy.ge"
@@ -32,7 +36,8 @@ public final class TenantOrigins {
         if (origin == null || origin.isBlank()) return false;
         return EXTRA.contains(origin)
             || TENANT_HOST.matcher(origin).matches()
-            || LOCAL_HOST.matcher(origin).matches();
+            || LOCAL_HOST.matcher(origin).matches()
+            || LVH_ME.matcher(origin).matches();
     }
 
     /**

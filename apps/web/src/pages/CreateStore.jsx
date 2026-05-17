@@ -5,6 +5,7 @@ import { useGlow } from '../styles/glow';
 import { Icon } from '../components/glow/GlowPrimitives';
 import { GlowScreen } from '../components/glow/GlowChrome';
 import { tenantApi, handleApiError } from '../utils/api';
+import { storeUrl } from '../platform/platformData';
 
 // Self-serve store signup. The backend resolves tenants by Host header, so a
 // created store is live the moment the row exists (on the deployed wildcard
@@ -64,7 +65,7 @@ export default function CreateStore() {
   };
 
   if (created) {
-    const url = `https://${created.subdomain}.esy.ge`;
+    const url = storeUrl(created);
     return (
       <GlowScreen T={T} padBottom={40}>
         <div style={{ maxWidth: 460, margin: '0 auto', padding: '48px 24px', textAlign: 'center' }}>
@@ -75,12 +76,11 @@ export default function CreateStore() {
             {t('createStore.liveTitle', { name: created.displayName || created.name })}
           </div>
           <div style={{ font: `400 13.5px/1.5 ${T.font}`, color: T.textDim, marginBottom: 20 }}>
-            {t('createStore.liveBody')}{' '}
-            <span style={{ color: T.text }}>{t('createStore.liveDevHint', { sub: created.subdomain })}</span>
+            {t('createStore.liveBody')}
           </div>
-          <div style={{ padding: '14px 16px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, font: `600 14px ${T.mono}`, color: T.accentFg, wordBreak: 'break-all' }}>
+          <a href={url} style={{ display: 'block', padding: '14px 16px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, font: `600 14px ${T.mono}`, color: T.accentFg, wordBreak: 'break-all', textDecoration: 'none' }}>
             {url}
-          </div>
+          </a>
           <button onClick={() => navigate('/')} style={{ marginTop: 22, width: '100%', height: 52, borderRadius: 16, border: 'none', background: T.grad, color: '#fff', font: `700 14.5px ${T.font}`, cursor: 'pointer' }}>
             {t('createStore.backToStorefront')}
           </button>

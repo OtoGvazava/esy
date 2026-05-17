@@ -42,6 +42,16 @@ public class TenantContextService {
             return h.substring(0, h.length() - ".esy.ge".length());
         }
 
+        // <sub>.lvh.me -> sub  (local lvh.me dev domain)
+        if (h.endsWith(".lvh.me")) {
+            return h.substring(0, h.length() - ".lvh.me".length());
+        }
+
+        // lvh.me / www.lvh.me -> platform
+        if (h.equals("lvh.me") || h.equals("www.lvh.me")) {
+            return DEFAULT_TENANT_SUBDOMAIN;
+        }
+
         // <sub>.localhost -> sub  (local wildcard, no /etc/hosts — Chrome
         // resolves *.localhost to 127.0.0.1). www.localhost = platform.
         if (h.endsWith(".localhost")) {
@@ -85,14 +95,15 @@ public class TenantContextService {
         String h = host.split(":")[0].toLowerCase();
 
         // Apex / www = platform.
-        if (h.equals("esy.ge") || h.equals("www.esy.ge") || h.equals("www.localhost")) {
+        if (h.equals("esy.ge") || h.equals("www.esy.ge") || h.equals("www.localhost")
+                || h.equals("lvh.me") || h.equals("www.lvh.me")) {
             return true;
         }
         // Bare localhost = platform unless ?tenant= forces a storefront.
         if (h.equals("localhost") || h.equals("127.0.0.1")) {
             return request.getParameter("tenant") == null;
         }
-        // <sub>.esy.ge / <sub>.localhost = a tenant storefront.
+        // <sub>.esy.ge / <sub>.localhost / <sub>.lvh.me = a tenant storefront.
         return false;
     }
 }

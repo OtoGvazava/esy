@@ -56,14 +56,18 @@ export function storeInitials(store) {
     .split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
-// Public URL for a store. Prod → https://<sub>.esy.ge. Locally → real
-// wildcard subdomain http://<sub>.localhost[:port] (Chrome resolves it; the
-// backend parses the label). 127.0.0.1 has no wildcard → ?tenant= fallback.
+// Public URL for a store. Prod → https://<sub>.esy.ge. Locally → a real
+// wildcard subdomain (http://<sub>.lvh.me[:port], or http://<sub>.localhost
+// [:port]); the backend parses the label from the Host header. 127.0.0.1 /
+// unknown host has no wildcard → ?tenant= fallback.
 export function storeUrl(store) {
   const sub = encodeURIComponent(store.subdomain);
   if (typeof window === 'undefined') return `https://${store.subdomain}.esy.ge`;
   const { hostname, origin, protocol, port } = window.location;
   if (hostname.endsWith('esy.ge')) return `https://${store.subdomain}.esy.ge`;
+  if (hostname === 'lvh.me' || hostname.endsWith('.lvh.me')) {
+    return `${protocol}//${store.subdomain}.lvh.me${port ? `:${port}` : ''}`;
+  }
   if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
     return `${protocol}//${store.subdomain}.localhost${port ? `:${port}` : ''}`;
   }

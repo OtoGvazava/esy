@@ -40,7 +40,8 @@ services:
       # email dev-login still works. No secrets in the repo (.env is gitignored).
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      # Prod only — keep unset on localhost (enabling it breaks local sign-in).
+      # Canonical OAuth host. Unset = bare localhost dev (no funnel).
+      # lvh.me dev: http://lvh.me:8092 | prod: https://www.esy.ge
       APP_OAUTH2_CANONICAL_ORIGIN: ${APP_OAUTH2_CANONICAL_ORIGIN:-}
     ports:
       - "8092:8080"

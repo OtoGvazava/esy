@@ -79,7 +79,9 @@ public class SecurityConfig {
             "https://esy.ge",
             "http://localhost:*",
             "http://127.0.0.1:*",
-            "http://*.localhost:*"   // local wildcard subdomains
+            "http://*.localhost:*",  // local wildcard subdomains
+            "http://lvh.me:*",
+            "http://*.lvh.me:*"   // local lvh.me dev domain
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

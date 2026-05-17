@@ -12,8 +12,8 @@ import org.springframework.http.ResponseCookie;
  * JS, so an XSS in one store can't lift the shared session.
  *
  * On esy.ge hosts the cookie is Domain=esy.ge (sent to all subdomains). On
- * localhost/127.0.0.1 (dev) it is host-only — a Domain attribute for a bare
- * hostname is invalid and browsers would drop it.
+ * lvh.me (local dev) it is Domain=lvh.me. On bare localhost/127.0.0.1
+ * it is host-only — browsers reject Domain for single-label hostnames.
  */
 public final class AuthCookie {
 
@@ -59,6 +59,8 @@ public final class AuthCookie {
     private static String registrableDomain(String host) {
         if (host == null) return null;
         String h = host.toLowerCase();
-        return (h.equals("esy.ge") || h.endsWith(".esy.ge")) ? "esy.ge" : null;
+        if (h.equals("esy.ge") || h.endsWith(".esy.ge")) return "esy.ge";
+        if (h.equals("lvh.me") || h.endsWith(".lvh.me")) return "lvh.me";
+        return null;
     }
 }
