@@ -76,9 +76,10 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList(
             "https://*.esy.ge",
-            "http://localhost:3000",
-            "http://localhost:5173",
-            "http://localhost:8080"
+            "https://esy.ge",
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "http://*.localhost:*"   // local wildcard subdomains
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

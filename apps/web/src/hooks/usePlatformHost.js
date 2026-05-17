@@ -3,8 +3,9 @@
 //
 //  - esy.ge / www.esy.ge            → platform
 //  - <sub>.esy.ge                   → storefront
-//  - localhost without ?tenant=     → platform   (esy.ge dev)
-//  - localhost with ?tenant=<sub>   → storefront  (dev store simulation)
+//  - <sub>.localhost                → storefront   (local wildcard, Chrome)
+//  - www.localhost / localhost      → platform      (esy.ge dev)
+//  - localhost with ?tenant=<sub>   → storefront    (dev store simulation)
 //  - ?platform=1 / ?store=1         → explicit override
 export function isPlatformHost() {
   if (typeof window === 'undefined') return true;
@@ -14,9 +15,9 @@ export function isPlatformHost() {
   if (params.has('platform')) return true;
   if (params.has('store') || params.get('tenant')) return false;
 
-  if (hostname === 'esy.ge' || hostname === 'www.esy.ge') return true;
+  if (hostname === 'esy.ge' || hostname === 'www.esy.ge' || hostname === 'www.localhost') return true;
   if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
-  if (hostname.endsWith('.esy.ge')) return false; // a tenant subdomain
+  if (hostname.endsWith('.esy.ge') || hostname.endsWith('.localhost')) return false; // a tenant subdomain
 
   // Unknown host (e.g. *.onrender.com preview) → platform by default.
   return true;

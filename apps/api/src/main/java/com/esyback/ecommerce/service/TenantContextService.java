@@ -29,26 +29,34 @@ public class TenantContextService {
         if (attributes == null) {
             return DEFAULT_TENANT_SUBDOMAIN;
         }
-        
+
         HttpServletRequest request = attributes.getRequest();
         String host = request.getHeader("Host");
-        
         if (host == null) {
             return DEFAULT_TENANT_SUBDOMAIN;
         }
-        
-        // Extract subdomain from host (e.g., shop1.esy.ge -> shop1)
-        if (host.contains(".esy.ge")) {
-            String subdomain = host.substring(0, host.indexOf(".esy.ge"));
-            return subdomain;
+        String h = host.split(":")[0].toLowerCase();
+
+        // <sub>.esy.ge -> sub  (prod)
+        if (h.endsWith(".esy.ge")) {
+            return h.substring(0, h.length() - ".esy.ge".length());
         }
-        
-        // For localhost development
-        if (host.contains("localhost")) {
+
+        // <sub>.localhost -> sub  (local wildcard, no /etc/hosts — Chrome
+        // resolves *.localhost to 127.0.0.1). www.localhost = platform.
+        if (h.endsWith(".localhost")) {
+            String label = h.substring(0, h.length() - ".localhost".length());
+            if (!label.isEmpty() && !label.equals("www")) {
+                return label;
+            }
+        }
+
+        // Bare localhost: ?tenant=<sub> dev fallback.
+        if (h.equals("localhost") || h.equals("127.0.0.1") || h.endsWith(".localhost")) {
             String subdomain = request.getParameter("tenant");
             return subdomain != null ? subdomain : DEFAULT_TENANT_SUBDOMAIN;
         }
-        
+
         return DEFAULT_TENANT_SUBDOMAIN;
     }
     
@@ -76,13 +84,15 @@ public class TenantContextService {
         }
         String h = host.split(":")[0].toLowerCase();
 
-        if (h.equals("esy.ge") || h.equals("www.esy.ge")) {
+        // Apex / www = platform.
+        if (h.equals("esy.ge") || h.equals("www.esy.ge") || h.equals("www.localhost")) {
             return true;
         }
+        // Bare localhost = platform unless ?tenant= forces a storefront.
         if (h.equals("localhost") || h.equals("127.0.0.1")) {
             return request.getParameter("tenant") == null;
         }
-        // <sub>.esy.ge → storefront unless the sub is the platform "www".
+        // <sub>.esy.ge / <sub>.localhost = a tenant storefront.
         return false;
     }
 }

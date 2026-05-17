@@ -125,14 +125,16 @@ export function storeInitials(store) {
     .split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
-// Subdomain hostname for a store. In local dev there are no real subdomains,
-// so link back to the same origin with ?tenant=<sub> (the backend resolves it).
+// Public URL for a store. Prod → https://<sub>.esy.ge. Locally → real
+// wildcard subdomain http://<sub>.localhost[:port] (Chrome resolves it; the
+// backend parses the label). 127.0.0.1 has no wildcard → ?tenant= fallback.
 export function storeUrl(store) {
+  const sub = encodeURIComponent(store.subdomain);
   if (typeof window === 'undefined') return `https://${store.subdomain}.esy.ge`;
-  const { hostname, origin } = window.location;
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `${origin}/?tenant=${encodeURIComponent(store.subdomain)}`;
-  }
+  const { hostname, origin, protocol, port } = window.location;
   if (hostname.endsWith('esy.ge')) return `https://${store.subdomain}.esy.ge`;
-  return `${origin}/?tenant=${encodeURIComponent(store.subdomain)}`;
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    return `${protocol}//${store.subdomain}.localhost${port ? ':' + port : ''}`;
+  }
+  return `${origin}/?tenant=${sub}`; // 127.0.0.1 / unknown host
 }

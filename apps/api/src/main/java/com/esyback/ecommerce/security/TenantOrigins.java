@@ -19,17 +19,20 @@ public final class TenantOrigins {
     private static final Pattern TENANT_HOST =
         Pattern.compile("^https://[a-z0-9][a-z0-9-]{0,61}[a-z0-9]\\.esy\\.ge$");
 
+    // http://localhost[:port] | http://127.0.0.1[:port] | http://<sub>.localhost[:port]
+    private static final Pattern LOCAL_HOST = Pattern.compile(
+        "^http://(localhost|127\\.0\\.0\\.1|[a-z0-9-]+\\.localhost)(:\\d{1,5})?$");
+
     private static final Set<String> EXTRA = Set.of(
         "https://esy.ge",
-        "https://www.esy.ge",
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://localhost:8080"
+        "https://www.esy.ge"
     );
 
     public static boolean isAllowed(String origin) {
         if (origin == null || origin.isBlank()) return false;
-        return EXTRA.contains(origin) || TENANT_HOST.matcher(origin).matches();
+        return EXTRA.contains(origin)
+            || TENANT_HOST.matcher(origin).matches()
+            || LOCAL_HOST.matcher(origin).matches();
     }
 
     /**
