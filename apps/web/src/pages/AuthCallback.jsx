@@ -10,7 +10,17 @@ export default function AuthCallback() {
   const { T } = useGlow();
 
   useEffect(() => {
-    window.location.replace('/account');
+    // Return to the store the user signed in from. signInWithGoogle stashed
+    // the path on this same origin; the dev store simulation lives in
+    // ?tenant=, which the OAuth origin round-trip can't carry on its own.
+    let dest = '/account';
+    try {
+      const saved = sessionStorage.getItem('esy_post_login');
+      sessionStorage.removeItem('esy_post_login');
+      const tenant = saved && new URL(saved, window.location.origin).searchParams.get('tenant');
+      if (tenant) dest = `/account?tenant=${encodeURIComponent(tenant)}`;
+    } catch { /* keep default /account */ }
+    window.location.replace(dest);
   }, []);
 
   return (

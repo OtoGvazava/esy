@@ -74,6 +74,13 @@ export const AuthProvider = ({ children }) => {
   const signInWithGoogle = () => {
     const base = window.location.port === '5173' ? 'http://localhost:8080' : '';
     const origin = encodeURIComponent(window.location.origin);
+    // window.location.origin can't carry ?tenant= (the dev store simulation
+    // runs every store on one host), so the OAuth round-trip would drop the
+    // store and land back on the platform. The round-trip returns to this same
+    // origin, so stash the return path for AuthCallback to restore.
+    try {
+      sessionStorage.setItem('esy_post_login', window.location.pathname + window.location.search);
+    } catch { /* storage blocked — AuthCallback falls back to /account */ }
     window.location.href = `${base}/oauth2/authorization/google?tenant_origin=${origin}`;
   };
 
