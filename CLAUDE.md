@@ -61,6 +61,15 @@ for real Google OAuth once `GOOGLE_CLIENT_ID/SECRET` are set).
 - Code exploration: use **codebase-memory-mcp** (project indexed). After
   meaningful edits run `detect_changes` then re-index (`fast`). An auto-reindex
   hook keeps it fresh.
+- **i18n is bilingual EN/KA, enforced.** All user-facing strings go through
+  react-i18next `t()` (namespaces in `apps/web/src/locales/{en,ka}/*.json`) —
+  never hardcode UI text. Every key MUST exist in **both** `en` and `ka`.
+  `npm run i18n:check` (script `scripts/check-i18n-parity.mjs`) is the gate;
+  it runs in the husky pre-commit and a Claude PostToolUse hook, so a change
+  that adds a string in one language only cannot be committed. New screens →
+  add a namespace, wire it in `i18n.js`, fill `en` + `ka`. `eslint-plugin-
+  i18next` (`no-literal-string`, currently `warn`) flags stray literals; flip
+  it to `error` once the legacy backfill is complete.
 
 ## Verify a change
 

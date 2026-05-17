@@ -1,0 +1,10 @@
+cd apps/web || exit 1
+
+# Hard gate: en ↔ ka must stay in sync (the actual "new strings need the
+# other language" rule). Fails the commit on any parity mismatch.
+node scripts/check-i18n-parity.mjs || {
+  echo "commit blocked: i18n parity failed (npm run i18n:check)"; exit 1;
+}
+
+# Lint changed JS/JSX (eslint-plugin-i18next flags hardcoded UI strings).
+npx --no-install lint-staged || exit 1
