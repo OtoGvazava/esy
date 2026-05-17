@@ -90,10 +90,10 @@ export default function Account() {
             </div>
             <div style={{ padding: '0 16px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {recent.map((o, idx) => {
-                const id = (o.id || `ESY-${idx}`).toString().slice(-7).toUpperCase();
+                const id = (o.orderNumber || o.id || `ESY-${idx}`).toString().toUpperCase();
                 const date = o.createdAt ? new Date(o.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—';
                 const n = o.count ?? (Array.isArray(o.items) ? o.items.length : '—');
-                const delivered = o.status === 'delivered' || o.status === 'completed';
+                const delivered = o.status === 'delivered';
                 return (
                   <div key={o.id || idx} style={{ padding: '12px 14px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span style={{ width: 38, height: 38, borderRadius: 10, background: T.accentBg, color: T.accentFg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.bag /></span>
@@ -103,7 +103,7 @@ export default function Account() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
                       <span style={{ font: `700 13.5px ${T.font}`, color: T.text }}>{money(o.total)}</span>
-                      <span style={{ font: `600 9.5px ${T.font}`, color: delivered ? T.success : T.accentFg, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t(`orders.status.${o.status || 'pending'}`, { defaultValue: o.status || 'pending' })}</span>
+                      <span style={{ font: `600 9.5px ${T.font}`, color: delivered ? T.success : T.accentFg, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t(`orders.status.${o.statusKey || 'placed'}`, { defaultValue: o.status || 'placed' })}</span>
                     </div>
                   </div>
                 );

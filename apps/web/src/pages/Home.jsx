@@ -74,11 +74,18 @@ function FollowPill({ T }) {
 function GlowLogo({ T, tenant, size = 20 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.text }}>
-      <span style={{
-        width: size * 1.1, height: size * 1.1, borderRadius: 10, background: T.grad,
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        color: '#fff', font: `800 ${size * 0.55}px ${T.font}`, letterSpacing: '-0.02em',
-      }}>{tenant.initials.charAt(0)}</span>
+      {tenant.logoUrl ? (
+        <img
+          src={tenant.logoUrl} alt={tenant.name}
+          style={{ width: size * 1.1, height: size * 1.1, borderRadius: 10, objectFit: 'cover', display: 'block' }}
+        />
+      ) : (
+        <span style={{
+          width: size * 1.1, height: size * 1.1, borderRadius: 10, background: T.grad,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', font: `800 ${size * 0.55}px ${T.font}`, letterSpacing: '-0.02em',
+        }}>{tenant.initials.charAt(0)}</span>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
         <span style={{ font: `700 ${size * 0.82}px ${T.font}`, letterSpacing: '-0.02em' }}>{tenant.name}</span>
         <span style={{ font: `500 ${size * 0.46}px ${T.font}`, color: T.textMute, marginTop: 3 }}>{tenant.domain}</span>

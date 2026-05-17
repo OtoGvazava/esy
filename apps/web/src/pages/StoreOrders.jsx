@@ -19,8 +19,8 @@ function StatCard({ T, label, value, isDesktop }) {
       padding: isDesktop ? '22px 24px' : '18px 18px',
       display: 'flex', flexDirection: 'column', gap: 8,
     }}>
-      <div style={{ font: `600 11px ${T.font}`, color: T.textDim, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ font: `800 ${isDesktop ? 30 : 24}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{value}</div>
+      <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ font: `800 ${isDesktop ? 30 : 24}px ${T.font}`, color: T.text, letterSpacing: '-0.03em' }}>{value}</div>
     </div>
   );
 }
@@ -33,7 +33,7 @@ function OrderRow({ T, order, t }) {
   const n = Number.isFinite(order.items) ? order.items : 0;
   const status = (order.status || 'placed').toLowerCase();
   const statusKey = status.replace(/ /g, '_');
-  const tone = status === 'delivered' ? T.success
+  const tone = status === 'delivered' || status === 'completed' ? T.success
     : status === 'cancelled' ? T.danger : T.accentFg;
   return (
     <div style={{ padding: '14px 14px', borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -100,6 +100,7 @@ export default function StoreOrders() {
     { id: 'products', label: t('statProducts'), value: stats.products ?? 0 },
     { id: 'orders', label: t('statOrders'), value: stats.orders ?? 0 },
     { id: 'revenue', label: t('statRevenue'), value: money(stats.revenue ?? 0) },
+    { id: 'fees', label: t('statFeesOwed'), value: money(stats.serviceFeesOwed ?? 0) },
     { id: 'followers', label: t('statFollowers'), value: stats.followers ?? 0 },
   ] : [];
 
@@ -126,7 +127,7 @@ export default function StoreOrders() {
           </button>
           <div>
             <div style={{ font: `500 11px ${T.font}`, color: T.accentFg, letterSpacing: '0.14em', textTransform: 'uppercase' }}>{t('ordersEyebrow')}</div>
-            <div style={{ font: `700 ${isDesktop ? 26 : 20}px ${T.font}`, color: T.text, letterSpacing: '-0.03em', marginTop: 4 }}>
+            <div style={{ font: `700 ${isDesktop ? 26 : 22}px ${T.font}`, color: T.text, letterSpacing: '-0.03em', marginTop: 4 }}>
               {stats?.store?.displayName || stats?.store?.name || tenant.name}
             </div>
           </div>

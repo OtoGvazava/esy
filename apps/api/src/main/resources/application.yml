@@ -101,6 +101,34 @@ app:
     redirect-base: ${APP_OAUTH2_REDIRECT_BASE:}
     canonical-origin: ${APP_OAUTH2_CANONICAL_ORIGIN:}
 
+  # Internet-reachable origin BOG redirects/calls back to. Empty = derive
+  # from the request (fine in prod same-origin). Local dev: BOG can't reach
+  # lvh.me anyway, so the /pay/return page reconciles via the receipt API.
+  public-base-url: ${APP_PUBLIC_BASE_URL:}
+
+  # AES key for secrets stored at rest (per-tenant BOG client secret). Any
+  # length (SHA-256 derived, like the JWT key). Dev default works locally;
+  # MUST be overridden in prod — changing it invalidates stored secrets, so
+  # stores would need to re-enter their BOG credentials.
+  secret:
+    enc-key: ${APP_SECRET_ENC_KEY:dev-local-esy-secret-encryption-key-override-in-prod}
+
+  # Bank of Georgia endpoints + the callback-signing public key. The key has
+  # NO default on purpose: a wrong key rejects every real payment callback.
+  # Unset → signature checks are skipped (logged) so local dev works; prod
+  # MUST set BOG_PUBLIC_KEY to the PEM from
+  # https://api.bog.ge/docs/en/payments/callback so callbacks are enforced.
+  bog:
+    auth-url: ${BOG_AUTH_URL:https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token}
+    base-url: ${BOG_BASE_URL:https://api.bog.ge}
+    public-key: ${BOG_PUBLIC_KEY:}
+
+  # Platform service fee accrued per order (fraction of order total; 0.02 =
+  # 2%). Frozen onto each order at creation; the shopper never sees/pays it
+  # and it does not change the BOG charge. Tunable without a redeploy.
+  platform:
+    service-fee-rate: ${PLATFORM_SERVICE_FEE_RATE:0.02}
+
 # Multi-tenant configuration
 tenant:
   domain: esy.ge

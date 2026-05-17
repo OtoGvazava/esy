@@ -4,6 +4,7 @@ import ProductDetails from './pages/ProductDetails';
 import SearchOverlay from './pages/SearchOverlay';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import PayReturn from './pages/PayReturn';
 import OrderSuccess from './pages/OrderSuccess';
 import Saved from './pages/Saved';
 import Account from './pages/Account';
@@ -33,6 +34,7 @@ function AppShell() {
         <Route path="/search" element={<SearchOverlay />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/pay/return" element={<PayReturn />} />
         <Route path="/success" element={<OrderSuccess />} />
         <Route path="/saved" element={<Saved />} />
         <Route path="/account" element={<Account />} />

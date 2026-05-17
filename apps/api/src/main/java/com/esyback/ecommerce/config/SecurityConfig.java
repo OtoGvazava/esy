@@ -45,6 +45,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/products/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/tenant/**").permitAll()
+                // BOG's async webhook is server-to-server (no JWT cookie); it
+                // is authenticated by its RSA Callback-Signature, not Spring.
+                // Explicit so it survives a future anyRequest() tighten.
+                .requestMatchers("/api/payments/bog/callback").permitAll()
                 .requestMatchers("/login/oauth2/**").permitAll()
                 .requestMatchers("/oauth2/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()

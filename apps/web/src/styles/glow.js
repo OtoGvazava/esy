@@ -13,7 +13,7 @@ export const GLOW_MONO = 'ui-monospace, "SF Mono", Menlo, monospace';
 export const TENANT = {
   name: 'esy',
   handle: 'esy',
-  domain: 'esy.shop',
+  domain: 'esy.ge',
   initials: 'E',
   bio: 'An independent storefront on esy. Small-batch goods, shipped worldwide — every order supports an independent maker.',
   location: 'Tbilisi · Georgia',
@@ -23,7 +23,7 @@ export const TENANT = {
 };
 
 // Mix the accent toward an orange-pink anchor for the CTA gradient end-stop.
-export function shiftHue(hex, _deg = 25) {
+export function shiftHue(hex) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -55,8 +55,9 @@ export function glowTokens(dark, accent = TENANT.accent) {
 }
 
 // Tokens bound to the app's current MUI palette mode (light/dark toggle) and
-// the resolved tenant brand (accent/name come from TenantContext; falls back
-// to the default brand until /api/tenant/current resolves).
+// the resolved tenant brand from TenantContext (name/description/address/
+// established/colors are owner-editable; each falls back to the default brand
+// when unset or until /api/tenant/current resolves).
 export function useGlow() {
   const theme = useTheme();
   const dark = theme.palette.mode === 'dark';
@@ -64,7 +65,18 @@ export function useGlow() {
   const { tenant } = useContext(TenantContext);
   const accent = tenant?.primaryColor || TENANT.accent;
   const brand = tenant
-    ? { ...TENANT, name: tenant.name || TENANT.name, accent }
+    ? {
+        ...TENANT,
+        name: tenant.displayName || tenant.name || TENANT.name,
+        bio: tenant.description || TENANT.bio,
+        location:
+          [tenant.addressCity, tenant.addressCountry].filter(Boolean).join(' · ') ||
+          TENANT.location,
+        since: tenant.establishedYear || TENANT.since,
+        domain: tenant.subdomain ? `${tenant.subdomain}.esy.ge` : TENANT.domain,
+        logoUrl: tenant.logoUrl || null,
+        accent,
+      }
     : TENANT;
   return { T: glowTokens(dark, accent), dark, isDesktop, tenant: brand };
 }

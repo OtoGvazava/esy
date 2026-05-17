@@ -43,6 +43,15 @@ services:
       # Canonical OAuth host. Unset = bare localhost dev (no funnel).
       # lvh.me dev: http://lvh.me:8092 | prod: https://www.esy.ge
       APP_OAUTH2_CANONICAL_ORIGIN: ${APP_OAUTH2_CANONICAL_ORIGIN:-}
+      # Payments (Bank of Georgia). Per-store creds are entered in Store
+      # Settings; these are platform knobs. All optional locally — unset
+      # APP_SECRET_ENC_KEY falls back to a dev key, unset BOG_PUBLIC_KEY
+      # skips callback signature checks (BOG can't reach lvh.me anyway).
+      APP_SECRET_ENC_KEY: ${APP_SECRET_ENC_KEY:-}
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-}
+      BOG_PUBLIC_KEY: ${BOG_PUBLIC_KEY:-}
+      BOG_BASE_URL: ${BOG_BASE_URL:-https://api.bog.ge}
+      BOG_AUTH_URL: ${BOG_AUTH_URL:-https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token}
     ports:
       - "8092:8080"
 

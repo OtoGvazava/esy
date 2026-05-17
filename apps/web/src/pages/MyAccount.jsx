@@ -1,67 +1,25 @@
 /* global process */
-import React, { useState } from 'react';
-import {
-  Container,
-  Typography,
-  Box,
-  Avatar,
-  Button,
-  TextField,
-  Grid,
-  Alert,
-  Snackbar,
-  useTheme,
-  useMediaQuery,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Card,
-  CardContent,
-  Chip,
-  Stack,
-  IconButton,
-} from '@mui/material';
-import {
-  Edit as EditIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-  Person as PersonIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon,
-  CalendarToday as CalendarIcon,
-  Badge as BadgeIcon,
-  Security as SecurityIcon,
-  AccountCircle as AccountCircleIcon,
-  Settings as SettingsIcon,
-  Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
-} from '@mui/icons-material';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useGlow } from '../styles/glow';
+import { Icon } from '../components/glow/GlowPrimitives';
+import { GlowScreen, GlowTopNav } from '../components/glow/GlowChrome';
 import { loginAsAdmin, loginAsUser } from '../utils/adminUtils';
 
+const PROVIDER_LABEL = { google: 'Google', apple: 'Apple' };
+
 const MyAccount = () => {
-  const theme = useTheme();
+  const { T, tenant } = useGlow();
   const { t } = useTranslation(['auth', 'account']);
   const { user, updateProfile, login } = useAuth();
   const navigate = useNavigate();
-  // eslint-disable-next-line no-unused-vars
-  const isMobile = useMediaQuery('(max-width:600px)');
-  
+
   const [loading, setLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-  const [editingFields, setEditingFields] = useState({
-    firstName: false,
-    lastName: false,
-    phoneNumber: false,
-    personalNumber: false,
-    dateOfBirth: false,
-  });
-  
-  const [formData, setFormData] = useState({
+  const [editing, setEditing] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [form, setForm] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     phoneNumber: user?.phoneNumber || '',
@@ -69,1166 +27,256 @@ const MyAccount = () => {
     dateOfBirth: user?.dateOfBirth || '',
   });
 
-
-  const handleInputChange = (field) => (event) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.value,
-    }));
+  const toastTimer = useRef(null);
+  const flash = (message, severity = 'success') => {
+    setToast({ message, severity });
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 3500);
   };
 
-  const handleEditField = (field) => {
-    setEditingFields(prev => ({
-      ...prev,
-      [field]: true,
-    }));
+  const startEdit = (id) => setEditing(id);
+
+  const cancelEdit = (id) => {
+    setForm((f) => ({ ...f, [id]: user?.[id] || '' }));
+    setEditing(null);
   };
 
-  const handleCancelEdit = (field) => {
-    setEditingFields(prev => ({
-      ...prev,
-      [field]: false,
-    }));
-    // Reset field to original value
-    setFormData(prev => ({
-      ...prev,
-      [field]: user?.[field] || '',
-    }));
-  };
-
-  const handleSaveField = async (field) => {
+  const saveField = async (id) => {
     setLoading(true);
     try {
-      const fieldData = { [field]: formData[field] };
-      const result = await updateProfile(fieldData);
+      const result = await updateProfile({ [id]: form[id] });
       if (result.success) {
-        setSnackbar({
-          open: true,
-          message: t('account:fieldUpdated'),
-          severity: 'success',
-        });
-        setEditingFields(prev => ({
-          ...prev,
-          [field]: false,
-        }));
+        flash(t('account:fieldUpdated'), 'success');
+        setEditing(null);
       } else {
-        setSnackbar({
-          open: true,
-          message: result.error || t('account:updateError'),
-          severity: 'error',
-        });
+        flash(result.error || t('account:updateError'), 'error');
       }
     } catch {
-      setSnackbar({
-        open: true,
-        message: t('account:updateError'),
-        severity: 'error',
-      });
+      flash(t('account:updateError'), 'error');
     } finally {
       setLoading(false);
     }
   };
 
-
-
-  const handleChangePassword = () => {
-    // Redirect to the appropriate provider's password change URL
+  const openPasswordManager = () => {
     if (user?.provider === 'google') {
       window.open('https://myaccount.google.com/security', '_blank');
     } else if (user?.provider === 'apple') {
       window.open('https://appleid.apple.com/account/manage', '_blank');
     } else {
-      // For other providers or if no provider is set, show a message
-      setSnackbar({
-        open: true,
-        message: t('account:passwordChangeRedirect'),
-        severity: 'info',
-      });
+      flash(t('account:passwordChangeRedirect'), 'info');
     }
-    setChangePasswordOpen(false);
   };
 
-  // eslint-disable-next-line no-unused-vars
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const getInitials = (firstName, lastName) => {
-    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
+  const eyebrow = {
+    font: `600 10.5px ${T.font}`,
+    color: T.textMute,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
   };
 
   if (!user) {
     return (
-      <Container maxWidth={false} sx={{ py: 4, px: 3 }}>
-        <Box textAlign="center" py={8}>
-          <Avatar
-            sx={{
-              width: 80,
-              height: 80,
-              bgcolor: 'rgba(99, 102, 241, 0.1)',
-              color: '#6366f1',
-              mb: 3,
-              border: '2px solid rgba(99, 102, 241, 0.2)',
-              mx: 'auto',
-            }}
-          >
-            <AccountCircleIcon sx={{ fontSize: 40 }} />
-          </Avatar>
-          <Typography 
-            variant="h4" 
-            gutterBottom
-            sx={{
-              fontWeight: 700,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            {t('account:myAccount')}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            {t('account:loginRequired')}
-          </Typography>
-        </Box>
-      </Container>
+      <GlowScreen T={T}>
+        <GlowTopNav T={T} title={t('account:myAccount')} onBack={() => navigate(-1)} />
+        <div style={{ padding: '64px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
+          <div style={{ width: 88, height: 88, borderRadius: 24, background: T.surface, border: `1px solid ${T.border}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.accentFg }}>
+            <Icon.user width="34" height="34" />
+          </div>
+          <div style={{ font: `700 20px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{t('account:myAccount')}</div>
+          <div style={{ font: `400 13px/1.5 ${T.font}`, color: T.textDim, maxWidth: 260 }}>{t('account:loginRequired')}</div>
+        </div>
+      </GlowScreen>
     );
   }
 
+  const fields = [
+    { id: 'firstName', label: t('auth:firstName'), icon: <Icon.user /> },
+    { id: 'lastName', label: t('auth:lastName'), icon: <Icon.user /> },
+    { id: 'phoneNumber', label: t('auth:phoneNumber'), icon: <Icon.pin /> },
+    { id: 'personalNumber', label: t('auth:personalNumber'), icon: <Icon.check /> },
+    { id: 'dateOfBirth', label: t('auth:dateOfBirth'), icon: <Icon.bag />, type: 'date' },
+  ];
+
+  const initials = `${(user.firstName || user.name || ' ')[0] || ''}${(user.lastName || '')[0] || ''}`.toUpperCase();
+  const providerLabel = PROVIDER_LABEL[user.provider] || tenant.name;
+
+  const renderField = ({ id, label, icon, type = 'text' }) => {
+    const active = editing === id;
+    return (
+      <div key={id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span style={eyebrow}>{label}</span>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, height: 52, padding: '0 14px',
+          borderRadius: 14, background: T.surface,
+          border: `1.5px solid ${active ? T.accent : T.border}`,
+          boxShadow: active ? `0 0 0 3px ${T.accent}22` : 'none',
+        }}>
+          <span style={{ color: T.textMute, display: 'inline-flex' }}>{icon}</span>
+          <input
+            type={type}
+            value={form[id] || ''}
+            disabled={!active}
+            onChange={(e) => setForm((f) => ({ ...f, [id]: e.target.value }))}
+            style={{
+              flex: 1, minWidth: 0, height: '100%', background: 'transparent',
+              border: 'none', outline: 'none', color: T.text,
+              font: `500 14px ${T.font}`, letterSpacing: '-0.01em',
+            }}
+          />
+          {active ? (
+            <span style={{ display: 'inline-flex', gap: 6 }}>
+              <button onClick={() => saveField(id)} disabled={loading} aria-label={t('account:saveChanges')} style={{
+                width: 30, height: 30, borderRadius: 10, border: 'none',
+                cursor: loading ? 'not-allowed' : 'pointer', background: T.accent, color: '#fff',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: loading ? 0.6 : 1,
+              }}><Icon.check /></button>
+              <button onClick={() => cancelEdit(id)} aria-label={t('account:cancel')} style={{
+                width: 30, height: 30, borderRadius: 10, border: `1px solid ${T.border}`, cursor: 'pointer',
+                background: 'transparent', color: T.textDim,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `600 14px ${T.font}`,
+              }}>×</button>
+            </span>
+          ) : (
+            <button onClick={() => startEdit(id)} style={{
+              width: 'auto', height: 30, padding: '0 12px', borderRadius: 10, border: `1px solid ${T.border}`,
+              cursor: 'pointer', background: 'transparent', color: T.accentFg,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `600 11px ${T.font}`,
+            }}>{t('account:edit')}</button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <Container maxWidth={false} sx={{ py: 4, px: 3 }}>
-      {/* Header */}
-      <Box mb={4}>
-        <Typography 
-          variant="h4" 
-          gutterBottom 
-          sx={{ 
-            fontWeight: 700,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {t('account:myAccount')}
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {t('account:profileInformation')}
-        </Typography>
-      </Box>
+    <GlowScreen T={T}>
+      <GlowTopNav T={T} title={t('account:myAccount')} onBack={() => navigate(-1)} />
+      <div style={{ maxWidth: 620, margin: '0 auto' }}>
+        {/* Profile card */}
+        <div style={{ padding: '0 16px 14px' }}>
+          <div style={{
+            padding: '18px 16px', borderRadius: 18,
+            background: `linear-gradient(135deg, ${tenant.accent}1c, transparent 70%), ${T.surface}`,
+            border: `1px solid ${T.border}`,
+            display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            {user.avatar ? (
+              <img src={user.avatar} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%', background: T.grad,
+                color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                font: `800 22px ${T.font}`, letterSpacing: '-0.02em',
+              }}>{initials}</div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ font: `700 17px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>
+                {user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()}
+              </div>
+              <div style={{ font: `400 12px ${T.font}`, color: T.textDim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, background: '#3f8a4a18', color: '#3f8a4a', font: `600 10.5px ${T.font}`, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  <Icon.check width="10" height="10" /> {t('account:verifiedShort')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      {/* Profile Header Card */}
-      <Card 
-        sx={(theme) => ({
-          borderRadius: 3,
-          border: theme.palette.mode === 'dark'
-            ? '1px solid rgba(255, 255, 255, 0.1)'
-            : '1px solid rgba(0, 0, 0, 0.08)',
-          background: theme.palette.mode === 'dark'
-            ? 'rgba(255, 255, 255, 0.05)'
-            : 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-            : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-          mb: 3,
-          overflow: 'hidden',
-        })}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Avatar
-                src={user.avatar}
-                sx={{ 
-                  width: 80, 
-                  height: 80,
-                  bgcolor: 'rgba(99, 102, 241, 0.1)',
-                  color: '#6366f1',
-                  border: '3px solid rgba(99, 102, 241, 0.2)',
-                  fontSize: '2rem',
-                  fontWeight: 600,
-                }}
-              >
-                {!user.avatar && getInitials(user.firstName, user.lastName)}
-              </Avatar>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  {user.name || `${user.firstName} ${user.lastName}`}
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 0.5 }}>
-                  {user.email}
-                </Typography>
-                <Chip
-                  icon={<AccountCircleIcon />}
-                  label={t('account:verified')}
-                  color="success"
-                  variant="outlined"
-                  size="small"
-                  sx={{ fontWeight: 600 }}
-                />
-              </Box>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
+        {/* Dev role toggle — development only */}
+        {process.env.NODE_ENV === 'development' && (
+          <>
+            <div style={{ padding: '4px 22px 8px', ...eyebrow }}>{t('account:devTools')}</div>
+            <div style={{ padding: '0 16px 14px' }}>
+              <div style={{ padding: '14px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {[
+                    { role: 'admin', label: t('account:switchToAdmin'), fn: loginAsAdmin, msg: t('account:roleSwitchedAdmin') },
+                    { role: 'user', label: t('account:switchToUser'), fn: loginAsUser, msg: t('account:roleSwitchedUser') },
+                  ].map((b) => {
+                    const on = user.role === b.role;
+                    return (
+                      <button key={b.role} onClick={() => { login(b.fn()); flash(b.msg, 'success'); }} style={{
+                        padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
+                        background: on ? T.accent : 'transparent', color: on ? '#fff' : T.text,
+                        border: `1px solid ${on ? T.accent : T.border}`, font: `600 12px ${T.font}`,
+                      }}>{b.label}</button>
+                    );
+                  })}
+                </div>
+                <span style={{ font: `400 11.5px ${T.font}`, color: T.textMute }}>
+                  {t('account:currentRole', { role: user.role || 'user' })}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
 
-      {/* Admin Toggle Card - Only show for development/testing */}
-      {process.env.NODE_ENV === 'development' && (
-        <Card 
-          sx={(theme) => ({
-            borderRadius: 3,
-            border: theme.palette.mode === 'dark'
-              ? '1px solid rgba(255, 255, 255, 0.1)'
-              : '1px solid rgba(0, 0, 0, 0.08)',
-            background: theme.palette.mode === 'dark'
-              ? 'rgba(255, 255, 255, 0.05)'
-              : 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(10px)',
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-              : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-            mb: 3,
-            overflow: 'hidden',
-          })}
-        >
-          <CardContent sx={{ p: 3 }}>
-            <Typography 
-              variant="h6" 
-              gutterBottom 
-              sx={{ 
-                mb: 3,
-                fontWeight: 600,
-                color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-              }}
-            >
-              Development Tools
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Button
-                variant={user.role === 'admin' ? 'contained' : 'outlined'}
-                color="primary"
-                onClick={() => {
-                  const adminUser = loginAsAdmin();
-                  login(adminUser);
-                  setSnackbar({ open: true, message: 'Switched to Admin role', severity: 'success' });
-                }}
-                sx={{ borderRadius: 2 }}
-              >
-                Switch to Admin
-              </Button>
-              <Button
-                variant={user.role === 'user' ? 'contained' : 'outlined'}
-                color="secondary"
-                onClick={() => {
-                  const regularUser = loginAsUser();
-                  login(regularUser);
-                  setSnackbar({ open: true, message: 'Switched to User role', severity: 'success' });
-                }}
-                sx={{ borderRadius: 2 }}
-              >
-                Switch to User
-              </Button>
-            </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-              Current role: <strong>{user.role || 'user'}</strong>
-            </Typography>
-          </CardContent>
-        </Card>
-      )}
+        {/* Personal information */}
+        <div style={{ padding: '4px 22px 8px', ...eyebrow, letterSpacing: '0.12em' }}>{t('account:personalInformation')}</div>
+        <div style={{ padding: '0 16px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {fields.map((f) => renderField(f))}
+          {/* Email — read-only auth identity */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={eyebrow}>{t('auth:email')}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 52, padding: '0 14px', borderRadius: 14, background: T.surface, border: `1.5px solid ${T.border}` }}>
+              <span style={{ color: T.textMute, display: 'inline-flex' }}><Icon.mail /></span>
+              <span style={{ flex: 1, minWidth: 0, color: T.textDim, font: `500 14px ${T.font}`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</span>
+            </div>
+          </div>
+        </div>
 
-      {/* Profile Information Card */}
-      <Card 
-        sx={(theme) => ({
-          borderRadius: 3,
-          border: theme.palette.mode === 'dark'
-            ? '1px solid rgba(255, 255, 255, 0.1)'
-            : '1px solid rgba(0, 0, 0, 0.08)',
-          background: theme.palette.mode === 'dark'
-            ? 'rgba(255, 255, 255, 0.05)'
-            : 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-            : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-          mb: 3,
-          overflow: 'hidden',
-        })}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Typography 
-            variant="h6" 
-            gutterBottom 
-            sx={{ 
-              mb: 3,
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            {t('account:profileInformation')}
-          </Typography>
+        {/* Security */}
+        <div style={{ padding: '4px 22px 8px', ...eyebrow, letterSpacing: '0.12em' }}>{t('account:security')}</div>
+        <div style={{ padding: '0 16px 14px' }}>
+          <div style={{ padding: '14px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ width: 38, height: 38, borderRadius: 12, background: '#3f8a4a18', color: '#3f8a4a', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.check /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ font: `600 13.5px ${T.font}`, color: T.text }}>{t('account:password')}</div>
+              <div style={{ font: `400 11.5px ${T.font}`, color: T.textMute }}>{t('account:passwordManagedBy', { provider: providerLabel })}</div>
+            </div>
+            <button onClick={openPasswordManager} style={{ background: 'transparent', border: 'none', cursor: 'pointer', font: `600 12px ${T.font}`, color: T.accentFg, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              {t('account:open')} <Icon.arrowR width="14" height="14" />
+            </button>
+          </div>
+        </div>
 
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Box sx={{ position: 'relative' }}>
-                <TextField
-                  fullWidth
-                  label={t('auth:firstName')}
-                  value={formData.firstName}
-                  onChange={handleInputChange('firstName')}
-                  disabled={!editingFields.firstName}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      backgroundColor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.05)' 
-                        : 'rgba(255, 255, 255, 0.8)',
-                      backdropFilter: 'blur(10px)',
-                      border: theme.palette.mode === 'dark'
-                        ? '1px solid rgba(255, 255, 255, 0.1)'
-                        : '1px solid rgba(0, 0, 0, 0.08)',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                      },
-                      '&.Mui-focused': {
-                        border: '1px solid rgba(99, 102, 241, 0.5)',
-                        boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)',
-                      },
-                      '&.Mui-disabled': {
-                        backgroundColor: theme.palette.mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.02)' 
-                          : 'rgba(0, 0, 0, 0.02)',
-                        '&:hover': {
-                          border: '1px solid rgba(99, 102, 241, 0.3)',
-                        },
-                      },
-                    },
-                  }}
-                  InputProps={{
-                    startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                    endAdornment: editingFields.firstName ? (
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleSaveField('firstName')}
-                          disabled={loading}
-                          sx={{
-                            color: '#4CAF50',
-                            bgcolor: 'rgba(76, 175, 80, 0.1)',
-                            border: '1px solid rgba(76, 175, 80, 0.2)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(76, 175, 80, 0.2)',
-                              transform: 'scale(1.05)',
-                            },
-                            '&:disabled': {
-                              bgcolor: 'rgba(0, 0, 0, 0.12)',
-                              color: 'rgba(0, 0, 0, 0.26)',
-                              border: '1px solid rgba(0, 0, 0, 0.12)',
-                            },
-                          }}
-                        >
-                          <SaveIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleCancelEdit('firstName')}
-                          sx={{
-                            color: '#f44336',
-                            bgcolor: 'rgba(244, 67, 54, 0.1)',
-                            border: '1px solid rgba(244, 67, 54, 0.2)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(244, 67, 54, 0.2)',
-                              transform: 'scale(1.05)',
-                            },
-                          }}
-                        >
-                          <CancelIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ) : (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditField('firstName')}
-                        sx={{
-                          color: '#6366f1',
-                          bgcolor: 'rgba(99, 102, 241, 0.1)',
-                          border: '1px solid rgba(99, 102, 241, 0.2)',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'rgba(99, 102, 241, 0.2)',
-                            transform: 'scale(1.05)',
-                          },
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    ),
-                  }}
-                />
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={8} md={6}>
-              <Box sx={{ position: 'relative' }}>
-                <TextField
-                  fullWidth
-                  label={t('auth:lastName')}
-                  value={formData.lastName}
-                  onChange={handleInputChange('lastName')}
-                  disabled={!editingFields.lastName}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      backgroundColor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.05)' 
-                        : 'rgba(255, 255, 255, 0.8)',
-                      backdropFilter: 'blur(10px)',
-                      border: theme.palette.mode === 'dark'
-                        ? '1px solid rgba(255, 255, 255, 0.1)'
-                        : '1px solid rgba(0, 0, 0, 0.08)',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                      },
-                      '&.Mui-focused': {
-                        border: '1px solid rgba(99, 102, 241, 0.5)',
-                        boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)',
-                      },
-                      '&.Mui-disabled': {
-                        backgroundColor: theme.palette.mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.02)' 
-                          : 'rgba(0, 0, 0, 0.02)',
-                        '&:hover': {
-                          border: '1px solid rgba(99, 102, 241, 0.3)',
-                        },
-                      },
-                    },
-                  }}
-                  InputProps={{
-                    startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                    endAdornment: editingFields.lastName ? (
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleSaveField('lastName')}
-                          disabled={loading}
-                          sx={{
-                            color: '#4CAF50',
-                            bgcolor: 'rgba(76, 175, 80, 0.1)',
-                            border: '1px solid rgba(76, 175, 80, 0.2)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(76, 175, 80, 0.2)',
-                              transform: 'scale(1.05)',
-                            },
-                            '&:disabled': {
-                              bgcolor: 'rgba(0, 0, 0, 0.12)',
-                              color: 'rgba(0, 0, 0, 0.26)',
-                              border: '1px solid rgba(0, 0, 0, 0.12)',
-                            },
-                          }}
-                        >
-                          <SaveIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleCancelEdit('lastName')}
-                          sx={{
-                            color: '#f44336',
-                            bgcolor: 'rgba(244, 67, 54, 0.1)',
-                            border: '1px solid rgba(244, 67, 54, 0.2)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(244, 67, 54, 0.2)',
-                              transform: 'scale(1.05)',
-                            },
-                          }}
-                        >
-                          <CancelIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ) : (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditField('lastName')}
-                        sx={{
-                          color: '#6366f1',
-                          bgcolor: 'rgba(99, 102, 241, 0.1)',
-                          border: '1px solid rgba(99, 102, 241, 0.2)',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'rgba(99, 102, 241, 0.2)',
-                            transform: 'scale(1.05)',
-                          },
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    ),
-                  }}
-                />
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={8} md={6}>
-              <TextField
-                fullWidth
-                label={t('auth:email')}
-                value={user?.email || ''}
-                disabled={true}
-                type="email"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    backgroundColor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.02)' 
-                      : 'rgba(0, 0, 0, 0.02)',
-                    backdropFilter: 'blur(10px)',
-                    border: theme.palette.mode === 'dark'
-                      ? '1px solid rgba(255, 255, 255, 0.1)'
-                      : '1px solid rgba(0, 0, 0, 0.08)',
-                    '&.Mui-disabled': {
-                      backgroundColor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.02)' 
-                        : 'rgba(0, 0, 0, 0.02)',
-                      color: 'text.primary',
-                    },
-                  },
-                }}
-                InputProps={{
-                  startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                }}
-                helperText={t('account:emailNotEditable')}
-              />
-            </Grid>
-            <Grid item xs={12} sm={8} md={6}>
-              <Box sx={{ position: 'relative' }}>
-                <TextField
-                  fullWidth
-                  label={t('auth:phoneNumber')}
-                  value={formData.phoneNumber}
-                  onChange={handleInputChange('phoneNumber')}
-                  disabled={!editingFields.phoneNumber}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      backgroundColor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.05)' 
-                        : 'rgba(255, 255, 255, 0.8)',
-                      backdropFilter: 'blur(10px)',
-                      border: theme.palette.mode === 'dark'
-                        ? '1px solid rgba(255, 255, 255, 0.1)'
-                        : '1px solid rgba(0, 0, 0, 0.08)',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                      },
-                      '&.Mui-focused': {
-                        border: '1px solid rgba(99, 102, 241, 0.5)',
-                        boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)',
-                      },
-                      '&.Mui-disabled': {
-                        backgroundColor: theme.palette.mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.02)' 
-                          : 'rgba(0, 0, 0, 0.02)',
-                        '&:hover': {
-                          border: '1px solid rgba(99, 102, 241, 0.3)',
-                        },
-                      },
-                    },
-                  }}
-                  InputProps={{
-                    startAdornment: <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                    endAdornment: editingFields.phoneNumber ? (
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleSaveField('phoneNumber')}
-                          disabled={loading}
-                          sx={{
-                            color: '#4CAF50',
-                            bgcolor: 'rgba(76, 175, 80, 0.1)',
-                            border: '1px solid rgba(76, 175, 80, 0.2)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(76, 175, 80, 0.2)',
-                              transform: 'scale(1.05)',
-                            },
-                            '&:disabled': {
-                              bgcolor: 'rgba(0, 0, 0, 0.12)',
-                              color: 'rgba(0, 0, 0, 0.26)',
-                              border: '1px solid rgba(0, 0, 0, 0.12)',
-                            },
-                          }}
-                        >
-                          <SaveIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleCancelEdit('phoneNumber')}
-                          sx={{
-                            color: '#f44336',
-                            bgcolor: 'rgba(244, 67, 54, 0.1)',
-                            border: '1px solid rgba(244, 67, 54, 0.2)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(244, 67, 54, 0.2)',
-                              transform: 'scale(1.05)',
-                            },
-                          }}
-                        >
-                          <CancelIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ) : (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditField('phoneNumber')}
-                        sx={{
-                          color: '#6366f1',
-                          bgcolor: 'rgba(99, 102, 241, 0.1)',
-                          border: '1px solid rgba(99, 102, 241, 0.2)',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'rgba(99, 102, 241, 0.2)',
-                            transform: 'scale(1.05)',
-                          },
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    ),
-                  }}
-                />
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={8} md={6}>
-              <Box sx={{ position: 'relative' }}>
-                <TextField
-                  fullWidth
-                  label={t('auth:personalNumber')}
-                  value={formData.personalNumber}
-                  onChange={handleInputChange('personalNumber')}
-                  disabled={!editingFields.personalNumber}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      backgroundColor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.05)' 
-                        : 'rgba(255, 255, 255, 0.8)',
-                      backdropFilter: 'blur(10px)',
-                      border: theme.palette.mode === 'dark'
-                        ? '1px solid rgba(255, 255, 255, 0.1)'
-                        : '1px solid rgba(0, 0, 0, 0.08)',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                      },
-                      '&.Mui-focused': {
-                        border: '1px solid rgba(99, 102, 241, 0.5)',
-                        boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)',
-                      },
-                      '&.Mui-disabled': {
-                        backgroundColor: theme.palette.mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.02)' 
-                          : 'rgba(0, 0, 0, 0.02)',
-                        '&:hover': {
-                          border: '1px solid rgba(99, 102, 241, 0.3)',
-                        },
-                      },
-                    },
-                  }}
-                  InputProps={{
-                    startAdornment: <BadgeIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                    endAdornment: editingFields.personalNumber ? (
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleSaveField('personalNumber')}
-                          disabled={loading}
-                          sx={{
-                            color: '#4CAF50',
-                            bgcolor: 'rgba(76, 175, 80, 0.1)',
-                            border: '1px solid rgba(76, 175, 80, 0.2)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(76, 175, 80, 0.2)',
-                              transform: 'scale(1.05)',
-                            },
-                            '&:disabled': {
-                              bgcolor: 'rgba(0, 0, 0, 0.12)',
-                              color: 'rgba(0, 0, 0, 0.26)',
-                              border: '1px solid rgba(0, 0, 0, 0.12)',
-                            },
-                          }}
-                        >
-                          <SaveIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleCancelEdit('personalNumber')}
-                          sx={{
-                            color: '#f44336',
-                            bgcolor: 'rgba(244, 67, 54, 0.1)',
-                            border: '1px solid rgba(244, 67, 54, 0.2)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(244, 67, 54, 0.2)',
-                              transform: 'scale(1.05)',
-                            },
-                          }}
-                        >
-                          <CancelIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ) : (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditField('personalNumber')}
-                        sx={{
-                          color: '#6366f1',
-                          bgcolor: 'rgba(99, 102, 241, 0.1)',
-                          border: '1px solid rgba(99, 102, 241, 0.2)',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'rgba(99, 102, 241, 0.2)',
-                            transform: 'scale(1.05)',
-                          },
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    ),
-                  }}
-                />
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={8} md={6}>
-              <Box sx={{ position: 'relative' }}>
-                <TextField
-                  fullWidth
-                  label={t('auth:dateOfBirth')}
-                  value={formData.dateOfBirth}
-                  onChange={handleInputChange('dateOfBirth')}
-                  disabled={!editingFields.dateOfBirth}
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      backgroundColor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.05)' 
-                        : 'rgba(255, 255, 255, 0.8)',
-                      backdropFilter: 'blur(10px)',
-                      border: theme.palette.mode === 'dark'
-                        ? '1px solid rgba(255, 255, 255, 0.1)'
-                        : '1px solid rgba(0, 0, 0, 0.08)',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                      },
-                      '&.Mui-focused': {
-                        border: '1px solid rgba(99, 102, 241, 0.5)',
-                        boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)',
-                      },
-                      '&.Mui-disabled': {
-                        backgroundColor: theme.palette.mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.02)' 
-                          : 'rgba(0, 0, 0, 0.02)',
-                        '&:hover': {
-                          border: '1px solid rgba(99, 102, 241, 0.3)',
-                        },
-                      },
-                    },
-                  }}
-                  InputProps={{
-                    startAdornment: <CalendarIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                    endAdornment: editingFields.dateOfBirth ? (
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleSaveField('dateOfBirth')}
-                          disabled={loading}
-                          sx={{
-                            color: '#4CAF50',
-                            bgcolor: 'rgba(76, 175, 80, 0.1)',
-                            border: '1px solid rgba(76, 175, 80, 0.2)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(76, 175, 80, 0.2)',
-                              transform: 'scale(1.05)',
-                            },
-                            '&:disabled': {
-                              bgcolor: 'rgba(0, 0, 0, 0.12)',
-                              color: 'rgba(0, 0, 0, 0.26)',
-                              border: '1px solid rgba(0, 0, 0, 0.12)',
-                            },
-                          }}
-                        >
-                          <SaveIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleCancelEdit('dateOfBirth')}
-                          sx={{
-                            color: '#f44336',
-                            bgcolor: 'rgba(244, 67, 54, 0.1)',
-                            border: '1px solid rgba(244, 67, 54, 0.2)',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(244, 67, 54, 0.2)',
-                              transform: 'scale(1.05)',
-                            },
-                          }}
-                        >
-                          <CancelIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ) : (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditField('dateOfBirth')}
-                        sx={{
-                          color: '#6366f1',
-                          bgcolor: 'rgba(99, 102, 241, 0.1)',
-                          border: '1px solid rgba(99, 102, 241, 0.2)',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'rgba(99, 102, 241, 0.2)',
-                            transform: 'scale(1.05)',
-                          },
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    ),
-                  }}
-                />
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-
-      {/* Security Section */}
-      <Card 
-        sx={(theme) => ({
-          borderRadius: 3,
-          border: theme.palette.mode === 'dark'
-            ? '1px solid rgba(255, 255, 255, 0.1)'
-            : '1px solid rgba(0, 0, 0, 0.08)',
-          background: theme.palette.mode === 'dark'
-            ? 'rgba(255, 255, 255, 0.05)'
-            : 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-            : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-          mb: 3,
-          overflow: 'hidden',
-        })}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Typography 
-            variant="h6" 
-            gutterBottom 
-            sx={{ 
-              mb: 3,
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            {t('account:security')}
-          </Typography>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar
-                sx={{
-                  width: 50,
-                  height: 50,
-                  bgcolor: 'rgba(34, 197, 94, 0.1)',
-                  color: '#22c55e',
-                  border: '2px solid rgba(34, 197, 94, 0.2)',
-                }}
-              >
-                <SecurityIcon sx={{ fontSize: 24 }} />
-              </Avatar>
-              <Box>
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                  {t('account:password')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('account:passwordDescriptionUpdated')}
-                </Typography>
-              </Box>
-            </Box>
-            <Button
-              variant="outlined"
-              onClick={() => setChangePasswordOpen(true)}
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600,
-                border: '2px solid rgba(99, 102, 241, 0.3)',
-                color: '#6366f1',
-                background: 'rgba(99, 102, 241, 0.05)',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  background: 'rgba(99, 102, 241, 0.1)',
-                  border: '2px solid rgba(99, 102, 241, 0.5)',
-                  transform: 'translateY(-1px)',
-                },
-              }}
-            >
-              {t('account:changePassword')}
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Account Actions */}
-      <Card 
-        sx={(theme) => ({
-          borderRadius: 3,
-          border: theme.palette.mode === 'dark'
-            ? '1px solid rgba(255, 255, 255, 0.1)'
-            : '1px solid rgba(0, 0, 0, 0.08)',
-          background: theme.palette.mode === 'dark'
-            ? 'rgba(255, 255, 255, 0.05)'
-            : 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-            : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-          overflow: 'hidden',
-        })}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Typography 
-            variant="h6" 
-            gutterBottom 
-            sx={{ 
-              mb: 3,
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            {t('account:accountActions')}
-          </Typography>
-
-          <Stack spacing={2}>
-            <Button
-              variant="outlined"
-              startIcon={<VisibilityIcon />}
-              onClick={() => navigate('/orders')}
-              fullWidth
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600,
-                border: '2px solid rgba(99, 102, 241, 0.3)',
-                color: '#6366f1',
-                background: 'rgba(99, 102, 241, 0.05)',
-                transition: 'all 0.2s ease',
-                py: 1.5,
-                '&:hover': {
-                  background: 'rgba(99, 102, 241, 0.1)',
-                  border: '2px solid rgba(99, 102, 241, 0.5)',
-                  transform: 'translateY(-1px)',
-                },
-              }}
-            >
-              {t('account:viewOrders')}
-            </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={() => {
-                if (window.confirm(t('account:deleteAccountConfirm'))) {
-                  // In a real app, you would call an API to delete the account
-                  setSnackbar({
-                    open: true,
-                    message: t('account:deleteAccountSuccess'),
-                    severity: 'info',
-                  });
-                }
-              }}
-              fullWidth
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600,
-                border: '2px solid rgba(239, 68, 68, 0.3)',
-                color: '#ef4444',
-                background: 'rgba(239, 68, 68, 0.05)',
-                transition: 'all 0.2s ease',
-                py: 1.5,
-                '&:hover': {
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '2px solid rgba(239, 68, 68, 0.5)',
-                  transform: 'translateY(-1px)',
-                },
-              }}
-            >
-              {t('account:deleteAccount')}
-            </Button>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      {/* Change Password Dialog */}
-      <Dialog 
-        open={changePasswordOpen} 
-        onClose={() => setChangePasswordOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        PaperProps={{
-          sx: (theme) => ({
-            borderRadius: 3,
-            border: theme.palette.mode === 'dark'
-              ? '1px solid rgba(255, 255, 255, 0.1)'
-              : '1px solid rgba(0, 0, 0, 0.08)',
-            background: theme.palette.mode === 'dark'
-              ? 'rgba(255, 255, 255, 0.05)'
-              : 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(20px)',
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 32px 64px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
-              : '0 32px 64px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-            overflow: 'hidden',
-          }),
-        }}
-      >
-        <DialogTitle
-          sx={(theme) => ({
-            background: theme.palette.mode === 'dark'
-              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)'
-              : 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
-            borderBottom: theme.palette.mode === 'dark'
-              ? '1px solid rgba(255, 255, 255, 0.1)'
-              : '1px solid rgba(0, 0, 0, 0.1)',
-            p: 3,
-          })}
-        >
-          <Typography 
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            {t('account:changePassword')}
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          <Box sx={{ textAlign: 'center', py: 2 }}>
-            <Avatar
-              sx={{
-                width: 80,
-                height: 80,
-                bgcolor: 'rgba(99, 102, 241, 0.1)',
-                color: '#6366f1',
-                border: '3px solid rgba(99, 102, 241, 0.2)',
-                mx: 'auto',
-                mb: 3,
-              }}
-            >
-              <SecurityIcon sx={{ fontSize: 40 }} />
-            </Avatar>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              {t('account:passwordChangeTitle')}
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              {user?.provider === 'google' 
-                ? t('account:passwordChangeGoogleMessage')
-                : user?.provider === 'apple'
-                ? t('account:passwordChangeAppleMessage')
-                : t('account:passwordChangeGenericMessage')
+        {/* Account actions */}
+        <div style={{ padding: '4px 22px 8px', ...eyebrow, letterSpacing: '0.12em' }}>{t('account:accountActions')}</div>
+        <div style={{ padding: '0 16px 28px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={() => navigate('/orders')} style={{ width: '100%', padding: '14px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
+            <span style={{ width: 38, height: 38, borderRadius: 12, background: T.accentBg, color: T.accentFg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.bag /></span>
+            <span style={{ flex: 1, font: `600 13.5px ${T.font}`, color: T.text }}>{t('account:viewOrders')}</span>
+            <Icon.arrowR width="14" height="14" style={{ color: T.textMute }} />
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm(t('account:deleteAccountConfirm'))) {
+                flash(t('account:deleteAccountSuccess'), 'info');
               }
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 0, justifyContent: 'center' }}>
-          <Button 
-            onClick={() => setChangePasswordOpen(false)}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              border: '2px solid rgba(156, 163, 175, 0.3)',
-              color: 'text.secondary',
-              background: 'rgba(156, 163, 175, 0.05)',
-              transition: 'all 0.2s ease',
-              px: 3,
-              py: 1,
-              mr: 2,
-              '&:hover': {
-                background: 'rgba(156, 163, 175, 0.1)',
-                border: '2px solid rgba(156, 163, 175, 0.5)',
-                transform: 'translateY(-1px)',
-              },
             }}
+            style={{ width: '100%', padding: '14px', borderRadius: 14, background: `${T.danger}0f`, border: `1px solid ${T.danger}33`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
           >
-            {t('account:cancel')}
-          </Button>
-          <Button
-            onClick={handleChangePassword}
-            variant="contained"
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              boxShadow: '0 4px 16px rgba(99, 102, 241, 0.3)',
-              border: 'none',
-              px: 3,
-              py: 1,
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
-                transform: 'translateY(-1px)',
-              },
-            }}
-          >
-            {t('account:continue')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <span style={{ width: 38, height: 38, borderRadius: 12, background: `${T.danger}1f`, color: T.danger, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `700 18px ${T.font}` }}>×</span>
+            <span style={{ flex: 1, font: `600 13.5px ${T.font}`, color: T.danger }}>{t('account:deleteAccount')}</span>
+          </button>
+        </div>
+      </div>
 
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-      >
-        <Alert
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+      {toast && (
+        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 28, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 1200 }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 12,
+            background: T.surface, border: `1px solid ${T.border}`, boxShadow: `0 12px 30px ${T.dark ? '#0008' : '#0b0b1420'}`,
+            font: `600 13px ${T.font}`, color: T.text, maxWidth: 'calc(100% - 32px)',
+          }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: toast.severity === 'error' ? T.danger : toast.severity === 'info' ? T.accentFg : T.success }} />
+            {toast.message}
+          </div>
+        </div>
+      )}
+    </GlowScreen>
   );
 };
 

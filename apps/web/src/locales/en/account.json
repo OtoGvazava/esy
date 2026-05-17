@@ -43,5 +43,16 @@
   "passwordChangeRedirect": "Please use your account provider's official password change process.",
   "continue": "Continue",
   "clickEditToModify": "Click 'Edit Profile' to modify your information",
-  "fieldUpdated": "Field updated successfully!"
+  "fieldUpdated": "Field updated successfully!",
+  "edit": "Edit",
+  "verifiedShort": "Verified",
+  "personalInformation": "Personal information",
+  "passwordManagedBy": "Managed by your {{provider}} account",
+  "open": "Open",
+  "devTools": "Development tools",
+  "switchToAdmin": "Switch to Admin",
+  "switchToUser": "Switch to User",
+  "currentRole": "Current role: {{role}}",
+  "roleSwitchedAdmin": "Switched to Admin role",
+  "roleSwitchedUser": "Switched to User role"
 }

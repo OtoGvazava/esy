@@ -63,21 +63,29 @@ export function EsyMark({ T, size = 26, suffix = '.ge', onClick }) {
   );
 }
 
-// Store mark — gradient tile when no logo, brand-outline monogram otherwise.
+// Store mark — the uploaded logo when set, else a gradient tile with initials.
 export function StoreMark({ store, size = 40, radius = 12, ring = false }) {
   const initials = storeInitials(store);
-  const useFill = !store.logoUrl; // null logo → filled gradient tile
-  const bg = useFill
-    ? `linear-gradient(135deg, ${store.primaryColor} 0%, ${store.secondaryColor || store.primaryColor} 100%)`
-    : 'transparent';
+  const shadow = ring ? `0 8px 22px ${store.primaryColor}40` : 'none';
+  if (store.logoUrl) {
+    return (
+      <img
+        src={store.logoUrl} alt={store.displayName || store.name || ''}
+        style={{
+          width: size, height: size, borderRadius: radius, objectFit: 'cover',
+          display: 'block', boxShadow: shadow, flexShrink: 0,
+        }}
+      />
+    );
+  }
   return (
     <span style={{
-      width: size, height: size, borderRadius: radius, background: bg,
-      border: useFill ? 'none' : `1.5px solid ${store.primaryColor}`,
-      color: useFill ? '#fff' : store.primaryColor,
+      width: size, height: size, borderRadius: radius,
+      background: `linear-gradient(135deg, ${store.primaryColor} 0%, ${store.secondaryColor || store.primaryColor} 100%)`,
+      color: '#fff',
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       font: `800 ${size * 0.4}px ${'Inter, sans-serif'}`, letterSpacing: '-0.04em',
-      boxShadow: ring ? `0 8px 22px ${store.primaryColor}40` : 'none',
+      boxShadow: shadow,
       flexShrink: 0,
     }}>{initials}</span>
   );

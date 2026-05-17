@@ -13,8 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -24,6 +28,12 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final MembershipService membershipService;
+
+    // Platform service fee, fraction of order total (0.02 = 2%). Tunable via
+    // PLATFORM_SERVICE_FEE_RATE without a redeploy. Field injection (not the
+    // Lombok constructor) so the default applies even in tests.
+    @Value("${app.platform.service-fee-rate:0.02}")
+    private BigDecimal serviceFeeRate;
 
     public Order createOrder(User user, Tenant tenant, CreateOrderRequest req) {
         if (req.getItems() == null || req.getItems().isEmpty()) {
@@ -49,10 +59,43 @@ public class OrderService {
             total = total.add(price.multiply(BigDecimal.valueOf(qty)));
         }
         order.setTotal(total);
+        // 2% platform fee, frozen at order time. Server-side only — never sent
+        // to the client and never added to the BOG charge.
+        order.setServiceFee(total.multiply(serviceFeeRate).setScale(2, RoundingMode.HALF_UP));
 
         // Buying makes the account a CUSTOMER of the store (no downgrade of owners).
         if (user != null) membershipService.ensure(user, tenant, StoreMembership.Role.CUSTOMER);
         return orderRepository.save(order);
+    }
+
+    /** Mark a freshly created order as awaiting BOG payment + record BOG's id. */
+    public Order markBogPending(Order order, String bogOrderId) {
+        order.setPaymentStatus(Order.PaymentStatus.PENDING);
+        order.setBogOrderId(bogOrderId);
+        return orderRepository.save(order);
+    }
+
+    public Optional<Order> findByOrderNumber(String orderNumber) {
+        return orderNumber == null ? Optional.empty()
+            : orderRepository.findByOrderNumber(orderNumber);
+    }
+
+    /**
+     * Apply a terminal BOG payment outcome. PAID leaves the order PLACED
+     * (ready to fulfill); FAILED cancels it so it drops out of the store's
+     * actionable queue. Idempotent — repeated callbacks for an already-settled
+     * order are a no-op, so BOG retries are safe.
+     */
+    public Optional<Order> settlePayment(String orderNumber, Order.PaymentStatus outcome) {
+        if (outcome == null) return findByOrderNumber(orderNumber);
+        return findByOrderNumber(orderNumber).map(order -> {
+            if (order.getPaymentStatus() == outcome) return order;
+            order.setPaymentStatus(outcome);
+            if (outcome == Order.PaymentStatus.FAILED) {
+                order.setStatus(Order.Status.CANCELLED);
+            }
+            return orderRepository.save(order);
+        });
     }
 
     public List<Order> ordersForUser(User user) {
@@ -76,6 +119,22 @@ public class OrderService {
     public BigDecimal revenue(Tenant tenant) {
         return orderRepository.findByTenantOrderByCreatedAtDesc(tenant).stream()
             .map(Order::getTotal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Platform service fees this store owes (for periodic out-of-band billing).
+     * Counts only revenue-bearing orders: not cancelled, and either a paid BOG
+     * order or a free-flow order (paymentStatus NONE). Pending/failed/refunded
+     * BOG orders are excluded so a store is never billed for money it didn't
+     * collect.
+     */
+    public BigDecimal serviceFeesOwed(Tenant tenant) {
+        return orderRepository.findByTenantOrderByCreatedAtDesc(tenant).stream()
+            .filter(o -> o.getStatus() != Order.Status.CANCELLED)
+            .filter(o -> o.getPaymentStatus() == Order.PaymentStatus.PAID
+                || o.getPaymentStatus() == Order.PaymentStatus.NONE)
+            .map(Order::getServiceFee)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

@@ -14,6 +14,13 @@ public class CreateTenantRequest {
     private String primaryColor;
     private String secondaryColor;
     private String category;
+    private String addressStreet;
+    private String addressCity;
+    private String addressCountry;
+    private String addressPostalCode;
+    // String (not Integer) so an empty optional field doesn't fail JSON
+    // binding; TenantService parses/validates it.
+    private String establishedYear;
 
     public CreateTenantRequest() {}
 
@@ -79,5 +86,45 @@ public class CreateTenantRequest {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public String getAddressStreet() {
+        return addressStreet;
+    }
+
+    public void setAddressStreet(String addressStreet) {
+        this.addressStreet = addressStreet;
+    }
+
+    public String getAddressCity() {
+        return addressCity;
+    }
+
+    public void setAddressCity(String addressCity) {
+        this.addressCity = addressCity;
+    }
+
+    public String getAddressCountry() {
+        return addressCountry;
+    }
+
+    public void setAddressCountry(String addressCountry) {
+        this.addressCountry = addressCountry;
+    }
+
+    public String getAddressPostalCode() {
+        return addressPostalCode;
+    }
+
+    public void setAddressPostalCode(String addressPostalCode) {
+        this.addressPostalCode = addressPostalCode;
+    }
+
+    public String getEstablishedYear() {
+        return establishedYear;
+    }
+
+    public void setEstablishedYear(String establishedYear) {
+        this.establishedYear = establishedYear;
     }
 }

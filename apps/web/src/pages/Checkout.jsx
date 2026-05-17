@@ -4,10 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { useCart } from '../contexts/CartContext';
 import { useOrders } from '../contexts/OrdersContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTenant } from '../contexts/TenantContext';
 import { useGlow } from '../styles/glow';
-import { orderApi } from '../utils/api';
+import { paymentApi, handleApiError } from '../utils/api';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
 import PhoneVerifyBox from '../components/PhoneVerifyBox';
+
+const devTenant = () => {
+  try { return new URLSearchParams(window.location.search).get('tenant') || undefined; }
+  catch { return undefined; }
+};
 
 function Field({ T, label, defaultValue, span }) {
   return (
@@ -25,14 +31,18 @@ export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCart();
   const { createOrder } = useOrders();
   const { user } = useAuth();
-  const [express, setExpress] = useState(false);
+  // Raw tenant (useGlow().tenant is the derived brand and has no
+  // bogConfigured). Drives card-redirect vs the free-order fallback.
+  const { tenant: store } = useTenant();
   const [placing, setPlacing] = useState(false);
+  const [payError, setPayError] = useState('');
 
   const subtotal = getTotalPrice();
   const count = items.reduce((s, it) => s + it.quantity, 0);
-  const shipping = express ? 12 : 0;
-  const tax = +(subtotal * 0.08).toFixed(2);
-  const total = +(subtotal + shipping + tax).toFixed(2);
+  // The shopper pays exactly the item subtotal — no shipping, no tax line.
+  // The 2% platform service fee is computed/persisted server-side and billed
+  // to the store later; it is invisible here and not added to the charge.
+  const total = subtotal;
   const email = user?.email || 'guest@esy.shop';
   // Ordering requires a complete profile AND a verified phone (the backend
   // enforces this too — see OrderController.requireOrderEligible).
@@ -53,27 +63,39 @@ export default function Checkout() {
   }
 
   const pay = async () => {
-    if (!eligible) return;
+    if (!eligible || placing) return;
+    setPayError('');
     setPlacing(true);
-    // Persist a real order so it shows in the cross-store account hub.
-    // Best-effort: requires sign-in; guests still complete the local flow.
-    try {
-      const devTenant = new URLSearchParams(window.location.search).get('tenant');
-      await orderApi.create(
-        items.map((i) => ({ productId: i.id, title: i.title, price: i.price, quantity: i.quantity })),
-        devTenant,
-      );
-    } catch {
-      /* not signed in / offline — local order flow below still works */
+    const cartItems = items.map((i) => ({ id: i.id, title: i.title, price: i.price, quantity: i.quantity }));
+
+    // Stores that connected Bank of Georgia: create the order + BOG payment,
+    // then hand the browser to the bank-hosted page. The cart is kept until
+    // /pay/return confirms PAID (so an abandoned payment doesn't lose it).
+    if (store?.bogConfigured) {
+      try {
+        const res = await paymentApi.checkout(cartItems, devTenant());
+        if (res?.redirectUrl) {
+          window.location.href = res.redirectUrl;
+          return; // leaving the SPA — keep the spinner
+        }
+        setPayError(t('checkout.payError'));
+      } catch (e) {
+        setPayError(handleApiError(e, t('checkout.payError')));
+      }
+      setPlacing(false);
+      return;
     }
-    const res = await createOrder({
-      items: items.map((i) => ({ id: i.id, title: i.title, price: i.price, quantity: i.quantity, image: i.image || i.thumbnail })),
-      subtotal, shipping, tax, total, count,
-      shippingMethod: express ? t('checkout.shipExpress') : t('checkout.shipStandard'),
-      email,
-    });
+
+    // Fallback for stores without a payment provider: the previous
+    // free-order flow (context posts /api/orders, order lives in the DB).
+    const res = await createOrder({ items: cartItems });
+    setPlacing(false);
+    if (!res?.success) return; // backend rejected — stay on checkout
     clearCart();
-    navigate('/success', { replace: true, state: { orderId: res?.order?.id, total, count } });
+    navigate('/success', {
+      replace: true,
+      state: { orderId: res.order?.orderNumber || res.order?.id, total, count },
+    });
   };
 
   return (
@@ -120,21 +142,6 @@ export default function Checkout() {
               <Field T={T} label={t('checkout.city')} defaultValue="" />
               <Field T={T} label={t('checkout.zip')} defaultValue="" />
             </div>
-            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[
-                { id: 'standard', label: t('checkout.shipStandard'), price: t('checkout.free'), free: true, ex: false },
-                { id: 'express', label: t('checkout.shipExpress'), price: money(12), free: false, ex: true },
-              ].map((opt) => {
-                const active = opt.ex === express;
-                return (
-                  <label key={opt.id} onClick={() => setExpress(opt.ex)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 12, border: `1.5px solid ${active ? T.accent : T.border}`, background: active ? T.accentBg : 'transparent', cursor: 'pointer' }}>
-                    <span style={{ width: 18, height: 18, borderRadius: '50%', border: `1.5px solid ${active ? T.accent : T.borderStr}`, background: active ? T.accent : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{active && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />}</span>
-                    <span style={{ flex: 1, font: `600 13px ${T.font}`, color: T.text }}>{opt.label}</span>
-                    <span style={{ font: `700 13px ${T.font}`, color: opt.free ? T.success : T.text }}>{opt.price}</span>
-                  </label>
-                );
-              })}
-            </div>
           </div>
         </div>
 
@@ -168,19 +175,31 @@ export default function Checkout() {
         {/* order summary */}
         <div style={{ padding: '0 22px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', font: `500 13px ${T.font}`, color: T.textDim }}><span>{t('checkout.itemCount', { count })}</span><span style={{ color: T.text }}>{money(subtotal)}</span></div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', font: `500 13px ${T.font}`, color: T.textDim }}><span>{t('checkout.shipping')}</span><span style={{ color: shipping ? T.text : T.success }}>{shipping ? money(shipping) : t('checkout.free')}</span></div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', font: `500 13px ${T.font}`, color: T.textDim }}><span>{t('checkout.tax')}</span><span style={{ color: T.text }}>{money(tax)}</span></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}><span style={{ font: `700 14px ${T.font}`, color: T.text }}>{t('checkout.total')}</span><span style={{ font: `800 18px ${T.font}`, color: T.text }}>{money(total)}</span></div>
         </div>
+
+        {store?.bogConfigured && eligible && !payError && (
+          <div style={{ padding: '0 22px 14px', font: `500 11.5px ${T.font}`, color: T.textMute, textAlign: 'center' }}>
+            {t('checkout.bogSecure')}
+          </div>
+        )}
+        {payError && (
+          <div style={{ padding: '0 16px 14px' }}>
+            <div style={{ padding: '11px 14px', borderRadius: 12, background: `${T.danger}14`, border: `1px solid ${T.danger}55`, color: T.danger, font: `600 12.5px ${T.font}` }}>
+              {payError}
+            </div>
+          </div>
+        )}
       </div>
 
       <GlowStickyCTA
         T={T}
         label={
-          placing ? t('checkout.placing')
+          placing ? (store?.bogConfigured ? t('checkout.redirecting') : t('checkout.placing'))
             : !user ? t('checkout.signInToPay')
             : !user.profileComplete ? t('checkout.completeProfile')
             : !user.phoneVerified ? t('checkout.verifyToPay')
+            : store?.bogConfigured ? t('checkout.payCard')
             : t('checkout.payNow')
         }
         sub={money(total)}

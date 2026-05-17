@@ -4,6 +4,7 @@ import com.esyback.ecommerce.dto.CreateTenantRequest;
 import com.esyback.ecommerce.dto.UpdateStoreRequest;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.TenantRepository;
+import com.esyback.ecommerce.security.SecretCipher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 public class TenantService {
 
     private final TenantRepository tenantRepository;
+    private final SecretCipher secretCipher;
 
     private static final Pattern SUBDOMAIN = Pattern.compile("^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])$");
 
@@ -96,6 +98,11 @@ public class TenantService {
         tenant.setPrimaryColor(normalizeColor(req.getPrimaryColor(), DEFAULT_PRIMARY));
         tenant.setSecondaryColor(normalizeColor(req.getSecondaryColor(), DEFAULT_SECONDARY));
         tenant.setCategory(normalizeCategory(req.getCategory()));
+        tenant.setAddressStreet(blankToNull(req.getAddressStreet()));
+        tenant.setAddressCity(blankToNull(req.getAddressCity()));
+        tenant.setAddressCountry(blankToNull(req.getAddressCountry()));
+        tenant.setAddressPostalCode(blankToNull(req.getAddressPostalCode()));
+        tenant.setEstablishedYear(parseYear(req.getEstablishedYear()));
         tenant.setIsActive(true);
         return tenantRepository.save(tenant);
     }
@@ -116,7 +123,59 @@ public class TenantService {
         tenant.setPrimaryColor(normalizeColor(req.getPrimaryColor(), DEFAULT_PRIMARY));
         tenant.setSecondaryColor(normalizeColor(req.getSecondaryColor(), DEFAULT_SECONDARY));
         tenant.setCategory(normalizeCategory(req.getCategory()));
+        tenant.setAddressStreet(blankToNull(req.getAddressStreet()));
+        tenant.setAddressCity(blankToNull(req.getAddressCity()));
+        tenant.setAddressCountry(blankToNull(req.getAddressCountry()));
+        tenant.setAddressPostalCode(blankToNull(req.getAddressPostalCode()));
+        tenant.setEstablishedYear(parseYear(req.getEstablishedYear()));
+        applyBogCredentials(tenant, req);
         return tenantRepository.save(tenant);
+    }
+
+    /**
+     * Connect / update / disconnect the store's Bank of Georgia merchant
+     * account. The field is tri-state on purpose, because neither the clientId
+     * nor the secret is ever sent back to the browser:
+     *
+     * <ul>
+     *   <li><b>{@code bogClientId == null}</b> (key omitted) — the request is a
+     *       plain branding save that never touched payments; leave BOG as is.
+     *   <li><b>{@code bogClientId} blank</b> (explicit "") — disconnect: clear
+     *       both fields.
+     *   <li><b>{@code bogClientId} present</b> — connect/update: a non-blank
+     *       secret is AES-GCM encrypted and stored; a blank secret keeps the
+     *       one already on file (so updating just the id doesn't wipe it).
+     * </ul>
+     */
+    private void applyBogCredentials(Tenant tenant, UpdateStoreRequest req) {
+        if (req.getBogClientId() == null) {
+            return; // not part of this request
+        }
+        String clientId = blankToNull(req.getBogClientId());
+        if (clientId == null) {
+            tenant.setBogClientId(null);
+            tenant.setBogClientSecret(null);
+            return;
+        }
+        tenant.setBogClientId(clientId);
+        String secret = blankToNull(req.getBogClientSecret());
+        if (secret != null) {
+            tenant.setBogClientSecret(secretCipher.encrypt(secret));
+        }
+    }
+
+    // Founding year, sanity-bounded. Blank/garbage/out-of-range → null so the
+    // storefront hero falls back to its default instead of showing "est 0".
+    private static Integer parseYear(String s) {
+        String v = blankToNull(s);
+        if (v == null) return null;
+        try {
+            int y = Integer.parseInt(v);
+            int max = java.time.Year.now().getValue() + 1;
+            return (y >= 1900 && y <= max) ? y : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static String blankToNull(String s) {

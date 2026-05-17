@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,10 +31,22 @@ export default function StoreSettings() {
   const [form, setForm] = useState({
     displayName: '', description: '', logoUrl: '',
     category: '', primaryColor: '#6366f1', secondaryColor: '#8b5cf6',
+    addressStreet: '', addressCity: '', addressCountry: '',
+    addressPostalCode: '', establishedYear: '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [logoBusy, setLogoBusy] = useState(false);
+  const logoInputRef = useRef(null);
+
+  // BOG credentials are never sent back to the browser (only tenant
+  // .bogConfigured), so these stay out of `form` (which resets from tenant).
+  // bogDirty gates whether the save payload carries the BOG keys at all —
+  // a plain branding save must leave the stored credentials untouched.
+  const [bogClientId, setBogClientId] = useState('');
+  const [bogSecret, setBogSecret] = useState('');
+  const [bogDirty, setBogDirty] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !canManageStore) navigate('/');
@@ -49,6 +61,11 @@ export default function StoreSettings() {
       category: tenant.category || '',
       primaryColor: tenant.primaryColor || '#6366f1',
       secondaryColor: tenant.secondaryColor || '#8b5cf6',
+      addressStreet: tenant.addressStreet || '',
+      addressCity: tenant.addressCity || '',
+      addressCountry: tenant.addressCountry || '',
+      addressPostalCode: tenant.addressPostalCode || '',
+      establishedYear: tenant.establishedYear ? String(tenant.establishedYear) : '',
     });
   }, [tenant]);
 
@@ -57,21 +74,75 @@ export default function StoreSettings() {
     setForm((p) => ({ ...p, [field]: e.target.value }));
   };
 
-  const submit = async () => {
+  const onLogoFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-picking the same file
+    if (!file || logoBusy) return;
+    setLogoBusy(true);
+    setApiError('');
+    setSaved(false);
+    try {
+      const t2 = await tenantApi.uploadLogo(file, devTenant());
+      setForm((p) => ({ ...p, logoUrl: t2.logoUrl || '' }));
+      await refresh();
+    } catch (err) {
+      setApiError(handleApiError(err, t('logoUploadFailed')));
+    } finally {
+      setLogoBusy(false);
+    }
+  };
+
+  const removeLogo = async () => {
+    if (logoBusy) return;
+    setLogoBusy(true);
+    setApiError('');
+    setSaved(false);
+    try {
+      await tenantApi.deleteLogo(devTenant());
+      setForm((p) => ({ ...p, logoUrl: '' }));
+      await refresh();
+    } catch (err) {
+      setApiError(handleApiError(err, t('logoUploadFailed')));
+    } finally {
+      setLogoBusy(false);
+    }
+  };
+
+  // disconnect=true forces the BOG keys into the payload with a blank
+  // clientId, which the backend reads as "clear the merchant account".
+  const save = async (disconnect = false) => {
     if (saving) return;
     setSaving(true);
     setApiError('');
     setSaved(false);
     try {
-      await tenantApi.update({
+      const payload = {
         displayName: form.displayName.trim(),
         description: form.description.trim(),
         logoUrl: form.logoUrl.trim(),
         category: form.category,
         primaryColor: form.primaryColor,
         secondaryColor: form.secondaryColor,
-      }, devTenant());
+        addressStreet: form.addressStreet.trim(),
+        addressCity: form.addressCity.trim(),
+        addressCountry: form.addressCountry.trim(),
+        addressPostalCode: form.addressPostalCode.trim(),
+        establishedYear: form.establishedYear.trim(),
+      };
+      // Only carry BOG keys when the owner touched that section — otherwise
+      // they stay absent so the backend leaves stored credentials alone.
+      if (disconnect) {
+        payload.bogClientId = '';
+        payload.bogClientSecret = '';
+      } else if (bogDirty) {
+        payload.bogClientId = bogClientId.trim();
+        payload.bogClientSecret = bogSecret.trim();
+      }
+      await tenantApi.update(payload, devTenant());
       await refresh();
+      setBogClientId('');
+      setBogSecret('');
+      setBogDirty(false);
       setSaved(true);
     } catch (err) {
       setApiError(handleApiError(err, t('storeSaveFailed')));
@@ -79,6 +150,8 @@ export default function StoreSettings() {
       setSaving(false);
     }
   };
+
+  const submit = () => save(false);
 
   // Field / label / colour styles copied from CreateStore so the two flows
   // are visually identical.
@@ -103,15 +176,16 @@ export default function StoreSettings() {
     marginBottom: 6,
   };
 
-  const swatch = {
-    width: 52, height: 52, padding: 0,
-    border: `1.5px solid ${T.border}`, borderRadius: 14,
-    background: T.surface, cursor: 'pointer',
-  };
-
+  // 44×44 rounded swatch previewing the colour; a transparent native
+  // <input type="color"> sits on top so a click still opens the OS picker.
   const colorField = (key) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <input type="color" value={form[key]} onChange={set(key)} style={swatch} />
+      <label style={{ position: 'relative', width: 44, height: 44, borderRadius: 12, background: form[key], border: `1.5px solid ${T.border}`, cursor: 'pointer', flexShrink: 0, display: 'inline-block' }}>
+        <input
+          type="color" value={form[key]} onChange={set(key)} aria-label={form[key]}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, border: 'none', padding: 0, cursor: 'pointer' }}
+        />
+      </label>
       <span style={{ font: `600 14px ${T.mono}`, color: T.textDim }}>{form[key]}</span>
     </div>
   );
@@ -128,6 +202,11 @@ export default function StoreSettings() {
           <div style={{ font: `700 26px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.03em' }}>
             {t('storeTitle')}
           </div>
+          {tenant?.subdomain && (
+            <div style={{ marginTop: 6, font: `400 12.5px ${T.font}`, color: T.textMute }}>
+              {t('subdomainLocked', { domain: `${tenant.subdomain}.esy.ge` })}
+            </div>
+          )}
         </div>
 
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -145,18 +224,97 @@ export default function StoreSettings() {
           </div>
 
           <div>
-            <div style={label}>{t('fieldLogoUrl')}</div>
-            <input value={form.logoUrl} onChange={set('logoUrl')} placeholder="https://…" style={field} />
+            <div style={label}>{t('fieldAddressStreet')}</div>
+            <input value={form.addressStreet} onChange={set('addressStreet')} style={field} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={label}>{t('fieldAddressCity')}</div>
+              <input value={form.addressCity} onChange={set('addressCity')} style={field} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={label}>{t('fieldAddressCountry')}</div>
+              <input value={form.addressCountry} onChange={set('addressCountry')} style={field} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={label}>{t('fieldAddressPostal')}</div>
+              <input value={form.addressPostalCode} onChange={set('addressPostalCode')} style={field} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={label}>{t('fieldEstablished')}</div>
+              <input
+                type="number" inputMode="numeric" min="1900" max="2100"
+                value={form.establishedYear} onChange={set('establishedYear')}
+                placeholder="2024" style={field}
+              />
+            </div>
+          </div>
+
+          <div>
+            <div style={label}>{t('fieldLogo')}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 64, height: 64, borderRadius: 16, overflow: 'hidden', flexShrink: 0,
+                border: `1.5px solid ${T.border}`, background: T.surface,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {form.logoUrl
+                  ? <img src={form.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ font: `800 24px ${T.font}`, color: T.textMute }}>
+                      {(form.displayName || 'S').charAt(0).toUpperCase()}
+                    </span>}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  type="button" onClick={() => logoInputRef.current?.click()} disabled={logoBusy}
+                  style={{ height: 40, padding: '0 16px', borderRadius: 12, border: `1.5px solid ${T.border}`, background: T.surface, color: T.text, font: `600 13px ${T.font}`, cursor: logoBusy ? 'default' : 'pointer', opacity: logoBusy ? 0.6 : 1 }}
+                >
+                  {logoBusy ? t('logoUploading') : (form.logoUrl ? t('logoReplace') : t('logoUpload'))}
+                </button>
+                {form.logoUrl && !logoBusy && (
+                  <button
+                    type="button" onClick={removeLogo}
+                    style={{ height: 36, padding: '0 16px', borderRadius: 12, border: 'none', background: 'transparent', color: T.danger, font: `600 12.5px ${T.font}`, cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    {t('logoRemove')}
+                  </button>
+                )}
+              </div>
+              <input
+                ref={logoInputRef} type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={onLogoFile} style={{ display: 'none' }}
+              />
+            </div>
+            <div style={{ marginTop: 8, font: `500 11.5px ${T.font}`, color: T.textMute }}>{t('logoHint')}</div>
           </div>
 
           <div>
             <div style={label}>{t('fieldCategory')}</div>
-            <select value={form.category} onChange={set('category')} style={field}>
-              <option value="">{t('catNone')}</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{t(`cat_${c}`)}</option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {CATEGORIES.map((c) => {
+                const on = form.category === c;
+                return (
+                  <button
+                    key={c} type="button"
+                    onClick={() => { setSaved(false); setForm((p) => ({ ...p, category: on ? '' : c })); }}
+                    style={{
+                      padding: '8px 12px', borderRadius: 999, cursor: 'pointer',
+                      background: on ? T.accent : T.surface,
+                      color: on ? '#fff' : T.text,
+                      border: `1px solid ${on ? T.accent : T.border}`,
+                      font: `600 12px ${T.font}`, textTransform: 'capitalize',
+                    }}
+                  >
+                    {t(`cat_${c}`)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div>
@@ -167,6 +325,52 @@ export default function StoreSettings() {
           <div>
             <div style={label}>{t('fieldSecondary')}</div>
             {colorField('secondaryColor')}
+          </div>
+
+          {/* Payments — Bank of Georgia merchant credentials */}
+          <div style={{ padding: '16px 16px 18px', borderRadius: 16, background: T.surface, border: `1.5px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ font: `700 14px ${T.font}`, color: T.text }}>{t('bog.title')}</div>
+              <span style={{
+                font: `700 10.5px ${T.font}`, letterSpacing: '0.04em', textTransform: 'uppercase',
+                padding: '5px 10px', borderRadius: 999,
+                background: tenant?.bogConfigured ? `${T.success}1f` : T.surface2,
+                color: tenant?.bogConfigured ? T.success : T.textMute,
+                border: `1px solid ${tenant?.bogConfigured ? `${T.success}55` : T.border}`,
+              }}>
+                {tenant?.bogConfigured ? t('bog.connected') : t('bog.notConnected')}
+              </span>
+            </div>
+            <div style={{ font: `500 12px/1.6 ${T.font}`, color: T.textMute }}>{t('bog.hint')}</div>
+
+            <div>
+              <div style={label}>{t('bog.clientId')}</div>
+              <input
+                value={bogClientId}
+                onChange={(e) => { setBogClientId(e.target.value); setBogDirty(true); setSaved(false); }}
+                placeholder={tenant?.bogConfigured ? t('bog.keptPlaceholder') : ''}
+                autoComplete="off" style={field}
+              />
+            </div>
+            <div>
+              <div style={label}>{t('bog.clientSecret')}</div>
+              <input
+                type="password"
+                value={bogSecret}
+                onChange={(e) => { setBogSecret(e.target.value); setBogDirty(true); setSaved(false); }}
+                placeholder={tenant?.bogConfigured ? t('bog.keptPlaceholder') : ''}
+                autoComplete="new-password" style={field}
+              />
+            </div>
+
+            {tenant?.bogConfigured && (
+              <button
+                type="button" onClick={() => save(true)} disabled={saving}
+                style={{ alignSelf: 'flex-start', height: 38, padding: '0 16px', borderRadius: 12, border: `1px solid ${T.danger}55`, background: 'transparent', color: T.danger, font: `600 12.5px ${T.font}`, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}
+              >
+                {t('bog.disconnect')}
+              </button>
+            )}
           </div>
 
           {apiError && (

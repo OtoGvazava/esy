@@ -4,24 +4,31 @@ import com.esyback.ecommerce.dto.CreateTenantRequest;
 import com.esyback.ecommerce.dto.UpdateStoreRequest;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
+import com.esyback.ecommerce.entity.TenantLogo;
 import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.repository.StoreFollowRepository;
 import com.esyback.ecommerce.service.MembershipService;
 import com.esyback.ecommerce.service.OrderService;
 import com.esyback.ecommerce.service.TenantContextService;
+import com.esyback.ecommerce.service.TenantLogoService;
 import com.esyback.ecommerce.service.TenantService;
 import com.esyback.ecommerce.service.UserService;
 import com.esyback.ecommerce.web.TenantMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RestController
@@ -32,6 +39,7 @@ public class TenantController {
 
     private final TenantContextService tenantContextService;
     private final TenantService tenantService;
+    private final TenantLogoService tenantLogoService;
     private final UserService userService;
     private final MembershipService membershipService;
     private final OrderService orderService;
@@ -87,6 +95,34 @@ public class TenantController {
         return ResponseEntity.ok(TenantMapper.toMap(updated));
     }
 
+    // Owner/admin uploads the store logo (replaces any existing one). Stored in
+    // our DB like product photos; the response is the fresh tenant whose
+    // logoUrl now points at the served bytes.
+    @PostMapping(value = "/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> uploadLogo(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(TenantMapper.toMap(tenantLogoService.setLogo(file)));
+    }
+
+    // Owner/admin removes the store logo (clears logoUrl, drops the bytes).
+    @DeleteMapping("/logo")
+    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> deleteLogo() {
+        return ResponseEntity.ok(TenantMapper.toMap(tenantLogoService.clearLogo()));
+    }
+
+    // Public: streams the logo bytes for an <img src>. Long-cached + ETag —
+    // logo ids are immutable (a re-upload is a new id, new URL).
+    @GetMapping("/logo/{logoId}")
+    public ResponseEntity<byte[]> serveLogo(@PathVariable Long logoId) {
+        TenantLogo logo = tenantLogoService.getForServing(logoId);
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(logo.getContentType()))
+            .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+            .eTag(String.valueOf(logo.getId()))
+            .body(logo.getData());
+    }
+
     // Owner/admin dashboard numbers for the current store (Host-resolved).
     // Same @storeAccess gate as the branding edit, so only the store's owner
     // (or a global admin) can read its stats.
@@ -99,6 +135,7 @@ public class TenantController {
         body.put("products", productRepository.countByTenant(tenant));
         body.put("orders", orderService.orderCount(tenant));
         body.put("revenue", orderService.revenue(tenant));
+        body.put("serviceFeesOwed", orderService.serviceFeesOwed(tenant));
         body.put("followers", storeFollowRepository.countByTenant(tenant));
         return ResponseEntity.ok(body);
     }
@@ -130,5 +167,11 @@ public class TenantController {
     public ResponseEntity<Map<String, Object>> handleStatus(ResponseStatusException ex) {
         return ResponseEntity.status(ex.getStatusCode())
             .body(Map.of("error", ex.getReason() == null ? "Request failed" : ex.getReason()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+            .body(Map.of("error", "Logo too large (max 5MB)"));
     }
 }

@@ -57,7 +57,36 @@ public class Tenant {
     
     @Column(name = "secondary_color")
     private String secondaryColor;
-    
+
+    // Owner-editable public storefront address. The hero shows city · country;
+    // the full address is kept for contact/checkout use.
+    @Column(name = "address_street")
+    private String addressStreet;
+
+    @Column(name = "address_city")
+    private String addressCity;
+
+    @Column(name = "address_country")
+    private String addressCountry;
+
+    @Column(name = "address_postal_code")
+    private String addressPostalCode;
+
+    // Founding year shown as "est {year}" in the hero. Nullable → UI default.
+    @Column(name = "established_year")
+    private Integer establishedYear;
+
+    // Per-store Bank of Georgia merchant credentials (issued on bonline.bog.ge).
+    // The secret is stored AES-GCM encrypted (SecretCipher) — it must never be
+    // serialized to the public tenant JSON; TenantMapper exposes only a
+    // bogConfigured boolean. Both null until the owner connects BOG in Store
+    // Settings; checkout falls back to the free-order flow when unset.
+    @Column(name = "bog_client_id")
+    private String bogClientId;
+
+    @Column(name = "bog_client_secret", length = 1024)
+    private String bogClientSecret;
+
     @Column(name = "is_active")
     private Boolean isActive = true;
     

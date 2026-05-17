@@ -21,7 +21,18 @@ public final class TenantMapper {
         m.put("category", t.getCategory());
         m.put("primaryColor", t.getPrimaryColor());
         m.put("secondaryColor", t.getSecondaryColor());
+        m.put("addressStreet", t.getAddressStreet());
+        m.put("addressCity", t.getAddressCity());
+        m.put("addressCountry", t.getAddressCountry());
+        m.put("addressPostalCode", t.getAddressPostalCode());
+        m.put("establishedYear", t.getEstablishedYear());
         m.put("isActive", t.getIsActive());
+        // Only whether BOG is wired up — never the id/secret. The storefront
+        // uses this to decide redirect-checkout vs the free-order fallback;
+        // Store Settings uses it to show a "Connected" badge.
+        m.put("bogConfigured",
+            t.getBogClientId() != null && !t.getBogClientId().isBlank()
+                && t.getBogClientSecret() != null && !t.getBogClientSecret().isBlank());
         return m;
     }
 }

@@ -19,6 +19,8 @@ const slugify = (s) =>
     .replace(/^-|-$/g, '')
     .slice(0, 30);
 
+const SWATCHES = ['#6366f1', '#c95b30', '#3f8a4a', '#0f766e', '#dc2626', '#0d0d0d'];
+
 export default function CreateStore() {
   const { T } = useGlow();
   const navigate = useNavigate();
@@ -26,6 +28,12 @@ export default function CreateStore() {
   const [name, setName] = useState('');
   const [subdomain, setSubdomain] = useState('');
   const [touchedSub, setTouchedSub] = useState(false);
+  const [description, setDescription] = useState('');
+  const [addressStreet, setAddressStreet] = useState('');
+  const [addressCity, setAddressCity] = useState('');
+  const [addressCountry, setAddressCountry] = useState('');
+  const [addressPostalCode, setAddressPostalCode] = useState('');
+  const [establishedYear, setEstablishedYear] = useState('');
   const [accent, setAccent] = useState('#6366f1');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -43,6 +51,12 @@ export default function CreateStore() {
         name: name.trim(),
         subdomain: sub,
         primaryColor: accent,
+        description: description.trim(),
+        addressStreet: addressStreet.trim(),
+        addressCity: addressCity.trim(),
+        addressCountry: addressCountry.trim(),
+        addressPostalCode: addressPostalCode.trim(),
+        establishedYear: establishedYear.trim(),
       });
       setCreated(res);
     } catch (e) {
@@ -129,11 +143,60 @@ export default function CreateStore() {
           </div>
 
           <div>
-            <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('createStore.brandAccent')}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} style={{ width: 52, height: 52, padding: 0, border: `1.5px solid ${T.border}`, borderRadius: 14, background: T.surface, cursor: 'pointer' }} />
-              <span style={{ font: `600 14px ${T.mono}`, color: T.textDim }}>{accent}</span>
+            <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('createStore.description')}</div>
+            <textarea
+              value={description} onChange={(e) => setDescription(e.target.value)} rows={2}
+              placeholder={t('createStore.descriptionPlaceholder')}
+              style={{ ...field, height: 'auto', padding: '12px 16px', resize: 'vertical' }}
+            />
+          </div>
+
+          <div>
+            <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('createStore.addressStreet')}</div>
+            <input value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} placeholder={t('createStore.addressStreetPlaceholder')} style={field} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('createStore.addressCity')}</div>
+              <input value={addressCity} onChange={(e) => setAddressCity(e.target.value)} style={field} />
             </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('createStore.addressCountry')}</div>
+              <input value={addressCountry} onChange={(e) => setAddressCountry(e.target.value)} style={field} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('createStore.addressPostal')}</div>
+              <input value={addressPostalCode} onChange={(e) => setAddressPostalCode(e.target.value)} style={field} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('createStore.established')}</div>
+              <input
+                type="number" inputMode="numeric" min="1900" max="2100"
+                value={establishedYear} onChange={(e) => setEstablishedYear(e.target.value)}
+                placeholder="2024" style={field}
+              />
+            </div>
+          </div>
+
+          <div>
+            <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('createStore.brandAccent')}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {SWATCHES.map((s) => (
+                <button
+                  key={s} type="button" aria-label={s} onClick={() => setAccent(s)}
+                  style={{
+                    width: 44, height: 44, borderRadius: 14, background: s, cursor: 'pointer', padding: 0,
+                    border: `2.5px solid ${accent === s ? T.text : 'transparent'}`,
+                    boxShadow: accent === s ? `0 0 0 3px ${T.bg}` : 'none',
+                  }}
+                />
+              ))}
+            </div>
+            <div style={{ marginTop: 8, font: `600 12px ${T.mono}`, color: T.textDim }}>{accent}</div>
           </div>
 
           {error && (
@@ -142,7 +205,7 @@ export default function CreateStore() {
             </div>
           )}
 
-          <button onClick={submit} disabled={busy} style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', background: T.grad, color: '#fff', font: `700 14.5px ${T.font}`, cursor: busy ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: busy ? 0.7 : 1 }}>
+          <button onClick={submit} disabled={busy} style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', background: `linear-gradient(135deg, ${accent}, ${accent}aa)`, color: '#fff', font: `700 14.5px ${T.font}`, cursor: busy ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: busy ? 0.7 : 1, boxShadow: `0 12px 30px ${accent}55` }}>
             {busy ? t('createStore.creating') : <>{t('createStore.create')} <Icon.arrowR /></>}
           </button>
         </div>

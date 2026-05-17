@@ -22,6 +22,14 @@
     "subdomain": "Subdomain",
     "subdomainPlaceholder": "acme",
     "subdomainHint": "lowercase letters, numbers, hyphens · 3–30 chars",
+    "description": "Description",
+    "descriptionPlaceholder": "What you sell, in a sentence",
+    "addressStreet": "Street address",
+    "addressStreetPlaceholder": "123 Market St",
+    "addressCity": "City",
+    "addressCountry": "Country",
+    "addressPostal": "Postal code",
+    "established": "Established year",
     "brandAccent": "Brand accent",
     "creating": "Creating…",
     "create": "Create store"
@@ -41,13 +49,8 @@
     "address": "Address",
     "city": "City",
     "zip": "ZIP",
-    "shipStandard": "Standard · 3–5 days",
-    "shipExpress": "Express · 1–2 days",
-    "free": "Free",
     "itemCount_one": "{{count}} item",
     "itemCount_other": "{{count}} items",
-    "shipping": "Shipping",
-    "tax": "Tax",
     "total": "Total",
     "placing": "Placing order…",
     "payNow": "Pay now",
@@ -60,7 +63,19 @@
     "verifyPhoneHint": "Verify {{phone}} to place your order.",
     "signInToPay": "Sign in to pay",
     "completeProfile": "Complete your profile",
-    "verifyToPay": "Verify phone to pay"
+    "verifyToPay": "Verify phone to pay",
+    "payCard": "Pay with card",
+    "redirecting": "Redirecting…",
+    "payError": "Payment could not be started. Please try again.",
+    "bogSecure": "Secure card payment via Bank of Georgia"
+  },
+  "payReturn": {
+    "checkingTitle": "Confirming your payment…",
+    "checkingBody": "This takes just a moment — please don't close this page.",
+    "failedTitle": "Payment not completed",
+    "failedBody": "We couldn't confirm your payment. Any amount taken will be returned. You can try again from your cart.",
+    "backToCart": "Back to cart",
+    "viewOrders": "View orders"
   },
   "saved": {
     "title": "Saved",
@@ -83,16 +98,38 @@
     "orderCount_other": "{{count}} orders",
     "itemCount_one": "{{count}} item",
     "itemCount_other": "{{count}} items",
+    "signInRequired": "Sign in to view your orders.",
+    "acrossStores": "Across every store on esy.",
+    "stat": {
+      "total": "Total orders",
+      "spent": "Spent",
+      "avg": "Avg order"
+    },
+    "tab": {
+      "all": "All",
+      "processing": "Processing",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "emptyTab": "No {{status}} orders",
+    "emptyTabSub": "Switch tab to see your other orders.",
     "status": {
+      "placed": "placed",
       "pending": "pending",
       "confirmed": "confirmed",
       "processing": "processing",
       "shipped": "shipped",
+      "out_for_delivery": "out for delivery",
       "delivered": "delivered",
       "completed": "completed",
       "cancelled": "cancelled",
       "refunded": "refunded"
     }
+  },
+  "authCallback": {
+    "signingIn": "Signing you in…",
+    "bringingBack": "Bringing you back to {{name}}"
   },
   "success": {
     "title": "Order placed!",

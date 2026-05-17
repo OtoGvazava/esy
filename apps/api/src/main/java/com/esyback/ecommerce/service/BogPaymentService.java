@@ -1,0 +1,279 @@
+package com.esyback.ecommerce.service;
+
+import com.esyback.ecommerce.entity.Order;
+import com.esyback.ecommerce.entity.OrderItem;
+import com.esyback.ecommerce.entity.Tenant;
+import com.esyback.ecommerce.security.SecretCipher;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.spec.X509EncodedKeySpec;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Bank of Georgia "standard process" e-commerce payment client, per tenant.
+ *
+ * <p>Each store carries its own BOG merchant credentials (issued on
+ * bonline.bog.ge); this service mints/caches a bearer token per clientId,
+ * creates the hosted-payment order, verifies the signed async callback, and
+ * can reconcile a payment by polling BOG's receipt endpoint (used when the
+ * callback can't reach us — e.g. local dev behind lvh.me).
+ *
+ * <p>Uses the JDK HTTP client + Jackson only (no new dependency).
+ */
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class BogPaymentService {
+
+    private final SecretCipher secretCipher;
+    private final ObjectMapper objectMapper;
+
+    @Value("${app.bog.auth-url:https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token}")
+    private String authUrl;
+
+    @Value("${app.bog.base-url:https://api.bog.ge}")
+    private String baseUrl;
+
+    // BOG's published callback-signing public key (PEM, SHA256withRSA). There
+    // is NO safe baked-in default: a wrong key rejects every real payment
+    // callback. Blank → signature checks are skipped with a loud warning so
+    // local dev works; production MUST set BOG_PUBLIC_KEY (the PEM from
+    // https://api.bog.ge/docs/en/payments/callback) so callbacks are enforced.
+    @Value("${app.bog.public-key:}")
+    private String publicKeyPem;
+
+    private final HttpClient http = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(10))
+        .build();
+
+    private record CachedToken(String token, long expiresAtMs) {}
+
+    private final Map<String, CachedToken> tokenCache = new ConcurrentHashMap<>();
+
+    /** Result of a successful create-order call. */
+    public record PaymentSession(String bogOrderId, String redirectUrl) {}
+
+    public boolean isConfigured(Tenant t) {
+        return t != null
+            && t.getBogClientId() != null && !t.getBogClientId().isBlank()
+            && t.getBogClientSecret() != null && !t.getBogClientSecret().isBlank();
+    }
+
+    // ---- Create order -------------------------------------------------------
+
+    /**
+     * Create a BOG hosted-payment order for {@code order} on {@code tenant}'s
+     * merchant account. {@code callbackUrl}/{@code successUrl}/{@code failUrl}
+     * must be absolute, internet-reachable URLs (built from the public origin).
+     */
+    public PaymentSession createPayment(Tenant tenant, Order order,
+                                        String callbackUrl, String successUrl, String failUrl) {
+        if (!isConfigured(tenant)) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                "This store has not connected a payment provider");
+        }
+        String token = accessToken(tenant);
+
+        List<Map<String, Object>> basket = new ArrayList<>();
+        for (OrderItem it : order.getItems()) {
+            Map<String, Object> line = new LinkedHashMap<>();
+            line.put("product_id", String.valueOf(it.getProductId()));
+            line.put("description", it.getTitle());
+            line.put("quantity", it.getQuantity());
+            line.put("unit_price", it.getPrice());
+            basket.add(line);
+        }
+
+        Map<String, Object> purchaseUnits = new LinkedHashMap<>();
+        purchaseUnits.put("currency", "GEL");
+        // Charged amount is the server-persisted order total (== Σ basket),
+        // never a client-supplied figure.
+        purchaseUnits.put("total_amount", order.getTotal());
+        purchaseUnits.put("basket", basket);
+
+        Map<String, Object> redirectUrls = new LinkedHashMap<>();
+        redirectUrls.put("success", successUrl);
+        redirectUrls.put("fail", failUrl);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("callback_url", callbackUrl);
+        body.put("external_order_id", order.getOrderNumber());
+        body.put("purchase_units", purchaseUnits);
+        body.put("redirect_urls", redirectUrls);
+
+        try {
+            HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/payments/v1/ecommerce/orders"))
+                .timeout(Duration.ofSeconds(20))
+                .header("Authorization", "Bearer " + token)
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .header("Accept-Language", "ka")
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
+                .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode() / 100 != 2) {
+                log.warn("BOG create-order failed ({}): {}", res.statusCode(), res.body());
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Payment provider rejected the order");
+            }
+            JsonNode json = objectMapper.readTree(res.body());
+            String bogId = json.path("id").asText(null);
+            String redirect = json.path("_links").path("redirect").path("href").asText(null);
+            if (bogId == null || redirect == null) {
+                log.warn("BOG create-order missing id/redirect: {}", res.body());
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Payment provider returned an unexpected response");
+            }
+            return new PaymentSession(bogId, redirect);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("BOG create-order error", e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not reach the payment provider");
+        }
+    }
+
+    // ---- Token --------------------------------------------------------------
+
+    private String accessToken(Tenant tenant) {
+        String clientId = tenant.getBogClientId();
+        CachedToken cached = tokenCache.get(clientId);
+        if (cached != null && System.currentTimeMillis() < cached.expiresAtMs()) {
+            return cached.token();
+        }
+        String clientSecret = secretCipher.decrypt(tenant.getBogClientSecret());
+        String basic = Base64.getEncoder().encodeToString(
+            (clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8));
+        try {
+            HttpRequest req = HttpRequest.newBuilder(URI.create(authUrl))
+                .timeout(Duration.ofSeconds(15))
+                .header("Authorization", "Basic " + basic)
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString("grant_type=client_credentials"))
+                .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode() / 100 != 2) {
+                log.warn("BOG auth failed ({}): {}", res.statusCode(), res.body());
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Payment provider authentication failed");
+            }
+            JsonNode json = objectMapper.readTree(res.body());
+            String token = json.path("access_token").asText(null);
+            if (token == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Payment provider did not return a token");
+            }
+            // expires_in is documented as seconds; tolerate ms-like values.
+            long expiresIn = json.path("expires_in").asLong(3600);
+            if (expiresIn > 100_000) expiresIn = expiresIn / 1000;
+            long ttlMs = Math.max(60, expiresIn - 60) * 1000L;
+            tokenCache.put(clientId, new CachedToken(token, System.currentTimeMillis() + ttlMs));
+            return token;
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("BOG auth error", e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not reach the payment provider");
+        }
+    }
+
+    // ---- Callback signature -------------------------------------------------
+
+    /**
+     * Verify the {@code Callback-Signature} (base64, SHA256withRSA over the
+     * raw request body) against BOG's public key. Returns {@code true} when
+     * no public key is configured (dev) — fail-open is intentional there and
+     * logged; production sets the key so it is fail-closed.
+     */
+    public boolean verifyCallbackSignature(byte[] rawBody, String signatureBase64) {
+        if (publicKeyPem == null || publicKeyPem.isBlank()) {
+            log.warn("BOG_PUBLIC_KEY unset — skipping callback signature verification "
+                + "(set it in production so callbacks are authenticated).");
+            return true;
+        }
+        if (signatureBase64 == null || signatureBase64.isBlank()) {
+            log.warn("BOG callback missing Callback-Signature header");
+            return false;
+        }
+        try {
+            String clean = publicKeyPem
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "")
+                .replaceAll("\\s", "");
+            byte[] der = Base64.getDecoder().decode(clean);
+            PublicKey key = KeyFactory.getInstance("RSA")
+                .generatePublic(new X509EncodedKeySpec(der));
+            Signature sig = Signature.getInstance("SHA256withRSA");
+            sig.initVerify(key);
+            sig.update(rawBody);
+            return sig.verify(Base64.getDecoder().decode(signatureBase64));
+        } catch (Exception e) {
+            log.warn("BOG callback signature verification error: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    // ---- Receipt reconcile (callback fallback) ------------------------------
+
+    /** Poll BOG for the order's current status; empty if it can't be read. */
+    public Optional<Order.PaymentStatus> fetchReceiptStatus(Tenant tenant, String bogOrderId) {
+        if (!isConfigured(tenant) || bogOrderId == null) return Optional.empty();
+        try {
+            HttpRequest req = HttpRequest.newBuilder(
+                    URI.create(baseUrl + "/payments/v1/receipt/" + bogOrderId))
+                .timeout(Duration.ofSeconds(15))
+                .header("Authorization", "Bearer " + accessToken(tenant))
+                .header("Accept", "application/json")
+                .GET()
+                .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode() / 100 != 2) {
+                log.debug("BOG receipt {} -> {}", bogOrderId, res.statusCode());
+                return Optional.empty();
+            }
+            JsonNode json = objectMapper.readTree(res.body());
+            String key = json.path("order_status").path("key").asText(null);
+            return Optional.ofNullable(mapStatus(key));
+        } catch (Exception e) {
+            log.debug("BOG receipt fetch error: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Map a BOG {@code order_status.key} to our {@link Order.PaymentStatus}.
+     * null when the status is non-terminal (created/processing/…), so callers
+     * leave the order PENDING.
+     */
+    public Order.PaymentStatus mapStatus(String bogStatusKey) {
+        if (bogStatusKey == null) return null;
+        return switch (bogStatusKey) {
+            case "completed", "partial_completed" -> Order.PaymentStatus.PAID;
+            case "rejected" -> Order.PaymentStatus.FAILED;
+            case "refunded", "refunded_partially" -> Order.PaymentStatus.REFUNDED;
+            default -> null; // created, processing, auth_requested, blocked …
+        };
+    }
+}

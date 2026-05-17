@@ -22,6 +22,14 @@
     "subdomain": "ქვედომენი",
     "subdomainPlaceholder": "acme",
     "subdomainHint": "პატარა ასოები, ციფრები, დეფისები · 3–30 სიმბოლო",
+    "description": "აღწერა",
+    "descriptionPlaceholder": "რას ყიდი, ერთ წინადადებად",
+    "addressStreet": "ქუჩის მისამართი",
+    "addressStreetPlaceholder": "მთავარი ქ. 123",
+    "addressCity": "ქალაქი",
+    "addressCountry": "ქვეყანა",
+    "addressPostal": "საფოსტო ინდექსი",
+    "established": "დაარსების წელი",
     "brandAccent": "ბრენდის აქცენტი",
     "creating": "იქმნება…",
     "create": "მაღაზიის შექმნა"
@@ -41,13 +49,8 @@
     "address": "მისამართი",
     "city": "ქალაქი",
     "zip": "საფოსტო ინდექსი",
-    "shipStandard": "სტანდარტული · 3–5 დღე",
-    "shipExpress": "ექსპრესი · 1–2 დღე",
-    "free": "უფასო",
     "itemCount_one": "{{count}} ნივთი",
     "itemCount_other": "{{count}} ნივთი",
-    "shipping": "მიწოდება",
-    "tax": "გადასახადი",
     "total": "სულ",
     "placing": "შეკვეთა იგზავნება…",
     "payNow": "გადახდა",
@@ -60,7 +63,19 @@
     "verifyPhoneHint": "შეკვეთის გასაფორმებლად დაადასტურე {{phone}}.",
     "signInToPay": "შედი გადასახდელად",
     "completeProfile": "შეავსე პროფილი",
-    "verifyToPay": "დაადასტურე ტელეფონი"
+    "verifyToPay": "დაადასტურე ტელეფონი",
+    "payCard": "ბარათით გადახდა",
+    "redirecting": "გადამისამართება…",
+    "payError": "გადახდის დაწყება ვერ მოხერხდა. სცადეთ თავიდან.",
+    "bogSecure": "უსაფრთხო გადახდა საქართველოს ბანკით"
+  },
+  "payReturn": {
+    "checkingTitle": "ვადასტურებთ თქვენს გადახდას…",
+    "checkingBody": "ეს მხოლოდ წამიერი პროცესია — გთხოვთ, არ დახუროთ ეს გვერდი.",
+    "failedTitle": "გადახდა არ დასრულდა",
+    "failedBody": "თქვენი გადახდის დადასტურება ვერ მოხერხდა. ჩამოჭრილი თანხა დაგიბრუნდებათ. შეგიძლიათ თავიდან სცადოთ კალათიდან.",
+    "backToCart": "კალათაში დაბრუნება",
+    "viewOrders": "შეკვეთების ნახვა"
   },
   "saved": {
     "title": "შენახული",
@@ -83,16 +98,38 @@
     "orderCount_other": "{{count}} შეკვეთა",
     "itemCount_one": "{{count}} ნივთი",
     "itemCount_other": "{{count}} ნივთი",
+    "signInRequired": "შეკვეთების სანახავად შედი ანგარიშზე.",
+    "acrossStores": "esy-ის ყველა მაღაზიაში.",
+    "stat": {
+      "total": "სულ შეკვეთები",
+      "spent": "დახარჯული",
+      "avg": "საშუალო შეკვეთა"
+    },
+    "tab": {
+      "all": "ყველა",
+      "processing": "მზადდება",
+      "shipped": "გაიგზავნა",
+      "delivered": "მიწოდებულია",
+      "cancelled": "გაუქმდა"
+    },
+    "emptyTab": "{{status}} შეკვეთები არ არის",
+    "emptyTabSub": "გადართე ჩანართი სხვა შეკვეთების სანახავად.",
     "status": {
+      "placed": "მიღებულია",
       "pending": "მუშავდება",
       "confirmed": "დადასტურდა",
       "processing": "მზადდება",
       "shipped": "გაიგზავნა",
+      "out_for_delivery": "მიწოდების გზაშია",
       "delivered": "მიწოდებულია",
       "completed": "დასრულდა",
       "cancelled": "გაუქმდა",
       "refunded": "თანხა დაბრუნდა"
     }
+  },
+  "authCallback": {
+    "signingIn": "მიმდინარეობს შესვლა…",
+    "bringingBack": "გიბრუნებთ {{name}}-ში"
   },
   "success": {
     "title": "შეკვეთა მიღებულია!",

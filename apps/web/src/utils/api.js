@@ -216,6 +216,21 @@ export const orderApi = {
   },
 };
 
+// ---- Payments (Bank of Georgia hosted checkout) ----------------------------
+export const paymentApi = {
+  // Creates the order + a BOG payment, returns { orderNumber, redirectUrl }.
+  // The caller sends the browser to redirectUrl (bank-hosted page).
+  checkout(items, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.post(`/api/payments/bog/checkout${q}`, { items });
+  },
+  // Payment state for the return page: { orderNumber, paymentStatus, total }.
+  // Server-side reconciles PENDING via BOG's receipt (covers missed callbacks).
+  status(orderNumber) {
+    return api.get(`/api/payments/bog/status?order=${encodeURIComponent(orderNumber)}`);
+  },
+};
+
 export const savedApi = {
   list() {
     return api.get('/api/saved');
@@ -267,6 +282,33 @@ export const tenantApi = {
       ? `/api/tenant/current?tenant=${encodeURIComponent(devTenant)}`
       : '/api/tenant/current';
     return api.put(path, payload);
+  },
+  // Owner-only store logo upload. Multipart — bypasses the JSON client so the
+  // browser sets the boundary; cookie auth via credentials:'include'. Returns
+  // the fresh tenant (logoUrl now points at the served bytes).
+  async uploadLogo(file, devTenant) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const path = devTenant
+      ? `/api/tenant/logo?tenant=${encodeURIComponent(devTenant)}`
+      : '/api/tenant/logo';
+    const res = await fetch(path, { method: 'POST', body: fd, credentials: 'include' });
+    if (!res.ok) {
+      let message = `Upload failed (${res.status})`;
+      try {
+        const b = await res.json();
+        message = b.error || b.message || message;
+      } catch { /* no JSON body */ }
+      throw new ApiError(message, res.status);
+    }
+    return res.json();
+  },
+  // Owner-only: drop the store logo (clears logoUrl + the stored bytes).
+  deleteLogo(devTenant) {
+    const path = devTenant
+      ? `/api/tenant/logo?tenant=${encodeURIComponent(devTenant)}`
+      : '/api/tenant/logo';
+    return api.delete(path);
   },
   // Owner/admin store stats for the current store (server resolves it by
   // Host; @storeAccess gates it).
