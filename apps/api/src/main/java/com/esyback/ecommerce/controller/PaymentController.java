@@ -135,9 +135,13 @@ public class PaymentController {
                 order = orderService.settlePayment(orderNumber, reconciled.get()).orElse(order);
             }
         }
+        // Null-coalesce defensively: the column is NOT NULL with a DB default
+        // ('NONE') and the entity defaults to NONE, so this should never be
+        // null — but a legacy row read before a backfill must not NPE the API.
+        Order.PaymentStatus ps = order.getPaymentStatus();
         return ResponseEntity.ok(Map.of(
             "orderNumber", order.getOrderNumber(),
-            "paymentStatus", order.getPaymentStatus().name(),
+            "paymentStatus", (ps == null ? Order.PaymentStatus.NONE : ps).name(),
             "total", order.getTotal()));
     }
 

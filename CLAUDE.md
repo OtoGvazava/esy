@@ -63,6 +63,21 @@ docker compose up --build     # Postgres-backed; data persists (named volume)
 - **H2 is in-memory** on Render free → data resets on restart/redeploy;
   `DataInitializer` reseeds products/roles/tenants. Persist via
   `SPRING_DATASOURCE_URL` (file/Postgres) + `JPA_DDL_AUTO=update`.
+- **`ddl-auto=update` cannot migrate a *populated* Postgres** (the docker
+  `lvh.me:8092` stack + any persistent prod). It is additive-only: it never
+  drops/alters an existing column or constraint, and it silently *logs-and-
+  continues* on a failed DDL, so the app boots but later 500s. Two traps, both
+  fine on H2 (`create-drop` rebuilds fresh) and only biting persistent
+  Postgres: **(1)** a new `@Column(nullable=false)` → `ADD COLUMN … NOT NULL`
+  is rejected on a table with rows. Always give such a column a DB default via
+  `columnDefinition` (e.g. `"numeric(12,2) default 0"`, `"varchar(255) default
+  'NONE'"`) — see `Order.serviceFee`/`paymentStatus`. **(2)** Hibernate freezes
+  an `@Enumerated(STRING)` column's `CHECK (col IN (…))` at the enum's *original*
+  values; adding a constant to `Order.Status` or `StoreMembership.Role` later
+  passes on H2 but rejects every write on populated Postgres
+  (`violates check constraint …_check`). Ship an explicit `DROP/ADD CONSTRAINT`
+  for that table, or suppress the CHECK via `columnDefinition="varchar(255)"`
+  and validate in code.
 - **JWT**: `JwtUtil` derives the HS512 key via SHA-512, so any-length secret
   works (Render's generated `JWT_SECRET` is short — do not "fix" by shortening).
 - **Google = OIDC** (the `openid` scope). `application.yml` must keep

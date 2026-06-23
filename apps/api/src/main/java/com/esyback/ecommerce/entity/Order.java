@@ -62,11 +62,19 @@ public class Order {
     // pays it and it does NOT change the BOG charge (which is `total`); it is
     // an internal ledger figure esy bills the store for periodically. Frozen
     // per order so a later rate change can't rewrite historical amounts owed.
-    @Column(name = "service_fee", nullable = false, precision = 12, scale = 2)
+    //
+    // columnDefinition carries a DB-level DEFAULT so Hibernate ddl-auto=update
+    // can add this NOT NULL column to a table that already has rows (Postgres
+    // rejects ADD COLUMN NOT NULL without a default; existing rows backfill to
+    // the default). Portable across H2 (dev) and Postgres (prod/docker). See
+    // also DataInitializer / deploy notes: legacy orders read back as 0.
+    @Column(name = "service_fee", nullable = false, columnDefinition = "numeric(12,2) default 0")
     private BigDecimal serviceFee = BigDecimal.ZERO;
 
+    // Same NOT-NULL-on-populated-table concern as service_fee: the DB default
+    // ('NONE') lets ddl-auto=update add it to existing orders on deploy.
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_status", nullable = false)
+    @Column(name = "payment_status", nullable = false, columnDefinition = "varchar(255) default 'NONE'")
     private PaymentStatus paymentStatus = PaymentStatus.NONE;
 
     // BOG's own order id (UUID), returned by create-order and echoed in the
