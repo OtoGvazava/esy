@@ -1,22 +1,27 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
 
 const pad = (n) => String(n).padStart(2, '0');
+const parse = (value) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+  return { year: m ? Number(m[1]) : '', month: m ? Number(m[2]) : '', day: m ? Number(m[3]) : '' };
+};
 
 // Birth-date picker: Day / Month / Year dropdowns with localized month names
 // (via Intl, so EN/KA need no extra strings). Far easier than a native date
 // input for dates decades in the past — no month-by-month clicking. Emits an
 // ISO `YYYY-MM-DD` string (or '' until all three are picked) so the backend
-// contract is unchanged.
+// contract is unchanged. Partial picks are held in local state — deriving the
+// dropdowns from `value` alone would discard a year/month chosen before the
+// others, so no single dropdown could ever "stick".
 export default function DateOfBirthPicker({ value, onChange }) {
   const { T } = useGlow();
   const { t, i18n } = useTranslation('storefront');
   const lang = i18n.language === 'ka' ? 'ka' : 'en';
 
-  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
-  const year = parts ? Number(parts[1]) : '';
-  const month = parts ? Number(parts[2]) : '';
-  const day = parts ? Number(parts[3]) : '';
+  const [sel, setSel] = useState(() => parse(value));
+  const { year, month, day } = sel;
 
   const thisYear = new Date().getFullYear();
   const years = Array.from({ length: 120 }, (_, i) => thisYear - i);
@@ -26,12 +31,10 @@ export default function DateOfBirthPicker({ value, onChange }) {
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
   const emit = (y, mo, d) => {
-    if (y && mo && d) {
-      const dd = Math.min(d, new Date(y, mo, 0).getDate()); // clamp e.g. 31 → Feb
-      onChange(`${y}-${pad(mo)}-${pad(dd)}`);
-    } else {
-      onChange('');
-    }
+    // Clamp the day to the chosen month (e.g. 31 → Feb) so it stays valid.
+    const dd = y && mo && d ? Math.min(d, new Date(y, mo, 0).getDate()) : d;
+    setSel({ year: y, month: mo, day: dd });
+    onChange(y && mo && dd ? `${y}-${pad(mo)}-${pad(dd)}` : '');
   };
 
   const box = (filled) => ({

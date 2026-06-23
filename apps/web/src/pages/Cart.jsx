@@ -36,7 +36,7 @@ export default function Cart() {
     return (
       <GlowScreen T={T}>
         <GlowTopNav T={T} title={t('bag')} onBack={() => navigate(-1)} />
-        <div style={{ padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
+        <div style={{ minHeight: 'calc(100vh - 186px)', padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 14 }}>
           <div style={{ width: 88, height: 88, borderRadius: 24, background: T.surface, border: `1px solid ${T.border}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.accentFg }}>
             <Icon.bag width="36" height="36" />
           </div>
