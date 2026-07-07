@@ -29,7 +29,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final MembershipService membershipService;
     // Platform service fee (fraction of order total). Read at call time from a
-    // refreshable config bean so the rate can change live (config UI / Consul)
+    // live config bean so the rate can change via the admin config UI
     // without a redeploy.
     private final PlatformProperties platformProperties;
 

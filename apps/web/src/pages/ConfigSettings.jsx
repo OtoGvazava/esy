@@ -8,8 +8,8 @@ import { GlowScreen } from '../components/glow/GlowChrome';
 import { Icon } from '../components/glow/GlowPrimitives';
 
 // ADMIN-only live config screen. Reads the currently-effective values and
-// writes changes to Consul KV via /api/admin/config; the config watch applies
-// them within a couple of seconds — no redeploy.
+// writes changes to the config store (Redis/Valkey) via /api/admin/config; the app
+// picks them up within a couple of seconds — no redeploy.
 export default function ConfigSettings() {
   const navigate = useNavigate();
   const { t } = useTranslation(['adminConfig', 'common']);
@@ -19,7 +19,7 @@ export default function ConfigSettings() {
   const [form, setForm] = useState({
     serviceFeeRate: '', bogEnv: 'live', bogAuthUrl: '', bogBaseUrl: '', publicBaseUrl: '',
   });
-  const [consulEnabled, setConsulEnabled] = useState(false);
+  const [storeReady, setStoreReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -39,7 +39,7 @@ export default function ConfigSettings() {
         bogBaseUrl: d?.bogBaseUrl || '',
         publicBaseUrl: d?.publicBaseUrl || '',
       });
-      setConsulEnabled(!!d?.consulEnabled);
+      setStoreReady(!!d?.storeReady);
     } catch (e) {
       setApiError(handleApiError(e));
     } finally {
@@ -54,7 +54,7 @@ export default function ConfigSettings() {
   const set = (k) => (e) => { setSaved(false); setForm((p) => ({ ...p, [k]: e.target.value })); };
 
   const save = async () => {
-    if (saving || !consulEnabled) return;
+    if (saving || !storeReady) return;
     setSaving(true); setApiError(''); setSaved(false);
     try {
       await adminApi.updateConfig({
@@ -65,7 +65,7 @@ export default function ConfigSettings() {
         publicBaseUrl: form.publicBaseUrl.trim(),
       });
       setSaved(true);
-      // Consul watch rebinds the beans in ~1-2s; re-pull to show applied values.
+      // The store's cache TTL applies the change in ~1-2s; re-pull to show it.
       setTimeout(load, 2500);
     } catch (e) {
       setApiError(handleApiError(e, t('saveFailed')));
@@ -108,23 +108,23 @@ export default function ConfigSettings() {
           <div style={{ marginTop: 8, font: `500 13px/1.5 ${T.font}`, color: T.textDim }}>{t('subtitle')}</div>
         </div>
 
-        {/* Consul connectivity badge */}
+        {/* Config store connectivity badge */}
         <div style={{ padding: '4px 20px 12px', display: 'flex', justifyContent: 'center' }}>
           <span style={{
             font: `700 10.5px ${T.font}`, letterSpacing: '0.04em', textTransform: 'uppercase',
             padding: '6px 12px', borderRadius: 999,
-            background: consulEnabled ? `${T.success}1f` : `${T.danger}14`,
-            color: consulEnabled ? T.success : T.danger,
-            border: `1px solid ${consulEnabled ? `${T.success}55` : `${T.danger}55`}`,
+            background: storeReady ? `${T.success}1f` : `${T.danger}14`,
+            color: storeReady ? T.success : T.danger,
+            border: `1px solid ${storeReady ? `${T.success}55` : `${T.danger}55`}`,
           }}>
-            {consulEnabled ? t('consulConnected') : t('consulOffline')}
+            {storeReady ? t('storeConnected') : t('storeOffline')}
           </span>
         </div>
 
-        {!consulEnabled && (
+        {!storeReady && (
           <div style={{ padding: '0 16px 12px' }}>
             <div style={{ padding: '12px 14px', borderRadius: 12, background: `${T.danger}12`, border: `1px solid ${T.danger}44`, color: T.danger, font: `500 12.5px/1.5 ${T.font}` }}>
-              {t('consulOfflineHint')}
+              {t('storeOfflineHint')}
             </div>
           </div>
         )}
@@ -169,7 +169,7 @@ export default function ConfigSettings() {
             <div style={{ padding: '12px 14px', borderRadius: 12, background: `${T.danger}14`, border: `1px solid ${T.danger}40`, color: T.danger, font: `500 12.5px ${T.font}` }}>{apiError}</div>
           )}
 
-          <button onClick={save} disabled={saving || !consulEnabled} style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', background: T.grad, color: '#fff', font: `700 14.5px ${T.font}`, cursor: saving || !consulEnabled ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving || !consulEnabled ? 0.6 : 1 }}>
+          <button onClick={save} disabled={saving || !storeReady} style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', background: T.grad, color: '#fff', font: `700 14.5px ${T.font}`, cursor: saving || !storeReady ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving || !storeReady ? 0.6 : 1 }}>
             {saving ? t('saving') : <>{t('save')} <Icon.check /></>}
           </button>
 

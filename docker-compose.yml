@@ -22,20 +22,16 @@ services:
       timeout: 5s
       retries: 20
 
-  # Consul: dynamic config store (KV). Single-node server with a persistent
-  # data dir so KV survives restarts, mirroring the intended consul.esy.ge.
-  # UI + KV API on http://localhost:8500. Live-tunable config lives under
-  # config/ecommerce-platform/ (e.g. app.platform.service-fee-rate, app.bog.env).
-  # Empty KV is fine — the app falls back to application.yml/env defaults.
-  consul:
-    image: hashicorp/consul:1.20
-    command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -data-dir=/consul/data
-    volumes:
-      - esy_consul_data:/consul/data
+  # Redis/Valkey: the live config store (mirrors prod's Render Key Value).
+  # The admin UI writes overrides here; the app reads Redis → env/yaml → default.
+  # Empty is fine — the app just uses env/yaml. (Local dev = ephemeral, like the
+  # Render free tier; add a volume if you want overrides to survive restarts.)
+  redis:
+    image: valkey/valkey:8-alpine
     ports:
-      - "8500:8500"
+      - "6379:6379"
     healthcheck:
-      test: ["CMD", "consul", "members"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -47,7 +43,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      consul:
+      redis:
         condition: service_healthy
     environment:
       PORT: 8080
@@ -76,16 +72,10 @@ services:
       # Explicit host overrides — leave blank to derive from BOG_ENV.
       BOG_BASE_URL: ${BOG_BASE_URL:-}
       BOG_AUTH_URL: ${BOG_AUTH_URL:-}
-      # Dynamic config via Consul KV. On by default in this stack; the app reads
-      # live-tunable values from Consul and hot-refreshes them (no redeploy).
-      # optional: + fail-fast:false ⇒ a Consul hiccup falls back to yaml defaults.
-      # Set CONSUL_ENABLED=false to run purely off env/yaml like before.
-      CONSUL_ENABLED: ${CONSUL_ENABLED:-true}
-      CONSUL_HOST: consul
-      SPRING_CONFIG_IMPORT: ${SPRING_CONFIG_IMPORT:-optional:consul:consul:8500}
+      # Live config store (Redis/Valkey). The admin UI writes overrides here.
+      SPRING_DATA_REDIS_URL: redis://redis:6379
     ports:
       - "8092:8080"
 
 volumes:
   esy_pgdata:
-  esy_consul_data:

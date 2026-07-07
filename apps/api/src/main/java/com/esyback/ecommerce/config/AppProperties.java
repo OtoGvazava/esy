@@ -1,21 +1,20 @@
 package com.esyback.ecommerce.config;
 
-import lombok.Getter;
-import lombok.Setter;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.esyback.ecommerce.service.ConfigStore;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * Miscellaneous app-level settings bound from {@code app.*}. Unknown {@code app.*}
- * subkeys (oauth2, secret, bog, platform — their own beans) are ignored.
- * Refreshable at runtime like the other config beans.
+ * Misc app-level settings, read live from the {@link ConfigStore} at call time.
  */
 @Component
-@ConfigurationProperties(prefix = "app")
-@Getter
-@Setter
+@RequiredArgsConstructor
 public class AppProperties {
 
+    private final ConfigStore config;
+
     /** Internet-reachable origin BOG redirects/calls back to; blank = derive from request. */
-    private String publicBaseUrl = "";
+    public String getPublicBaseUrl() {
+        return config.get("app.public-base-url", "");
+    }
 }

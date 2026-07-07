@@ -345,11 +345,11 @@ export const tenantApi = {
 
 // ---- Admin: live config (ADMIN only) ---------------------------------------
 export const adminApi = {
-  // { serviceFeeRate, bogEnv, bogAuthUrl, bogBaseUrl, publicBaseUrl, consulEnabled }
+  // { serviceFeeRate, bogEnv, bogAuthUrl, bogBaseUrl, publicBaseUrl, storeReady }
   getConfig() {
     return api.get('/api/admin/config');
   },
-  // Send only the keys you changed; server validates + writes to Consul.
+  // Send only the keys you changed; server validates + writes to the config store.
   updateConfig(patch) {
     return api.put('/api/admin/config', patch);
   },

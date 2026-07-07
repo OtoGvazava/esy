@@ -1,23 +1,33 @@
 package com.esyback.ecommerce.config;
 
-import lombok.Getter;
-import lombok.Setter;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.esyback.ecommerce.service.ConfigStore;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
 /**
- * Platform-level tunables, bound from {@code app.platform.*}. Refreshable at
- * runtime (see {@link BogProperties}) so e.g. the service-fee rate can change
- * live without a redeploy. Read the getter at call time, never cache it.
+ * Platform tunables, read live from the {@link ConfigStore} at call time so
+ * e.g. the service-fee rate changes with no redeploy.
  */
 @Component
-@ConfigurationProperties(prefix = "app.platform")
-@Getter
-@Setter
+@Slf4j
+@RequiredArgsConstructor
 public class PlatformProperties {
 
+    private static final BigDecimal DEFAULT_FEE = new BigDecimal("0.02");
+
+    private final ConfigStore config;
+
     /** Platform service fee as a fraction of order total (0.02 = 2%). */
-    private BigDecimal serviceFeeRate = new BigDecimal("0.02");
+    public BigDecimal getServiceFeeRate() {
+        String v = config.get("app.platform.service-fee-rate", "0.02");
+        try {
+            return new BigDecimal(v.trim());
+        } catch (RuntimeException e) {
+            log.warn("Invalid service-fee-rate '{}' in config store; using {}", v, DEFAULT_FEE);
+            return DEFAULT_FEE;
+        }
+    }
 }

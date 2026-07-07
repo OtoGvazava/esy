@@ -1,35 +1,38 @@
 package com.esyback.ecommerce.config;
 
-import lombok.Getter;
-import lombok.Setter;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.esyback.ecommerce.service.ConfigStore;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * Bank of Georgia settings, bound from {@code app.bog.*}. A dedicated
- * {@code @ConfigurationProperties} bean (rather than field {@code @Value}s on
- * the service) so the values can be re-sourced and refreshed at runtime:
- * Spring Cloud's {@code ConfigurationPropertiesRebinder} re-binds this bean on
- * a {@code /actuator/refresh} (e.g. after a Consul KV change), and because
- * {@code BogPaymentService} reads the getters at call time, the new values take
- * effect with no redeploy. The service itself stays a plain singleton so its
- * per-store token cache survives.
+ * Bank of Georgia settings, read live from the {@link ConfigStore} (Redis
+ * override → env/yaml → default) at call time — so the admin UI can change them
+ * with no redeploy. Same getter surface as before, so BogPaymentService is
+ * unchanged; it stays a plain singleton (its token cache is preserved).
  */
 @Component
-@ConfigurationProperties(prefix = "app.bog")
-@Getter
-@Setter
+@RequiredArgsConstructor
 public class BogProperties {
 
-    /** Environment selector: {@code live} (default) or {@code sandbox}. */
-    private String env = "live";
+    private final ConfigStore config;
 
-    /** Explicit OAuth token host override; blank = derive from {@link #env}. */
-    private String authUrl = "";
+    /** {@code live} (default) or {@code sandbox}. */
+    public String getEnv() {
+        return config.get("app.bog.env", "live");
+    }
 
-    /** Explicit API base host override; blank = derive from {@link #env}. */
-    private String baseUrl = "";
+    /** Explicit OAuth token host override; blank = derive from env. */
+    public String getAuthUrl() {
+        return config.get("app.bog.auth-url", "");
+    }
+
+    /** Explicit API base host override; blank = derive from env. */
+    public String getBaseUrl() {
+        return config.get("app.bog.base-url", "");
+    }
 
     /** Callback-signing public key (PEM); blank = skip signature verification. */
-    private String publicKey = "";
+    public String getPublicKey() {
+        return config.get("app.bog.public-key", "");
+    }
 }

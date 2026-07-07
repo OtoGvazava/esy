@@ -1,9 +1,9 @@
 {
   "title": "Platform config",
   "subtitle": "Live-tunable settings. Changes apply within seconds — no redeploy.",
-  "consulConnected": "Consul connected",
-  "consulOffline": "Consul offline",
-  "consulOfflineHint": "The config store (Consul) isn't reachable, so changes can't be saved. Set CONSUL_ENABLED + the Consul host, then reload.",
+  "storeConnected": "Config store: ready",
+  "storeOffline": "Config store: offline",
+  "storeOfflineHint": "The config store (Key Value / Redis) isn't reachable, so changes can't be saved. Set SPRING_DATA_REDIS_URL, then reload.",
   "serviceFeeRate": "Service fee rate",
   "serviceFeeRateHint": "Platform fee as a fraction of order total. 0.02 = 2%.",
   "bogEnv": "Bank of Georgia environment",
@@ -18,6 +18,6 @@
   "deriveFromEnv": "Blank — derive from environment",
   "save": "Save",
   "saving": "Saving…",
-  "savedLive": "Saved — applying live via Consul",
+  "savedLive": "Saved — applying live",
   "saveFailed": "Couldn't save the config"
 }

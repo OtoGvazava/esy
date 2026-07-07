@@ -3,7 +3,7 @@ package com.esyback.ecommerce.controller;
 import com.esyback.ecommerce.config.AppProperties;
 import com.esyback.ecommerce.config.BogProperties;
 import com.esyback.ecommerce.config.PlatformProperties;
-import com.esyback.ecommerce.service.ConsulConfigWriter;
+import com.esyback.ecommerce.service.ConfigStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,10 +17,10 @@ import java.util.Map;
 
 /**
  * ADMIN-only live config. GET returns the currently-effective values (read from
- * the refreshable {@code @ConfigurationProperties} beans); PUT validates and
- * writes changed keys to Consul KV, which the config watch then hot-refreshes
- * into those beans — no redeploy. Gated by {@code @PreAuthorize} (method
- * security is enabled), so the URL being permitAll is fine.
+ * the config beans); PUT validates and writes changed keys to the {@link
+ * ConfigStore} (Redis/Valkey), which the beans then read on their next call —
+ * within the store's short cache TTL, no redeploy. Gated by {@code @PreAuthorize}
+ * (method security is enabled), so the URL being permitAll is fine.
  */
 @RestController
 @RequestMapping("/api/admin/config")
@@ -30,7 +30,7 @@ public class AdminConfigController {
     private final BogProperties bog;
     private final PlatformProperties platform;
     private final AppProperties app;
-    private final ConsulConfigWriter consul;
+    private final ConfigStore store;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -41,8 +41,8 @@ public class AdminConfigController {
         m.put("bogAuthUrl", bog.getAuthUrl());
         m.put("bogBaseUrl", bog.getBaseUrl());
         m.put("publicBaseUrl", app.getPublicBaseUrl());
-        // Whether writes are possible right now (Consul reachable/enabled).
-        m.put("consulEnabled", consul.isEnabled());
+        // Whether writes are possible right now (config store reachable).
+        m.put("storeReady", store.ready());
         return m;
     }
 
@@ -64,27 +64,27 @@ public class AdminConfigController {
             if (rate.signum() < 0 || rate.compareTo(BigDecimal.ONE) > 0) {
                 throw bad("serviceFeeRate must be between 0 and 1 (0.02 = 2%)");
             }
-            consul.put("app.platform.service-fee-rate", rate.toPlainString());
+            store.set("app.platform.service-fee-rate", rate.toPlainString());
         }
         if (body.containsKey("bogEnv")) {
             String env = body.get("bogEnv") == null ? "" : body.get("bogEnv").trim().toLowerCase();
             if (!env.equals("live") && !env.equals("sandbox")) {
                 throw bad("bogEnv must be 'live' or 'sandbox'");
             }
-            consul.put("app.bog.env", env);
+            store.set("app.bog.env", env);
         }
         if (body.containsKey("bogAuthUrl")) {
-            consul.put("app.bog.auth-url", validUrlOrBlank(body.get("bogAuthUrl")));
+            store.set("app.bog.auth-url", validUrlOrBlank(body.get("bogAuthUrl")));
         }
         if (body.containsKey("bogBaseUrl")) {
-            consul.put("app.bog.base-url", validUrlOrBlank(body.get("bogBaseUrl")));
+            store.set("app.bog.base-url", validUrlOrBlank(body.get("bogBaseUrl")));
         }
         if (body.containsKey("publicBaseUrl")) {
-            consul.put("app.public-base-url", validUrlOrBlank(body.get("publicBaseUrl")));
+            store.set("app.public-base-url", validUrlOrBlank(body.get("publicBaseUrl")));
         }
         return ResponseEntity.ok(Map.of(
             "ok", true,
-            "note", "Written to Consul; the change applies within a few seconds via the config watch."));
+            "note", "Written to the config store; the change applies within a few seconds."));
     }
 
     private String validUrlOrBlank(String value) {

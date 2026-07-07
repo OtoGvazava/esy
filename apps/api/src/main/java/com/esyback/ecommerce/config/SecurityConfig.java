@@ -53,10 +53,8 @@ public class SecurityConfig {
                 .requestMatchers("/oauth2/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/error").permitAll()
-                // Actuator: health is public (Render health checks); refresh is
-                // a state-changing POST that re-binds live config, so ADMIN only.
+                // Actuator: only health is exposed, and it's public (probes).
                 .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers("/actuator/refresh").hasRole("ADMIN")
                 // The SPA + storefront are public; admin product mutations are
                 // still locked down by @PreAuthorize("hasRole('ADMIN')")
                 // (@EnableMethodSecurity), so static assets / client routes /

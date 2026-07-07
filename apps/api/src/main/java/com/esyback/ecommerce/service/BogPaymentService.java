@@ -52,9 +52,9 @@ public class BogPaymentService {
     private final SecretCipher secretCipher;
     private final ObjectMapper objectMapper;
     // Runtime-refreshable config (env / host overrides / callback public key).
-    // Read via getters at call time so a /actuator/refresh (e.g. Consul KV
-    // change) takes effect without restarting — the service stays a singleton
-    // so tokenCache below is preserved across refreshes.
+    // Read via getters at call time so an admin config change takes effect
+    // without restarting — the service stays a singleton so tokenCache below is
+    // preserved.
     private final BogProperties bog;
 
     // Live vs sandbox host pairs. Sandbox is BOG's fully-isolated test space
