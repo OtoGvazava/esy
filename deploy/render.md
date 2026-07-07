@@ -8,9 +8,10 @@ frontend's relative `/api` calls work with no CORS.
 ## Free-plan caveats
 
 - The instance **sleeps after ~15 min idle**; the next request cold-starts (~30–60s).
-- DB is **in-memory H2** (Render's free plan has no persistent disk), so data
-  resets on restart/redeploy. `DataInitializer` reseeds products; dev-login
-  still works every run. Fine for a demo; not for real orders.
+- **Prod now runs on a Render PostgreSQL** so data persists across deploys (see
+  *Persistence* below). Without a datasource the app defaults to **in-memory H2**,
+  which resets every restart/redeploy — fine for a throwaway demo, not for real
+  orders. `DataInitializer` seeds a fresh DB (Postgres or H2) on first boot.
 
 ## Deploy (one time, ~5 min of your input)
 
@@ -67,9 +68,9 @@ code and verified. iCloud stays a dev stand-in (Apple OAuth not configured).
 
 ## Persistence (required for real signup / accounts / orders)
 
-H2 is in-memory → every redeploy/restart wipes signed-up stores, accounts,
-memberships and orders. The platform (store signup, the cross-store account
-hub, orders) is only "real" with a database.
+Without a persistent DB, every redeploy/restart wipes signed-up stores, accounts,
+memberships and orders — the platform is only "real" with one. **Prod now runs on
+Render PostgreSQL** (steps below); local uses the docker Postgres stack.
 
 **Local (one command):** `docker compose up --build` → http://lvh.me:8092
 (platform) and http://&lt;sub&gt;.lvh.me:8092 (tenant stores — `*.lvh.me`
@@ -78,11 +79,23 @@ app with `JPA_DDL_AUTO=update`; data survives restarts (named volume
 `esy_pgdata`; `docker compose down -v` wipes it). See CLAUDE.md
 "Multi-tenant + real Google sign-in (lvh.me)" for the full clean setup.
 
-**Render:** add a **Render PostgreSQL**, then on the web service set
-`SPRING_DATASOURCE_URL` (jdbc:postgresql://…), `SPRING_DATASOURCE_USERNAME`,
-`SPRING_DATASOURCE_PASSWORD`, `JPA_DDL_AUTO=update`. The backend already reads
-these (`application.yml`); the postgres driver is bundled. The free Render
-plan has no managed Postgres for long — this is the paid path.
+**Render (done — prod runs on this):** create a **Render PostgreSQL** in the
+**same region** as the web service, then on the web service → Environment set:
+
+- `SPRING_DATASOURCE_URL` = `jdbc:postgresql://<host>:<port>/<db>` — ⚠️ take
+  Render's **Internal Database URL** (`postgresql://user:pass@host:port/db`),
+  **add the `jdbc:` prefix**, and **drop the `user:pass@`** part. Pasting it raw
+  fails at boot with Hikari `URL must start with 'jdbc'`.
+- `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` = that user / password.
+- `JPA_DDL_AUTO=update` — also pinned in [`render.yaml`](../render.yaml). It must
+  **never** be `create-drop` on Postgres (that drops every table each deploy); the
+  blueprint value guards against a re-sync silently resetting it.
+
+The backend reads these from `application.yml`; the postgres driver is bundled.
+Region must match (web + DB) so the internal URL resolves on the private network.
+First boot on the empty DB creates the schema (`update`) + `DataInitializer` seeds.
+⚠️ Render's **free** Postgres expires after ~30 days — use a paid tier for real
+persistence. Heed the `ddl-auto=update` traps in CLAUDE.md for future schema changes.
 
 Account model: one global `User` (unique email/username) + `StoreMembership`
 (OWNER/CUSTOMER) + `Order`/`SavedItem`/`StoreFollow`. `GET /api/account`

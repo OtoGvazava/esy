@@ -60,9 +60,13 @@ docker compose up --build     # Postgres-backed; data persists (named volume)
   on it. Always set `JAVA_HOME` to the `ms-17.0.18` JDK for any `mvn`.
 - **Vite dev server needs Node 18–22.** Node 25 crashes `vite`/`vite preview`
   silently (the Docker build pins Node 20). `vite build` works on Node 25.
-- **H2 is in-memory** on Render free → data resets on restart/redeploy;
-  `DataInitializer` reseeds products/roles/tenants. Persist via
-  `SPRING_DATASOURCE_URL` (file/Postgres) + `JPA_DDL_AUTO=update`.
+- **Prod runs on Render PostgreSQL** (`SPRING_DATASOURCE_*` +
+  `JPA_DDL_AUTO=update`) — data persists across deploys. **Local/default is
+  in-memory H2** (`create-drop`, wiped each boot; `DataInitializer` reseeds
+  products/roles/tenants). Consequence: the `ddl-auto=update` traps below now
+  bite *prod*, not just the docker `lvh.me:8092` stack. Setup steps:
+  `deploy/render.md` (note: `SPRING_DATASOURCE_URL` must be a `jdbc:postgresql://`
+  URL — Render's Internal URL is `postgresql://…` and must be rewritten).
 - **`ddl-auto=update` cannot migrate a *populated* Postgres** (the docker
   `lvh.me:8092` stack + any persistent prod). It is additive-only: it never
   drops/alters an existing column or constraint, and it silently *logs-and-
