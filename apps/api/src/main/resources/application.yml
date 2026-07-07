@@ -17,6 +17,11 @@ spring:
       enabled: ${CONSUL_ENABLED:false}
       host: ${CONSUL_HOST:localhost}
       port: ${CONSUL_PORT:8500}
+      # For a real consul.esy.ge: set CONSUL_SCHEME=https (Consul HTTPS API is
+      # 8501) and CONSUL_TOKEN to an ACL token scoped to read the config/ prefix.
+      # Both default to plain http / no token for local dev — inert until set.
+      scheme: ${CONSUL_SCHEME:http}
+      token: ${CONSUL_TOKEN:}
       config:
         enabled: true
         format: KEY_VALUE
