@@ -13,11 +13,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.zip.GZIPInputStream;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.Signature;
@@ -98,6 +100,31 @@ public class BogPaymentService {
             ? override.trim() : (sandbox() ? SANDBOX_BASE : LIVE_BASE);
     }
 
+    /**
+     * Read a response body as UTF-8, transparently gunzipping when needed. BOG
+     * sometimes returns gzip-compressed responses (Content-Encoding: gzip, magic
+     * bytes 0x1F 0x8B) that the JDK HttpClient neither negotiates away nor
+     * auto-decodes — parsing the raw bytes as JSON otherwise throws
+     * "Illegal character (CTRL-CHAR, code 31)".
+     */
+    String bodyString(HttpResponse<byte[]> res) {
+        byte[] b = res.body();
+        if (b == null || b.length == 0) return "";
+        boolean gzip = b.length > 1 && (b[0] & 0xff) == 0x1f && (b[1] & 0xff) == 0x8b;
+        if (!gzip) {
+            gzip = res.headers().firstValue("content-encoding")
+                .map(e -> e.toLowerCase().contains("gzip")).orElse(false);
+        }
+        if (gzip) {
+            try (GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(b))) {
+                return new String(gis.readAllBytes(), StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                log.warn("BOG response looked gzip but failed to decode: {}", e.getMessage());
+            }
+        }
+        return new String(b, StandardCharsets.UTF_8);
+    }
+
     // ---- Create order -------------------------------------------------------
 
     /**
@@ -149,17 +176,18 @@ public class BogPaymentService {
                 .header("Accept-Language", "ka")
                 .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
                 .build();
-            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<byte[]> res = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
+            String respBody = bodyString(res);
             if (res.statusCode() / 100 != 2) {
-                log.warn("BOG create-order failed ({}): {}", res.statusCode(), res.body());
+                log.warn("BOG create-order failed ({}): {}", res.statusCode(), respBody);
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "Payment provider rejected the order");
             }
-            JsonNode json = objectMapper.readTree(res.body());
+            JsonNode json = objectMapper.readTree(respBody);
             String bogId = json.path("id").asText(null);
             String redirect = json.path("_links").path("redirect").path("href").asText(null);
             if (bogId == null || redirect == null) {
-                log.warn("BOG create-order missing id/redirect: {}", res.body());
+                log.warn("BOG create-order missing id/redirect: {}", respBody);
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "Payment provider returned an unexpected response");
             }
@@ -190,13 +218,14 @@ public class BogPaymentService {
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString("grant_type=client_credentials"))
                 .build();
-            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<byte[]> res = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
+            String respBody = bodyString(res);
             if (res.statusCode() / 100 != 2) {
-                log.warn("BOG auth failed ({}): {}", res.statusCode(), res.body());
+                log.warn("BOG auth failed ({}): {}", res.statusCode(), respBody);
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "Payment provider authentication failed");
             }
-            JsonNode json = objectMapper.readTree(res.body());
+            JsonNode json = objectMapper.readTree(respBody);
             String token = json.path("access_token").asText(null);
             if (token == null) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
@@ -266,12 +295,12 @@ public class BogPaymentService {
                 .header("Accept", "application/json")
                 .GET()
                 .build();
-            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<byte[]> res = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
             if (res.statusCode() / 100 != 2) {
                 log.debug("BOG receipt {} -> {}", bogOrderId, res.statusCode());
                 return Optional.empty();
             }
-            JsonNode json = objectMapper.readTree(res.body());
+            JsonNode json = objectMapper.readTree(bodyString(res));
             String key = json.path("order_status").path("key").asText(null);
             return Optional.ofNullable(mapStatus(key));
         } catch (Exception e) {
