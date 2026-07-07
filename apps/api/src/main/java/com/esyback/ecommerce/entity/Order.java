@@ -63,18 +63,20 @@ public class Order {
     // an internal ledger figure esy bills the store for periodically. Frozen
     // per order so a later rate change can't rewrite historical amounts owed.
     //
-    // columnDefinition carries a DB-level DEFAULT so Hibernate ddl-auto=update
-    // can add this NOT NULL column to a table that already has rows (Postgres
-    // rejects ADD COLUMN NOT NULL without a default; existing rows backfill to
-    // the default). Portable across H2 (dev) and Postgres (prod/docker). See
-    // also DataInitializer / deploy notes: legacy orders read back as 0.
-    @Column(name = "service_fee", nullable = false, columnDefinition = "numeric(12,2) default 0")
+    // NB: do NOT put a "default" in columnDefinition — Hibernate ddl-auto=update
+    // then re-emits it verbatim as `ALTER COLUMN … SET DATA TYPE numeric(12,2)
+    // default 0` on every boot against Postgres, which is invalid SQL (syntax
+    // error at "default") and slows startup. The column already exists in prod;
+    // the app always sets the value, so no DB default is needed.
+    @Column(name = "service_fee", nullable = false, precision = 12, scale = 2)
     private BigDecimal serviceFee = BigDecimal.ZERO;
 
-    // Same NOT-NULL-on-populated-table concern as service_fee: the DB default
-    // ('NONE') lets ddl-auto=update add it to existing orders on deploy.
+    // columnDefinition="varchar(255)" (no default!) keeps Hibernate from freezing
+    // an @Enumerated CHECK on the column (see CLAUDE.md enum-CHECK trap) while
+    // avoiding the invalid "… default …" ALTER. It matches the existing column,
+    // so no ALTER is emitted.
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_status", nullable = false, columnDefinition = "varchar(255) default 'NONE'")
+    @Column(name = "payment_status", nullable = false, columnDefinition = "varchar(255)")
     private PaymentStatus paymentStatus = PaymentStatus.NONE;
 
     // BOG's own order id (UUID), returned by create-order and echoed in the
