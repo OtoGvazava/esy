@@ -1,8 +1,9 @@
-# Render Blueprint — one free Docker web service that serves the SPA + API.
-# Render auto-detects this when you create a Blueprint from the repo.
-# Free plan note: the instance sleeps after ~15 min idle (cold start on next
-# hit) and the H2 DB is in-memory, so data resets on restart/redeploy —
-# DataInitializer reseeds products and dev-login still works each run.
+# Render Blueprint — a Docker web service (SPA + API).
+# By default the DB is in-memory H2 (data resets on every deploy). For real
+# persistence, provision a Render PostgreSQL and set SPRING_DATASOURCE_URL/
+# USERNAME/PASSWORD on the web service (see deploy/render.md). JPA_DDL_AUTO is
+# `update` (NOT create-drop) so a persistent Postgres is never dropped on
+# deploy — heed the ddl-auto=update traps in CLAUDE.md.
 services:
   - type: web
     name: esy
@@ -16,5 +17,7 @@ services:
     envVars:
       - key: JWT_SECRET
         generateValue: true
+      # Additive migrations; on H2 (no datasource set) this still creates a
+      # fresh schema each boot. On Postgres it preserves data across deploys.
       - key: JPA_DDL_AUTO
-        value: create-drop
+        value: update
