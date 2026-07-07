@@ -28,6 +28,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final TenantContextService tenantContextService;
     private final MembershipService membershipService;
+    private final ConfigStore configStore;
 
     public User findOrCreateUser(String oauthProvider, String oauthProviderId, String email,
                                  String firstName, String lastName, String profileImageUrl) {
@@ -61,6 +62,12 @@ public class UserService {
                 return userRepository.save(u);
             });
 
+        // Grant ADMIN to allowlisted emails (app.admin-emails, env ADMIN_EMAILS)
+        // on sign-in. This is the only way ADMIN is assigned; the allowlist is
+        // read from the live config store so admins can be added without a
+        // redeploy (existing users get it on their next login).
+        ensureAdminIfAllowlisted(user);
+
         // Signing in on an actual storefront makes you a CUSTOMER of it.
         if (!tenantContextService.isPlatformHost()) {
             Tenant tenant = tenantContextService.getCurrentTenant();
@@ -80,6 +87,33 @@ public class UserService {
 
     public User save(User user) {
         return userRepository.save(user);
+    }
+
+    /**
+     * Ensure the user has the ADMIN role if their email is in the configured
+     * allowlist ({@code app.admin-emails}, comma-separated). Idempotent.
+     */
+    private void ensureAdminIfAllowlisted(User user) {
+        if (user == null || user.getEmail() == null) return;
+        String raw = configStore.get("app.admin-emails", "");
+        if (raw == null || raw.isBlank()) return;
+        String email = user.getEmail().trim().toLowerCase();
+        boolean allowed = java.util.Arrays.stream(raw.split(","))
+            .map(s -> s.trim().toLowerCase())
+            .filter(s -> !s.isEmpty())
+            .anyMatch(email::equals);
+        if (!allowed) return;
+        boolean hasAdmin = user.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getName()));
+        if (hasAdmin) return;
+        Role adminRole = roleRepository.findByName("ADMIN")
+            .orElseGet(() -> {
+                Role role = new Role();
+                role.setName("ADMIN");
+                role.setDescription("Administrator role");
+                return roleRepository.save(role);
+            });
+        user.addRole(adminRole);
+        userRepository.save(user);
     }
 
     public void assignAdminRole(Long userId) {

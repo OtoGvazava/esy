@@ -123,6 +123,10 @@ app:
   # lvh.me anyway, so the /pay/return page reconciles via the receipt API.
   public-base-url: ${APP_PUBLIC_BASE_URL:}
 
+  # Comma-separated emails granted the ADMIN role on sign-in (the ONLY way ADMIN
+  # is assigned). Overridable live via the config store (config:app.admin-emails).
+  admin-emails: ${ADMIN_EMAILS:}
+
   # AES key for secrets stored at rest (per-tenant BOG client secret). Any
   # length (SHA-256 derived, like the JWT key). Dev default works locally;
   # MUST be overridden in prod — changing it invalidates stored secrets, so
