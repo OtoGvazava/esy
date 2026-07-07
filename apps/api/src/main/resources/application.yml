@@ -1,7 +1,31 @@
 spring:
   application:
     name: ecommerce-platform
-  
+
+  # ── Dynamic config (Consul KV, opt-in) ──────────────────────────────────
+  # Consul is OFF by default: the app reads config from application.yml/env
+  # exactly as before. To source live-tunable values (app.bog.*, app.platform.*,
+  # app.public-base-url) from Consul KV and hot-refresh them, set:
+  #   CONSUL_ENABLED=true
+  #   SPRING_CONFIG_IMPORT=optional:consul:<host>:<port>   (e.g. consul:8500)
+  # `optional:` + fail-fast:false = a Consul outage falls back to these defaults
+  # instead of blocking boot. KV lives under config/ecommerce-platform/.
+  config:
+    import: ${SPRING_CONFIG_IMPORT:}
+  cloud:
+    consul:
+      enabled: ${CONSUL_ENABLED:false}
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
+      config:
+        enabled: true
+        format: KEY_VALUE
+        prefix: config
+        default-context: ecommerce-platform
+        fail-fast: false
+        watch:
+          enabled: true
+
   # Seeding is handled by DataInitializer.java; data.sql is comment-only, so
   # disable Spring's SQL init (an empty/comment-only script otherwise errors).
   sql:
@@ -156,3 +180,15 @@ jwt:
   # enough so local runs work without setting JWT_SECRET; override it in production.
   secret: ${JWT_SECRET:dev-local-esy-jwt-secret-please-override-in-production-0123456789abcdef}
   expiration: 86400000 # 24 hours
+
+# Actuator: expose ONLY the refresh + health endpoints (refresh re-binds the
+# @ConfigurationProperties beans after a config-source change). /actuator/refresh
+# is a state-changing POST and is locked to ADMIN in SecurityConfig.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: refresh,health
+  endpoint:
+    health:
+      access: read-only

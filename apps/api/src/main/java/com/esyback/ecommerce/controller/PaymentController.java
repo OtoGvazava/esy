@@ -1,5 +1,6 @@
 package com.esyback.ecommerce.controller;
 
+import com.esyback.ecommerce.config.AppProperties;
 import com.esyback.ecommerce.dto.CreateOrderRequest;
 import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.Tenant;
@@ -13,7 +14,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -50,12 +50,10 @@ public class PaymentController {
     private final UserService userService;
     private final TenantContextService tenantContextService;
     private final ObjectMapper objectMapper;
-
-    // The internet-reachable origin BOG redirects/calls back to. Empty =
-    // derive from the request (fine in prod same-origin; in local dev BOG
-    // can't reach it, so /status reconciles via the receipt instead).
-    @Value("${app.public-base-url:}")
-    private String publicBaseUrl;
+    // The internet-reachable origin BOG redirects/calls back to. Blank =
+    // derive from the request. Read at call time from a refreshable bean so it
+    // can change live without a redeploy.
+    private final AppProperties appProperties;
 
     @PostMapping("/checkout")
     public ResponseEntity<Map<String, Object>> checkout(@RequestBody CreateOrderRequest request,
@@ -148,6 +146,7 @@ public class PaymentController {
     // ---- helpers (mirrors OrderController) ----------------------------------
 
     private String origin(HttpServletRequest req) {
+        String publicBaseUrl = appProperties.getPublicBaseUrl();
         if (publicBaseUrl != null && !publicBaseUrl.isBlank()) {
             return publicBaseUrl.replaceAll("/+$", "");
         }

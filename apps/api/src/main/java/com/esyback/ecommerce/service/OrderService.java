@@ -1,5 +1,6 @@
 package com.esyback.ecommerce.service;
 
+import com.esyback.ecommerce.config.PlatformProperties;
 import com.esyback.ecommerce.dto.CreateOrderRequest;
 import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.OrderItem;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import org.springframework.beans.factory.annotation.Value;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -28,12 +28,10 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final MembershipService membershipService;
-
-    // Platform service fee, fraction of order total (0.02 = 2%). Tunable via
-    // PLATFORM_SERVICE_FEE_RATE without a redeploy. Field injection (not the
-    // Lombok constructor) so the default applies even in tests.
-    @Value("${app.platform.service-fee-rate:0.02}")
-    private BigDecimal serviceFeeRate;
+    // Platform service fee (fraction of order total). Read at call time from a
+    // refreshable config bean so the rate can change live (config UI / Consul)
+    // without a redeploy.
+    private final PlatformProperties platformProperties;
 
     public Order createOrder(User user, Tenant tenant, CreateOrderRequest req) {
         if (req.getItems() == null || req.getItems().isEmpty()) {
@@ -61,7 +59,7 @@ public class OrderService {
         order.setTotal(total);
         // 2% platform fee, frozen at order time. Server-side only — never sent
         // to the client and never added to the BOG charge.
-        order.setServiceFee(total.multiply(serviceFeeRate).setScale(2, RoundingMode.HALF_UP));
+        order.setServiceFee(total.multiply(platformProperties.getServiceFeeRate()).setScale(2, RoundingMode.HALF_UP));
 
         // Buying makes the account a CUSTOMER of the store (no downgrade of owners).
         if (user != null) membershipService.ensure(user, tenant, StoreMembership.Role.CUSTOMER);

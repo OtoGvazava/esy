@@ -2,13 +2,13 @@ package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.OrderItem;
+import com.esyback.ecommerce.config.BogProperties;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.security.SecretCipher;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -49,6 +49,11 @@ public class BogPaymentService {
 
     private final SecretCipher secretCipher;
     private final ObjectMapper objectMapper;
+    // Runtime-refreshable config (env / host overrides / callback public key).
+    // Read via getters at call time so a /actuator/refresh (e.g. Consul KV
+    // change) takes effect without restarting — the service stays a singleton
+    // so tokenCache below is preserved across refreshes.
+    private final BogProperties bog;
 
     // Live vs sandbox host pairs. Sandbox is BOG's fully-isolated test space
     // (no real charges; test cards on api.bog.ge/docs/sandbox/payments/test-cards).
@@ -56,30 +61,6 @@ public class BogPaymentService {
     static final String LIVE_BASE = "https://api.bog.ge";
     static final String SANDBOX_AUTH = "https://oauth2-sandbox.bog.ge/auth/realms/bog/protocol/openid-connect/token";
     static final String SANDBOX_BASE = "https://api-sandbox.bog.ge";
-
-    // Environment selector: "live" (default) or "sandbox". Flips BOTH the OAuth
-    // token host and the API base host together, so switching is one setting
-    // (BOG_ENV) rather than two URLs. Per-store credentials must match the
-    // selected environment (sandbox creds only auth against the sandbox realm).
-    @Value("${app.bog.env:live}")
-    private String env;
-
-    // Optional explicit host overrides. Blank (the default) = derive from `env`.
-    // Set only for an unusual/private host; authUrl()/baseUrl() resolve the
-    // effective value.
-    @Value("${app.bog.auth-url:}")
-    private String authUrlOverride;
-
-    @Value("${app.bog.base-url:}")
-    private String baseUrlOverride;
-
-    // BOG's published callback-signing public key (PEM, SHA256withRSA). There
-    // is NO safe baked-in default: a wrong key rejects every real payment
-    // callback. Blank → signature checks are skipped with a loud warning so
-    // local dev works; production MUST set BOG_PUBLIC_KEY (the PEM from
-    // https://api.bog.ge/docs/en/payments/callback) so callbacks are enforced.
-    @Value("${app.bog.public-key:}")
-    private String publicKeyPem;
 
     private final HttpClient http = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(10))
@@ -99,19 +80,22 @@ public class BogPaymentService {
     }
 
     private boolean sandbox() {
-        return "sandbox".equalsIgnoreCase(env == null ? "" : env.trim());
+        String e = bog.getEnv();
+        return "sandbox".equalsIgnoreCase(e == null ? "" : e.trim());
     }
 
     /** Effective OAuth token endpoint — explicit override, else per {@code env}. */
     String authUrl() {
-        return (authUrlOverride != null && !authUrlOverride.isBlank())
-            ? authUrlOverride.trim() : (sandbox() ? SANDBOX_AUTH : LIVE_AUTH);
+        String override = bog.getAuthUrl();
+        return (override != null && !override.isBlank())
+            ? override.trim() : (sandbox() ? SANDBOX_AUTH : LIVE_AUTH);
     }
 
     /** Effective API base URL — explicit override, else per {@code env}. */
     String baseUrl() {
-        return (baseUrlOverride != null && !baseUrlOverride.isBlank())
-            ? baseUrlOverride.trim() : (sandbox() ? SANDBOX_BASE : LIVE_BASE);
+        String override = bog.getBaseUrl();
+        return (override != null && !override.isBlank())
+            ? override.trim() : (sandbox() ? SANDBOX_BASE : LIVE_BASE);
     }
 
     // ---- Create order -------------------------------------------------------
@@ -241,6 +225,7 @@ public class BogPaymentService {
      * logged; production sets the key so it is fail-closed.
      */
     public boolean verifyCallbackSignature(byte[] rawBody, String signatureBase64) {
+        String publicKeyPem = bog.getPublicKey();
         if (publicKeyPem == null || publicKeyPem.isBlank()) {
             log.warn("BOG_PUBLIC_KEY unset — skipping callback signature verification "
                 + "(set it in production so callbacks are authenticated).");
