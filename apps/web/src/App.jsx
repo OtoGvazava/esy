@@ -16,6 +16,7 @@ import AuthCallback from './pages/AuthCallback';
 import LanguageSettings from './pages/LanguageSettings';
 import AppearanceSettings from './pages/AppearanceSettings';
 import StoreSettings from './pages/StoreSettings';
+import ConfigSettings from './pages/ConfigSettings';
 import AppProviders from './providers/AppProviders';
 import GlowDock from './components/glow/GlowDock';
 import ProfileGate from './components/ProfileGate';
@@ -46,6 +47,7 @@ function AppShell() {
         <Route path="/settings/language" element={<LanguageSettings />} />
         <Route path="/settings/appearance" element={<AppearanceSettings />} />
         <Route path="/settings/store" element={<StoreSettings />} />
+        <Route path="/settings/config" element={<ConfigSettings />} />
       </Routes>
       <GlowDock />
       <ProfileGate />

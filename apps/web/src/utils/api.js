@@ -343,6 +343,18 @@ export const tenantApi = {
   },
 };
 
+// ---- Admin: live config (ADMIN only) ---------------------------------------
+export const adminApi = {
+  // { serviceFeeRate, bogEnv, bogAuthUrl, bogBaseUrl, publicBaseUrl, consulEnabled }
+  getConfig() {
+    return api.get('/api/admin/config');
+  },
+  // Send only the keys you changed; server validates + writes to Consul.
+  updateConfig(patch) {
+    return api.put('/api/admin/config', patch);
+  },
+};
+
 export const handleApiError = (error, fallbackMessage = 'An error occurred') => {
   if (error?.name === 'AbortError') return 'Request was cancelled';
   if (error?.message?.includes('Failed to fetch')) {

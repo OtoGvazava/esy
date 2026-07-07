@@ -167,6 +167,8 @@
     "setPayments": "Payment methods",
     "setDashboard": "Shop dashboard",
     "dashboardValue": "Admin",
+    "setConfig": "Platform config",
+    "configValue": "Live",
     "setHelp": "Help & support",
     "signOut": "Sign out",
     "personal": {

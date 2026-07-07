@@ -167,6 +167,8 @@
     "setPayments": "გადახდის მეთოდები",
     "setDashboard": "მაღაზიის პანელი",
     "dashboardValue": "ადმინი",
+    "setConfig": "პლატფორმის კონფიგურაცია",
+    "configValue": "ცოცხალი",
     "setHelp": "დახმარება და მხარდაჭერა",
     "signOut": "გასვლა",
     "personal": {

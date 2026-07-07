@@ -31,6 +31,7 @@ export default function Account() {
     { id: 'addresses', k: t('account.setAddresses'), v: null, onClick: null },
     { id: 'payments', k: t('account.setPayments'), v: null, onClick: null },
     ...(isAdmin ? [{ id: 'dashboard', k: t('account.setDashboard'), v: t('account.dashboardValue'), onClick: () => navigate('/admin') }] : []),
+    ...(isAdmin ? [{ id: 'config', k: t('account.setConfig'), v: t('account.configValue'), onClick: () => navigate('/settings/config') }] : []),
     { id: 'help', k: t('account.setHelp'), v: null, onClick: null },
     { id: 'signout', k: t('account.signOut'), v: null, danger: true, onClick: () => { logout(); navigate('/'); } },
   ];
