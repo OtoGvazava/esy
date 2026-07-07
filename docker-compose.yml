@@ -49,9 +49,13 @@ services:
       # skips callback signature checks (BOG can't reach lvh.me anyway).
       APP_SECRET_ENC_KEY: ${APP_SECRET_ENC_KEY:-}
       APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-}
+      # BOG environment: live (default) or sandbox — flips both hosts at once.
+      # For local end-to-end testing set BOG_ENV=sandbox in .env + sandbox creds.
+      BOG_ENV: ${BOG_ENV:-live}
       BOG_PUBLIC_KEY: ${BOG_PUBLIC_KEY:-}
-      BOG_BASE_URL: ${BOG_BASE_URL:-https://api.bog.ge}
-      BOG_AUTH_URL: ${BOG_AUTH_URL:-https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token}
+      # Explicit host overrides — leave blank to derive from BOG_ENV.
+      BOG_BASE_URL: ${BOG_BASE_URL:-}
+      BOG_AUTH_URL: ${BOG_AUTH_URL:-}
     ports:
       - "8092:8080"
 

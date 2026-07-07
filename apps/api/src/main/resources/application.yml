@@ -119,8 +119,15 @@ app:
   # MUST set BOG_PUBLIC_KEY to the PEM from
   # https://api.bog.ge/docs/en/payments/callback so callbacks are enforced.
   bog:
-    auth-url: ${BOG_AUTH_URL:https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token}
-    base-url: ${BOG_BASE_URL:https://api.bog.ge}
+    # Environment: live (default) or sandbox. One switch flips BOTH hosts:
+    #   live    → oauth2.bog.ge         + api.bog.ge
+    #   sandbox → oauth2-sandbox.bog.ge  + api-sandbox.bog.ge  (isolated test
+    #             space, no real charges; test cards in the sandbox docs).
+    # A store's saved Client ID/Secret must belong to the selected environment.
+    env: ${BOG_ENV:live}
+    # Explicit host overrides — blank = derived from env above. Rarely needed.
+    auth-url: ${BOG_AUTH_URL:}
+    base-url: ${BOG_BASE_URL:}
     public-key: ${BOG_PUBLIC_KEY:}
 
   # Platform service fee accrued per order (fraction of order total; 0.02 =

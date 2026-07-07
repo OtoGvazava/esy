@@ -50,11 +50,28 @@ public class BogPaymentService {
     private final SecretCipher secretCipher;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.bog.auth-url:https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token}")
-    private String authUrl;
+    // Live vs sandbox host pairs. Sandbox is BOG's fully-isolated test space
+    // (no real charges; test cards on api.bog.ge/docs/sandbox/payments/test-cards).
+    static final String LIVE_AUTH = "https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token";
+    static final String LIVE_BASE = "https://api.bog.ge";
+    static final String SANDBOX_AUTH = "https://oauth2-sandbox.bog.ge/auth/realms/bog/protocol/openid-connect/token";
+    static final String SANDBOX_BASE = "https://api-sandbox.bog.ge";
 
-    @Value("${app.bog.base-url:https://api.bog.ge}")
-    private String baseUrl;
+    // Environment selector: "live" (default) or "sandbox". Flips BOTH the OAuth
+    // token host and the API base host together, so switching is one setting
+    // (BOG_ENV) rather than two URLs. Per-store credentials must match the
+    // selected environment (sandbox creds only auth against the sandbox realm).
+    @Value("${app.bog.env:live}")
+    private String env;
+
+    // Optional explicit host overrides. Blank (the default) = derive from `env`.
+    // Set only for an unusual/private host; authUrl()/baseUrl() resolve the
+    // effective value.
+    @Value("${app.bog.auth-url:}")
+    private String authUrlOverride;
+
+    @Value("${app.bog.base-url:}")
+    private String baseUrlOverride;
 
     // BOG's published callback-signing public key (PEM, SHA256withRSA). There
     // is NO safe baked-in default: a wrong key rejects every real payment
@@ -79,6 +96,22 @@ public class BogPaymentService {
         return t != null
             && t.getBogClientId() != null && !t.getBogClientId().isBlank()
             && t.getBogClientSecret() != null && !t.getBogClientSecret().isBlank();
+    }
+
+    private boolean sandbox() {
+        return "sandbox".equalsIgnoreCase(env == null ? "" : env.trim());
+    }
+
+    /** Effective OAuth token endpoint — explicit override, else per {@code env}. */
+    String authUrl() {
+        return (authUrlOverride != null && !authUrlOverride.isBlank())
+            ? authUrlOverride.trim() : (sandbox() ? SANDBOX_AUTH : LIVE_AUTH);
+    }
+
+    /** Effective API base URL — explicit override, else per {@code env}. */
+    String baseUrl() {
+        return (baseUrlOverride != null && !baseUrlOverride.isBlank())
+            ? baseUrlOverride.trim() : (sandbox() ? SANDBOX_BASE : LIVE_BASE);
     }
 
     // ---- Create order -------------------------------------------------------
@@ -124,7 +157,7 @@ public class BogPaymentService {
         body.put("redirect_urls", redirectUrls);
 
         try {
-            HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/payments/v1/ecommerce/orders"))
+            HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl() + "/payments/v1/ecommerce/orders"))
                 .timeout(Duration.ofSeconds(20))
                 .header("Authorization", "Bearer " + token)
                 .header("Content-Type", "application/json")
@@ -167,7 +200,7 @@ public class BogPaymentService {
         String basic = Base64.getEncoder().encodeToString(
             (clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8));
         try {
-            HttpRequest req = HttpRequest.newBuilder(URI.create(authUrl))
+            HttpRequest req = HttpRequest.newBuilder(URI.create(authUrl()))
                 .timeout(Duration.ofSeconds(15))
                 .header("Authorization", "Basic " + basic)
                 .header("Content-Type", "application/x-www-form-urlencoded")
@@ -242,7 +275,7 @@ public class BogPaymentService {
         if (!isConfigured(tenant) || bogOrderId == null) return Optional.empty();
         try {
             HttpRequest req = HttpRequest.newBuilder(
-                    URI.create(baseUrl + "/payments/v1/receipt/" + bogOrderId))
+                    URI.create(baseUrl() + "/payments/v1/receipt/" + bogOrderId))
                 .timeout(Duration.ofSeconds(15))
                 .header("Authorization", "Bearer " + accessToken(tenant))
                 .header("Accept", "application/json")
