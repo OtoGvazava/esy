@@ -5,6 +5,10 @@ import { authApi, accountApi } from '../utils/api';
 
 const AuthContext = createContext();
 
+// Exported like TenantContext's raw context so tooling (e.g. the design-system
+// preview harness) can re-provide a value; the app itself uses useAuth().
+export { AuthContext };
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

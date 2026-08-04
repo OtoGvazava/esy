@@ -1,0 +1,159 @@
+{
+  "projectId": "5ac6db82-6f27-4a3e-9a79-66aa0fd7c837",
+  "shape": "package",
+  "pkg": "esy",
+  "globalName": "EsyGlow",
+  "entry": "apps/web/.ds-entry.mjs",
+  "srcDir": "src",
+  "provider": {
+    "component": "GlowPreviewProvider"
+  },
+  "runtimeFontPrefixes": [
+    "Inter"
+  ],
+  "readmeHeader": ".design-sync/conventions.md",
+  "overrides": {
+    "GlowDock": {
+      "cardMode": "single",
+      "viewport": "560x180"
+    },
+    "GlowStickyCTA": {
+      "cardMode": "single",
+      "primaryStory": "Default",
+      "viewport": "520x230"
+    },
+    "GlowScreen": {
+      "cardMode": "single",
+      "viewport": "460x420"
+    },
+    "GlowTopNav": {
+      "cardMode": "column"
+    },
+    "GlowSearchBar": {
+      "cardMode": "column"
+    },
+    "AuthModal": {
+      "cardMode": "single",
+      "viewport": "520x520"
+    },
+    "CartDrawer": {
+      "cardMode": "single",
+      "viewport": "560x560"
+    },
+    "ProfileMenu": {
+      "cardMode": "single",
+      "viewport": "520x560"
+    },
+    "ProductEditorDialog": {
+      "cardMode": "single",
+      "viewport": "620x880"
+    },
+    "DeleteProductDialog": {
+      "cardMode": "single",
+      "viewport": "560x360"
+    },
+    "GlowModal": {
+      "cardMode": "single",
+      "viewport": "560x400"
+    },
+    "Header": {
+      "cardMode": "column"
+    },
+    "Navbar": {
+      "cardMode": "column"
+    },
+    "MobileFooter": {
+      "cardMode": "single",
+      "viewport": "420x300"
+    },
+    "OwnerBar": {
+      "cardMode": "single",
+      "viewport": "560x200"
+    },
+    "FloatingCart": {
+      "cardMode": "single",
+      "viewport": "820x400"
+    },
+    "FloatingContacts": {
+      "cardMode": "single",
+      "viewport": "820x420"
+    },
+    "SearchIsland": {
+      "cardMode": "column"
+    },
+    "SearchSuggestions": {
+      "cardMode": "column"
+    },
+    "GoogleStyleSearch": {
+      "cardMode": "column"
+    },
+    "PTopBar": {
+      "cardMode": "single",
+      "viewport": "1040x180"
+    },
+    "PFooter": {
+      "cardMode": "single",
+      "viewport": "1040x460"
+    },
+    "PersonalInfo": {
+      "cardMode": "single",
+      "viewport": "520x520"
+    },
+    "ProfileGate": {
+      "cardMode": "single",
+      "viewport": "520x480"
+    },
+    "DateOfBirthPicker": {
+      "cardMode": "column"
+    },
+    "MarkdownField": {
+      "cardMode": "column"
+    }
+  },
+  "componentSrcMap": {
+    "GlowScreen": "src/components/glow/GlowChrome.jsx",
+    "GlowTopNav": "src/components/glow/GlowChrome.jsx",
+    "GlowStickyCTA": "src/components/glow/GlowChrome.jsx",
+    "GlowDock": "src/components/glow/GlowDock.jsx",
+    "GlowLoadMore": "src/components/glow/GlowLoadMore.jsx",
+    "ThemePill": "src/components/glow/GlowPills.jsx",
+    "LangPill": "src/components/glow/GlowPills.jsx",
+    "Placeholder": "src/components/glow/GlowPrimitives.jsx",
+    "PoweredBy": "src/components/glow/GlowPrimitives.jsx",
+    "GlowToken": "src/components/glow/GlowPrimitives.jsx",
+    "GlowProductCard": "src/components/glow/GlowProductCard.jsx",
+    "GlowSearchBar": "src/components/glow/GlowSearchBar.jsx",
+    "Button": "src/components/common/Button.jsx",
+    "Card": "src/components/common/Card.jsx",
+    "AuthModal": "src/components/AuthModal.jsx",
+    "CartDrawer": "src/components/CartDrawer.jsx",
+    "DateOfBirthPicker": "src/components/DateOfBirthPicker.jsx",
+    "EsyLogo": null,
+    "FloatingCart": "src/components/FloatingCart.jsx",
+    "FloatingContacts": "src/components/FloatingContacts.jsx",
+    "GoogleStyleSearch": "src/components/GoogleStyleSearch.jsx",
+    "Header": "src/components/Header.jsx",
+    "Logo": "src/components/Logo.jsx",
+    "MobileFooter": "src/components/MobileFooter.jsx",
+    "Navbar": "src/components/Navbar.jsx",
+    "PersonalInfo": "src/components/PersonalInfo.jsx",
+    "PhoneVerifyBox": "src/components/PhoneVerifyBox.jsx",
+    "ProductCard": "src/components/ProductCard.jsx",
+    "ProfileGate": "src/components/ProfileGate.jsx",
+    "ProfileMenu": "src/components/ProfileMenu.jsx",
+    "SearchIsland": "src/components/SearchIsland.jsx",
+    "SearchSuggestions": "src/components/SearchSuggestions.jsx",
+    "DeleteProductDialog": "src/components/owner/DeleteProductDialog.jsx",
+    "GlowModal": "src/components/owner/GlowModal.jsx",
+    "MarkdownField": "src/components/owner/MarkdownField.jsx",
+    "OwnerBar": "src/components/owner/OwnerBar.jsx",
+    "ProductEditorDialog": "src/components/owner/ProductEditorDialog.jsx",
+    "ViewModeToggle": "src/components/owner/ViewModeToggle.jsx",
+    "EsyMark": "src/platform/PlatformShared.jsx",
+    "StoreMark": "src/platform/PlatformShared.jsx",
+    "StatusPill": "src/platform/PlatformShared.jsx",
+    "PTopBar": "src/platform/PlatformShared.jsx",
+    "PFooter": "src/platform/PlatformShared.jsx",
+    "StoreArtStrip": "src/platform/PlatformShared.jsx"
+  }
+}
