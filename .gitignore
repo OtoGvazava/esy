@@ -24,3 +24,12 @@ apps/api/target/
 # Logs
 *.log
 npm-debug.log*
+
+# design-sync (claude.ai/design) — staged scripts + build output + machine state.
+# Kept: .design-sync/config.json, NOTES.md, conventions.md, previews/, and the
+# apps/web/.ds-entry.mjs / .ds-provider.jsx sync inputs.
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
