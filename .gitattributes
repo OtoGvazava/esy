@@ -1,0 +1,9 @@
+# The design-sync durable set must stay LF on every platform.
+#
+# The converter embeds these files verbatim into the uploaded artifacts:
+# previews/*.tsx snippets go into each component's .prompt.md, and
+# conventions.md is prepended to the generated README. With Windows'
+# core.autocrlf=true they check out as CRLF, so a sync run on Windows rewrites
+# ~35 .prompt.md files with no text change — and the next run on macOS rewrites
+# them back. Pinning LF stops that ping-pong.
+.design-sync/** text eol=lf

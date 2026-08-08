@@ -91,6 +91,32 @@ dialog needs the same wrapper.**
 - `CartDrawer` shows its **empty-cart** state (the harness's CartProvider starts empty and
   there is no prop to seed items) — a legitimate, labelled card.
 
+## Line endings — CRLF makes a no-op re-sync look like a full rebuild (fixed)
+Root `.gitattributes` pins `.design-sync/** text eol=lf`. **Do not remove it.** Without it,
+on Windows (`core.autocrlf=true`) all 43 `previews/*.tsx` and `conventions.md` check out as
+CRLF. The converter embeds preview snippets verbatim into each `.prompt.md` and prepends
+`conventions.md` to the README, so the CRs propagate into the uploaded artifacts. Observed
+on the 2026-08-07 Windows re-sync **before** the fix, against a Mac-produced anchor:
+
+- 35 of 43 `.prompt.md` differed — **line endings only**, zero text change
+- all 43 `sourceKeys` invalidated → driver reported `43 changed, 0 unchanged`
+- `bundleSha12` changed too → `upload.any: true` (a full 43-component re-upload)
+- `renderHashes` were **identical 43/43** the whole time — the giveaway that nothing real changed
+
+After normalizing to LF: `0 changed, 43 verified-by-upload`, `upload: nothing`, and every
+hash (`renderHashes`, `sourceKeys`, `sourceHashes` 129/129, `bundleSha12`, `auxSha`,
+`styleSha`) matched the anchor exactly. The repo blobs were already LF, so
+`git add --renormalize` staged **no** content change — the fix is the `.gitattributes` file
+alone. **Diagnostic**: if a re-sync ever reports "everything changed" while `renderHashes`
+all match, check for CR before touching anything else.
+
+## Toolchain is per-machine — the notes below are not portable
+The "Playwright/Chromium already installed" line under Re-sync command was true of the
+original macOS machine (`~/Library/Caches/ms-playwright/`). On a fresh clone elsewhere
+nothing is cached, and `.ds-sync/` is gitignored so the converter must be re-staged and
+`npm i esbuild ts-morph @types/react` re-run every time. Point `--node-modules` at
+`apps/web/node_modules`.
+
 ## Re-sync risks
 - **Component set is pinned in `componentSrcMap` (43).** New components are NOT
   auto-discovered (no `.d.ts`) — add them to BOTH `apps/web/.ds-entry.mjs` and
@@ -110,6 +136,8 @@ node .ds-sync/resync.mjs --config .design-sync/config.json \
   --node-modules apps/web/node_modules --out ./ds-bundle \
   --remote .design-sync/.cache/remote-sync.json
 ```
-(fetch the project's `_ds_sync.json` → `.design-sync/.cache/remote-sync.json` first).
-Playwright/Chromium already installed under `.ds-sync/node_modules` +
-`~/Library/Caches/ms-playwright/`.
+(fetch the project's `_ds_sync.json` → `.design-sync/.cache/remote-sync.json` first;
+re-stage `.ds-sync/` and install its deps on any fresh clone — see "Toolchain is
+per-machine"). Add `--no-render-check` **only** when the diff shows `renderHashes`
+matching the anchor 43/43, i.e. nothing can have changed visually; otherwise install
+playwright + chromium and let the render check run.
