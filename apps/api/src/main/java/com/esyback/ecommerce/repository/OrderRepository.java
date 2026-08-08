@@ -30,9 +30,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * winner runs the stock commit. clearAutomatically so the follow-up entity
      * load sees the new status instead of a stale first-level-cache copy.
      */
+    // Enums travel as parameters: Hibernate 6 rejects a fully-qualified
+    // nested-enum literal in the SET clause ("Could not interpret path
+    // expression"), which fails Spring Data's boot-time query validation.
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update Order o set o.paymentStatus = com.esyback.ecommerce.entity.Order.PaymentStatus.PAID "
-        + "where o.orderNumber = :orderNumber "
-        + "and o.paymentStatus = com.esyback.ecommerce.entity.Order.PaymentStatus.PENDING")
-    int claimPaid(@Param("orderNumber") String orderNumber);
+    @Query("update Order o set o.paymentStatus = :paid "
+        + "where o.orderNumber = :orderNumber and o.paymentStatus = :pending")
+    int claimPaid(@Param("orderNumber") String orderNumber,
+                  @Param("paid") Order.PaymentStatus paid,
+                  @Param("pending") Order.PaymentStatus pending);
+
+    default int claimPaid(String orderNumber) {
+        return claimPaid(orderNumber, Order.PaymentStatus.PAID, Order.PaymentStatus.PENDING);
+    }
 }
