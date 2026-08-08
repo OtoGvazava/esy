@@ -45,6 +45,18 @@ public class OrderController {
             .map(OrderController::toMap).collect(Collectors.toList()));
     }
 
+    /**
+     * Shopper self-cancel (decision D1): allowed only while the order is still
+     * PLACED and unpaid — the service enforces both. Paid or in-payment orders
+     * return 409 and the shopper is told to contact the store.
+     */
+    @PostMapping("/{orderNumber}/cancel")
+    public ResponseEntity<Map<String, Object>> cancel(@PathVariable String orderNumber,
+                                                      Authentication authentication) {
+        User user = currentUser(authentication);
+        return ResponseEntity.ok(toMap(orderService.cancelByShopper(orderNumber, user)));
+    }
+
     // Phone verification is not required to sign up, but it (and a complete
     // profile) is required to place an order.
     private void requireOrderEligible(User user) {
@@ -71,10 +83,21 @@ public class OrderController {
         m.put("id", o.getId());
         m.put("orderNumber", o.getOrderNumber());
         m.put("status", o.getStatus().name().toLowerCase().replace('_', ' '));
+        m.put("paymentStatus", o.getPaymentStatus().name().toLowerCase());
         m.put("total", o.getTotal());
         m.put("items", o.getItems().size());
         m.put("placed", o.getCreatedAt());
         m.put("store", o.getTenant() == null ? null : TenantMapper.toMap(o.getTenant()));
+        if (o.getShipLine() != null) {
+            Map<String, Object> ship = new HashMap<>();
+            ship.put("recipient", o.getShipRecipient());
+            ship.put("phone", o.getShipPhone());
+            ship.put("line", o.getShipLine());
+            ship.put("city", o.getShipCity());
+            ship.put("postalCode", o.getShipPostalCode());
+            ship.put("country", o.getShipCountry());
+            m.put("delivery", ship);
+        }
         return m;
     }
 

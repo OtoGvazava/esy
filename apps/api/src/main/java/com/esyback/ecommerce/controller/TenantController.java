@@ -2,6 +2,7 @@ package com.esyback.ecommerce.controller;
 
 import com.esyback.ecommerce.dto.CreateTenantRequest;
 import com.esyback.ecommerce.dto.UpdateStoreRequest;
+import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.TenantLogo;
@@ -86,8 +87,10 @@ public class TenantController {
     // Edit the current store's branding. The store is resolved from the Host
     // header (same as everything else), and @storeAccess only lets the store's
     // OWNER (or a global ADMIN) through, so an owner can only edit their own.
+    // OWNER-only (decision D5): store identity/branding is the store itself,
+    // not day-to-day running — a MANAGER may not edit it.
     @PutMapping("/current")
-    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
     public ResponseEntity<Map<String, Object>> updateCurrentStore(@RequestBody UpdateStoreRequest request) {
         Tenant updated = tenantService.updateBranding(tenantContextService.getCurrentTenant(), request);
         return ResponseEntity.ok(TenantMapper.toMap(updated));
@@ -97,14 +100,14 @@ public class TenantController {
     // our DB like product photos; the response is the fresh tenant whose
     // logoUrl now points at the served bytes.
     @PostMapping(value = "/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
     public ResponseEntity<Map<String, Object>> uploadLogo(@RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(TenantMapper.toMap(tenantLogoService.setLogo(file)));
     }
 
     // Owner/admin removes the store logo (clears logoUrl, drops the bytes).
     @DeleteMapping("/logo")
-    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
     public ResponseEntity<Map<String, Object>> deleteLogo() {
         return ResponseEntity.ok(TenantMapper.toMap(tenantLogoService.clearLogo()));
     }
@@ -155,6 +158,26 @@ public class TenantController {
     public ResponseEntity<Map<String, Object>> currentStoreNewOrderCount() {
         Tenant tenant = tenantContextService.getCurrentTenant();
         return ResponseEntity.ok(Map.of("count", orderService.newOrderCount(tenant)));
+    }
+
+    /**
+     * Fulfilment transition for one of the current store's orders (decision
+     * D1). Legal moves are enforced in OrderService: PLACED→SHIPPED→
+     * OUT_FOR_DELIVERY→DELIVERED, cancel only from PLACED or SHIPPED. Body:
+     * {"status": "SHIPPED"}.
+     */
+    @PatchMapping("/orders/{orderId}/status")
+    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> updateOrderStatus(@PathVariable Long orderId,
+                                                                 @RequestBody Map<String, String> body) {
+        Order.Status next;
+        try {
+            next = Order.Status.valueOf(body.getOrDefault("status", "").trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown status");
+        }
+        Tenant tenant = tenantContextService.getCurrentTenant();
+        return ResponseEntity.ok(OrderController.toMap(orderService.updateStatus(tenant, orderId, next)));
     }
 
     // Surface the validation/conflict reason as { error }. Spring's default

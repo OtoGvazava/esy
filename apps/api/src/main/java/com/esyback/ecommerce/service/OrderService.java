@@ -2,11 +2,13 @@ package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.config.PlatformProperties;
 import com.esyback.ecommerce.dto.CreateOrderRequest;
+import com.esyback.ecommerce.entity.Address;
 import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.OrderItem;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
+import com.esyback.ecommerce.repository.AddressRepository;
 import com.esyback.ecommerce.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,6 +30,8 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final MembershipService membershipService;
+    private final ProductService productService;
+    private final AddressRepository addressRepository;
     // Platform service fee (fraction of order total). Read at call time from a
     // live config bean so the rate can change via the admin config UI
     // without a redeploy.
@@ -61,9 +65,55 @@ public class OrderService {
         // to the client and never added to the BOG charge.
         order.setServiceFee(total.multiply(platformProperties.getServiceFeeRate()).setScale(2, RoundingMode.HALF_UP));
 
+        applyDeliveryAddress(order, user, req);
+
         // Buying makes the account a CUSTOMER of the store (no downgrade of owners).
         if (user != null) membershipService.ensure(user, tenant, StoreMembership.Role.CUSTOMER);
         return orderRepository.save(order);
+    }
+
+    /**
+     * Freeze the delivery address onto the order (decision D4). A saved
+     * addressId wins; an inline address is saved into the user's book first
+     * (so the next checkout can reuse it), then frozen. The frozen copy is
+     * plain columns — later edits to the address book never rewrite an order.
+     */
+    private void applyDeliveryAddress(Order order, User user, CreateOrderRequest req) {
+        Address chosen = null;
+        if (req.getAddressId() != null && user != null) {
+            chosen = addressRepository.findByIdAndUser(req.getAddressId(), user)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown address"));
+        } else if (req.getAddress() != null) {
+            CreateOrderRequest.InlineAddress in = req.getAddress();
+            if (in.getRecipient() == null || in.getPhone() == null
+                || in.getLine() == null || in.getCity() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Delivery address needs recipient, phone, line and city");
+            }
+            Address a = new Address();
+            a.setRecipient(in.getRecipient());
+            a.setPhone(in.getPhone());
+            a.setLine(in.getLine());
+            a.setCity(in.getCity());
+            a.setPostalCode(in.getPostalCode());
+            a.setCountry(in.getCountry());
+            if (user != null) {
+                a.setUser(user);
+                boolean first = addressRepository.findByUserOrderByIsDefaultDescCreatedAtDesc(user).isEmpty();
+                a.setIsDefault(first);
+                chosen = addressRepository.save(a);
+            } else {
+                chosen = a; // guest checkout: freeze without saving a book entry
+            }
+        }
+        if (chosen != null) {
+            order.setShipRecipient(chosen.getRecipient());
+            order.setShipPhone(chosen.getPhone());
+            order.setShipLine(chosen.getLine());
+            order.setShipCity(chosen.getCity());
+            order.setShipPostalCode(chosen.getPostalCode());
+            order.setShipCountry(chosen.getCountry());
+        }
     }
 
     /** Mark a freshly created order as awaiting BOG payment + record BOG's id. */
@@ -92,8 +142,66 @@ public class OrderService {
             if (outcome == Order.PaymentStatus.FAILED) {
                 order.setStatus(Order.Status.CANCELLED);
             }
+            if (outcome == Order.PaymentStatus.PAID) {
+                // Decision D3: stock is committed at PAID, not at PLACED — no
+                // reservation-expiry machinery for abandoned checkouts. The
+                // idempotency guard above ("already == outcome" returns early)
+                // means a BOG callback retry can't decrement twice.
+                productService.commitStock(order);
+            }
             return orderRepository.save(order);
         });
+    }
+
+    /**
+     * Shopper-initiated cancellation (decision D1): only while the order is
+     * still PLACED and no money has moved or is moving. PENDING is excluded on
+     * purpose — a payment in flight must settle (or fail) first, otherwise a
+     * late success callback would pay for a cancelled order.
+     */
+    public Order cancelByShopper(String orderNumber, User user) {
+        Order order = findByOrderNumber(orderNumber)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        if (user == null || order.getUser() == null || !order.getUser().getId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your order");
+        }
+        if (order.getStatus() != Order.Status.PLACED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Order can no longer be cancelled");
+        }
+        if (order.getPaymentStatus() != Order.PaymentStatus.NONE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Paid or in-payment orders can't be self-cancelled — contact the store");
+        }
+        order.setStatus(Order.Status.CANCELLED);
+        return orderRepository.save(order);
+    }
+
+    /**
+     * Store-side fulfilment transition (decision D1). Legal moves:
+     * PLACED→SHIPPED→OUT_FOR_DELIVERY→DELIVERED, plus cancel from PLACED or
+     * SHIPPED. DELIVERED and CANCELLED are terminal. Scoped to the tenant so
+     * one store can never touch another store's order.
+     */
+    public Order updateStatus(Tenant tenant, Long orderId, Order.Status next) {
+        Order order = orderRepository.findById(orderId)
+            .filter(o -> o.getTenant().getId().equals(tenant.getId()))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        if (!isLegalTransition(order.getStatus(), next)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Illegal transition " + order.getStatus() + " -> " + next);
+        }
+        order.setStatus(next);
+        return orderRepository.save(order);
+    }
+
+    private static boolean isLegalTransition(Order.Status from, Order.Status to) {
+        if (to == null || from == to) return false;
+        return switch (from) {
+            case PLACED -> to == Order.Status.SHIPPED || to == Order.Status.CANCELLED;
+            case SHIPPED -> to == Order.Status.OUT_FOR_DELIVERY || to == Order.Status.CANCELLED;
+            case OUT_FOR_DELIVERY -> to == Order.Status.DELIVERED;
+            case DELIVERED, CANCELLED -> false;
+        };
     }
 
     public List<Order> ordersForUser(User user) {
@@ -114,8 +222,13 @@ public class OrderService {
         return orderRepository.countByTenantAndStatus(tenant, Order.Status.PLACED);
     }
 
+    // Decision D2: refunded money is not revenue, and neither are cancelled
+    // orders. Without these filters the stats screen silently counts money
+    // that was returned to shoppers.
     public BigDecimal revenue(Tenant tenant) {
         return orderRepository.findByTenantOrderByCreatedAtDesc(tenant).stream()
+            .filter(o -> o.getStatus() != Order.Status.CANCELLED)
+            .filter(o -> o.getPaymentStatus() != Order.PaymentStatus.REFUNDED)
             .map(Order::getTotal)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
