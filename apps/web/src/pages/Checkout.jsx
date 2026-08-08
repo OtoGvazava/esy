@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCart } from '../contexts/CartContext';
@@ -6,7 +6,7 @@ import { useOrders } from '../contexts/OrdersContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
 import { useGlow } from '../styles/glow';
-import { paymentApi, handleApiError } from '../utils/api';
+import { paymentApi, addressApi, handleApiError } from '../utils/api';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
 import PhoneVerifyBox from '../components/PhoneVerifyBox';
 
@@ -15,11 +15,11 @@ const devTenant = () => {
   catch { return undefined; }
 };
 
-function Field({ T, label, defaultValue, span }) {
+function Field({ T, label, value, onChange, span }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: span ? 'span 2' : undefined }}>
       <span style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</span>
-      <input defaultValue={defaultValue} style={{ padding: '10px 12px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.dark ? T.surface2 : '#fff', color: T.text, font: `500 13px ${T.font}`, outline: 'none' }} />
+      <input value={value} onChange={(e) => onChange(e.target.value)} style={{ padding: '10px 12px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.dark ? T.surface2 : '#fff', color: T.text, font: `500 13px ${T.font}`, outline: 'none' }} />
     </div>
   );
 }
@@ -37,6 +37,49 @@ export default function Checkout() {
   const [placing, setPlacing] = useState(false);
   const [payError, setPayError] = useState('');
 
+  // Delivery address (decision D4). Prefilled from the platform-wide address
+  // book's default entry; whatever is submitted gets frozen onto the order
+  // server-side, and a new inline address is saved to the book for next time.
+  const [savedAddressId, setSavedAddressId] = useState(null);
+  const [recipient, setRecipient] = useState('');
+  const [phone, setPhone] = useState('');
+  const [line, setLine] = useState('');
+  const [city, setCity] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [addressTouched, setAddressTouched] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!recipient) setRecipient([user.firstName, user.lastName].filter(Boolean).join(' '));
+    if (!phone && user.phoneNumber) setPhone(user.phoneNumber);
+    addressApi.list()
+      .then((list) => {
+        const def = (list || []).find((a) => a.isDefault) || (list || [])[0];
+        if (def) {
+          setSavedAddressId(def.id);
+          setRecipient(def.recipient || '');
+          setPhone(def.phone || '');
+          setLine(def.line || '');
+          setCity(def.city || '');
+          setPostalCode(def.postalCode || '');
+        }
+      })
+      .catch(() => { /* signed out or no book yet — the blank form is fine */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const addressComplete = recipient.trim() && phone.trim() && line.trim() && city.trim();
+  // Editing any field after a saved address loaded turns it into a new inline
+  // address (the frozen copy must match what the shopper sees on screen).
+  const touch = (setter) => (v) => { setAddressTouched(true); setter(v); };
+  const delivery = () => {
+    if (savedAddressId != null && !addressTouched) return { addressId: savedAddressId };
+    return { address: {
+      recipient: recipient.trim(), phone: phone.trim(), line: line.trim(),
+      city: city.trim(), postalCode: postalCode.trim() || null, country: null,
+    } };
+  };
+
   const subtotal = getTotalPrice();
   const count = items.reduce((s, it) => s + it.quantity, 0);
   // The shopper pays exactly the item subtotal — no shipping, no tax line.
@@ -45,8 +88,9 @@ export default function Checkout() {
   const total = subtotal;
   const email = user?.email || 'guest@esy.shop';
   // Ordering requires a complete profile AND a verified phone (the backend
-  // enforces this too — see OrderController.requireOrderEligible).
-  const eligible = !!user && user.profileComplete && !!user.phoneVerified;
+  // enforces this too — see OrderController.requireOrderEligible), plus a
+  // complete delivery address to freeze onto the order.
+  const eligible = !!user && user.profileComplete && !!user.phoneVerified && !!addressComplete;
 
   if (items.length === 0) {
     return (
@@ -73,7 +117,7 @@ export default function Checkout() {
     // /pay/return confirms PAID (so an abandoned payment doesn't lose it).
     if (store?.bogConfigured) {
       try {
-        const res = await paymentApi.checkout(cartItems, devTenant());
+        const res = await paymentApi.checkout(cartItems, devTenant(), delivery());
         if (res?.redirectUrl) {
           window.location.href = res.redirectUrl;
           return; // leaving the SPA — keep the spinner
@@ -88,7 +132,7 @@ export default function Checkout() {
 
     // Fallback for stores without a payment provider: the previous
     // free-order flow (context posts /api/orders, order lives in the DB).
-    const res = await createOrder({ items: cartItems });
+    const res = await createOrder({ items: cartItems, ...delivery() });
     setPlacing(false);
     if (!res?.success) return; // backend rejected — stay on checkout
     clearCart();
@@ -136,11 +180,11 @@ export default function Checkout() {
           <div style={{ padding: '14px 14px 16px', borderRadius: 16, background: T.surface, border: `1.5px solid ${T.accent}` }}>
             <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>{t('checkout.shippingAddress')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <Field T={T} label={t('checkout.firstName')} defaultValue={user?.firstName || ''} />
-              <Field T={T} label={t('checkout.lastName')} defaultValue={user?.lastName || ''} />
-              <Field T={T} label={t('checkout.address')} defaultValue="" span />
-              <Field T={T} label={t('checkout.city')} defaultValue="" />
-              <Field T={T} label={t('checkout.zip')} defaultValue="" />
+              <Field T={T} label={t('checkout.recipient')} value={recipient} onChange={touch(setRecipient)} />
+              <Field T={T} label={t('checkout.phone')} value={phone} onChange={touch(setPhone)} />
+              <Field T={T} label={t('checkout.address')} value={line} onChange={touch(setLine)} span />
+              <Field T={T} label={t('checkout.city')} value={city} onChange={touch(setCity)} />
+              <Field T={T} label={t('checkout.zip')} value={postalCode} onChange={touch(setPostalCode)} />
             </div>
           </div>
         </div>

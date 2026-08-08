@@ -67,7 +67,9 @@
     "payCard": "Pay with card",
     "redirecting": "Redirecting…",
     "payError": "Payment could not be started. Please try again.",
-    "bogSecure": "Secure card payment via Bank of Georgia"
+    "bogSecure": "Secure card payment via Bank of Georgia",
+    "recipient": "Recipient",
+    "phone": "Phone"
   },
   "payReturn": {
     "checkingTitle": "Confirming your payment…",

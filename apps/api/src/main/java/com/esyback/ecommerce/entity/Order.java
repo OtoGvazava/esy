@@ -85,6 +85,29 @@ public class Order {
     @Column(name = "bog_order_id")
     private String bogOrderId;
 
+    // Delivery address, frozen at checkout (decision D4). Plain columns, not a
+    // FK to Address: the user's address book is mutable and deletable, but an
+    // order must keep the address as it was at purchase time — the same pattern
+    // OrderItem uses for title/price. All nullable (additive-safe on populated
+    // Postgres; pre-existing orders simply have no delivery address).
+    @Column(name = "ship_recipient")
+    private String shipRecipient;
+
+    @Column(name = "ship_phone")
+    private String shipPhone;
+
+    @Column(name = "ship_line")
+    private String shipLine;
+
+    @Column(name = "ship_city")
+    private String shipCity;
+
+    @Column(name = "ship_postal_code")
+    private String shipPostalCode;
+
+    @Column(name = "ship_country")
+    private String shipCountry;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
