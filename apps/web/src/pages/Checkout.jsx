@@ -41,12 +41,16 @@ export default function Checkout() {
   // book's default entry; whatever is submitted gets frozen onto the order
   // server-side, and a new inline address is saved to the book for next time.
   const [savedAddressId, setSavedAddressId] = useState(null);
+  // Snapshot of the loaded saved address — "did the shopper change anything?"
+  // is answered by value comparison, not a touched flag: a set-only flag would
+  // treat a reverted keystroke as a new address and save a duplicate book row
+  // on every such checkout.
+  const [savedSnapshot, setSavedSnapshot] = useState(null);
   const [recipient, setRecipient] = useState('');
   const [phone, setPhone] = useState('');
   const [line, setLine] = useState('');
   const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');
-  const [addressTouched, setAddressTouched] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -57,6 +61,10 @@ export default function Checkout() {
         const def = (list || []).find((a) => a.isDefault) || (list || [])[0];
         if (def) {
           setSavedAddressId(def.id);
+          setSavedSnapshot({
+            recipient: def.recipient || '', phone: def.phone || '', line: def.line || '',
+            city: def.city || '', postalCode: def.postalCode || '',
+          });
           setRecipient(def.recipient || '');
           setPhone(def.phone || '');
           setLine(def.line || '');
@@ -69,11 +77,14 @@ export default function Checkout() {
   }, [user?.id]);
 
   const addressComplete = recipient.trim() && phone.trim() && line.trim() && city.trim();
-  // Editing any field after a saved address loaded turns it into a new inline
-  // address (the frozen copy must match what the shopper sees on screen).
-  const touch = (setter) => (v) => { setAddressTouched(true); setter(v); };
   const delivery = () => {
-    if (savedAddressId != null && !addressTouched) return { addressId: savedAddressId };
+    const matchesSaved = savedAddressId != null && savedSnapshot
+      && recipient.trim() === savedSnapshot.recipient
+      && phone.trim() === savedSnapshot.phone
+      && line.trim() === savedSnapshot.line
+      && city.trim() === savedSnapshot.city
+      && postalCode.trim() === savedSnapshot.postalCode;
+    if (matchesSaved) return { addressId: savedAddressId };
     return { address: {
       recipient: recipient.trim(), phone: phone.trim(), line: line.trim(),
       city: city.trim(), postalCode: postalCode.trim() || null, country: null,
@@ -180,11 +191,11 @@ export default function Checkout() {
           <div style={{ padding: '14px 14px 16px', borderRadius: 16, background: T.surface, border: `1.5px solid ${T.accent}` }}>
             <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>{t('checkout.shippingAddress')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <Field T={T} label={t('checkout.recipient')} value={recipient} onChange={touch(setRecipient)} />
-              <Field T={T} label={t('checkout.phone')} value={phone} onChange={touch(setPhone)} />
-              <Field T={T} label={t('checkout.address')} value={line} onChange={touch(setLine)} span />
-              <Field T={T} label={t('checkout.city')} value={city} onChange={touch(setCity)} />
-              <Field T={T} label={t('checkout.zip')} value={postalCode} onChange={touch(setPostalCode)} />
+              <Field T={T} label={t('checkout.recipient')} value={recipient} onChange={setRecipient} />
+              <Field T={T} label={t('checkout.phone')} value={phone} onChange={setPhone} />
+              <Field T={T} label={t('checkout.address')} value={line} onChange={setLine} span />
+              <Field T={T} label={t('checkout.city')} value={city} onChange={setCity} />
+              <Field T={T} label={t('checkout.zip')} value={postalCode} onChange={setPostalCode} />
             </div>
           </div>
         </div>

@@ -130,7 +130,8 @@ public class ProductService {
             product.getId(),
             product.getTitle(),
             product.getImageUrl(),
-            product.getPrice()
+            product.getPrice(),
+            product.getQuantity()
         );
     }
     

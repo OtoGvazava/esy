@@ -46,19 +46,17 @@ public class SchemaMigrations implements CommandLineRunner {
         );
     }
 
+    // No catch: a failed constraint migration must FAIL THE BOOT, not log a
+    // warn line and defer the breakage to the first rejected write at runtime —
+    // that silent logs-and-continues mode is the exact ddl-auto trap this class
+    // exists to remove. H2 accepts both statements (DROP CONSTRAINT IF EXISTS
+    // is a no-op there, the ADD mirrors what create-drop built), so nothing
+    // legitimate is being protected by swallowing.
     private void recreateCheck(String table, String constraint, String column, String values) {
-        try {
-            jdbc.execute("ALTER TABLE " + table + " DROP CONSTRAINT IF EXISTS " + constraint);
-            jdbc.execute("ALTER TABLE " + table
-                + " ADD CONSTRAINT " + constraint
-                + " CHECK (" + column + " IN (" + values + "))");
-            log.info("SchemaMigrations: {} re-created on {} ({})", constraint, table, values);
-        } catch (Exception e) {
-            // Do not block boot: H2 syntax differences or an already-correct
-            // schema must never take the app down. Postgres failures show up
-            // loudly here and again on the first rejected write.
-            log.warn("SchemaMigrations: could not re-create {} on {}: {}",
-                constraint, table, e.getMessage());
-        }
+        jdbc.execute("ALTER TABLE " + table + " DROP CONSTRAINT IF EXISTS " + constraint);
+        jdbc.execute("ALTER TABLE " + table
+            + " ADD CONSTRAINT " + constraint
+            + " CHECK (" + column + " IN (" + values + "))");
+        log.info("SchemaMigrations: {} re-created on {} ({})", constraint, table, values);
     }
 }

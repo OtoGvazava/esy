@@ -116,6 +116,19 @@ public class OrderService {
         }
     }
 
+    /**
+     * Decision D3 for the free-flow path (stores without a payment provider):
+     * a NONE-payment order never reaches settlePayment, so its stock would
+     * never decrement. The free-order endpoint calls this right after
+     * creation — placement IS settlement when no money moves. The BOG path
+     * must NOT call it (there the commit happens at the atomic PAID claim).
+     */
+    public void commitFreeOrderStock(Order order) {
+        if (order.getPaymentStatus() == Order.PaymentStatus.NONE) {
+            productService.commitStock(order);
+        }
+    }
+
     /** Mark a freshly created order as awaiting BOG payment + record BOG's id. */
     public Order markBogPending(Order order, String bogOrderId) {
         order.setPaymentStatus(Order.PaymentStatus.PENDING);
@@ -136,18 +149,25 @@ public class OrderService {
      */
     public Optional<Order> settlePayment(String orderNumber, Order.PaymentStatus outcome) {
         if (outcome == null) return findByOrderNumber(orderNumber);
+        if (outcome == Order.PaymentStatus.PAID) {
+            // Decision D3: stock is committed at PAID, not at PLACED. The BOG
+            // callback and the /pay/return reconcile race here, so the
+            // PENDING→PAID flip is one atomic conditional UPDATE — exactly one
+            // caller sees claimed == 1 and commits stock; the loser (and any
+            // BOG retry) finds nothing to claim and decrements nothing.
+            int claimed = orderRepository.claimPaid(orderNumber);
+            return findByOrderNumber(orderNumber).map(order -> {
+                if (claimed == 1) {
+                    productService.commitStock(order);
+                }
+                return order;
+            });
+        }
         return findByOrderNumber(orderNumber).map(order -> {
             if (order.getPaymentStatus() == outcome) return order;
             order.setPaymentStatus(outcome);
             if (outcome == Order.PaymentStatus.FAILED) {
                 order.setStatus(Order.Status.CANCELLED);
-            }
-            if (outcome == Order.PaymentStatus.PAID) {
-                // Decision D3: stock is committed at PAID, not at PLACED — no
-                // reservation-expiry machinery for abandoned checkouts. The
-                // idempotency guard above ("already == outcome" returns early)
-                // means a BOG callback retry can't decrement twice.
-                productService.commitStock(order);
             }
             return orderRepository.save(order);
         });

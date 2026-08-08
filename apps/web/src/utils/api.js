@@ -93,13 +93,15 @@ class ApiClient {
 const api = new ApiClient('');
 
 // ---- Shape mapping (backend DTO <-> frontend UI shape) ----------------------
-// Backend list item: { id, title, imageUrl, price }
+// Backend list item: { id, title, imageUrl, price, quantity }
 const mapListItem = (dto) => ({
   id: dto.id,
   title: dto.title,
   price: dto.price,
   thumbnail: dto.imageUrl,
   image: dto.imageUrl,
+  quantity: dto.quantity,
+  stock: dto.quantity,
 });
 
 // Backend detail: { id, title, description, imageUrl, price, quantity,
@@ -171,10 +173,12 @@ export const productApi = {
 
   // Multipart — bypasses the JSON client so the browser sets the multipart
   // boundary. Cookie auth via credentials:'include'. Returns the fresh product.
+  // Because it bypasses ApiClient, the manager-host ?tenant rewrite must be
+  // applied by hand or the upload resolves to the default tenant and 403s.
   async uploadImages(id, files) {
     const fd = new FormData();
     for (const f of files) fd.append('files', f);
-    const res = await fetch(`/api/products/${id}/images`, {
+    const res = await fetch(withManagerTenant(`/api/products/${id}/images`), {
       method: 'POST',
       body: fd,
       credentials: 'include',

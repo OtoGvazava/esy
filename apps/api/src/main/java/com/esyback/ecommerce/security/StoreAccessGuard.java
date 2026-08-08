@@ -35,8 +35,7 @@ public class StoreAccessGuard {
         User user = authenticated(authentication);
         if (user == null) return false;
         if (isPlatformAdmin(user)) return true;
-        // Platform front door has no store to manage.
-        if (tenantContextService.isPlatformHost()) return false;
+        if (noStoreInScope()) return false;
         return membershipService.canManage(user, tenantContextService.getCurrentTenant());
     }
 
@@ -44,8 +43,20 @@ public class StoreAccessGuard {
         User user = authenticated(authentication);
         if (user == null) return false;
         if (isPlatformAdmin(user)) return true;
-        if (tenantContextService.isPlatformHost()) return false;
+        if (noStoreInScope()) return false;
         return membershipService.isOwner(user, tenantContextService.getCurrentTenant());
+    }
+
+    /**
+     * The platform front door has no store to manage — but the manager host is
+     * platform-faced AND store-scoped (?tenant=<sub> selects the store there),
+     * so it must fall through to the membership check. Without this exception
+     * every guarded endpoint 403s for non-ADMIN owners/managers on the back
+     * office, the exact audience it exists for (AuthController carries the
+     * same exception for the UI's canManageStore flag).
+     */
+    private boolean noStoreInScope() {
+        return tenantContextService.isPlatformHost() && !tenantContextService.isManagerHost();
     }
 
     private User authenticated(Authentication authentication) {

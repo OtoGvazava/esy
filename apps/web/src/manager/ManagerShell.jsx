@@ -36,7 +36,7 @@ function storeUrlFor(sub) {
 
 function TopBar() {
   const { t } = useTranslation('manager');
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isStoreOwner } = useAuth();
   const { T } = useGlow();
   const [params] = useSearchParams();
   const tenant = params.get('tenant');
@@ -47,7 +47,11 @@ function TopBar() {
   const tabs = tenant ? [
     { to: `/products${q}`, label: t('nav.products'), active: pathname.startsWith('/products') },
     { to: `/orders${q}`, label: t('nav.orders'), active: pathname.startsWith('/orders') },
-    { to: `/settings${q}`, label: t('nav.settings'), active: pathname.startsWith('/settings') },
+    // Settings is OWNER-only (D5): showing it to a MANAGER would render a
+    // screen whose every save the API 403s.
+    ...(isStoreOwner ? [
+      { to: `/settings${q}`, label: t('nav.settings'), active: pathname.startsWith('/settings') },
+    ] : []),
   ] : [];
 
   const tab = (active) => ({

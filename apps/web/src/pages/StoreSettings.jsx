@@ -24,7 +24,7 @@ const devTenant = () => {
 export default function StoreSettings() {
   const navigate = useNavigate();
   const { t } = useTranslation(['owner', 'common']);
-  const { canManageStore, loading: authLoading } = useAuth();
+  const { isStoreOwner, loading: authLoading } = useAuth();
   const { T } = useGlow();
   const { tenant, refresh } = useTenant();
 
@@ -49,8 +49,8 @@ export default function StoreSettings() {
   const [bogDirty, setBogDirty] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !canManageStore) navigate('/');
-  }, [authLoading, canManageStore, navigate]);
+    if (!authLoading && !isStoreOwner) navigate('/'); // OWNER-only: the API refuses MANAGERs here
+  }, [authLoading, isStoreOwner, navigate]);
 
   useEffect(() => {
     if (!tenant) return;

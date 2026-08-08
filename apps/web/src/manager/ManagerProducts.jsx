@@ -25,6 +25,17 @@ export default function ManagerProducts() {
       .catch((e) => setError(handleApiError(e)));
   }, []);
 
+  // Always hydrate the full detail before opening the editor: list rows carry
+  // only id/title/price/thumbnail, and initializing the dialog from one would
+  // save description:'' — silently erasing the real description.
+  const edit = async (p) => {
+    try {
+      setEditing(await productApi.get(p.id));
+    } catch (e) {
+      setError(handleApiError(e));
+    }
+  };
+
   useEffect(() => {
     if (!authLoading && canManageStore) load();
   }, [authLoading, canManageStore, load]);
@@ -82,7 +93,7 @@ export default function ManagerProducts() {
             </div>
           </div>
           <div style={{ font: `700 14px ${T.mono}`, color: T.text }}>{money(p.price)}</div>
-          <button onClick={() => setEditing(p)} style={{
+          <button onClick={() => edit(p)} style={{
             padding: '7px 14px', borderRadius: 999, cursor: 'pointer',
             border: `1px solid ${T.border}`, background: 'transparent',
             color: T.text, font: `600 12px ${T.font}`,

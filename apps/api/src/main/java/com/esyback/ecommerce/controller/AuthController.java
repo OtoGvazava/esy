@@ -77,6 +77,12 @@ public class AuthController {
         boolean ownsCurrentStore = onStore
             && membershipService.canManage(user, tenantContextService.getCurrentTenant());
         payload.put("ownsCurrentStore", ownsCurrentStore);
+        // Separate OWNER-only signal: store settings / logo / integrations are
+        // OWNER-gated server-side (D5), so the UI needs to know the difference
+        // or it shows MANAGERs screens whose every save 403s.
+        boolean ownerOfCurrentStore = onStore
+            && membershipService.isOwner(user, tenantContextService.getCurrentTenant());
+        payload.put("ownerOfCurrentStore", ownerOfCurrentStore);
         return payload;
     }
     

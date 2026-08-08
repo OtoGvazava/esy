@@ -35,6 +35,10 @@ public class OrderController {
         User user = currentUser(authentication);
         requireOrderEligible(user);
         Order order = orderService.createOrder(user, tenantContextService.getCurrentTenant(), request);
+        // This endpoint IS the free flow (BOG stores checkout via
+        // /api/payments/bog/checkout) — no payment will ever settle this
+        // order, so stock commits at placement (decision D3, free path).
+        orderService.commitFreeOrderStock(order);
         return ResponseEntity.status(HttpStatus.CREATED).body(toMap(order));
     }
 
@@ -83,7 +87,10 @@ public class OrderController {
         m.put("id", o.getId());
         m.put("orderNumber", o.getOrderNumber());
         m.put("status", o.getStatus().name().toLowerCase().replace('_', ' '));
-        m.put("paymentStatus", o.getPaymentStatus().name().toLowerCase());
+        // Legacy prod rows can hold NULL payment_status (the column predates a
+        // backfill) — same null-coalesce PaymentController.status applies.
+        Order.PaymentStatus ps = o.getPaymentStatus() == null ? Order.PaymentStatus.NONE : o.getPaymentStatus();
+        m.put("paymentStatus", ps.name().toLowerCase());
         m.put("total", o.getTotal());
         m.put("items", o.getItems().size());
         m.put("placed", o.getCreatedAt());
