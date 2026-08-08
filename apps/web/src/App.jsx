@@ -6,29 +6,28 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import PayReturn from './pages/PayReturn';
 import OrderSuccess from './pages/OrderSuccess';
-import Saved from './pages/Saved';
 import Account from './pages/Account';
 import Orders from './pages/Orders';
-import StoreOrders from './pages/StoreOrders';
 import SignIn from './pages/SignIn';
 import CreateStore from './pages/CreateStore';
 import AuthCallback from './pages/AuthCallback';
 import LanguageSettings from './pages/LanguageSettings';
 import AppearanceSettings from './pages/AppearanceSettings';
-import StoreSettings from './pages/StoreSettings';
-import ConfigSettings from './pages/ConfigSettings';
 import AppProviders from './providers/AppProviders';
 import GlowDock from './components/glow/GlowDock';
 import ProfileGate from './components/ProfileGate';
 import PlatformShell from './platform/PlatformShell';
+import ManagerShell from './manager/ManagerShell';
 import { useAppTheme } from './hooks/useAppTheme';
-import { usePlatformHost } from './hooks/usePlatformHost';
+import { usePlatformHost, isManagerHost } from './hooks/usePlatformHost';
 import { ThemeModeProvider } from './contexts/ThemeModeContext';
-import { OwnerToolsProvider } from './contexts/OwnerToolsContext';
 
+// Storefront: shopping only (scope rule: no admin functions in the store).
+// Management lives at manager.esy.ge — the ManageButton on Home is the one
+// affordance, and the old /manage + /settings/store|config routes are gone.
 function AppShell() {
   return (
-    <OwnerToolsProvider>
+    <>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetails />} />
@@ -37,28 +36,26 @@ function AppShell() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/pay/return" element={<PayReturn />} />
         <Route path="/success" element={<OrderSuccess />} />
-        <Route path="/saved" element={<Saved />} />
         <Route path="/account" element={<Account />} />
         <Route path="/orders" element={<Orders />} />
-        <Route path="/manage/orders" element={<StoreOrders />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/create-store" element={<CreateStore />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/settings/language" element={<LanguageSettings />} />
         <Route path="/settings/appearance" element={<AppearanceSettings />} />
-        <Route path="/settings/store" element={<StoreSettings />} />
-        <Route path="/settings/config" element={<ConfigSettings />} />
       </Routes>
       <GlowDock />
       <ProfileGate />
-    </OwnerToolsProvider>
+    </>
   );
 }
 
-// esy.ge → platform front door; <sub>.esy.ge → tenant storefront. Same bundle,
-// host-selected shell (see usePlatformHost).
+// esy.ge → platform front door; manager.esy.ge → back office;
+// <sub>.esy.ge → tenant storefront. Same bundle, host-selected shell.
 function Shell() {
-  return usePlatformHost() ? <PlatformShell /> : <AppShell />;
+  const platform = usePlatformHost(); // unconditional — hooks rules
+  if (isManagerHost()) return <ManagerShell />;
+  return platform ? <PlatformShell /> : <AppShell />;
 }
 
 function App() {

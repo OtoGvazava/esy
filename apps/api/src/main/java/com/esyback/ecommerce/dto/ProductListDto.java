@@ -8,15 +8,19 @@ public class ProductListDto {
     private String title;
     private String imageUrl;
     private BigDecimal price;
-    
+    // Stock on hand — the back-office product list renders availability from
+    // list rows, so it must travel with them (detail-only before).
+    private Integer quantity;
+
     // Constructors
     public ProductListDto() {}
-    
-    public ProductListDto(Long id, String title, String imageUrl, BigDecimal price) {
+
+    public ProductListDto(Long id, String title, String imageUrl, BigDecimal price, Integer quantity) {
         this.id = id;
         this.title = title;
         this.imageUrl = imageUrl;
         this.price = price;
+        this.quantity = quantity;
     }
     
     // Getters and Setters
@@ -47,8 +51,16 @@ public class ProductListDto {
     public BigDecimal getPrice() {
         return price;
     }
-    
+
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 }

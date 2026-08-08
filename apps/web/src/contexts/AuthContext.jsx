@@ -37,8 +37,11 @@ const mapBackendUser = (u) => {
     profileComplete: !!u.profileComplete,
     roles,
     role: roles.includes('ADMIN') ? 'admin' : 'user',
-    // Owner of the store this request resolved to (by host). Backend-derived.
+    // May manage the store this request resolved to (OWNER or MANAGER, D5).
     ownsCurrentStore: !!u.ownsCurrentStore,
+    // Strictly the OWNER — gates settings/logo/integrations screens whose
+    // API endpoints refuse MANAGERs.
+    ownerOfCurrentStore: !!u.ownerOfCurrentStore,
     provider: 'google',
   };
 };
@@ -187,10 +190,12 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
     isUser: user?.role === 'user' || !user?.role,
-    // Owner of the store currently being viewed.
-    isStoreOwner: !!user?.ownsCurrentStore,
-    // Allowed to manage this store (add/edit products, edit branding):
-    // a global admin, or the store's owner.
+    // Strictly the OWNER of the store currently being viewed (or a global
+    // admin) — the gate for settings/logo/integrations, which the API
+    // refuses to MANAGERs.
+    isStoreOwner: user?.role === 'admin' || !!user?.ownerOfCurrentStore,
+    // Allowed to run the store day-to-day (products, orders, stats):
+    // a global admin, the OWNER, or a MANAGER (decision D5).
     canManageStore: user?.role === 'admin' || !!user?.ownsCurrentStore,
   };
 

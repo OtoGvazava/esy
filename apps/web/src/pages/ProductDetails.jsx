@@ -4,8 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { productApi, handleApiError } from '../utils/api';
 import { renderMarkdown } from '../utils/markdown';
 import { useCart } from '../contexts/CartContext';
-import { useSaved } from '../contexts/SavedContext';
-import { useOwnerTools } from '../contexts/OwnerToolsContext';
 import { useGlow } from '../styles/glow';
 import { Icon, Placeholder, PoweredBy } from '../components/glow/GlowPrimitives';
 import { money } from '../components/glow/GlowChrome';
@@ -26,8 +24,6 @@ export default function ProductDetails() {
   const navigate = useNavigate();
   const { t } = useTranslation('product');
   const { addToCart } = useCart();
-  const { isSaved, toggleSaved } = useSaved();
-  const { canManage, editProduct, deleteProduct, version } = useOwnerTools();
   const { T, isDesktop, tenant } = useGlow();
 
   const [product, setProduct] = useState(null);
@@ -36,8 +32,6 @@ export default function ProductDetails() {
   const [error, setError] = useState('');
   const [imgOk, setImgOk] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
-  const saved = product ? isSaved(product.id) : false;
-  const toggleFav = () => product && toggleSaved({ id: product.id, title: product.title, price: product.price, image: heroImg, thumbnail: product.thumbnail });
 
   useEffect(() => {
     let alive = true;
@@ -59,9 +53,7 @@ export default function ProductDetails() {
       }
     })();
     return () => { alive = false; };
-    // `version` bumps after an owner edit/delete → re-pull (a deleted product
-    // 404s into the existing not-found screen).
-  }, [id, t, version]);
+  }, [id, t]);
 
   const gallery = (product?.images && product.images.length)
     ? product.images
@@ -111,17 +103,6 @@ export default function ProductDetails() {
       <div style={{ position: 'absolute', top: isDesktop ? 16 : 50, left: 16, right: 16, display: 'flex', justifyContent: 'space-between' }}>
         <button onClick={() => navigate(-1)} style={iconBtn(T)} aria-label="back"><Icon.arrowR style={{ transform: 'rotate(180deg)' }} /></button>
         <div style={{ display: 'flex', gap: 8 }}>
-          {canManage && (
-            <>
-              <button onClick={() => editProduct(product)} style={iconBtn(T)} aria-label={t('editAria', { defaultValue: 'Edit product' })}>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-              </button>
-              <button onClick={() => deleteProduct(product)} style={{ ...iconBtn(T), color: T.danger }} aria-label={t('deleteAria', { defaultValue: 'Delete product' })}>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /></svg>
-              </button>
-            </>
-          )}
-          <button onClick={toggleFav} style={{ ...iconBtn(T), color: saved ? T.accent : T.text }} aria-label="save"><Icon.heart /></button>
           <button onClick={share} style={iconBtn(T)} aria-label="share"><Icon.share /></button>
         </div>
       </div>
@@ -192,7 +173,6 @@ export default function ProductDetails() {
       </div>
       {isDesktop && (
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={toggleFav} style={{ width: 54, height: 54, borderRadius: 16, border: `1px solid ${T.border}`, background: T.surface, color: saved ? T.accent : T.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Icon.heart /></button>
           <button onClick={addAndOpenCart} disabled={!inStock} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: inStock ? T.grad : T.surface2, color: inStock ? '#fff' : T.textMute, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: inStock ? 'pointer' : 'not-allowed', boxShadow: inStock ? `0 10px 28px ${T.accent}55` : 'none' }}>
             <Icon.bag /> {inStock ? t('addToBag', { price: money(product.price) }) : t('outOfStock')}
           </button>
@@ -227,7 +207,6 @@ export default function ProductDetails() {
       {/* mobile sticky CTA — sits above the global dock */}
       {!isDesktop && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 92, padding: '14px 16px', background: T.bg, borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 10, zIndex: 1100 }}>
-          <button onClick={toggleFav} style={{ width: 54, height: 54, borderRadius: 16, border: `1px solid ${T.border}`, background: T.surface, color: saved ? T.accent : T.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Icon.heart /></button>
           <button onClick={addAndOpenCart} disabled={!inStock} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: inStock ? T.grad : T.surface2, color: inStock ? '#fff' : T.textMute, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: inStock ? 'pointer' : 'not-allowed', boxShadow: inStock ? `0 10px 28px ${T.accent}55` : 'none' }}>
             <Icon.bag /> {inStock ? t('addToBag', { price: money(product.price) }) : t('outOfStock')}
           </button>

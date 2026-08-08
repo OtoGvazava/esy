@@ -1,4 +1,4 @@
-// GlowDock — persistent bottom nav (Shop · Search · Bag · Saved · Account).
+// GlowDock — persistent bottom nav (Shop · Search · Bag · Account).
 // Reads router/i18n/cart/auth from the preview provider; signed-out default.
 // position:fixed → a transform wrapper makes it a local containing block, and a
 // tinted backdrop lets the translucent glass read.

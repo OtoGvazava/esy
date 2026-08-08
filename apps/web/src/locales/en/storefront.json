@@ -67,7 +67,9 @@
     "payCard": "Pay with card",
     "redirecting": "Redirecting…",
     "payError": "Payment could not be started. Please try again.",
-    "bogSecure": "Secure card payment via Bank of Georgia"
+    "bogSecure": "Secure card payment via Bank of Georgia",
+    "recipient": "Recipient",
+    "phone": "Phone"
   },
   "payReturn": {
     "checkingTitle": "Confirming your payment…",
@@ -76,17 +78,6 @@
     "failedBody": "We couldn't confirm your payment. Any amount taken will be returned. You can try again from your cart.",
     "backToCart": "Back to cart",
     "viewOrders": "View orders"
-  },
-  "saved": {
-    "title": "Saved",
-    "heading": "Things you love",
-    "emptyBody": "Tap the heart on any product to save it here for later.",
-    "browse": "Browse {{name}}",
-    "itemCount_one": "{{count}} item",
-    "itemCount_other": "{{count}} items",
-    "filterAll": "All",
-    "filterInStock": "In stock",
-    "bag": "Bag"
   },
   "orders": {
     "title": "Orders",
@@ -154,7 +145,6 @@
     "roleMember": "Member",
     "statOrders": "Orders",
     "statSpent": "Spent",
-    "statSaved": "Saved",
     "recentOrders": "Recent orders",
     "seeAll": "See all",
     "itemCount_one": "{{count}} item",

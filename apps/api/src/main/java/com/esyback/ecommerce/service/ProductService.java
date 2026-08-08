@@ -30,6 +30,31 @@ public class ProductService {
     private final ProductImageRepository productImageRepository;
     private final TenantContextService tenantContextService;
     
+    /**
+     * Commit stock for a paid order (decision D3): quantities decrement at PAID,
+     * not at PLACED, so abandoned checkouts never lock inventory. Clamped at
+     * zero; an oversell (two shoppers paying for the last unit before either
+     * callback lands) logs loudly instead of going negative — there is no BOG
+     * refund API integration yet, so automated refund-on-oversell is not
+     * possible and the store resolves it manually from the orders screen.
+     */
+    public void commitStock(com.esyback.ecommerce.entity.Order order) {
+        for (com.esyback.ecommerce.entity.OrderItem item : order.getItems()) {
+            if (item.getProductId() == null) continue;
+            productRepository.findById(item.getProductId()).ifPresent(p -> {
+                int have = p.getQuantity() == null ? 0 : p.getQuantity();
+                int take = item.getQuantity() == null ? 1 : item.getQuantity();
+                if (take > have) {
+                    org.slf4j.LoggerFactory.getLogger(ProductService.class).warn(
+                        "OVERSELL order={} product={} wanted={} had={} — stock floored at 0, resolve manually",
+                        order.getOrderNumber(), p.getId(), take, have);
+                }
+                p.setQuantity(Math.max(0, have - take));
+                productRepository.save(p);
+            });
+        }
+    }
+
     public PagedResponse<ProductListDto> getProducts(int page, int size, String sortBy, String sortDir,
                                                      String title, BigDecimal minPrice, BigDecimal maxPrice, Integer quantity) {
         
@@ -105,7 +130,8 @@ public class ProductService {
             product.getId(),
             product.getTitle(),
             product.getImageUrl(),
-            product.getPrice()
+            product.getPrice(),
+            product.getQuantity()
         );
     }
     

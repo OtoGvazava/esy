@@ -1,4 +1,13 @@
-# design-sync notes — esy frontend design system (43 components)
+# design-sync notes — esy frontend design system (41 components)
+
+## 2026-08 manager migration — component set shrank 43 → 41 (intentional)
+`OwnerBar` and `ViewModeToggle` were **deleted from the app** (management moved
+to manager.esy.ge; the storefront no longer has inline owner tools). Their
+entries were removed from `.ds-entry.mjs`, `componentSrcMap`, `overrides`, and
+`previews/`. `OwnerToolsProvider` no longer exists (the export and the
+context file are gone). The next re-sync will diff them as REMOVED and delete
+their cards from the project — that is correct, not a regression. References
+to "43" below are historical.
 
 ## Repo shape (off-script)
 `apps/web` is a **Vite application**, not a packaged component library — no `dist/`,

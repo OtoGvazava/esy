@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/miro-sync-check.sh",
+            "timeout": 20,
+            "statusMessage": "Checking Miro docs are in sync"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -2,16 +2,11 @@
 // MemoryRouter, the app's configured i18n, and the ThemeMode context, so
 // components that read app context render inside preview cards.
 //
-// NOTE: OwnerToolsProvider is deliberately NOT in this chain. It renders global
-// owner chrome (<ViewModeToggle/> + the editor dialogs) as siblings of children
-// whenever canManageStore is true, which would stamp a floating "Enable client
-// view" pill onto every card. The two previews that need it (OwnerBar,
-// ViewModeToggle) wrap themselves — it is exported from .ds-entry.mjs for that.
 //
 // It also re-provides AuthContext with a demo signed-in store owner. Without
 // it the harness has no backend, `user` stays null, and every auth-gated
-// component (PersonalInfo, ProfileGate, OwnerBar, ViewModeToggle — the last two
-// via OwnerTools, whose canManage derives from auth.canManageStore) renders
+// component (PersonalInfo, ProfileGate
+// — gated on auth.canManageStore) renders
 // nothing. profileComplete is false on purpose so ProfileGate shows its form.
 import React, { useContext, useMemo } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material';
@@ -23,7 +18,6 @@ import { TenantProvider } from './src/contexts/TenantContext';
 import { AuthProvider, AuthContext } from './src/contexts/AuthContext';
 import { OrdersProvider } from './src/contexts/OrdersContext';
 import { CartProvider } from './src/contexts/CartContext';
-import { SavedProvider } from './src/contexts/SavedContext';
 import { ThemeModeProvider } from './src/contexts/ThemeModeContext';
 
 const theme = createTheme();
@@ -79,9 +73,7 @@ export function GlowPreviewProvider({ children }) {
                 <DemoSignedIn>
                   <OrdersProvider>
                     <CartProvider>
-                      <SavedProvider>
-                        <ThemeProvider theme={theme}>{children}</ThemeProvider>
-                      </SavedProvider>
+                      <ThemeProvider theme={theme}>{children}</ThemeProvider>
                     </CartProvider>
                   </OrdersProvider>
                 </DemoSignedIn>

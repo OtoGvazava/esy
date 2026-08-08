@@ -14,6 +14,21 @@ export class ApiError extends Error {
   }
 }
 
+function isManagerHostname() {
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hostname;
+  return h === 'manager.esy.ge' || h === 'manager.lvh.me' || h === 'manager.localhost';
+}
+
+function withManagerTenant(endpoint) {
+  if (!isManagerHostname() || !endpoint.startsWith('/api/')) return endpoint;
+  if (/[?&]tenant=/.test(endpoint)) return endpoint;
+  let tenant = null;
+  try { tenant = new URLSearchParams(window.location.search).get('tenant'); } catch { /* SSR */ }
+  if (!tenant) return endpoint;
+  return `${endpoint + (endpoint.includes('?') ? '&' : '?')}tenant=${encodeURIComponent(tenant)}`;
+}
+
 class ApiClient {
   constructor(baseURL = '') {
     this.baseURL = baseURL;
@@ -24,6 +39,15 @@ class ApiClient {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     };
+
+    // Back office: one host serves every store, so the Host header can't carry
+    // the store the way it does on <sub>.esy.ge. The selected store rides the
+    // page URL as ?tenant=<sub> (the ManagerShell keeps it there), and the
+    // backend honors that param on manager hosts only. Appending it centrally
+    // makes every existing page and dialog store-scoped in the manager app
+    // without touching each call site. Calls that already carry ?tenant=
+    // (the legacy devTenant() helpers) are left alone.
+    endpoint = withManagerTenant(endpoint);
 
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
@@ -69,13 +93,15 @@ class ApiClient {
 const api = new ApiClient('');
 
 // ---- Shape mapping (backend DTO <-> frontend UI shape) ----------------------
-// Backend list item: { id, title, imageUrl, price }
+// Backend list item: { id, title, imageUrl, price, quantity }
 const mapListItem = (dto) => ({
   id: dto.id,
   title: dto.title,
   price: dto.price,
   thumbnail: dto.imageUrl,
   image: dto.imageUrl,
+  quantity: dto.quantity,
+  stock: dto.quantity,
 });
 
 // Backend detail: { id, title, description, imageUrl, price, quantity,
@@ -147,10 +173,12 @@ export const productApi = {
 
   // Multipart — bypasses the JSON client so the browser sets the multipart
   // boundary. Cookie auth via credentials:'include'. Returns the fresh product.
+  // Because it bypasses ApiClient, the manager-host ?tenant rewrite must be
+  // applied by hand or the upload resolves to the default tenant and 403s.
   async uploadImages(id, files) {
     const fd = new FormData();
     for (const f of files) fd.append('files', f);
-    const res = await fetch(`/api/products/${id}/images`, {
+    const res = await fetch(withManagerTenant(`/api/products/${id}/images`), {
       method: 'POST',
       body: fd,
       credentials: 'include',
@@ -207,12 +235,31 @@ export const accountApi = {
 export const orderApi = {
   // items: [{ productId, title, price, quantity }] — scoped to the current
   // store by the backend (Host header / ?tenant=).
-  create(items, devTenant) {
+  // delivery: { addressId } (a saved address-book entry) or { address:
+  // { recipient, phone, line, city, postalCode, country } } — frozen onto
+  // the order server-side (decision D4).
+  create(items, devTenant, delivery = {}) {
     const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
-    return api.post(`/api/orders${q}`, { items });
+    return api.post(`/api/orders${q}`, { items, ...delivery });
   },
   list() {
     return api.get('/api/orders');
+  },
+};
+
+// ---- Address book (platform-wide, decision D4) ------------------------------
+export const addressApi = {
+  list() {
+    return api.get('/api/addresses');
+  },
+  create(body) {
+    return api.post('/api/addresses', body);
+  },
+  update(id, body) {
+    return api.put(`/api/addresses/${id}`, body);
+  },
+  remove(id) {
+    return api.delete(`/api/addresses/${id}`);
   },
 };
 
@@ -220,42 +267,14 @@ export const orderApi = {
 export const paymentApi = {
   // Creates the order + a BOG payment, returns { orderNumber, redirectUrl }.
   // The caller sends the browser to redirectUrl (bank-hosted page).
-  checkout(items, devTenant) {
+  checkout(items, devTenant, delivery = {}) {
     const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
-    return api.post(`/api/payments/bog/checkout${q}`, { items });
+    return api.post(`/api/payments/bog/checkout${q}`, { items, ...delivery });
   },
   // Payment state for the return page: { orderNumber, paymentStatus, total }.
   // Server-side reconciles PENDING via BOG's receipt (covers missed callbacks).
   status(orderNumber) {
     return api.get(`/api/payments/bog/status?order=${encodeURIComponent(orderNumber)}`);
-  },
-};
-
-export const savedApi = {
-  list() {
-    return api.get('/api/saved');
-  },
-  add({ productId, title, price }, devTenant) {
-    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
-    return api.post(`/api/saved${q}`, { productId, title, price });
-  },
-  remove(productId, devTenant) {
-    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
-    return api.delete(`/api/saved/${productId}${q}`);
-  },
-};
-
-export const followApi = {
-  list() {
-    return api.get('/api/follows');
-  },
-  follow(devTenant) {
-    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
-    return api.post(`/api/follows${q}`, {});
-  },
-  unfollow(devTenant) {
-    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
-    return api.delete(`/api/follows${q}`);
   },
 };
 
@@ -325,6 +344,15 @@ export const tenantApi = {
       ? `/api/tenant/orders?tenant=${encodeURIComponent(devTenant)}`
       : '/api/tenant/orders';
     return api.get(path);
+  },
+  // Owner/manager: advance an order through the fulfilment machine
+  // (decision D1). status: SHIPPED | OUT_FOR_DELIVERY | DELIVERED | CANCELLED.
+  updateOrderStatus(orderId, status, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.request(`/api/tenant/orders/${orderId}/status${q}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
   },
   // Count of new (unhandled) orders — drives the owner-bar Orders badge.
   newOrderCount(devTenant) {

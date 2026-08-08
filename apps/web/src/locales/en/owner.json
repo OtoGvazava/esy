@@ -95,5 +95,12 @@
   "settingsSaved": "Saved",
   "subdomainLocked": "{{domain}} · subdomain is locked",
   "ownerEdit": "Edit",
-  "ownerDelete": "Delete"
+  "ownerDelete": "Delete",
+  "manageStore": "Manage store",
+  "orderAdvance": {
+    "shipped": "Mark shipped",
+    "out_for_delivery": "Out for delivery",
+    "delivered": "Mark delivered",
+    "cancelled": "Cancel order"
+  }
 }

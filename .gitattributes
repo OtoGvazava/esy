@@ -7,3 +7,8 @@
 # ~35 .prompt.md files with no text change — and the next run on macOS rewrites
 # them back. Pinning LF stops that ping-pong.
 .design-sync/** text eol=lf
+
+# Hook scripts run under bash even on Windows — a CRLF checkout breaks them
+# ("\r: command not found" on every line). Same for settings.json consistency.
+.claude/hooks/** text eol=lf
+.claude/settings.json text eol=lf

@@ -33,12 +33,18 @@ public class TenantService {
 
     // Names that must never become a tenant: infra hosts, the OAuth canonical
     // host, common service labels, and the default tenant.
+    //
+    // "manager"/"manage" are reserved for the back-office surface
+    // (manager.esy.ge). TenantContextService strips any <sub>.esy.ge to a
+    // subdomain, so a store registered under that name would shadow the whole
+    // back office — reserve it before the host exists, not after.
     private static final Set<String> RESERVED = Set.of(
         "main", "www", "api", "auth", "admin", "app", "mail", "smtp", "imap",
         "static", "assets", "cdn", "oauth2", "login", "logout", "esy", "support",
         "help", "status", "blog", "docs", "store", "shop", "account", "accounts",
         "dashboard", "billing", "checkout", "cart", "test", "dev", "staging",
-        "internal", "ns", "ns1", "ns2", "ftp", "vpn", "render"
+        "internal", "ns", "ns1", "ns2", "ftp", "vpn", "render",
+        "manager", "manage"
     );
 
     private static final String DEFAULT_PRIMARY = "#6366f1";

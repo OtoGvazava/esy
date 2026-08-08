@@ -4,10 +4,15 @@
 # IDE / local tooling (machine-specific)
 .idea/
 .vscode/
-# .claude/* (not .claude/) so the negation below can re-include a subdirectory —
-# git cannot un-ignore anything inside an excluded *directory*.
+# .claude/* (not .claude/) so the negations below can re-include entries —
+# git cannot un-ignore anything inside an excluded *directory*. Shared with the
+# team: slash commands, project hooks, and the settings.json that wires them.
+# Machine-local (still ignored): settings.local.json, statusline.js,
+# .miro-sync-state.
 .claude/*
 !.claude/commands/
+!.claude/hooks/
+!.claude/settings.json
 
 # Node / Vite (apps/web)
 node_modules/

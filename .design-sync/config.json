@@ -66,10 +66,6 @@
       "cardMode": "single",
       "viewport": "420x300"
     },
-    "OwnerBar": {
-      "cardMode": "single",
-      "viewport": "560x200"
-    },
     "FloatingCart": {
       "cardMode": "single",
       "viewport": "820x400"
@@ -146,9 +142,7 @@
     "DeleteProductDialog": "src/components/owner/DeleteProductDialog.jsx",
     "GlowModal": "src/components/owner/GlowModal.jsx",
     "MarkdownField": "src/components/owner/MarkdownField.jsx",
-    "OwnerBar": "src/components/owner/OwnerBar.jsx",
     "ProductEditorDialog": "src/components/owner/ProductEditorDialog.jsx",
-    "ViewModeToggle": "src/components/owner/ViewModeToggle.jsx",
     "EsyMark": "src/platform/PlatformShared.jsx",
     "StoreMark": "src/platform/PlatformShared.jsx",
     "StatusPill": "src/platform/PlatformShared.jsx",

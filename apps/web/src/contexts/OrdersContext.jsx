@@ -73,7 +73,10 @@ export const OrdersProvider = ({ children }) => {
         price: i.price,
         quantity: i.quantity,
       }));
-      const created = await orderApi.create(items, devTenant());
+      const delivery = {};
+      if (orderData?.addressId != null) delivery.addressId = orderData.addressId;
+      if (orderData?.address) delivery.address = orderData.address;
+      const created = await orderApi.create(items, devTenant(), delivery);
       const order = created ? normalize(created) : null;
       if (order) {
         setOrders((prev) => [order, ...prev.filter((o) => o.id !== order.id)]);

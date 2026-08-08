@@ -49,7 +49,6 @@ export default function GlowDock() {
     { key: 'shop', icon: <Icon.grid />, label: t('dock.shop'), to: '/', active: pathname === '/' || pathname.startsWith('/product') },
     { key: 'search', icon: <Icon.search />, label: t('dock.search'), to: '/search', active: pathname === '/search' },
     { key: 'bag', icon: <Icon.bag />, label: t('dock.bag'), to: '/cart', badge: cartCount, active: ['/cart', '/checkout', '/success'].includes(pathname) },
-    { key: 'saved', icon: <Icon.heart />, label: t('dock.saved'), to: '/saved', active: pathname === '/saved' },
     { key: 'account', icon: accountIcon, label: accountLabel, to: '/account', active: pathname === '/account' },
   ];
 

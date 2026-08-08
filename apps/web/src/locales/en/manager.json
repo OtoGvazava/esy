@@ -1,0 +1,37 @@
+{
+  "title": "esy manager",
+  "pickStore": "Choose a store to manage",
+  "noStores": "No stores yet",
+  "noStoresBody": "Create your first store on esy.ge and it will appear here.",
+  "createStore": "Create a store",
+  "roleOwner": "Owner",
+  "roleManager": "Manager",
+  "statusLive": "Live",
+  "statusDraft": "Draft",
+  "nav": {
+    "products": "Products",
+    "orders": "Orders",
+    "settings": "Settings",
+    "admin": "Platform admin",
+    "switchStore": "Switch store",
+    "viewStore": "View live store",
+    "signOut": "Sign out"
+  },
+  "products": {
+    "title": "Products",
+    "add": "Add product",
+    "empty": "No products yet",
+    "emptyBody": "Add your first product and it goes live on your storefront immediately.",
+    "inStock": "{{count}} in stock",
+    "outOfStock": "Out of stock",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "admin": {
+    "title": "Platform administration",
+    "restricted": "Platform admins only",
+    "config": "Live configuration"
+  },
+  "signInRequired": "Sign in to manage your stores",
+  "signIn": "Continue with Google"
+}
