@@ -11,40 +11,46 @@ relative `/api/...` (Vite proxy in dev, same-origin in prod).
 
 ## Run locally
 
-Backend (`:8080`) — **must use JDK 17** (see gotcha):
-```bash
-cd apps/api && JAVA_HOME=/Users/ogvazava/Library/Java/JavaVirtualMachines/ms-17.0.18/Contents/Home mvn -q spring-boot:run
-```
-Frontend (`:5173`, proxies `/api` → `:8080`):
-```bash
-cd apps/web && npm install && npm run dev
-```
-Dev sign-in: `POST /api/auth/dev-login {"email":"..."}` — an email containing
-`admin` gets the ADMIN role. UI: Account → email field (or "Continue with Gmail"
-for real Google OAuth once `GOOGLE_CLIENT_ID/SECRET` are set).
-
-### Multi-tenant + real Google sign-in (lvh.me) — clean setup
-
-The Vite flow above is single-host. For wildcard tenant subdomains **and** real
-Google OAuth, use the docker compose stack on **`lvh.me:8092`**. `*.lvh.me`
-resolves to `127.0.0.1` via public DNS, so there is **no `/etc/hosts` /
-dnsmasq** to configure:
+**Docker compose is the ONLY supported local flow.** There is no native
+Maven/Vite path — it was removed deliberately. Do not reintroduce one, and do
+not "helpfully" run `mvn spring-boot:run` or `vite` to work around a broken
+container; fix the container.
 
 ```bash
 cp .env.example .env          # set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET;
                               # keep APP_OAUTH2_CANONICAL_ORIGIN=http://lvh.me:8092
-docker compose up --build     # Postgres-backed; data persists (named volume)
+npm run dev                   # docker compose up --build
 ```
+
+Root scripts: `dev` (foreground), `up` (detached), `down` (keep data), `reset`
+(**wipes** the `esy_pgdata` volume), `logs`, `ps`, `build`. `npm run setup`
+installs `apps/web` deps for `lint` / `i18n:check` / editor tooling only — the
+image builds the SPA itself.
 
 - Platform front door: `http://lvh.me:8092`
 - A tenant store: `http://<sub>.lvh.me:8092` (e.g. `studio-form.lvh.me:8092`)
-- **Google Cloud Console** → OAuth client → Authorized redirect URIs, add this
-  exact URI: `http://lvh.me:8092/login/oauth2/code/google` (Google accepts
-  `.me`; it rejects `.local`).
+- **Port 8092 is load-bearing** — it matches the Google redirect URI. Moving it
+  breaks sign-in with `redirect_uri_mismatch`.
+- **No hot reload.** The SPA is baked into the jar at image build time; any
+  `apps/web` or `apps/api` edit needs `npm run up` again.
+- Docker Desktop here is a **per-user** install — the CLI is at
+  `%LOCALAPPDATA%\Programs\DockerDesktop\resources\bin`, *not*
+  `C:\Program Files\Docker`. Probing only the latter falsely concludes Docker
+  is missing.
+- Every env var must be listed explicitly in the `app` service's `environment:`
+  block in `docker-compose.yml`, or it silently never reaches the container
+  (this is how `ADMIN_EMAILS` was dropped).
+
+Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
+(`AuthController` exposes `/user`, `/token`, `/logout`). ADMIN comes solely from
+`ADMIN_EMAILS`.
+
+- **Google Cloud Console** → OAuth client → Authorized redirect URIs must
+  contain this exact URI: `http://lvh.me:8092/login/oauth2/code/google` (Google
+  accepts `.me`; it rejects `.local`).
 - One Gmail sign-in is shared across the platform **and every** `*.lvh.me`
   store — HttpOnly `Domain=lvh.me` cookie, mirroring prod `Domain=esy.ge` over
   `*.esy.ge`. Sign out once = signed out everywhere.
-- `docker compose down` keeps data; `docker compose down -v` wipes it.
 
 ## Build & deploy
 

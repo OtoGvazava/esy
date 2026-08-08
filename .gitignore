@@ -4,7 +4,10 @@
 # IDE / local tooling (machine-specific)
 .idea/
 .vscode/
-.claude/
+# .claude/* (not .claude/) so the negation below can re-include a subdirectory —
+# git cannot un-ignore anything inside an excluded *directory*.
+.claude/*
+!.claude/commands/
 
 # Node / Vite (apps/web)
 node_modules/
