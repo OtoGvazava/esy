@@ -41,15 +41,11 @@ export { default as SearchSuggestions } from './src/components/SearchSuggestions
 export { default as DeleteProductDialog } from './src/components/owner/DeleteProductDialog.jsx';
 export { default as GlowModal } from './src/components/owner/GlowModal.jsx';
 export { default as MarkdownField } from './src/components/owner/MarkdownField.jsx';
-export { default as OwnerBar } from './src/components/owner/OwnerBar.jsx';
 export { default as ProductEditorDialog } from './src/components/owner/ProductEditorDialog.jsx';
-export { default as ViewModeToggle } from './src/components/owner/ViewModeToggle.jsx';
 
 // ── Platform primitives ─────────────────────────────────────────────────────
 export { EsyMark, StoreMark, StatusPill, PTopBar, PFooter, StoreArtStrip } from './src/platform/PlatformShared.jsx';
 
 // ── Helpers / provider consumed by preview cards (not registered components) ─
 export { glowTokens, TENANT } from './src/styles/glow.js';
-// Scoped to the OwnerBar / ViewModeToggle previews only — see .ds-provider.jsx.
-export { OwnerToolsProvider } from './src/contexts/OwnerToolsContext.jsx';
 export { GlowPreviewProvider } from './.ds-provider.jsx';

@@ -54,6 +54,19 @@ public class AccountController {
                 s.put("orders", orderService.orderCount(m.getTenant()));
                 s.put("revenue", orderService.revenue(m.getTenant()));
                 s.put("views", "—");
+                s.put("myRole", "OWNER");
+                return s;
+            })
+            .collect(Collectors.toList());
+
+        // Stores this account MANAGES but does not own (decision D5) — the
+        // back office's store switcher shows both tiers.
+        List<Map<String, Object>> managedStores = membershipRepository
+            .findByUserAndRole(user, StoreMembership.Role.MANAGER).stream()
+            .map(m -> {
+                Map<String, Object> s = TenantMapper.toMap(m.getTenant());
+                s.put("status", Boolean.TRUE.equals(m.getTenant().getIsActive()) ? "live" : "draft");
+                s.put("myRole", "MANAGER");
                 return s;
             })
             .collect(Collectors.toList());
@@ -68,6 +81,7 @@ public class AccountController {
         Map<String, Object> body = new HashMap<>();
         body.put("user", userMap(user));
         body.put("ownedStores", ownedStores);
+        body.put("managedStores", managedStores);
         body.put("orders", orders);
         body.put("role", role);
         return ResponseEntity.ok(body);

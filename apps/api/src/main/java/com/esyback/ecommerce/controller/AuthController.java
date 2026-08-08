@@ -67,9 +67,15 @@ public class AuthController {
         payload.put("roles", user.getRoles().stream().map(role -> role.getName()).toArray());
         // Lets the SPA show owner actions for *this* store. Resolved from the
         // request Host (same tenant the storefront is showing); false on the
-        // platform front door where there's no store to manage.
-        boolean ownsCurrentStore = !tenantContextService.isPlatformHost()
-            && membershipService.isOwner(user, tenantContextService.getCurrentTenant());
+        // platform front door where there's no store to manage. The manager
+        // host is platform-faced but ?tenant=<sub> selects a store there, so
+        // it resolves against that selection (decision D5: OWNER or MANAGER
+        // both count as "can manage"; owner-only rights are checked
+        // server-side per endpoint regardless of what the UI shows).
+        boolean onStore = !tenantContextService.isPlatformHost()
+            || tenantContextService.isManagerHost();
+        boolean ownsCurrentStore = onStore
+            && membershipService.canManage(user, tenantContextService.getCurrentTenant());
         payload.put("ownsCurrentStore", ownsCurrentStore);
         return payload;
     }

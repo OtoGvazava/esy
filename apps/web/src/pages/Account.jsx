@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useOrders } from '../contexts/OrdersContext';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useGlow } from '../styles/glow';
+import { managerUrl } from '../hooks/usePlatformHost';
 import { Icon, PoweredBy, langInfo } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, money } from '../components/glow/GlowChrome';
 import PersonalInfo from '../components/PersonalInfo';
@@ -29,7 +30,7 @@ export default function Account() {
     { id: 'addresses', k: t('account.setAddresses'), v: null, onClick: null },
     { id: 'payments', k: t('account.setPayments'), v: null, onClick: null },
     ...(isAdmin ? [{ id: 'dashboard', k: t('account.setDashboard'), v: t('account.dashboardValue'), onClick: () => navigate('/admin') }] : []),
-    ...(isAdmin ? [{ id: 'config', k: t('account.setConfig'), v: t('account.configValue'), onClick: () => navigate('/settings/config') }] : []),
+    ...(isAdmin ? [{ id: 'config', k: t('account.setConfig'), v: t('account.configValue'), onClick: () => { window.location.href = managerUrl('/admin/config'); } }] : []),
     { id: 'help', k: t('account.setHelp'), v: null, onClick: null },
     { id: 'signout', k: t('account.signOut'), v: null, danger: true, onClick: () => { logout(); navigate('/'); } },
   ];

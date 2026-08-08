@@ -25,7 +25,16 @@ function StatCard({ T, label, value, isDesktop }) {
   );
 }
 
-function OrderRow({ T, order, t }) {
+// The next fulfilment step per state (decision D1). CANCEL is offered only
+// where the machine allows it; the backend enforces the same table.
+const NEXT_STEP = {
+  placed: 'SHIPPED',
+  shipped: 'OUT_FOR_DELIVERY',
+  out_for_delivery: 'DELIVERED',
+};
+const CAN_CANCEL = new Set(['placed', 'shipped']);
+
+function OrderRow({ T, order, t, onAdvance }) {
   const id = (order.orderNumber || `ESY-${order.id}`).toString().toUpperCase();
   const date = order.placed
     ? new Date(order.placed).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -35,17 +44,44 @@ function OrderRow({ T, order, t }) {
   const statusKey = status.replace(/ /g, '_');
   const tone = status === 'delivered' || status === 'completed' ? T.success
     : status === 'cancelled' ? T.danger : T.accentFg;
+  const next = NEXT_STEP[statusKey];
+  const ship = order.delivery;
   return (
-    <div style={{ padding: '14px 14px', borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-      <span style={{ width: 42, height: 42, borderRadius: 12, background: T.accentBg, color: T.accentFg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.bag /></span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ font: `700 13px ${T.mono}`, color: T.text }}>#{id}</div>
-        <div style={{ font: `400 11.5px ${T.font}`, color: T.textMute, marginTop: 2 }}>{date} · {t('orderItems', { count: n })}</div>
+    <div style={{ padding: '14px 14px', borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ width: 42, height: 42, borderRadius: 12, background: T.accentBg, color: T.accentFg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.bag /></span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ font: `700 13px ${T.mono}`, color: T.text }}>#{id}</div>
+          <div style={{ font: `400 11.5px ${T.font}`, color: T.textMute, marginTop: 2 }}>{date} · {t('orderItems', { count: n })}</div>
+          {ship && (
+            <div style={{ font: `400 11px ${T.font}`, color: T.textMute, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              → {ship.recipient} · {ship.line}, {ship.city}{ship.phone ? ` · ${ship.phone}` : ''}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <span style={{ font: `800 14px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(order.total)}</span>
+          <span style={{ font: `600 9.5px ${T.font}`, color: tone, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t(`orderStatus.${statusKey}`, { defaultValue: status })}</span>
+        </div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-        <span style={{ font: `800 14px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(order.total)}</span>
-        <span style={{ font: `600 9.5px ${T.font}`, color: tone, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t(`orderStatus.${statusKey}`, { defaultValue: status })}</span>
-      </div>
+      {(next || CAN_CANCEL.has(statusKey)) && (
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          {next && (
+            <button onClick={() => onAdvance(order, next)} style={{
+              padding: '6px 13px', borderRadius: 999, cursor: 'pointer',
+              border: `1px solid ${T.accent}`, background: T.accentBg,
+              color: T.accentFg, font: `600 11.5px ${T.font}`,
+            }}>{t(`orderAdvance.${next.toLowerCase()}`)}</button>
+          )}
+          {CAN_CANCEL.has(statusKey) && (
+            <button onClick={() => onAdvance(order, 'CANCELLED')} style={{
+              padding: '6px 13px', borderRadius: 999, cursor: 'pointer',
+              border: `1px solid ${T.border}`, background: 'transparent',
+              color: T.danger, font: `600 11.5px ${T.font}`,
+            }}>{t('orderAdvance.cancelled')}</button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -84,6 +120,17 @@ export default function StoreOrders() {
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [authLoading, canManageStore, t]);
+
+  // Advance an order through the fulfilment machine (decision D1); the row
+  // updates in place from the server's response, stats refresh lazily.
+  const advance = async (order, next) => {
+    try {
+      const updated = await tenantApi.updateOrderStatus(order.id, next, devTenant());
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    } catch (e) {
+      setError(handleApiError(e, t('ordersError')));
+    }
+  };
 
   const gutter = isDesktop ? 40 : 18;
 
@@ -166,7 +213,7 @@ export default function StoreOrders() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {orders.map((o) => (
-                  <OrderRow key={o.id} T={T} order={o} t={t} />
+                  <OrderRow key={o.id} T={T} order={o} t={t} onAdvance={advance} />
                 ))}
               </div>
             )}
