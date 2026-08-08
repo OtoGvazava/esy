@@ -77,17 +77,6 @@
     "backToCart": "კალათაში დაბრუნება",
     "viewOrders": "შეკვეთების ნახვა"
   },
-  "saved": {
-    "title": "შენახული",
-    "heading": "რაც გიყვარს",
-    "emptyBody": "შესანახად დააჭირე გულის ნიშანს ნებისმიერ პროდუქტზე.",
-    "browse": "დაათვალიერე {{name}}",
-    "itemCount_one": "{{count}} ნივთი",
-    "itemCount_other": "{{count}} ნივთი",
-    "filterAll": "ყველა",
-    "filterInStock": "მარაგშია",
-    "bag": "ჩანთა"
-  },
   "orders": {
     "title": "შეკვეთები",
     "emptyTitle": "შეკვეთები ჯერ არ არის",
@@ -154,7 +143,6 @@
     "roleMember": "მომხმარებელი",
     "statOrders": "შეკვეთები",
     "statSpent": "დახარჯული",
-    "statSaved": "შენახული",
     "recentOrders": "ბოლო შეკვეთები",
     "seeAll": "ყველას ნახვა",
     "itemCount_one": "{{count}} ნივთი",

@@ -231,34 +231,6 @@ export const paymentApi = {
   },
 };
 
-export const savedApi = {
-  list() {
-    return api.get('/api/saved');
-  },
-  add({ productId, title, price }, devTenant) {
-    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
-    return api.post(`/api/saved${q}`, { productId, title, price });
-  },
-  remove(productId, devTenant) {
-    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
-    return api.delete(`/api/saved/${productId}${q}`);
-  },
-};
-
-export const followApi = {
-  list() {
-    return api.get('/api/follows');
-  },
-  follow(devTenant) {
-    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
-    return api.post(`/api/follows${q}`, {});
-  },
-  unfollow(devTenant) {
-    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
-    return api.delete(`/api/follows${q}`);
-  },
-};
-
 // ---- Tenant API -------------------------------------------------------------
 // The backend resolves the tenant from the request Host header, so `current`
 // is implicitly scoped to whatever subdomain the SPA is served from.

@@ -77,17 +77,6 @@
     "backToCart": "Back to cart",
     "viewOrders": "View orders"
   },
-  "saved": {
-    "title": "Saved",
-    "heading": "Things you love",
-    "emptyBody": "Tap the heart on any product to save it here for later.",
-    "browse": "Browse {{name}}",
-    "itemCount_one": "{{count}} item",
-    "itemCount_other": "{{count}} items",
-    "filterAll": "All",
-    "filterInStock": "In stock",
-    "bag": "Bag"
-  },
   "orders": {
     "title": "Orders",
     "emptyTitle": "No orders yet",
@@ -154,7 +143,6 @@
     "roleMember": "Member",
     "statOrders": "Orders",
     "statSpent": "Spent",
-    "statSaved": "Saved",
     "recentOrders": "Recent orders",
     "seeAll": "See all",
     "itemCount_one": "{{count}} item",

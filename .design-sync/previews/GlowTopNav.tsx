@@ -9,7 +9,7 @@ export const Default = () => <GlowTopNav T={T} title="Checkout" onBack={() => {}
 export const WithAction = () => (
   <GlowTopNav
     T={T}
-    title="Saved"
+    title="Orders"
     onBack={() => {}}
     right={<span style={{ font: `600 13px ${T.font}`, color: T.accent }}>Edit</span>}
   />

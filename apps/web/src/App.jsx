@@ -6,7 +6,6 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import PayReturn from './pages/PayReturn';
 import OrderSuccess from './pages/OrderSuccess';
-import Saved from './pages/Saved';
 import Account from './pages/Account';
 import Orders from './pages/Orders';
 import StoreOrders from './pages/StoreOrders';
@@ -37,7 +36,6 @@ function AppShell() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/pay/return" element={<PayReturn />} />
         <Route path="/success" element={<OrderSuccess />} />
-        <Route path="/saved" element={<Saved />} />
         <Route path="/account" element={<Account />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/manage/orders" element={<StoreOrders />} />

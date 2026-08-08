@@ -1,8 +1,6 @@
 {
   "noMore": "No more products",
   "failedToLoad": "Failed to load products",
-  "follow": "Follow",
-  "following": "Following",
   "established": "est {{year}}",
   "addFilter": "Add filter",
   "sortNewest": "Sort: Newest",

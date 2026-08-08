@@ -173,9 +173,7 @@
     "noShopping0": "No orders yet.",
     "browseStores": "Browse stores →",
     "items": "{{n}} item",
-    "itemsPlural": "{{n}} items",
-    "saved": "Saved",
-    "followed": "Followed shops"
+    "itemsPlural": "{{n}} items"
   },
   "auth": {
     "title": "One account for all of esy",

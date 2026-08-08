@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { productApi, handleApiError } from '../utils/api';
 import { renderMarkdown } from '../utils/markdown';
 import { useCart } from '../contexts/CartContext';
-import { useSaved } from '../contexts/SavedContext';
 import { useOwnerTools } from '../contexts/OwnerToolsContext';
 import { useGlow } from '../styles/glow';
 import { Icon, Placeholder, PoweredBy } from '../components/glow/GlowPrimitives';
@@ -26,7 +25,6 @@ export default function ProductDetails() {
   const navigate = useNavigate();
   const { t } = useTranslation('product');
   const { addToCart } = useCart();
-  const { isSaved, toggleSaved } = useSaved();
   const { canManage, editProduct, deleteProduct, version } = useOwnerTools();
   const { T, isDesktop, tenant } = useGlow();
 
@@ -36,8 +34,6 @@ export default function ProductDetails() {
   const [error, setError] = useState('');
   const [imgOk, setImgOk] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
-  const saved = product ? isSaved(product.id) : false;
-  const toggleFav = () => product && toggleSaved({ id: product.id, title: product.title, price: product.price, image: heroImg, thumbnail: product.thumbnail });
 
   useEffect(() => {
     let alive = true;
@@ -121,7 +117,6 @@ export default function ProductDetails() {
               </button>
             </>
           )}
-          <button onClick={toggleFav} style={{ ...iconBtn(T), color: saved ? T.accent : T.text }} aria-label="save"><Icon.heart /></button>
           <button onClick={share} style={iconBtn(T)} aria-label="share"><Icon.share /></button>
         </div>
       </div>
@@ -192,7 +187,6 @@ export default function ProductDetails() {
       </div>
       {isDesktop && (
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={toggleFav} style={{ width: 54, height: 54, borderRadius: 16, border: `1px solid ${T.border}`, background: T.surface, color: saved ? T.accent : T.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Icon.heart /></button>
           <button onClick={addAndOpenCart} disabled={!inStock} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: inStock ? T.grad : T.surface2, color: inStock ? '#fff' : T.textMute, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: inStock ? 'pointer' : 'not-allowed', boxShadow: inStock ? `0 10px 28px ${T.accent}55` : 'none' }}>
             <Icon.bag /> {inStock ? t('addToBag', { price: money(product.price) }) : t('outOfStock')}
           </button>
@@ -227,7 +221,6 @@ export default function ProductDetails() {
       {/* mobile sticky CTA — sits above the global dock */}
       {!isDesktop && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 92, padding: '14px 16px', background: T.bg, borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 10, zIndex: 1100 }}>
-          <button onClick={toggleFav} style={{ width: 54, height: 54, borderRadius: 16, border: `1px solid ${T.border}`, background: T.surface, color: saved ? T.accent : T.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Icon.heart /></button>
           <button onClick={addAndOpenCart} disabled={!inStock} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: inStock ? T.grad : T.surface2, color: inStock ? '#fff' : T.textMute, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: inStock ? 'pointer' : 'not-allowed', boxShadow: inStock ? `0 10px 28px ${T.accent}55` : 'none' }}>
             <Icon.bag /> {inStock ? t('addToBag', { price: money(product.price) }) : t('outOfStock')}
           </button>

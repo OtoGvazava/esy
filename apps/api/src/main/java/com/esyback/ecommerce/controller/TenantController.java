@@ -6,7 +6,6 @@ import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.TenantLogo;
 import com.esyback.ecommerce.repository.ProductRepository;
-import com.esyback.ecommerce.repository.StoreFollowRepository;
 import com.esyback.ecommerce.service.MembershipService;
 import com.esyback.ecommerce.service.OrderService;
 import com.esyback.ecommerce.service.TenantContextService;
@@ -44,7 +43,6 @@ public class TenantController {
     private final MembershipService membershipService;
     private final OrderService orderService;
     private final ProductRepository productRepository;
-    private final StoreFollowRepository storeFollowRepository;
 
     @GetMapping("/current")
     public ResponseEntity<Map<String, Object>> getCurrentTenant() {
@@ -136,7 +134,6 @@ public class TenantController {
         body.put("orders", orderService.orderCount(tenant));
         body.put("revenue", orderService.revenue(tenant));
         body.put("serviceFeesOwed", orderService.serviceFeesOwed(tenant));
-        body.put("followers", storeFollowRepository.countByTenant(tenant));
         return ResponseEntity.ok(body);
     }
 

@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useOrders } from '../contexts/OrdersContext';
-import { useSaved } from '../contexts/SavedContext';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useGlow } from '../styles/glow';
 import { Icon, PoweredBy, langInfo } from '../components/glow/GlowPrimitives';
@@ -16,7 +15,6 @@ export default function Account() {
   const { t } = useTranslation('storefront');
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { orders, getTotalOrders, getTotalSpent } = useOrders();
-  const { count: savedCount } = useSaved();
   const { mode, language } = useThemeMode();
 
   if (!isAuthenticated) return <SignIn />;
@@ -70,7 +68,6 @@ export default function Account() {
           {[
             { id: 'orders', v: String(getTotalOrders()), k: t('account.statOrders') },
             { id: 'spent', v: money(getTotalSpent()), k: t('account.statSpent') },
-            { id: 'saved', v: String(savedCount), k: t('account.statSaved') },
           ].map(({ id, v, k }) => (
             <div key={id} style={{ padding: '12px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ font: `800 18px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{v}</span>

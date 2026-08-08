@@ -23,7 +23,6 @@ import { TenantProvider } from './src/contexts/TenantContext';
 import { AuthProvider, AuthContext } from './src/contexts/AuthContext';
 import { OrdersProvider } from './src/contexts/OrdersContext';
 import { CartProvider } from './src/contexts/CartContext';
-import { SavedProvider } from './src/contexts/SavedContext';
 import { ThemeModeProvider } from './src/contexts/ThemeModeContext';
 
 const theme = createTheme();
@@ -79,9 +78,7 @@ export function GlowPreviewProvider({ children }) {
                 <DemoSignedIn>
                   <OrdersProvider>
                     <CartProvider>
-                      <SavedProvider>
-                        <ThemeProvider theme={theme}>{children}</ThemeProvider>
-                      </SavedProvider>
+                      <ThemeProvider theme={theme}>{children}</ThemeProvider>
                     </CartProvider>
                   </OrdersProvider>
                 </DemoSignedIn>

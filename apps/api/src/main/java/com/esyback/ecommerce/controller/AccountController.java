@@ -3,8 +3,6 @@ package com.esyback.ecommerce.controller;
 import com.esyback.ecommerce.dto.UpdateProfileRequest;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.User;
-import com.esyback.ecommerce.repository.SavedItemRepository;
-import com.esyback.ecommerce.repository.StoreFollowRepository;
 import com.esyback.ecommerce.repository.StoreMembershipRepository;
 import com.esyback.ecommerce.service.OrderService;
 import com.esyback.ecommerce.service.PhoneVerificationService;
@@ -26,8 +24,8 @@ import java.util.stream.Collectors;
 
 /**
  * Cross-store account hub for one global identity: stores you OWN (with live
- * order/revenue stats) + shopping you do anywhere (orders / saved / followed).
- * This is the real backing for the platform's /account screen.
+ * order/revenue stats) + the orders you placed anywhere. This is the real
+ * backing for the platform's /account screen.
  */
 @RestController
 @RequestMapping("/api/account")
@@ -38,8 +36,6 @@ public class AccountController {
     private final UserService userService;
     private final StoreMembershipRepository membershipRepository;
     private final OrderService orderService;
-    private final SavedItemRepository savedRepository;
-    private final StoreFollowRepository followRepository;
     private final PhoneVerificationService phoneVerificationService;
 
     @GetMapping
@@ -64,21 +60,15 @@ public class AccountController {
 
         List<Map<String, Object>> orders = orderService.ordersForUser(user).stream()
             .map(OrderController::toMap).collect(Collectors.toList());
-        List<Map<String, Object>> saved = savedRepository.findByUserOrderByCreatedAtDesc(user).stream()
-            .map(SavedController::toMap).collect(Collectors.toList());
-        List<Map<String, Object>> followed = followRepository.findByUser(user).stream()
-            .map(f -> TenantMapper.toMap(f.getTenant())).collect(Collectors.toList());
 
         boolean sells = !ownedStores.isEmpty();
-        boolean shops = !orders.isEmpty() || !saved.isEmpty() || !followed.isEmpty();
+        boolean shops = !orders.isEmpty();
         String role = sells && shops ? "both" : (sells ? "seller" : "shopper");
 
         Map<String, Object> body = new HashMap<>();
         body.put("user", userMap(user));
         body.put("ownedStores", ownedStores);
         body.put("orders", orders);
-        body.put("saved", saved);
-        body.put("followed", followed);
         body.put("role", role);
         return ResponseEntity.ok(body);
     }

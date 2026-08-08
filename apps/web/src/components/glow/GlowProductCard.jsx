@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon, Placeholder } from './GlowPrimitives';
 import { money } from './GlowChrome';
-import { useSaved } from '../../contexts/SavedContext';
 
 const tagBg = (tag, T) =>
   tag === 'new' ? T.accent : tag === 'sale' ? T.danger : tag === 'low' ? T.warn : T.text;
@@ -19,9 +18,7 @@ const tagLabel = (tag, t) =>
 
 export default function GlowProductCard({ T, p, hue = 240, compact = false, onOpen, onAdd, owner }) {
   const [imgOk, setImgOk] = useState(Boolean(p.image));
-  const { isSaved, toggleSaved } = useSaved();
   const { t } = useTranslation('product');
-  const saved = isSaved(p.id);
   return (
     <div
       onClick={() => onOpen?.(p)}
@@ -41,17 +38,6 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
         ) : (
           <Placeholder label={p.title} hue={hue} dark={T.dark} />
         )}
-        <button
-          aria-label={saved ? 'remove from saved' : 'save'}
-          onClick={(e) => { e.stopPropagation(); toggleSaved({ id: p.id, title: p.title, price: p.price, image: p.image, thumbnail: p.thumbnail }); }}
-          style={{
-            position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: '50%',
-            border: 'none', cursor: 'pointer',
-            background: T.dark ? 'rgba(10,10,18,0.55)' : 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(8px)', color: saved ? T.accent : T.text,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        ><Icon.heart /></button>
         {p.tag && (
           <div style={{
             position: 'absolute', top: 10, left: 10, padding: '3px 8px', borderRadius: 999,
