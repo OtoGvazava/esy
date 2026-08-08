@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Stop hook: keep the Miro documentation board in sync with the code.
+#
+# Fires when Claude finishes a turn. If documentation-relevant files changed
+# since the last time this hook prompted (fingerprint = HEAD + working-tree
+# status/diff over scope-bearing paths), it blocks the stop ONCE with an
+# instruction to review/update the Miro board, then records the fingerprint so
+# it stays silent until something else changes. Without that gate this would
+# nag on every stop forever.
+#
+# State lives in .claude/.miro-sync-state (gitignored, per-machine).
+set -u
+cd "$(dirname "$0")/../.." 2>/dev/null || exit 0
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+
+STATE=".claude/.miro-sync-state"
+# Paths whose changes can invalidate the architecture/scope documentation.
+# Locales, previews and build config are deliberately excluded — they never
+# change what the board describes.
+PATHS=(apps/api/src apps/web/src/manager apps/web/src/pages apps/web/src/contexts docker-compose.yml Dockerfile render.yaml)
+
+FP=$(
+  {
+    git rev-parse HEAD 2>/dev/null
+    git status --porcelain -- "${PATHS[@]}" 2>/dev/null
+    git diff -- "${PATHS[@]}" 2>/dev/null
+  } | git hash-object --stdin 2>/dev/null
+)
+[ -z "${FP:-}" ] && exit 0
+
+LAST=""
+[ -f "$STATE" ] && LAST=$(cat "$STATE" 2>/dev/null)
+[ "$FP" = "$LAST" ] && exit 0
+
+# Record BEFORE blocking: the very next stop (after Claude handles the nag)
+# must not re-fire for the same change-set.
+printf '%s' "$FP" > "$STATE"
+
+# Changed files, sanitized for JSON (paths in this repo carry no quotes).
+CHANGED=$(git status --porcelain -- "${PATHS[@]}" 2>/dev/null | head -10 | tr -d '"\\' | tr '\n' ';')
+[ -z "$CHANGED" ] && CHANGED="(committed changes since last check)"
+
+cat <<EOF
+{"decision":"block","reason":"Documentation-relevant code changed this session, so the Miro board may be stale. Board: 'esy — Surface Map & Product Scope' (https://miro.com/app/board/uXjVHzlpzUQ=/). Check whether the changes affect: the surface-map diagram, scope doc, decision log, ERD (3), order lifecycle (4), backend structure (7), target architecture (8), or migration status (9). If yes: update the affected items now via the Miro tools (diagram_update_mermaid / doc_update), then finish. If the changes genuinely do not alter what the board documents, say so in one sentence and finish — do not update the board for cosmetic code changes. Changed: $CHANGED"}
+EOF
