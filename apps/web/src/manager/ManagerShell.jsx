@@ -29,6 +29,7 @@ import { MNAV, MDOCK, OWNER_ONLY } from './nav';
 import ManagerHome from './ManagerHome';
 import ManagerProducts from './ManagerProducts';
 import ManagerSettings from './ManagerSettings';
+import ManagerTeam from './ManagerTeam';
 import StoreOrders from '../pages/StoreOrders';
 import SignIn from '../pages/SignIn';
 import AuthCallback from '../pages/AuthCallback';
@@ -272,6 +273,7 @@ export default function ManagerShell() {
       <Route path="/" element={<ManagerHome />} />
       <Route path="/products" element={<ManagerProducts />} />
       <Route path="/orders" element={<StoreOrders />} />
+      <Route path="/team" element={<ManagerTeam />} />
       <Route path="/settings/*" element={<ManagerSettings />} />
       <Route path="*" element={<Navigate to={`/${q}`} replace />} />
     </Routes>

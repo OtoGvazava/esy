@@ -328,6 +328,25 @@ export const deliveryApi = {
   },
 };
 
+// Who runs THIS store, from the merchant's own back office (D17). Distinct
+// from adminApi's member calls: those name a store by path and are for the
+// platform, these act on the store the request already resolved to. Both go
+// through the same server-side rules.
+export const teamApi = {
+  list(devTenant, { signal } = {}) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/store/team${q}`, { signal });
+  },
+  assign(email, role, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.post(`/api/store/team${q}`, { email, role });
+  },
+  remove(email, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.delete(`/api/store/team/${encodeURIComponent(email)}${q}`);
+  },
+};
+
 export const tenantApi = {
   // `devTenant` forwards ?tenant=<sub> so a single localhost host can switch
   // tenants in dev (the backend only honors it for localhost; prod resolves

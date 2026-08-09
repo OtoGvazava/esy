@@ -56,5 +56,26 @@
     "integrationsSub": "Card payments, cart",
     "shopNote": "Shop and brand still share one form. Splitting the fields is a separate job from splitting the navigation.",
     "brandNote": "Shop and brand still share one form. Splitting the fields is a separate job from splitting the navigation."
+  },
+  "team": {
+    "title": "Team",
+    "sub": "Who can run this store. Store roles are separate from platform administration.",
+    "loading": "Loading the team…",
+    "empty": "Nobody else has a role in this store yet.",
+    "loadFailed": "Could not load the team.",
+    "assignFailed": "Could not change this role.",
+    "removeFailed": "Could not remove this person.",
+    "add": "Add",
+    "addLabel": "Give someone a role",
+    "addHint": "The account must have signed in at least once — identities come from Google, so an address nobody has used yet cannot be given a role.",
+    "makeRole": {
+      "OWNER": "Make owner",
+      "MANAGER": "Make manager"
+    },
+    "remove": "Remove",
+    "removeConfirm": "Remove {{email}} from this store? They lose access to the back office; their shopping history is untouched.",
+    "removeSelfConfirm": "Remove your own access to this store? You will not be able to return unless another owner adds you back.",
+    "lastOwner": "The only owner",
+    "you": "you"
   }
 }

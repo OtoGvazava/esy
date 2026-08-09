@@ -228,44 +228,12 @@ public class AdminService {
     @Transactional
     public Map<String, Object> assignMember(String subdomain, String email, String role, String actorEmail) {
         Tenant tenant = requireStore(subdomain);
-        String normalized = PlatformAdmin.normalizeEmail(blankToNull(email));
-        if (normalized == null || !EMAIL.matcher(normalized).matches()) {
-            throw bad("A valid email address is required");
-        }
-
-        StoreMembership.Role target;
-        try {
-            target = StoreMembership.Role.valueOf(String.valueOf(role).trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw bad("Role must be OWNER or MANAGER");
-        }
-        if (!STAFF.contains(target)) {
-            throw bad("Role must be OWNER or MANAGER — CUSTOMER is recorded automatically, not granted");
-        }
-
-        // The account has to exist. There is no way to create one here: an
-        // identity comes from Google, so a row invented for an address nobody
-        // has signed in with would never match the person who eventually does.
-        User user = userService.findByEmail(normalized).orElseThrow(() -> new ResponseStatusException(
-            HttpStatus.NOT_FOUND,
-            normalized + " has no account yet — they must sign in once before they can be given a role"));
-
-        StoreMembership existing = membershipRepository.findByUserAndTenant(user, tenant).orElse(null);
-        StoreMembership.Role was = existing == null ? null : existing.getRole();
-        if (was == target) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                normalized + " is already " + target + " of this store");
-        }
-        // Demoting the last owner would leave the shop with nobody who can
-        // change its settings — the unmanageable state this whole screen exists
-        // to resolve. Promote the replacement first.
-        if (was == StoreMembership.Role.OWNER && membershipService.ownerCount(tenant) <= 1) {
-            throw bad("This is the store's only owner — give someone else OWNER before changing this one");
-        }
-
-        membershipService.assign(user, tenant, target);
+        // The rules live in MembershipService so this screen and the merchant's
+        // own Team screen cannot drift apart on who may run a shop.
+        MembershipService.Assignment done = membershipService.assignStaff(tenant, email, role);
         audit(actorEmail, ACTION_MEMBER_ASSIGNED, TARGET_STORE, tenant.getSubdomain(),
-            normalized + " -> " + target + (was == null ? "" : " (was " + was + ")"));
+            done.email() + " -> " + done.membership().getRole()
+                + (done.previousRole() == null ? "" : " (was " + done.previousRole() + ")"));
         return storeDetail(tenant.getSubdomain());
     }
 
@@ -273,26 +241,9 @@ public class AdminService {
     @Transactional
     public Map<String, Object> removeMember(String subdomain, String email, String actorEmail) {
         Tenant tenant = requireStore(subdomain);
-        String normalized = PlatformAdmin.normalizeEmail(blankToNull(email));
-        if (normalized == null) {
-            throw bad("An email address is required");
-        }
-        User user = userService.findByEmail(normalized).orElseThrow(() -> new ResponseStatusException(
-            HttpStatus.NOT_FOUND, normalized + " has no account"));
-
-        StoreMembership existing = membershipRepository.findByUserAndTenant(user, tenant)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                normalized + " holds no role in this store"));
-        if (!STAFF.contains(existing.getRole())) {
-            throw bad(normalized + " is a customer of this store, not staff — there is no role to remove");
-        }
-        if (existing.getRole() == StoreMembership.Role.OWNER && membershipService.ownerCount(tenant) <= 1) {
-            throw bad("This is the store's only owner — a store cannot be left with nobody who can run it");
-        }
-
-        membershipService.remove(user, tenant);
+        StoreMembership.Role was = membershipService.removeStaff(tenant, email);
         audit(actorEmail, ACTION_MEMBER_REMOVED, TARGET_STORE, tenant.getSubdomain(),
-            normalized + " was " + existing.getRole());
+            MembershipService.normalizeEmail(email) + " was " + was);
         return storeDetail(tenant.getSubdomain());
     }
 
