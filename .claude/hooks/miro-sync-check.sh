@@ -19,9 +19,12 @@ STATE=".claude/.miro-sync-state"
 # change what the board describes.
 PATHS=(apps/api/src apps/web/src/manager apps/web/src/pages apps/web/src/contexts docker-compose.yml Dockerfile render.yaml)
 
+# Use the last commit that TOUCHED a watched path, not bare HEAD — bare HEAD
+# moves on every commit, so a commit to unrelated files (docs, .design-sync,
+# the hook itself) would re-fire this nag with nothing doc-relevant changed.
 FP=$(
   {
-    git rev-parse HEAD 2>/dev/null
+    git log -1 --format=%H -- "${PATHS[@]}" 2>/dev/null
     git status --porcelain -- "${PATHS[@]}" 2>/dev/null
     git diff -- "${PATHS[@]}" 2>/dev/null
   } | git hash-object --stdin 2>/dev/null
