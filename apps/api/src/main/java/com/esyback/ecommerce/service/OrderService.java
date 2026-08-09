@@ -5,12 +5,15 @@ import com.esyback.ecommerce.dto.CreateOrderRequest;
 import com.esyback.ecommerce.entity.Address;
 import com.esyback.ecommerce.entity.DeliveryOption;
 import com.esyback.ecommerce.entity.Order;
+import com.esyback.ecommerce.entity.Product;
+import com.esyback.ecommerce.entity.ProductVariant;
 import com.esyback.ecommerce.entity.OrderItem;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.AddressRepository;
 import com.esyback.ecommerce.repository.OrderRepository;
+import com.esyback.ecommerce.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,8 @@ public class OrderService {
     private final MembershipService membershipService;
     private final DeliveryService deliveryService;
     private final ProductService productService;
+    private final ProductRepository productRepository;
+    private final ProductVariantService productVariantService;
     private final AddressRepository addressRepository;
     // Platform service fee (fraction of order total). Read at call time from a
     // live config bean so the rate can change via the admin config UI
@@ -57,6 +62,22 @@ public class OrderService {
             oi.setTitle(i.getTitle() == null ? "Item" : i.getTitle());
             BigDecimal price = i.getPrice() == null ? BigDecimal.ZERO : i.getPrice();
             int qty = i.getQuantity() == null || i.getQuantity() < 1 ? 1 : i.getQuantity();
+
+            // Variants (D11). The combination is frozen onto the line the same
+            // way the title and price are, and its price — not the browser's —
+            // decides what is charged, for the same reason delivery is priced
+            // server-side: the shopper picks a row, not an amount.
+            if (i.getProductId() != null) {
+                Product product = productRepository.findById(i.getProductId()).orElse(null);
+                if (product != null && product.variantsEnabled()) {
+                    ProductVariant variant = productVariantService.require(product, i.getVariantId());
+                    oi.setVariantId(variant.getId());
+                    oi.setVariantLabel(variant.label());
+                    price = variant.getPrice() != null ? variant.getPrice() : product.getPrice();
+                    oi.setTitle(product.getTitle());
+                }
+            }
+
             oi.setPrice(price);
             oi.setQuantity(qty);
             order.addItem(oi);

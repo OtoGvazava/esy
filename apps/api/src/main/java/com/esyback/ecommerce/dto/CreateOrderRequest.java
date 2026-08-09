@@ -60,9 +60,13 @@ public class CreateOrderRequest {
         private String title;
         private BigDecimal price;
         private Integer quantity;
+        /** The chosen combination (D11), when the product has variants. */
+        private Long variantId;
 
         public Long getProductId() { return productId; }
         public void setProductId(Long productId) { this.productId = productId; }
+        public Long getVariantId() { return variantId; }
+        public void setVariantId(Long variantId) { this.variantId = variantId; }
         public String getTitle() { return title; }
         public void setTitle(String title) { this.title = title; }
         public BigDecimal getPrice() { return price; }

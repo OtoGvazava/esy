@@ -29,6 +29,8 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
     private final TenantContextService tenantContextService;
+    private final com.esyback.ecommerce.repository.ProductVariantRepository variantRepository;
+    private final ProductVariantService productVariantService;
     
     /**
      * Commit stock for a paid order (decision D3): quantities decrement at PAID,
@@ -38,12 +40,45 @@ public class ProductService {
      * refund API integration yet, so automated refund-on-oversell is not
      * possible and the store resolves it manually from the orders screen.
      */
+    /**
+     * The entity itself, scoped to the store the request resolved to. The
+     * variant endpoints need the Product rather than a DTO, and going through
+     * the tenant keeps one store from reaching another's rows by id.
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public java.util.Optional<Product> findEntity(Long id) {
+        Tenant tenant = tenantContextService.getCurrentTenant();
+        return productRepository.findById(id)
+            .filter(p -> p.getTenant() != null && p.getTenant().getId().equals(tenant.getId()));
+    }
+
     public void commitStock(com.esyback.ecommerce.entity.Order order) {
         for (com.esyback.ecommerce.entity.OrderItem item : order.getItems()) {
             if (item.getProductId() == null) continue;
             productRepository.findById(item.getProductId()).ifPresent(p -> {
-                int have = p.getQuantity() == null ? 0 : p.getQuantity();
                 int take = item.getQuantity() == null ? 1 : item.getQuantity();
+
+                // With variants, stock lives on the combination (D11). Taking
+                // it off the product instead would decrement a cached sum and
+                // leave the row the shopper actually bought untouched — the
+                // size would stay "in stock" forever.
+                if (p.variantsEnabled() && item.getVariantId() != null) {
+                    variantRepository.findByIdAndProduct(item.getVariantId(), p).ifPresent(v -> {
+                        int have = v.getQuantity() == null ? 0 : v.getQuantity();
+                        if (take > have) {
+                            org.slf4j.LoggerFactory.getLogger(ProductService.class).warn(
+                                "OVERSELL order={} product={} variant={} wanted={} had={} — floored at 0, resolve manually",
+                                order.getOrderNumber(), p.getId(), v.getId(), take, have);
+                        }
+                        v.setQuantity(Math.max(0, have - take));
+                        variantRepository.save(v);
+                    });
+                    // Keep the product's cached total honest against its rows.
+                    productVariantService.syncStock(p);
+                    return;
+                }
+
+                int have = p.getQuantity() == null ? 0 : p.getQuantity();
                 if (take > have) {
                     org.slf4j.LoggerFactory.getLogger(ProductService.class).warn(
                         "OVERSELL order={} product={} wanted={} had={} — stock floored at 0, resolve manually",
