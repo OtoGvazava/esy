@@ -31,10 +31,26 @@ public class StoreAccessGuard {
     private final MembershipService membershipService;
     private final TenantContextService tenantContextService;
 
+    // The two permission axes are independent (D6), and this guard implements
+    // exactly one of them: the STORE axis. Platform ADMIN is deliberately NOT
+    // consulted here.
+    //
+    // It used to short-circuit to true, which meant any platform admin silently
+    // held owner powers in every store — able to edit products, change branding
+    // and issue refunds in a merchant's shop without ever appearing in its
+    // membership list. That is the "admin can do anything" shortcut the decision
+    // log warns makes the system impossible to audit: nothing in the data would
+    // distinguish an admin's edit from the owner's.
+    //
+    // ADMIN grants breadth, not depth: sight of every store through
+    // /api/admin/** (guarded separately by hasRole('ADMIN')), and no authority
+    // inside any one of them. An admin who genuinely needs to act inside a shop
+    // gets it the same way anyone does — a StoreMembership — until the designed
+    // view-as/impersonation flow exists to make such access explicit and logged.
+
     public boolean canManageCurrentStore(Authentication authentication) {
         User user = authenticated(authentication);
         if (user == null) return false;
-        if (isPlatformAdmin(user)) return true;
         if (noStoreInScope()) return false;
         return membershipService.canManage(user, tenantContextService.getCurrentTenant());
     }
@@ -42,7 +58,6 @@ public class StoreAccessGuard {
     public boolean ownsCurrentStore(Authentication authentication) {
         User user = authenticated(authentication);
         if (user == null) return false;
-        if (isPlatformAdmin(user)) return true;
         if (noStoreInScope()) return false;
         return membershipService.isOwner(user, tenantContextService.getCurrentTenant());
     }
@@ -66,7 +81,4 @@ public class StoreAccessGuard {
         return userService.findByUsername(authentication.getName()).orElse(null);
     }
 
-    private static boolean isPlatformAdmin(User user) {
-        return user.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getName()));
-    }
 }
