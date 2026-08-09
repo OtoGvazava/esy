@@ -39,6 +39,10 @@ export const FULFIL_TONE = {
   PLACED: 'accent',
   SHIPPED: 'accent',
   OUT: 'warn',
+  // The design names this state OUT; Order.Status calls it OUT_FOR_DELIVERY and
+  // the API sends the enum name verbatim. Both keys map to the same tone so a
+  // real order doesn't fall through to neutral and read as unremarkable.
+  OUT_FOR_DELIVERY: 'warn',
   DELIVERED: 'success',
   CANCELLED: 'neutral',
 };

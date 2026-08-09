@@ -362,7 +362,16 @@ export const tenantApi = {
   },
 };
 
-// ---- Admin: live config (ADMIN only) ---------------------------------------
+// ---- Admin: platform administration (ADMIN only) ---------------------------
+// Every endpoint here is @PreAuthorize("hasRole('ADMIN')") and lives under
+// /api/admin. Administration is cross-store: the target is always named in the
+// path, never inferred from the Host header or ?tenant (withManagerTenant
+// skips this host on purpose), so these calls mean the same thing whichever
+// surface they are made from.
+//
+// Money fields (revenue, feesOwed, totalAccrued) are BigDecimal and EXCLUDE
+// refunded orders (decision D2 — a refund is not revenue). Anything rendering
+// them has to say so rather than let the figure read as gross takings.
 export const adminApi = {
   // { serviceFeeRate, bogEnv, bogAuthUrl, bogBaseUrl, publicBaseUrl, storeReady }
   getConfig() {
@@ -371,6 +380,55 @@ export const adminApi = {
   // Send only the keys you changed; server validates + writes to the config store.
   updateConfig(patch) {
     return api.put('/api/admin/config', patch);
+  },
+
+  // [{ subdomain, name, displayName, category, active, suspendedAt,
+  //    suspendReason, productCount, orderCount, revenue, feesOwed, ownerEmail }]
+  // `q` matches name / subdomain / owner email; omitted when empty so the
+  // unfiltered list is a plain GET.
+  listStores(q = '', { signal } = {}) {
+    const query = q ? `?q=${encodeURIComponent(q)}` : '';
+    return api.get(`/api/admin/stores${query}`, { signal });
+  },
+
+  // The list item plus members:[{email, role}] and
+  // recentOrders:[{orderNumber, total, status, paymentStatus, createdAt}].
+  getStore(subdomain, { signal } = {}) {
+    return api.get(`/api/admin/stores/${encodeURIComponent(subdomain)}`, { signal });
+  },
+
+  // Pulls the storefront down. `reason` is required by the server and is shown
+  // to the store owner — never send a placeholder. Returns the updated store.
+  suspendStore(subdomain, reason) {
+    return api.post(`/api/admin/stores/${encodeURIComponent(subdomain)}/suspend`, { reason });
+  },
+
+  // Puts it back. Returns the updated store.
+  reactivateStore(subdomain) {
+    return api.post(`/api/admin/stores/${encodeURIComponent(subdomain)}/reactivate`, {});
+  },
+
+  // { totalAccrued, stores:[{ subdomain, name, orderCount, revenue, feesOwed }] }
+  getBilling({ signal } = {}) {
+    return api.get('/api/admin/billing', { signal });
+  },
+
+  // [{ email, source: 'env'|'db', grantedAt, grantedBy }]. An 'env' row comes
+  // from ADMIN_EMAILS and cannot be removed over the API (the server answers
+  // 400) — only by editing that variable and redeploying.
+  listAdmins({ signal } = {}) {
+    return api.get('/api/admin/admins', { signal });
+  },
+  addAdmin(email) {
+    return api.post('/api/admin/admins', { email });
+  },
+  removeAdmin(email) {
+    return api.delete(`/api/admin/admins/${encodeURIComponent(email)}`);
+  },
+
+  // [{ at, actorEmail, action, targetType, targetId, detail }] — newest first.
+  listAudit(limit = 50, { signal } = {}) {
+    return api.get(`/api/admin/audit?limit=${encodeURIComponent(limit)}`, { signal });
   },
 };
 

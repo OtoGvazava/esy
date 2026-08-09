@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -89,7 +90,32 @@ public class Tenant {
 
     @Column(name = "is_active")
     private Boolean isActive = true;
-    
+
+    // Platform-admin suspension. suspendedAt != null IS the suspended state —
+    // there is no boolean twin to drift out of sync; reactivate clears all three.
+    // Distinct from isActive, which the owner controls for their own store.
+    //
+    // ALL THREE ARE NULLABLE ON PURPOSE. `tenants` is populated in prod, and
+    // ddl-auto=update emits ADD COLUMN only — a NOT NULL add is rejected on a
+    // table with rows (CLAUDE.md gotcha #1), leaving the app booted but broken.
+    // Nullable adds are accepted; existing stores read back as "never suspended",
+    // which is exactly right. No columnDefinition default is needed (and none is
+    // given: see Order.serviceFee for why a "default" in columnDefinition makes
+    // Hibernate re-emit an invalid ALTER on every Postgres boot).
+    @Column(name = "suspended_at")
+    private Instant suspendedAt;
+
+    // Email of the platform admin who suspended the store (audit trail on the
+    // row itself; the full history lives in AuditLog).
+    @Column(name = "suspended_by")
+    private String suspendedBy;
+
+    // Free-text reason shown to the owner. TEXT mirrors `description` above,
+    // which is the proven type for a free-text column on this table.
+    @Column(name = "suspend_reason", columnDefinition = "TEXT")
+    private String suspendReason;
+
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

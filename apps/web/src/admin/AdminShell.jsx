@@ -14,24 +14,21 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { useTK } from '../core/useTK';
 import { Btn, Card, Note } from '../core/primitives';
 import { EsyMark } from '../core/domain';
 import { Icons } from '../core/icons';
 import SignIn from '../pages/SignIn';
 import AuthCallback from '../pages/AuthCallback';
+// Administration is teal, never the platform indigo — see ./adminTokens for why
+// the accent is fixed rather than tenant-derived. Every screen below reads the
+// same hook, so the chrome and its contents cannot drift apart.
+import { useAdminTokens } from './adminTokens';
+import AdminStores from './AdminStores';
+import AdminStoreDetail from './AdminStoreDetail';
+import AdminBilling from './AdminBilling';
+import AdminAdmins from './AdminAdmins';
 
 const ConfigSettings = lazy(() => import('../pages/ConfigSettings'));
-
-// Administration is teal, never the platform indigo. The accent is fixed rather
-// than tenant-derived: this host serves no single store, so borrowing a store's
-// brand here would be a lie about whose data is on screen.
-const ADMIN_ACCENT = '#0f766e';
-
-function useAdminTokens() {
-  const { T, dark } = useTK();
-  return { ...T, accent: ADMIN_ACCENT, accentFg: T.adminFg, accentBg: T.adminBg, dark };
-}
 
 /** Permanent, non-dismissable reminder of the scope you are operating in. */
 function ScopeBand({ T }) {
@@ -123,17 +120,6 @@ function Gate({ T, kind }) {
   );
 }
 
-/** Placeholder for a screen whose /api/admin endpoint is not built yet. */
-function Pending({ T, titleKey }) {
-  const { t } = useTranslation('admin');
-  return (
-    <div style={{ padding: 20 }}>
-      <div style={{ font: `700 17px ${T.font}`, marginBottom: 10 }}>{t(titleKey)}</div>
-      <Note T={T} tone="admin">{t('pending')}</Note>
-    </div>
-  );
-}
-
 export default function AdminShell() {
   const T = useAdminTokens();
   const { isAuthenticated, loading, user } = useAuth();
@@ -163,10 +149,12 @@ export default function AdminShell() {
       <Suspense fallback={<div style={{ padding: 20, color: T.textMute }} />}>
         <Routes>
           <Route path="/" element={<Navigate to="/stores" replace />} />
-          <Route path="/stores" element={<Pending T={T} titleKey="nav.stores" />} />
-          <Route path="/billing" element={<Pending T={T} titleKey="nav.billing" />} />
+          <Route path="/stores" element={<AdminStores />} />
+          {/* The store record is under /stores/ so the Stores tab stays lit. */}
+          <Route path="/stores/:sub" element={<AdminStoreDetail />} />
+          <Route path="/billing" element={<AdminBilling />} />
           <Route path="/config" element={<ConfigSettings />} />
-          <Route path="/admins" element={<Pending T={T} titleKey="nav.admins" />} />
+          <Route path="/admins" element={<AdminAdmins />} />
           <Route path="*" element={<Navigate to="/stores" replace />} />
         </Routes>
       </Suspense>
