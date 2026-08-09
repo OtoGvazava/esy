@@ -151,5 +151,34 @@
       "express": "Added on top of a courier route at checkout — never chosen on its own."
     },
     "surcharge": "Surcharge"
+  },
+  "variants": {
+    "title": "Options",
+    "sub": "Sizes, colours — the combinations are what hold stock.",
+    "axisName": "Option name",
+    "axisValues": "Values",
+    "addValue": "Add…",
+    "removeAxis": "Remove",
+    "removeValue": "Remove {{value}}",
+    "axisPlaceholder": {
+      "0": "Size",
+      "1": "Colour"
+    },
+    "addAxis": "Add a second option",
+    "apply": "Apply options",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveStock": "Save stock",
+    "stock": "Stock",
+    "price": "Price",
+    "totalStock": "Total stock",
+    "offNote": "This product is sold as one thing. Turn options on if it comes in sizes or colours.",
+    "twoAxisCeiling": "Two options is the ceiling — a third produces a table nobody fills in.",
+    "stockNote": "Stock lives on each combination. The product’s own stock number becomes their sum.",
+    "quantityLocked": "Set per combination below",
+    "disableConfirm": "Turn options off? The combinations and their stock are deleted, and the product goes back to a single stock number.",
+    "saveProductFirst": "Save the product first — combinations are attached to it.",
+    "loadFailed": "Could not load the options.",
+    "saveFailed": "Could not save the options."
   }
 }
