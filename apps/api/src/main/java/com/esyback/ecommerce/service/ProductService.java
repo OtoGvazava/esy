@@ -161,13 +161,15 @@ public class ProductService {
     }
     
     private ProductListDto convertToProductListDto(Product product) {
-        return new ProductListDto(
+        ProductListDto dto = new ProductListDto(
             product.getId(),
             product.getTitle(),
             product.getImageUrl(),
             product.getPrice(),
             product.getQuantity()
         );
+        dto.setHasVariants(product.variantsEnabled());
+        return dto;
     }
     
     private ProductDto convertToProductDto(Product product) {

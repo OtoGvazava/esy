@@ -261,5 +261,12 @@
     "contact": "Contact",
     "delivery": "Delivery",
     "deliveryNote": "Delivery is charged once per order and shown again before you pay."
+  },
+  "variant": {
+    "struckWith": "Struck through — not available with {{other}}.",
+    "struckAlone": "Struck through — not available right now.",
+    "onlyLeft": "Only {{n}} left",
+    "soldOut": "Sold out in this combination",
+    "priceForCombination": "This price is for the combination you picked."
   }
 }

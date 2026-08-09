@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useCart } from '../contexts/CartContext';
+import { useCart, lineKey } from '../contexts/CartContext';
 import { useGlow } from '../styles/glow';
 import { Icon, Placeholder } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
@@ -78,12 +78,15 @@ export default function Cart() {
               <Thumb T={T} item={it} tenant={tenant} />
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <div style={{ font: `600 13.5px ${T.font}`, color: T.text, letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.title}</div>
-                <button onClick={() => removeFromCart(it.id)} style={{ alignSelf: 'flex-start', marginTop: 2, padding: 0, border: 'none', background: 'transparent', color: T.textMute, font: `500 11px ${T.font}`, cursor: 'pointer' }}>{t('remove')}</button>
+                {it.variantLabel && (
+                  <div style={{ font: `500 11.5px ${T.font}`, color: T.textMute, marginTop: 2 }}>{it.variantLabel}</div>
+                )}
+                <button onClick={() => removeFromCart(lineKey(it))} style={{ alignSelf: 'flex-start', marginTop: 2, padding: 0, border: 'none', background: 'transparent', color: T.textMute, font: `500 11px ${T.font}`, cursor: 'pointer' }}>{t('remove')}</button>
                 <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', border: `1px solid ${T.border}`, borderRadius: 999, height: 30, overflow: 'hidden' }}>
-                    <button onClick={() => updateQuantity(it.id, it.quantity - 1)} style={{ width: 30, height: 30, border: 'none', background: 'transparent', color: T.text, font: `600 16px ${T.font}`, cursor: 'pointer' }}>−</button>
+                    <button onClick={() => updateQuantity(lineKey(it), it.quantity - 1)} style={{ width: 30, height: 30, border: 'none', background: 'transparent', color: T.text, font: `600 16px ${T.font}`, cursor: 'pointer' }}>−</button>
                     <span style={{ width: 26, textAlign: 'center', font: `600 13px ${T.font}`, color: T.text }}>{it.quantity}</span>
-                    <button onClick={() => updateQuantity(it.id, it.quantity + 1)} style={{ width: 30, height: 30, border: 'none', background: 'transparent', color: T.text, font: `600 16px ${T.font}`, cursor: 'pointer' }}>+</button>
+                    <button onClick={() => updateQuantity(lineKey(it), it.quantity + 1)} style={{ width: 30, height: 30, border: 'none', background: 'transparent', color: T.text, font: `600 16px ${T.font}`, cursor: 'pointer' }}>+</button>
                   </div>
                   <div style={{ font: `700 14px ${T.font}`, color: T.text, letterSpacing: '-0.015em' }}>{money(it.price * it.quantity)}</div>
                 </div>

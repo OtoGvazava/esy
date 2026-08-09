@@ -100,6 +100,9 @@ const mapListItem = (dto) => ({
   image: dto.imageUrl,
   quantity: dto.quantity,
   stock: dto.quantity,
+  // So a card can send the shopper to choose rather than adding a product
+  // checkout would refuse for having no combination (D11).
+  hasVariants: !!dto.hasVariants,
 });
 
 // Backend detail: { id, title, description, imageUrl, price, quantity,
@@ -190,6 +193,17 @@ export const productApi = {
       throw new ApiError(message, res.status);
     }
     return mapDetail(await res.json());
+  },
+
+  // Variants (D11). The read is public — a shopper must see the sizes before
+  // choosing one; the write is store management and replaces the whole
+  // document, because editing a variant grid is a single act.
+  getVariants(id, { signal } = {}) {
+    return api.get(`/api/products/${id}/variants`, { signal });
+  },
+
+  putVariants(id, doc) {
+    return api.put(`/api/products/${id}/variants`, doc);
   },
 
   async deleteImage(id, imageId) {

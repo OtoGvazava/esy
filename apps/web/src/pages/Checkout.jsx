@@ -189,7 +189,9 @@ export default function Checkout() {
     if (!eligible || placing) return;
     setPayError('');
     setPlacing(true);
-    const cartItems = items.map((i) => ({ id: i.id, title: i.title, price: i.price, quantity: i.quantity }));
+    // variantId rides along so the server can price the chosen row and take
+    // stock from it (D11); it is absent for a product without variants.
+    const cartItems = items.map((i) => ({ id: i.id, title: i.title, price: i.price, quantity: i.quantity, variantId: i.variantId }));
 
     // Stores that connected Bank of Georgia: create the order + BOG payment,
     // then hand the browser to the bank-hosted page. The cart is kept until

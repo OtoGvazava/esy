@@ -3,42 +3,50 @@ import { createContext, useContext, useReducer } from 'react';
 
 const CartContext = createContext();
 
+/**
+ * A cart line is identified by the product AND the chosen variant (D11), not
+ * by the product alone. Two sizes of one shirt are two lines: merging them
+ * would show quantity 2 of "a shirt" and send a single variant to checkout,
+ * so one of the sizes would silently become the other.
+ *
+ * Products without variants carry no variantId and key on the product alone,
+ * exactly as before.
+ */
+export const lineKey = (item) => `${item.id}::${item.variantId ?? ''}`;
+
 // Cart reducer for state management
 const cartReducer = (state, action) => {
-  console.log('CartReducer: Received action:', action);
   switch (action.type) {
     case 'ADD_TO_CART': {
-      console.log('CartReducer: Processing ADD_TO_CART');
-      const existingItem = state.items.find(item => item.id === action.payload.id);
+      const key = lineKey(action.payload);
+      const existingItem = state.items.find(item => lineKey(item) === key);
       if (existingItem) {
-        console.log('CartReducer: Item exists, incrementing quantity');
         return {
           ...state,
           items: state.items.map(item =>
-            item.id === action.payload.id
-              ? { ...item, quantity: item.quantity + 1 }
+            lineKey(item) === key
+              ? { ...item, quantity: item.quantity + (action.payload.quantity || 1) }
               : item,
           ),
         };
       }
-      console.log('CartReducer: New item, adding to cart');
       return {
         ...state,
-        items: [...state.items, { ...action.payload, quantity: 1 }],
+        items: [...state.items, { ...action.payload, quantity: action.payload.quantity || 1 }],
       };
     }
 
     case 'REMOVE_FROM_CART':
       return {
         ...state,
-        items: state.items.filter(item => item.id !== action.payload),
+        items: state.items.filter(item => lineKey(item) !== action.payload),
       };
 
     case 'UPDATE_QUANTITY':
       return {
         ...state,
         items: state.items.map(item =>
-          item.id === action.payload.id
+          lineKey(item) === action.payload.key
             ? { ...item, quantity: Math.max(0, action.payload.quantity) }
             : item,
         ).filter(item => item.quantity > 0),
@@ -61,17 +69,17 @@ export const CartProvider = ({ children }) => {
   });
 
   const addToCart = (product) => {
-    console.log('CartContext: Adding product to cart:', product);
     dispatch({ type: 'ADD_TO_CART', payload: product });
-    console.log('CartContext: Dispatch sent');
   };
 
-  const removeFromCart = (productId) => {
-    dispatch({ type: 'REMOVE_FROM_CART', payload: productId });
+  // Both take a line key (see lineKey) rather than a product id, because with
+  // variants a product id no longer names one row of the cart.
+  const removeFromCart = (key) => {
+    dispatch({ type: 'REMOVE_FROM_CART', payload: key });
   };
 
-  const updateQuantity = (productId, quantity) => {
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { id: productId, quantity } });
+  const updateQuantity = (key, quantity) => {
+    dispatch({ type: 'UPDATE_QUANTITY', payload: { key, quantity } });
   };
 
   const clearCart = () => {

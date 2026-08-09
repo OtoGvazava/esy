@@ -12,8 +12,15 @@ public class ProductListDto {
     // list rows, so it must travel with them (detail-only before).
     private Integer quantity;
 
+    // So a card can send a shopper to choose rather than adding a product that
+    // checkout would then refuse for having no combination (D11).
+    private Boolean hasVariants;
+
     // Constructors
     public ProductListDto() {}
+
+    public Boolean getHasVariants() { return hasVariants; }
+    public void setHasVariants(Boolean hasVariants) { this.hasVariants = hasVariants; }
 
     public ProductListDto(Long id, String title, String imageUrl, BigDecimal price, Integer quantity) {
         this.id = id;
