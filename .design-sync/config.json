@@ -104,6 +104,12 @@
     },
     "MarkdownField": {
       "cardMode": "column"
+    },
+    "PhoneVerifyBox": {
+      "cardMode": "column"
+    },
+    "StoreArtStrip": {
+      "cardMode": "column"
     }
   },
   "componentSrcMap": {
