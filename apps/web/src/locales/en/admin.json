@@ -15,7 +15,8 @@
     "deniedTitle": "This account is not an administrator",
     "deniedBody": "Your account manages shops, not the platform. To manage your shop, use the back office.",
     "signedInAs": "Signed in as {{email}}",
-    "backToPlatform": "Back to esy.ge"
+    "backToPlatform": "Back to esy.ge",
+    "backToManager": "Go to manager.esy.ge"
   },
   "pending": "This screen is designed but its data is not connected yet.",
   "ui": {
@@ -33,7 +34,7 @@
     "OWNER": "Owner",
     "MANAGER": "Manager",
     "CUSTOMER": "Customer",
-    "ADMIN": "Admin"
+    "ADMIN": "Administrator"
   },
   "orderStatus": {
     "PLACED": "Placed",
@@ -156,5 +157,8 @@
     "removeConfirmYes": "Yes, remove",
     "removeSelf": "This is your own account — you will lose access to this host.",
     "you": "you"
+  },
+  "shell": {
+    "sidebarNote": "A separate host, separate routes, admin API only. Scopes are never mixed in one response."
   }
 }
