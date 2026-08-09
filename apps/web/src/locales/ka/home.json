@@ -11,5 +11,6 @@
   "noProductsQuery": "„{{query}}“-ისთვის პროდუქტი ვერ მოიძებნა.",
   "reachedEnd": "სია დასრულდა",
   "loadingMore": "იტვირთება…",
-  "loadingMoreN": "იტვირთება კიდევ {{count}}…"
+  "loadingMoreN": "იტვირთება კიდევ {{count}}…",
+  "aboutStore": "მაღაზიის შესახებ"
 }

@@ -112,16 +112,16 @@
     "primary": "Primary",
     "makePrimary": "Make primary",
     "type": {
-      "PHONE": "Phone",
-      "WHATSAPP": "WhatsApp",
-      "FACEBOOK": "Facebook",
-      "INSTAGRAM": "Instagram"
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "facebook": "Facebook",
+      "instagram": "Instagram"
     },
     "placeholder": {
-      "PHONE": "Phone number",
-      "WHATSAPP": "WhatsApp number",
-      "FACEBOOK": "Facebook page or handle",
-      "INSTAGRAM": "Instagram handle"
+      "phone": "Phone number",
+      "whatsapp": "WhatsApp number",
+      "facebook": "Facebook page or handle",
+      "instagram": "Instagram handle"
     }
   },
   "delivery": {

@@ -252,12 +252,14 @@
     "year": "Year"
   },
   "contact": {
-    "title": "Contact",
-    "type": {
-      "PHONE": "Phone",
-      "WHATSAPP": "WhatsApp",
-      "FACEBOOK": "Facebook",
-      "INSTAGRAM": "Instagram"
-    }
+    "call": "Call",
+    "write": "Write",
+    "open": "Open"
+  },
+  "about": {
+    "title": "About",
+    "contact": "Contact",
+    "delivery": "Delivery",
+    "deliveryNote": "Delivery is charged once per order and shown again before you pay."
   }
 }

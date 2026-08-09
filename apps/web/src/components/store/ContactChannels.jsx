@@ -5,16 +5,18 @@
 // Two components, because the two audiences want opposite things: the shopper
 // wants the fastest way to reach the shop, the owner wants to see everything
 // including what is currently hidden.
-import { useCallback, useEffect, useRef, useState } from 'react';
+//
+// The shopper's side renders the design's ChannelBtn, which colours each entry
+// with that channel's own brand. This replaced a set of generic accent chips:
+// a row of contacts is meant to be recognised before it is read, and green
+// WhatsApp does that where a uniform accent does not.
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { contactApi, handleApiError } from '../../utils/api';
-import { CHANNEL_TYPES, PHONE_TYPES, channelHref } from './channelLinks';
+import { CHANNEL_TYPES, CHANNELS, PHONE_TYPES } from '../../core/channels';
+import { ChannelBtn } from '../../core/domain';
+import { Toggle } from '../../core/primitives';
 
-
-// The dev store-switch parameter, read here rather than threaded down as a
-// prop: in production the backend resolves the store from the Host header and
-// this is absent, so a caller that forgot to pass it would work everywhere
-// except the one environment where it matters.
 function devTenantParam() {
   try {
     return new URLSearchParams(window.location.search).get('tenant') || undefined;
@@ -23,60 +25,62 @@ function devTenantParam() {
   }
 }
 
+/** The action word under a value: a number is dialled, a handle is opened. */
+function actionFor(t, type) {
+  if (type === 'whatsapp') return t('contact.write');
+  return CHANNELS[type]?.kind === 'tel' ? t('contact.call') : t('contact.open');
+}
+
 /**
- * The shopper-facing strip. Renders nothing at all when a store has listed no
- * public channels — an empty "Contact" heading is worse than no heading, since
- * it implies the shop is unreachable rather than that it has not said yet.
+ * The shopper-facing row. Renders nothing when a store has listed no public
+ * channels — an empty "Contact" heading is worse than no heading, since it
+ * implies the shop is unreachable rather than that it has not said yet.
  */
-export function StoreContacts({ T, devTenant = devTenantParam(), style = {} }) {
+export function StoreContacts({ T, devTenant = devTenantParam(), compact, onLoaded, style = {} }) {
   const { t } = useTranslation('storefront');
   const [channels, setChannels] = useState([]);
-  const abortRef = useRef(null);
 
   useEffect(() => {
     const ac = new AbortController();
-    abortRef.current = ac;
+    // onLoaded lets a caller share this component's fate — a heading above an
+    // empty contact list reads as "unreachable", so the wrapper hides too.
+    const settle = (rows) => {
+      if (ac.signal.aborted) return;
+      setChannels(rows);
+      if (onLoaded) onLoaded(rows.length > 0);
+    };
     contactApi.listPublic(devTenant, { signal: ac.signal })
-      .then((rows) => { if (!ac.signal.aborted) setChannels(Array.isArray(rows) ? rows : []); })
-      // A store that cannot list its channels still sells: fall back to showing
-      // nothing rather than an error the shopper can do nothing about.
-      .catch(() => { if (!ac.signal.aborted) setChannels([]); });
+      .then((rows) => settle(Array.isArray(rows) ? rows : []))
+      // A store that cannot list its channels still sells: show nothing rather
+      // than an error the shopper can do nothing about.
+      .catch(() => settle([]));
     return () => ac.abort();
+    // onLoaded is intentionally not a dependency: callers pass an inline
+    // setState, and re-running the fetch on every render would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [devTenant]);
 
   if (channels.length === 0) return null;
 
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', ...style }}>
-      <span style={{ font: `600 12px ${T.font}`, color: T.textMute }}>{t('contact.title')}</span>
-      {channels.map((c) => {
-        const href = channelHref(c.type, c.value);
-        const label = c.value;
-        const chip = {
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '6px 12px', borderRadius: 999, textDecoration: 'none',
-          border: `1px solid ${c.isPrimary ? T.accent : T.border}`,
-          background: c.isPrimary ? T.accentBg : 'transparent',
-          color: c.isPrimary ? T.accentFg : T.textDim,
-          font: `600 12px ${T.font}`,
-        };
-        return href ? (
-          <a key={c.id} href={href} target={c.type === 'PHONE' ? undefined : '_blank'}
-             rel="noreferrer" style={chip}>
-            {t(`contact.type.${c.type}`)} · {label}
-          </a>
-        ) : (
-          <span key={c.id} style={chip}>{t(`contact.type.${c.type}`)} · {label}</span>
-        );
-      })}
+      {channels.map((c) => (
+        <ChannelBtn
+          key={c.id}
+          T={T}
+          channel={c}
+          action={actionFor(t, c.type)}
+          compact={compact}
+        />
+      ))}
     </div>
   );
 }
 
 /**
- * The owner's editor. Hiding is offered next to deleting because they mean
- * different things: a shop closing a channel for the season keeps the number
- * and switches it off, rather than retyping it when it reopens.
+ * The owner's editor. Hiding sits next to deleting because they mean different
+ * things: a shop closing a channel for the season keeps the number and
+ * switches it off, rather than retyping it when it reopens.
  */
 export function ContactChannelsEditor({ T, devTenant = devTenantParam() }) {
   const { t } = useTranslation('owner');
@@ -84,7 +88,7 @@ export function ContactChannelsEditor({ T, devTenant = devTenantParam() }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [draft, setDraft] = useState({ type: 'PHONE', value: '' });
+  const [draft, setDraft] = useState({ type: 'phone', value: '' });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -124,7 +128,7 @@ export function ContactChannelsEditor({ T, devTenant = devTenantParam() }) {
       () => contactApi.create({ type: draft.type, value, isPublic: true }, devTenant),
       'contacts.saveFailed',
     );
-    if (ok) setDraft({ type: 'PHONE', value: '' });
+    if (ok) setDraft({ type: 'phone', value: '' });
   };
 
   const label = { font: `600 11.5px ${T.font}`, color: T.textDim, marginBottom: 6 };
@@ -133,11 +137,12 @@ export function ContactChannelsEditor({ T, devTenant = devTenantParam() }) {
     border: `1px solid ${T.border}`, background: T.surface, color: T.text,
     font: `500 13.5px ${T.font}`, outline: 'none', boxSizing: 'border-box',
   };
-  const smallBtn = (active) => ({
+  const chipBtn = (active, brand) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 7,
     padding: '7px 12px', borderRadius: 10, cursor: busy ? 'not-allowed' : 'pointer',
-    border: `1px solid ${active ? T.accent : T.border}`,
-    background: active ? T.accentBg : 'transparent',
-    color: active ? T.accentFg : T.textDim,
+    border: `1px solid ${active ? brand : T.border}`,
+    background: active ? `${brand}14` : 'transparent',
+    color: active ? brand : T.textDim,
     font: `600 12px ${T.font}`,
   });
 
@@ -165,52 +170,68 @@ export function ContactChannelsEditor({ T, devTenant = devTenantParam() }) {
           {rows.length === 0 && (
             <div style={{ font: `500 13px ${T.font}`, color: T.textMute }}>{t('contacts.empty')}</div>
           )}
-          {rows.map((c) => (
-            <div key={c.id} style={{
-              display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
-              padding: '10px 12px', borderRadius: 12, border: `1px solid ${T.border}`,
-              opacity: c.isPublic ? 1 : 0.6,
-            }}>
-              <span style={{ font: `600 12px ${T.font}`, color: T.textDim, minWidth: 74 }}>
-                {t(`contacts.type.${c.type}`)}
-              </span>
-              <span style={{ flex: 1, minWidth: 140, font: `500 13.5px ${T.font}`, color: T.text }}>
-                {c.value}
-              </span>
-              {c.isPrimary && (
+          {rows.map((c) => {
+            const brand = CHANNELS[c.type]?.brand || T.accent;
+            return (
+              <div key={c.id} style={{
+                display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
+                padding: '10px 12px', borderRadius: 12, border: `1px solid ${T.border}`,
+                opacity: c.isPublic ? 1 : 0.6,
+              }}>
                 <span style={{
-                  padding: '3px 9px', borderRadius: 999, background: T.accentBg,
-                  color: T.accentFg, font: `700 10.5px ${T.font}`,
-                }}>{t('contacts.primary')}</span>
-              )}
-              {PHONE_TYPES.includes(c.type) && !c.isPrimary && (
-                <button type="button" disabled={busy} style={smallBtn(false)}
-                        onClick={() => run(() => contactApi.update(c.id, { isPrimary: true }, devTenant), 'contacts.saveFailed')}>
-                  {t('contacts.makePrimary')}
+                  width: 8, height: 8, borderRadius: '50%', background: brand, flexShrink: 0,
+                }} />
+                <span style={{ font: `600 12px ${T.font}`, color: T.textDim, minWidth: 74 }}>
+                  {t(`contacts.type.${c.type}`)}
+                </span>
+                <span style={{ flex: 1, minWidth: 140, font: `500 13.5px ${T.font}`, color: T.text }}>
+                  {c.value}
+                </span>
+                {c.isPrimary && (
+                  <span style={{
+                    padding: '3px 9px', borderRadius: 999, background: T.accentBg,
+                    color: T.accentFg, font: `700 10.5px ${T.font}`,
+                  }}>{t('contacts.primary')}</span>
+                )}
+                {PHONE_TYPES.includes(c.type) && !c.isPrimary && (
+                  <button type="button" disabled={busy} style={chipBtn(false, brand)}
+                          onClick={() => run(() => contactApi.update(c.id, { isPrimary: true }, devTenant), 'contacts.saveFailed')}>
+                    {t('contacts.makePrimary')}
+                  </button>
+                )}
+                {/* The switch is the design's Toggle, and it renders the state
+                    the server confirmed — not the one that was clicked. */}
+                <span title={c.isPublic ? t('contacts.shown') : t('contacts.hidden')}>
+                  <Toggle
+                    T={T}
+                    on={!!c.isPublic}
+                    disabled={busy}
+                    onClick={() => run(
+                      () => contactApi.update(c.id, { isPublic: !c.isPublic }, devTenant),
+                      'contacts.saveFailed',
+                    )}
+                  />
+                </span>
+                <button type="button" disabled={busy}
+                        style={{ ...chipBtn(false, T.danger), color: T.dangerFg, borderColor: `${T.danger}44` }}
+                        onClick={() => {
+                          if (window.confirm(t('contacts.deleteConfirm', { value: c.value }))) {
+                            run(() => contactApi.remove(c.id, devTenant), 'contacts.deleteFailed');
+                          }
+                        }}>
+                  {t('contacts.delete')}
                 </button>
-              )}
-              <button type="button" disabled={busy} style={smallBtn(c.isPublic)}
-                      onClick={() => run(() => contactApi.update(c.id, { isPublic: !c.isPublic }, devTenant), 'contacts.saveFailed')}>
-                {c.isPublic ? t('contacts.shown') : t('contacts.hidden')}
-              </button>
-              <button type="button" disabled={busy}
-                      style={{ ...smallBtn(false), color: T.dangerFg, borderColor: `${T.danger}44` }}
-                      onClick={() => {
-                        if (window.confirm(t('contacts.deleteConfirm', { value: c.value }))) {
-                          run(() => contactApi.remove(c.id, devTenant), 'contacts.deleteFailed');
-                        }
-                      }}>
-                {t('contacts.delete')}
-              </button>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
       <form onSubmit={add} style={{ display: 'grid', gap: 8 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {CHANNEL_TYPES.map((ty) => (
-            <button key={ty} type="button" style={smallBtn(draft.type === ty)}
+            <button key={ty} type="button"
+                    style={chipBtn(draft.type === ty, CHANNELS[ty].brand)}
                     onClick={() => setDraft((d) => ({ ...d, type: ty }))}>
               {t(`contacts.type.${ty}`)}
             </button>
@@ -221,6 +242,7 @@ export function ContactChannelsEditor({ T, devTenant = devTenantParam() }) {
             <div style={label}>{t(`contacts.placeholder.${draft.type}`)}</div>
             <input
               value={draft.value}
+              placeholder={CHANNELS[draft.type].ph}
               onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value }))}
               style={field}
             />

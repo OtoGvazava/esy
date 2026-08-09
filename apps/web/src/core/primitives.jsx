@@ -248,6 +248,47 @@ export function Card({ T, children, pad = 16, style = {} }) {
   );
 }
 
+// The switch used wherever a setting is on or off — delivery routes, whether a
+// contact channel is public, the cart. Presentational only: it renders the
+// state it is given and the caller owns the click, so an optimistic flip can
+// never disagree with what the server kept.
+export function Toggle({ T, on, onClick, disabled, style = {} }) {
+  return (
+    <span
+      role="switch"
+      aria-checked={!!on}
+      aria-disabled={disabled || undefined}
+      onClick={disabled ? undefined : onClick}
+      style={{
+        width: 46,
+        height: 28,
+        borderRadius: 999,
+        flexShrink: 0,
+        position: 'relative',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.55 : 1,
+        background: on ? T.accent : T.surface2,
+        border: `1px solid ${on ? T.accent : T.borderStr}`,
+        ...style,
+      }}
+    >
+      <span
+        style={{
+          position: 'absolute',
+          top: 2,
+          left: on ? 20 : 2,
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          background: '#fff',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+          transition: 'left 120ms ease',
+        }}
+      />
+    </span>
+  );
+}
+
 // Section heading with an optional sub-line and a right-hand slot for actions.
 // The title is `title` or, matching the design's call sites, `children`. `lang`
 // is the active i18n language and only feeds track() — Georgian display text

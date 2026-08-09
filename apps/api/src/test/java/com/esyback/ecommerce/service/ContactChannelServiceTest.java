@@ -61,7 +61,7 @@ class ContactChannelServiceTest {
     }
 
     private Map<String, Object> phone(String value, boolean primary) {
-        return Map.of("type", "PHONE", "value", value, "isPrimary", primary);
+        return Map.of("type", "phone", "value", value, "isPrimary", primary);
     }
 
     @Test
@@ -84,7 +84,7 @@ class ContactChannelServiceTest {
     void aHandleCannotBeThePrimaryContact() {
         // A "primary" Instagram handle tells a shopper nothing about how to call.
         assertThatThrownBy(() -> service.create(
-            Map.of("type", "INSTAGRAM", "value", "@shop", "isPrimary", true)))
+            Map.of("type", "instagram", "value", "@shop", "isPrimary", true)))
             .hasMessageContaining("phone");
     }
 
@@ -92,7 +92,7 @@ class ContactChannelServiceTest {
     @Transactional
     void whatsappCountsAsAPhoneForThePrimaryMarker() {
         Map<String, Object> saved = service.create(
-            Map.of("type", "WHATSAPP", "value", "+995 555 000 003", "isPrimary", true));
+            Map.of("type", "whatsapp", "value", "+995 555 000 003", "isPrimary", true));
         assertThat(saved.get("isPrimary")).isEqualTo(true);
     }
 
@@ -144,11 +144,11 @@ class ContactChannelServiceTest {
     @Test
     @Transactional
     void thePublicReadNeverReturnsHiddenEntries() {
-        service.create(Map.of("type", "PHONE", "value", "+995 555 000 031", "isPublic", true));
-        service.create(Map.of("type", "FACEBOOK", "value", "fb/shop", "isPublic", false));
+        service.create(Map.of("type", "phone", "value", "+995 555 000 031", "isPublic", true));
+        service.create(Map.of("type", "facebook", "value", "fb/shop", "isPublic", false));
 
         assertThat(service.listPublic()).hasSize(1);
-        assertThat(service.listPublic().get(0).get("type")).isEqualTo("PHONE");
+        assertThat(service.listPublic().get(0).get("type")).isEqualTo("phone");
         assertThat(service.listForOwner()).hasSize(2);
     }
 
@@ -173,8 +173,17 @@ class ContactChannelServiceTest {
     }
 
     @Test
+    @Transactional
+    void theTypeIsStoredLowercaseWhateverCasingArrives() {
+        // The stored string is the API value, the brand-colour key and the i18n
+        // key all at once, so it has to be one spelling.
+        Map<String, Object> saved = service.create(Map.of("type", "WhatsApp", "value", "+995 555 1"));
+        assertThat(saved.get("type")).isEqualTo("whatsapp");
+    }
+
+    @Test
     void everyDeclaredTypeIsAccepted() {
-        assertThat(ContactChannel.TYPES).containsExactly("PHONE", "WHATSAPP", "FACEBOOK", "INSTAGRAM");
+        assertThat(ContactChannel.TYPES).containsExactly("phone", "whatsapp", "facebook", "instagram");
         assertThat(ContactChannel.PHONE_TYPES).allMatch(ContactChannel.TYPES::contains);
     }
 }

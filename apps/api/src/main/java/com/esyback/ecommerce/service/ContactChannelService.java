@@ -93,10 +93,13 @@ public class ContactChannelService {
     private void apply(ContactChannel channel, Map<String, Object> body, boolean creating) {
         if (creating || body.containsKey("type")) {
             String type = str(body.get("type"));
-            if (type == null || !ContactChannel.TYPES.contains(type.toUpperCase())) {
+            // Lowercased on the way in so the stored value always matches the
+            // design's vocabulary, whatever casing a caller sends.
+            String normalized = type == null ? null : type.toLowerCase();
+            if (normalized == null || !ContactChannel.TYPES.contains(normalized)) {
                 throw bad("Channel type must be one of " + String.join(", ", ContactChannel.TYPES));
             }
-            channel.setType(type.toUpperCase());
+            channel.setType(normalized);
         }
         if (creating || body.containsKey("value")) {
             String value = str(body.get("value"));
@@ -151,7 +154,9 @@ public class ContactChannelService {
     private static Map<String, Object> toMap(ContactChannel c) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", c.getId());
-        m.put("type", c.getType());
+        // Lowercased on the way out too, so a row written before the vocabulary
+        // settled still matches the client's brand-colour and i18n keys.
+        m.put("type", c.getType() == null ? null : c.getType().toLowerCase());
         m.put("value", c.getValue());
         m.put("isPrimary", Boolean.TRUE.equals(c.getIsPrimary()));
         m.put("isPublic", Boolean.TRUE.equals(c.getIsPublic()));

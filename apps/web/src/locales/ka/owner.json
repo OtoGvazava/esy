@@ -112,16 +112,16 @@
     "primary": "მთავარი",
     "makePrimary": "მთავარად დაყენება",
     "type": {
-      "PHONE": "ტელეფონი",
-      "WHATSAPP": "WhatsApp",
-      "FACEBOOK": "Facebook",
-      "INSTAGRAM": "Instagram"
+      "phone": "ტელეფონი",
+      "whatsapp": "WhatsApp",
+      "facebook": "Facebook",
+      "instagram": "Instagram"
     },
     "placeholder": {
-      "PHONE": "ტელეფონის ნომერი",
-      "WHATSAPP": "WhatsApp ნომერი",
-      "FACEBOOK": "Facebook გვერდი ან მომხმარებელი",
-      "INSTAGRAM": "Instagram მომხმარებელი"
+      "phone": "ტელეფონის ნომერი",
+      "whatsapp": "WhatsApp ნომერი",
+      "facebook": "Facebook გვერდი ან მომხმარებელი",
+      "instagram": "Instagram მომხმარებელი"
     }
   },
   "delivery": {

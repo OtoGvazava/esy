@@ -35,11 +35,17 @@ import java.util.List;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class ContactChannel {
 
-    /** The channels a store may list. Order is the storefront's display order. */
-    public static final List<String> TYPES = List.of("PHONE", "WHATSAPP", "FACEBOOK", "INSTAGRAM");
+    /**
+     * The channels a store may list, in the storefront's display order.
+     *
+     * <p>Lowercase to match the design's own vocabulary (esy-core.jsx keys its
+     * CHANNELS map this way) so the same string is the API value, the CSS
+     * brand-colour key and the i18n key, with no casing layer in between.
+     */
+    public static final List<String> TYPES = List.of("phone", "whatsapp", "facebook", "instagram");
 
     /** Channels whose value is a telephone number rather than a handle or URL. */
-    public static final List<String> PHONE_TYPES = List.of("PHONE", "WHATSAPP");
+    public static final List<String> PHONE_TYPES = List.of("phone", "whatsapp");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

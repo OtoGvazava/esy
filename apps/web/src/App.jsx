@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import ProductDetails from './pages/ProductDetails';
+import StoreAbout from './pages/StoreAbout';
 import SearchOverlay from './pages/SearchOverlay';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
@@ -32,6 +33,7 @@ function AppShell() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetails />} />
+        <Route path="/about" element={<StoreAbout />} />
         <Route path="/search" element={<SearchOverlay />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />

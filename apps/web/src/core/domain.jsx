@@ -13,6 +13,8 @@
 // object passed in as `T` (see ./tokens).
 /* eslint-disable react-refresh/only-export-components */
 import { Chip } from './primitives';
+import { Icons } from './icons';
+import { CHANNELS, channelHref } from './channels';
 
 // The design hardcodes a Georgian-first stack on `Mark` and a Latin-only stack
 // on the `esy.ge` wordmark. The wordmark stack is reproduced verbatim — the
@@ -195,5 +197,76 @@ export function EsyMark({
         )}
       </span>
     </span>
+  );
+}
+
+// ─── Contact channels (D10) ─────────────────────────────────────────────────
+
+/**
+ * One way to reach a store, rendered in that channel's own brand colour —
+ * WhatsApp green, Instagram pink, Facebook blue. The colour is the point: a
+ * row of these is read at a glance, before any label is.
+ *
+ * The second line is the action, not the channel name, because the value above
+ * it already says which channel it is. "Call" and "Write" differ for a reason:
+ * a phone number opens the dialler, a WhatsApp number opens a conversation.
+ *
+ * Renders as a link when the value can be linked and a plain span otherwise,
+ * so a malformed handle degrades to text rather than a dead click.
+ */
+export function ChannelBtn({ T, channel, label, action, compact, style = {} }) {
+  const meta = CHANNELS[channel.type] || CHANNELS.phone;
+  const Ic = Icons[meta.icon];
+  const href = channelHref(channel.type, channel.value);
+  const size = compact ? 15 : 16;
+
+  const body = (
+    <>
+      <span style={{ color: meta.brand, display: 'inline-flex', flexShrink: 0 }}>
+        {Ic && <Ic width={size} height={size} />}
+      </span>
+      <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+        <span
+          style={{
+            font: `700 ${compact ? 12 : 12.5}px ${T.font}`,
+            color: T.text,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {label || channel.value}
+        </span>
+        <span style={{ font: `600 10.5px ${T.font}`, color: T.textDim, letterSpacing: '0.01em' }}>
+          {action}
+        </span>
+      </span>
+    </>
+  );
+
+  const shell = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 9,
+    height: compact ? 42 : 46,
+    padding: '0 14px',
+    borderRadius: 13,
+    background: `${meta.brand}14`,
+    border: `1px solid ${meta.brand}33`,
+    maxWidth: '100%',
+    textDecoration: 'none',
+    ...style,
+  };
+
+  if (!href) return <span style={shell}>{body}</span>;
+  return (
+    <a
+      href={href}
+      target={meta.kind === 'tel' && channel.type === 'phone' ? undefined : '_blank'}
+      rel="noreferrer"
+      style={{ ...shell, cursor: 'pointer' }}
+    >
+      {body}
+    </a>
   );
 }

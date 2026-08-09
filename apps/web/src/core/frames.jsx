@@ -21,6 +21,15 @@
 //     runs. Sticky keeps its space in flow, so the design's 86px bottom
 //     clearance under a dock is no longer needed and is not reproduced.
 //
+// Two things in esy-core.jsx are deliberately NOT ported, for the same reason:
+// they are artboard furniture, not application UI.
+//
+//   · `StatusBar` — an iOS mock with a hardcoded "9:41" and battery glyphs. A
+//     real phone draws its own; ours would be a lie that never updates.
+//   · `Ph` — the striped placeholder whose caption is literally `// label`.
+//     That is mock-data notation. A product with no image needs an empty
+//     state, not a note to the designer.
+//
 // Colours come only from the token object passed in as `T` (see ./tokens).
 import { MOB } from './tokens';
 
