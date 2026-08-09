@@ -9,7 +9,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { deliveryApi, handleApiError } from '../../utils/api';
 
-const ROUTES = ['PICKUP', 'TBILISI', 'GEORGIA', 'EXPRESS'];
+// Express sits last and is styled as what it is: an upgrade a shopper adds to
+// a courier route, not a fourth way to receive an order.
+const ROUTES = ['pickup', 'tbilisi', 'georgia', 'express'];
 
 function devTenantParam() {
   try {
@@ -129,26 +131,30 @@ export default function DeliveryRoutes({ T, devTenant = devTenantParam() }) {
                     display: 'grid', gap: 10, marginTop: 12,
                     gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
                   }}>
-                    {route !== 'PICKUP' && (
-                      <>
-                        <div>
-                          <div style={label}>{t('delivery.price')}</div>
-                          <input
-                            type="number" min="0" step="0.01" style={field}
-                            defaultValue={r.price ?? 0}
-                            onBlur={(e) => write(route, { price: e.target.value || '0' })}
-                          />
+                    {route !== 'pickup' && (
+                      <div>
+                        <div style={label}>
+                          {route === 'express' ? t('delivery.surcharge') : t('delivery.price')}
                         </div>
-                        <div>
-                          <div style={label}>{t('delivery.freeOver')}</div>
-                          <input
-                            type="number" min="0" step="0.01" style={field}
-                            placeholder={t('delivery.freeOverNever')}
-                            defaultValue={r.freeOverTotal ?? ''}
-                            onBlur={(e) => write(route, { freeOverTotal: e.target.value })}
-                          />
-                        </div>
-                      </>
+                        <input
+                          type="number" min="0" step="0.01" style={field}
+                          defaultValue={r.price ?? 0}
+                          onBlur={(e) => write(route, { price: e.target.value || '0' })}
+                        />
+                      </div>
+                    )}
+                    {/* No free-over on express: the threshold is a gift of the
+                        courier fee, not of same-day. */}
+                    {route !== 'pickup' && route !== 'express' && (
+                      <div>
+                        <div style={label}>{t('delivery.freeOver')}</div>
+                        <input
+                          type="number" min="0" step="0.01" style={field}
+                          placeholder={t('delivery.freeOverNever')}
+                          defaultValue={r.freeOverTotal ?? ''}
+                          onBlur={(e) => write(route, { freeOverTotal: e.target.value })}
+                        />
+                      </div>
                     )}
                     <div>
                       <div style={label}>{t('delivery.eta')}</div>
@@ -159,7 +165,7 @@ export default function DeliveryRoutes({ T, devTenant = devTenantParam() }) {
                           ? { etaKa: e.target.value } : { etaEn: e.target.value })}
                       />
                     </div>
-                    {route === 'PICKUP' && (
+                    {route === 'pickup' && (
                       <>
                         <div>
                           <div style={label}>{t('delivery.pickupAddress')}</div>

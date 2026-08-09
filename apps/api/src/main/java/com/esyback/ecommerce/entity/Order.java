@@ -126,6 +126,12 @@ public class Order {
     @Column(name = "delivery_route")
     private String deliveryRoute;
 
+    // Whether the shopper paid for the express upgrade on top of that route.
+    // Nullable, and null reads as "no" — every order placed before express
+    // existed simply did not have it.
+    @Column(name = "delivery_express")
+    private Boolean deliveryExpress;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 

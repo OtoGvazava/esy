@@ -139,16 +139,17 @@
     "pickupAddress": "Pickup address",
     "pickupHours": "Pickup hours",
     "route": {
-      "PICKUP": "Collect in person",
-      "TBILISI": "Courier — Tbilisi",
-      "GEORGIA": "Courier — rest of Georgia",
-      "EXPRESS": "Express"
+      "pickup": "Collect in person",
+      "tbilisi": "Courier — Tbilisi",
+      "georgia": "Courier — rest of Georgia",
+      "express": "Express upgrade"
     },
     "routeHint": {
-      "PICKUP": "The shopper collects from you. No courier, no price.",
-      "TBILISI": "Delivered within the city.",
-      "GEORGIA": "Delivered outside Tbilisi.",
-      "EXPRESS": "Faster than your courier routes — needs one of them on."
-    }
+      "pickup": "The shopper collects from you. No courier, no price.",
+      "tbilisi": "Delivered within the city.",
+      "georgia": "Delivered outside Tbilisi.",
+      "express": "Added on top of a courier route at checkout — never chosen on its own."
+    },
+    "surcharge": "Surcharge"
   }
 }

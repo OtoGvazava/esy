@@ -82,18 +82,18 @@ class OrderDeliveryMoneyTest {
     }
 
     private void courierAt(String price) {
-        deliveryService.update("TBILISI", Map.of("enabled", true, "price", price));
+        deliveryService.update("tbilisi", Map.of("enabled", true, "price", price));
     }
 
     @Test
     @Transactional
     void theShopperIsChargedGoodsPlusDeliveryButRevenueCountsGoodsOnly() {
         courierAt("5.00");
-        Order order = orderService.createOrder(null, tenant, request("TBILISI", "100.00", 1));
+        Order order = orderService.createOrder(null, tenant, request("tbilisi", "100.00", 1));
 
         assertThat(order.getTotal()).isEqualByComparingTo("105.00");
         assertThat(order.getDeliveryFee()).isEqualByComparingTo("5.00");
-        assertThat(order.getDeliveryRoute()).isEqualTo("TBILISI");
+        assertThat(order.getDeliveryRoute()).isEqualTo("tbilisi");
 
         // The courier's 5 is not the merchant's money.
         assertThat(orderService.revenue(tenant)).isEqualByComparingTo("100.00");
@@ -103,7 +103,7 @@ class OrderDeliveryMoneyTest {
     @Transactional
     void commissionIsChargedOnGoodsNotOnDelivery() {
         courierAt("40.00");
-        Order order = orderService.createOrder(null, tenant, request("TBILISI", "100.00", 1));
+        Order order = orderService.createOrder(null, tenant, request("tbilisi", "100.00", 1));
 
         // 2% of 100, not of 140 — the merchant never keeps the 40.
         assertThat(order.getServiceFee()).isEqualByComparingTo("2.00");
@@ -112,9 +112,9 @@ class OrderDeliveryMoneyTest {
     @Test
     @Transactional
     void aFreeOverThresholdReachesTheOrder() {
-        deliveryService.update("TBILISI", Map.of(
+        deliveryService.update("tbilisi", Map.of(
             "enabled", true, "price", "5.00", "freeOverTotal", "50.00"));
-        Order order = orderService.createOrder(null, tenant, request("TBILISI", "60.00", 1));
+        Order order = orderService.createOrder(null, tenant, request("tbilisi", "60.00", 1));
 
         assertThat(order.getDeliveryFee()).isEqualByComparingTo("0");
         assertThat(order.getTotal()).isEqualByComparingTo("60.00");
@@ -123,7 +123,7 @@ class OrderDeliveryMoneyTest {
     @Test
     @Transactional
     void collectingInPersonCostsNothingAndKeepsNoAddress() {
-        Order order = orderService.createOrder(null, tenant, request("PICKUP", "80.00", 1));
+        Order order = orderService.createOrder(null, tenant, request("pickup", "80.00", 1));
 
         assertThat(order.getDeliveryFee()).isEqualByComparingTo("0");
         assertThat(order.getTotal()).isEqualByComparingTo("80.00");
@@ -137,7 +137,7 @@ class OrderDeliveryMoneyTest {
     @Transactional
     void aCourierOrderStillFreezesTheAddress() {
         courierAt("5.00");
-        Order order = orderService.createOrder(null, tenant, request("TBILISI", "10.00", 1));
+        Order order = orderService.createOrder(null, tenant, request("tbilisi", "10.00", 1));
         assertThat(order.getShipLine()).isEqualTo("1 Rustaveli");
         assertThat(order.getShipCity()).isEqualTo("Tbilisi");
     }
@@ -147,22 +147,51 @@ class OrderDeliveryMoneyTest {
     void theBrowserCannotDictateTheDeliveryPrice() {
         // The shopper picks a route; the fee comes from the store's own row.
         courierAt("7.50");
-        Order order = orderService.createOrder(null, tenant, request("TBILISI", "20.00", 1));
+        Order order = orderService.createOrder(null, tenant, request("tbilisi", "20.00", 1));
         assertThat(order.getDeliveryFee()).isEqualByComparingTo("7.50");
     }
 
     @Test
     @Transactional
     void aRouteTheStoreDoesNotOfferIsRefusedAtCheckout() {
-        assertThatThrownBy(() -> orderService.createOrder(null, tenant, request("EXPRESS", "20.00", 1)))
+        assertThatThrownBy(() -> orderService.createOrder(null, tenant, request("georgia", "20.00", 1)))
             .hasMessageContaining("not offered");
+    }
+
+    @Test
+    @Transactional
+    void expressCannotBeCheckedOutAsIfItWereARoute() {
+        courierAt("5.00");
+        deliveryService.update("express", Map.of("enabled", true, "price", "12.00"));
+        // Buying speed with no delivery under it.
+        assertThatThrownBy(() -> orderService.createOrder(null, tenant, request("express", "20.00", 1)))
+            .hasMessageContaining("not a route of its own");
+    }
+
+    @Test
+    @Transactional
+    void theExpressUpgradeIsAddedToTheCourierFeeAndFrozen() {
+        courierAt("8.00");
+        deliveryService.update("express", Map.of("enabled", true, "price", "12.00"));
+
+        CreateOrderRequest req = request("tbilisi", "100.00", 1);
+        req.setDeliveryExpress(true);
+        Order order = orderService.createOrder(null, tenant, req);
+
+        assertThat(order.getDeliveryFee()).isEqualByComparingTo("20.00");
+        assertThat(order.getTotal()).isEqualByComparingTo("120.00");
+        assertThat(order.getDeliveryExpress()).isTrue();
+        // Still not the merchant's money, however fast it arrived.
+        assertThat(orderService.revenue(tenant)).isEqualByComparingTo("100.00");
+        // And still 2% of the goods alone.
+        assertThat(order.getServiceFee()).isEqualByComparingTo("2.00");
     }
 
     @Test
     @Transactional
     void ordersPredatingDeliveryAreCountedAsGoodsOnly() {
         // A null fee is what every existing production order has.
-        Order legacy = orderService.createOrder(null, tenant, request("PICKUP", "30.00", 1));
+        Order legacy = orderService.createOrder(null, tenant, request("pickup", "30.00", 1));
         legacy.setDeliveryFee(null);
         legacy.setDeliveryRoute(null);
         orderRepository.save(legacy);
@@ -174,11 +203,11 @@ class OrderDeliveryMoneyTest {
     @Transactional
     void refundedAndCancelledOrdersStayOutOfRevenue() {
         courierAt("5.00");
-        Order refunded = orderService.createOrder(null, tenant, request("TBILISI", "100.00", 1));
+        Order refunded = orderService.createOrder(null, tenant, request("tbilisi", "100.00", 1));
         refunded.setPaymentStatus(Order.PaymentStatus.REFUNDED);
         orderRepository.save(refunded);
 
-        Order cancelled = orderService.createOrder(null, tenant, request("TBILISI", "70.00", 1));
+        Order cancelled = orderService.createOrder(null, tenant, request("tbilisi", "70.00", 1));
         cancelled.setStatus(Order.Status.CANCELLED);
         orderRepository.save(cancelled);
 

@@ -32,6 +32,9 @@ public class DeliveryController {
     public Map<String, Object> publicOptions() {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("routes", service.listPublic());
+        // Null when the store does not offer it. Separate from routes because
+        // express is bought on top of a courier route, not instead of one.
+        body.put("express", service.expressOffer());
         body.put("requiresAddress", service.requiresAddress());
         return body;
     }

@@ -57,11 +57,29 @@ public class DeliveryService {
             return List.of(toMap(defaultPickup()));
         }
         return enabled.stream()
+            // Express never appears here: it is an upgrade on a courier route,
+            // not one of the ways to receive an order. It is returned
+            // separately by expressOffer() so checkout can render it as the
+            // "+₾" add-on the design specifies.
+            .filter(o -> DeliveryOption.BASE_ROUTES.contains(o.getRoute()))
             .sorted((a, b) -> Integer.compare(
-                DeliveryOption.ROUTES.indexOf(a.getRoute()),
-                DeliveryOption.ROUTES.indexOf(b.getRoute())))
+                DeliveryOption.BASE_ROUTES.indexOf(a.getRoute()),
+                DeliveryOption.BASE_ROUTES.indexOf(b.getRoute())))
             .map(DeliveryService::toMap)
             .toList();
+    }
+
+    /**
+     * The express upgrade, or null when the store does not offer it. Separate
+     * from the route list because it is bought <em>in addition to</em> a
+     * courier route, not instead of one.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> expressOffer() {
+        DeliveryOption express = repository
+            .findByTenantAndRoute(tenant(), DeliveryOption.EXPRESS).orElse(null);
+        if (express == null || !Boolean.TRUE.equals(express.getEnabled())) return null;
+        return toMap(express);
     }
 
     /** The unconfigured store's implied route. Never saved by a read path. */
@@ -74,7 +92,7 @@ public class DeliveryService {
     }
 
     public Map<String, Object> update(String route, Map<String, Object> body) {
-        String key = String.valueOf(route).trim().toUpperCase();
+        String key = String.valueOf(route).trim().toLowerCase();
         if (!DeliveryOption.ROUTES.contains(key)) {
             throw bad("Unknown delivery route: " + route);
         }
@@ -124,9 +142,18 @@ public class DeliveryService {
      * agree on one calculation.
      */
     @Transactional(readOnly = true)
-    public BigDecimal feeFor(String route, BigDecimal orderTotal) {
-        String key = String.valueOf(route).toUpperCase();
+    public BigDecimal feeFor(String route, boolean express, BigDecimal orderTotal) {
+        String key = String.valueOf(route).toLowerCase();
         Tenant tenant = tenant();
+
+        if (!DeliveryOption.BASE_ROUTES.contains(key)) {
+            // Express reaching here means a caller tried to buy the upgrade as
+            // if it were a route — speed without any delivery to accelerate.
+            throw bad(DeliveryOption.EXPRESS.equals(key)
+                ? "Express is an upgrade on a courier route, not a route of its own"
+                : "That delivery route is not offered by this store");
+        }
+
         DeliveryOption option = repository.findByTenantAndRoute(tenant, key).orElse(null);
 
         // Unconfigured store: it implicitly offers collection in person, and
@@ -141,12 +168,26 @@ public class DeliveryService {
         if (!Boolean.TRUE.equals(option.getEnabled())) {
             throw bad("That delivery route is not offered by this store");
         }
+
         BigDecimal price = option.getPrice() == null ? BigDecimal.ZERO : option.getPrice();
         BigDecimal threshold = option.getFreeOverTotal();
+        // The threshold frees the ROUTE, not the express upgrade: a shop
+        // offering free delivery over 150 is not also giving away same-day.
         if (threshold != null && orderTotal != null && orderTotal.compareTo(threshold) >= 0) {
-            return BigDecimal.ZERO;
+            price = BigDecimal.ZERO;
         }
-        return price;
+
+        if (!express) return price;
+
+        if (DeliveryOption.PICKUP.equals(key)) {
+            throw bad("Express applies to a courier route — there is nothing to accelerate about collecting in person");
+        }
+        DeliveryOption upgrade = repository
+            .findByTenantAndRoute(tenant, DeliveryOption.EXPRESS).orElse(null);
+        if (upgrade == null || !Boolean.TRUE.equals(upgrade.getEnabled())) {
+            throw bad("This store does not offer express delivery");
+        }
+        return price.add(upgrade.getPrice() == null ? BigDecimal.ZERO : upgrade.getPrice());
     }
 
     /**

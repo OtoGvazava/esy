@@ -65,61 +65,61 @@ class DeliveryServiceTest {
         List<Map<String, Object>> all = service.listForOwner();
         assertThat(all).hasSize(4);
         assertThat(all.stream().map(r -> r.get("route")))
-            .containsExactly("PICKUP", "TBILISI", "GEORGIA", "EXPRESS");
+            .containsExactly("pickup", "tbilisi", "georgia", "express");
         // A shop that never opened the screen must still be able to sell.
-        assertThat(route("PICKUP").get("enabled")).isEqualTo(true);
+        assertThat(route("pickup").get("enabled")).isEqualTo(true);
     }
 
     @Test
     @Transactional
     void theLastEnabledRouteCannotBeSwitchedOff() {
         service.listForOwner(); // PICKUP is the only one on
-        assertThatThrownBy(() -> service.update("PICKUP", Map.of("enabled", false)))
+        assertThatThrownBy(() -> service.update("pickup", Map.of("enabled", false)))
             .hasMessageContaining("only way");
     }
 
     @Test
     @Transactional
     void aRouteCanBeSwitchedOffOnceAnotherIsOn() {
-        enable("TBILISI");
-        service.update("PICKUP", Map.of("enabled", false));
-        assertThat(route("PICKUP").get("enabled")).isEqualTo(false);
-        assertThat(route("TBILISI").get("enabled")).isEqualTo(true);
+        enable("tbilisi");
+        service.update("pickup", Map.of("enabled", false));
+        assertThat(route("pickup").get("enabled")).isEqualTo(false);
+        assertThat(route("tbilisi").get("enabled")).isEqualTo(true);
     }
 
     @Test
     @Transactional
     void expressCannotBeEnabledWithoutACourier() {
-        assertThatThrownBy(() -> service.update("EXPRESS", Map.of("enabled", true)))
+        assertThatThrownBy(() -> service.update("express", Map.of("enabled", true)))
             .hasMessageContaining("courier");
     }
 
     @Test
     @Transactional
     void expressCanBeEnabledOnceACourierIsOn() {
-        enable("GEORGIA");
-        enable("EXPRESS");
-        assertThat(route("EXPRESS").get("enabled")).isEqualTo(true);
+        enable("georgia");
+        enable("express");
+        assertThat(route("express").get("enabled")).isEqualTo(true);
     }
 
     @Test
     @Transactional
     void turningOffTheLastCourierIsRefusedWhileExpressIsOn() {
-        enable("TBILISI");
-        enable("EXPRESS");
+        enable("tbilisi");
+        enable("express");
         // Silently disabling express too would hide the consequence.
-        assertThatThrownBy(() -> service.update("TBILISI", Map.of("enabled", false)))
+        assertThatThrownBy(() -> service.update("tbilisi", Map.of("enabled", false)))
             .hasMessageContaining("express off first");
     }
 
     @Test
     @Transactional
     void theLastCourierCanGoOnceExpressIsOff() {
-        enable("TBILISI");
-        enable("EXPRESS");
-        service.update("EXPRESS", Map.of("enabled", false));
-        service.update("TBILISI", Map.of("enabled", false));
-        assertThat(route("TBILISI").get("enabled")).isEqualTo(false);
+        enable("tbilisi");
+        enable("express");
+        service.update("express", Map.of("enabled", false));
+        service.update("tbilisi", Map.of("enabled", false));
+        assertThat(route("tbilisi").get("enabled")).isEqualTo(false);
     }
 
     @Test
@@ -127,22 +127,22 @@ class DeliveryServiceTest {
     void checkoutDropsTheAddressBlockWhenNoCourierIsOn() {
         service.listForOwner(); // pickup only
         assertThat(service.requiresAddress()).isFalse();
-        enable("GEORGIA");
+        enable("georgia");
         assertThat(service.requiresAddress()).isTrue();
     }
 
     @Test
     @Transactional
     void theFreeOverThresholdAppliesAutomatically() {
-        service.update("TBILISI", Map.of(
+        service.update("tbilisi", Map.of(
             "enabled", true, "price", "5.00", "freeOverTotal", "100.00"));
 
-        assertThat(service.feeFor("TBILISI", new BigDecimal("99.99")))
+        assertThat(service.feeFor("tbilisi", false, new BigDecimal("99.99")))
             .isEqualByComparingTo("5.00");
         // At the threshold, not merely above it.
-        assertThat(service.feeFor("TBILISI", new BigDecimal("100.00")))
+        assertThat(service.feeFor("tbilisi", false, new BigDecimal("100.00")))
             .isEqualByComparingTo("0");
-        assertThat(service.feeFor("TBILISI", new BigDecimal("250.00")))
+        assertThat(service.feeFor("tbilisi", false, new BigDecimal("250.00")))
             .isEqualByComparingTo("0");
     }
 
@@ -152,31 +152,31 @@ class DeliveryServiceTest {
         service.listForOwner();
         // GEORGIA exists as a row but is switched off — quoting a price for it
         // would let a shopper check out on a route the shop cannot serve.
-        assertThatThrownBy(() -> service.feeFor("GEORGIA", new BigDecimal("10")))
+        assertThatThrownBy(() -> service.feeFor("georgia", false, new BigDecimal("10")))
             .hasMessageContaining("not offered");
     }
 
     @Test
     @Transactional
     void aNegativePriceIsRefused() {
-        assertThatThrownBy(() -> service.update("TBILISI", Map.of("enabled", true, "price", "-1")))
+        assertThatThrownBy(() -> service.update("tbilisi", Map.of("enabled", true, "price", "-1")))
             .hasMessageContaining("negative");
     }
 
     @Test
     @Transactional
     void thePublicListShowsOnlyEnabledRoutesInDisplayOrder() {
-        enable("GEORGIA");
-        enable("TBILISI");
+        enable("georgia");
+        enable("tbilisi");
         List<Map<String, Object>> shown = service.listPublic();
         assertThat(shown.stream().map(r -> r.get("route")))
-            .containsExactly("PICKUP", "TBILISI", "GEORGIA");
+            .containsExactly("pickup", "tbilisi", "georgia");
     }
 
     @Test
     @Transactional
     void anUnknownRouteIsRefused() {
-        assertThatThrownBy(() -> service.update("TELEPORT", Map.of("enabled", true)))
+        assertThatThrownBy(() -> service.update("teleport", Map.of("enabled", true)))
             .hasMessageContaining("Unknown delivery route");
     }
 
@@ -187,11 +187,11 @@ class DeliveryServiceTest {
         // would leave this store's shoppers unable to check out at all.
         List<Map<String, Object>> shown = service.listPublic();
         assertThat(shown).hasSize(1);
-        assertThat(shown.get(0).get("route")).isEqualTo("PICKUP");
+        assertThat(shown.get(0).get("route")).isEqualTo("pickup");
         assertThat(shown.get(0).get("enabled")).isEqualTo(true);
 
         // ...and the quote must agree with what the storefront just offered.
-        assertThat(service.feeFor("PICKUP", new BigDecimal("40"))).isEqualByComparingTo("0");
+        assertThat(service.feeFor("pickup", false, new BigDecimal("40"))).isEqualByComparingTo("0");
         assertThat(service.requiresAddress()).isFalse();
     }
 
@@ -207,13 +207,93 @@ class DeliveryServiceTest {
     @Test
     @Transactional
     void anUnconfiguredStoreDoesNotSilentlyOfferCouriers() {
-        assertThatThrownBy(() -> service.feeFor("TBILISI", new BigDecimal("40")))
+        assertThatThrownBy(() -> service.feeFor("tbilisi", false, new BigDecimal("40")))
             .hasMessageContaining("not offered");
+    }
+
+    // ─── Express is an upgrade, not a route ─────────────────────────────────
+    // The design's checkout renders it as a "+₾" row that appears only once a
+    // courier is chosen. Treating it as a fourth radio button would let a
+    // shopper buy speed without buying any delivery to accelerate.
+
+    @Test
+    @Transactional
+    void expressIsNotOfferedAsAWayToReceiveAnOrder() {
+        enable("tbilisi");
+        enable("express");
+        assertThat(service.listPublic().stream().map(r -> r.get("route")))
+            .containsExactly("pickup", "tbilisi")
+            .doesNotContain("express");
+    }
+
+    @Test
+    @Transactional
+    void expressIsOfferedSeparatelyWithItsOwnPrice() {
+        enable("tbilisi");
+        service.update("express", Map.of("enabled", true, "price", "12.00"));
+
+        Map<String, Object> offer = service.expressOffer();
+        assertThat(offer).isNotNull();
+        assertThat(offer.get("price")).isEqualTo(new BigDecimal("12.00"));
+    }
+
+    @Test
+    @Transactional
+    void aStoreWithoutExpressOffersNothingToUpgradeTo() {
+        enable("tbilisi");
+        assertThat(service.expressOffer()).isNull();
+    }
+
+    @Test
+    @Transactional
+    void expressAddsToTheCourierPriceRatherThanReplacingIt() {
+        service.update("tbilisi", Map.of("enabled", true, "price", "8.00"));
+        service.update("express", Map.of("enabled", true, "price", "12.00"));
+
+        assertThat(service.feeFor("tbilisi", false, new BigDecimal("50"))).isEqualByComparingTo("8.00");
+        assertThat(service.feeFor("tbilisi", true, new BigDecimal("50"))).isEqualByComparingTo("20.00");
+    }
+
+    @Test
+    @Transactional
+    void aFreeRouteStillChargesForSpeed() {
+        // Free delivery over 150 is a gift of the courier fee, not of same-day.
+        service.update("tbilisi", Map.of(
+            "enabled", true, "price", "8.00", "freeOverTotal", "150.00"));
+        service.update("express", Map.of("enabled", true, "price", "12.00"));
+
+        assertThat(service.feeFor("tbilisi", true, new BigDecimal("200"))).isEqualByComparingTo("12.00");
+    }
+
+    @Test
+    @Transactional
+    void expressCannotBeBoughtAsIfItWereARoute() {
+        enable("tbilisi");
+        enable("express");
+        assertThatThrownBy(() -> service.feeFor("express", false, new BigDecimal("50")))
+            .hasMessageContaining("not a route of its own");
+    }
+
+    @Test
+    @Transactional
+    void thereIsNothingToAccelerateAboutCollectingInPerson() {
+        enable("tbilisi");
+        enable("express");
+        assertThatThrownBy(() -> service.feeFor("pickup", true, new BigDecimal("50")))
+            .hasMessageContaining("nothing to accelerate");
+    }
+
+    @Test
+    @Transactional
+    void expressCannotBeAddedWhenTheStoreDoesNotOfferIt() {
+        enable("tbilisi");
+        assertThatThrownBy(() -> service.feeFor("tbilisi", true, new BigDecimal("50")))
+            .hasMessageContaining("does not offer express");
     }
 
     @Test
     void theCourierRoutesAreTheTwoThatPostAParcel() {
-        assertThat(DeliveryOption.COURIER_ROUTES).containsExactly("TBILISI", "GEORGIA");
+        assertThat(DeliveryOption.COURIER_ROUTES).containsExactly("tbilisi", "georgia");
         assertThat(DeliveryOption.ROUTES).containsAll(DeliveryOption.COURIER_ROUTES);
     }
 }

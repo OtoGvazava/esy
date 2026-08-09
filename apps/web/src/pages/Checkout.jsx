@@ -43,8 +43,12 @@ export default function Checkout() {
   // Delivery routes the store actually offers (D9). An unconfigured store
   // still answers with collection in person, so this is never empty.
   const [routes, setRoutes] = useState([]);
+  // Express is not a route. It is bought on top of a courier one, so it has
+  // its own offer and its own checkbox rather than a place in the list.
+  const [express, setExpress] = useState(null);
+  const [wantExpress, setWantExpress] = useState(false);
   const [requiresAddress, setRequiresAddress] = useState(false);
-  const [deliveryRoute, setDeliveryRoute] = useState('PICKUP');
+  const [deliveryRoute, setDeliveryRoute] = useState('pickup');
 
   const [savedAddressId, setSavedAddressId] = useState(null);
   // Snapshot of the loaded saved address — "did the shopper change anything?"
@@ -67,6 +71,7 @@ export default function Checkout() {
         if (ac.signal.aborted) return;
         const list = Array.isArray(res?.routes) ? res.routes : [];
         setRoutes(list);
+        setExpress(res?.express || null);
         setRequiresAddress(!!res?.requiresAddress);
         // Preselect the cheapest route rather than the first: the shopper can
         // always pick a faster one, and defaulting to the dearest would charge
@@ -113,12 +118,19 @@ export default function Checkout() {
   // checkout, so a tampered browser cannot set its own delivery charge — this
   // number is for the shopper to read, never the one that is charged.
   const chosen = routes.find((r) => r.route === deliveryRoute);
+
+  // Express is only on the table once a courier is chosen — there is nothing
+  // to accelerate about collecting in person.
+  const canExpress = !!express && !!chosen?.courier;
+  const expressOn = canExpress && wantExpress;
+
   const deliveryFee = (() => {
     if (!chosen) return 0;
     const price = Number(chosen.price ?? 0);
     const freeOver = chosen.freeOverTotal == null ? null : Number(chosen.freeOverTotal);
-    if (freeOver != null && subtotal >= freeOver) return 0;
-    return price;
+    // The threshold frees the route, never the speed.
+    const base = freeOver != null && subtotal >= freeOver ? 0 : price;
+    return base + (expressOn ? Number(express.price ?? 0) : 0);
   })();
 
   // Only a courier route needs an address. With both couriers off the store
@@ -129,7 +141,7 @@ export default function Checkout() {
   const delivery = () => {
     // The route is all the server needs to price delivery — it looks the fee
     // up from the store's own rows rather than trusting anything sent here.
-    const base = { deliveryRoute };
+    const base = { deliveryRoute, deliveryExpress: expressOn };
 
     // On collection there is nothing to post. Sending an address anyway would
     // freeze one onto an order nobody is delivering, and the server ignores it.
@@ -243,7 +255,7 @@ export default function Checkout() {
         </div>
 
         {/* delivery routes (D9) */}
-        {routes.length > 1 && (
+        {(routes.length > 1 || canExpress) && (
           <div style={{ padding: '0 16px 14px' }}>
             <div style={{ padding: '14px', borderRadius: 16, background: T.surface, border: `1.5px solid ${T.border}` }}>
               <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>
@@ -281,6 +293,40 @@ export default function Checkout() {
                   );
                 })}
               </div>
+
+              {/* The upgrade, not a route: it appears only once a courier is
+                  chosen, and its price reads as "+₾" because it is added to
+                  the route above rather than replacing it. */}
+              {canExpress && (
+                <button
+                  type="button"
+                  onClick={() => setWantExpress((v) => !v)}
+                  style={{
+                    marginTop: 10, width: '100%', textAlign: 'left',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '11px 13px', borderRadius: 13, cursor: 'pointer',
+                    border: `1.5px solid ${expressOn ? T.accent : T.border}`,
+                    background: expressOn ? T.accentBg : 'transparent',
+                  }}
+                >
+                  <span style={{ color: expressOn ? T.accentFg : T.textMute, display: 'inline-flex' }}>
+                    <Icon.check />
+                  </span>
+                  <span style={{ flex: 1 }}>
+                    <span style={{ display: 'block', font: `700 13px ${T.font}`, color: T.text }}>
+                      {t('checkout.route.express')}
+                    </span>
+                    {(i18n.language === 'ka' ? express.etaKa : express.etaEn) && (
+                      <span style={{ display: 'block', font: `400 11.5px ${T.font}`, color: T.textMute, marginTop: 2 }}>
+                        {i18n.language === 'ka' ? express.etaKa : express.etaEn}
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ font: `700 12.5px ${T.font}`, color: T.text, flexShrink: 0 }}>
+                    +{money(Number(express.price ?? 0))}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -335,7 +381,7 @@ export default function Checkout() {
               would leave the shopper unable to see what they are paying for. */}
           {chosen && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, font: `500 13px ${T.font}`, color: T.textDim }}>
-              <span>{t(`checkout.route.${chosen.route}`)}</span>
+              <span>{t(`checkout.route.${chosen.route}`)}{expressOn ? ` + ${t('checkout.route.express')}` : ''}</span>
               <span style={{ color: deliveryFee ? T.text : T.success }}>
                 {deliveryFee ? money(deliveryFee) : t('checkout.free')}
               </span>

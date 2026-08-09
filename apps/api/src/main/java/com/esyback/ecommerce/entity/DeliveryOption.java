@@ -37,13 +37,26 @@ import java.util.List;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class DeliveryOption {
 
-    public static final String PICKUP = "PICKUP";
-    public static final String TBILISI = "TBILISI";
-    public static final String GEORGIA = "GEORGIA";
-    public static final String EXPRESS = "EXPRESS";
+    // Lowercase to match the design's own keys, so one string is the API value
+    // and the i18n key — the same reasoning as ContactChannel.TYPES.
+    public static final String PICKUP = "pickup";
+    public static final String TBILISI = "tbilisi";
+    public static final String GEORGIA = "georgia";
+    public static final String EXPRESS = "express";
 
-    /** Display order, and the order the storefront offers them in. */
+    /** Every switch an owner sets, in the order the settings screen shows them. */
     public static final List<String> ROUTES = List.of(PICKUP, TBILISI, GEORGIA, EXPRESS);
+
+    /**
+     * The ways a shopper can receive an order, and the only values that may
+     * land in {@code Order.deliveryRoute}.
+     *
+     * <p>Express is NOT among them. It is an upgrade added on top of a courier
+     * route — the design's checkout renders it as a "+₾" row that appears only
+     * once a courier is chosen, never as a fourth radio button. Treating it as
+     * a peer route would let a shopper buy speed without buying delivery.
+     */
+    public static final List<String> BASE_ROUTES = List.of(PICKUP, TBILISI, GEORGIA);
 
     /** The routes that put a parcel in a courier's hands. */
     public static final List<String> COURIER_ROUTES = List.of(TBILISI, GEORGIA);

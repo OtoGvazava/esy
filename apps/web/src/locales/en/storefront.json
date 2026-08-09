@@ -73,10 +73,10 @@
     "deliveryMethod": "Delivery",
     "free": "Free",
     "route": {
-      "PICKUP": "Collect in person",
-      "TBILISI": "Courier — Tbilisi",
-      "GEORGIA": "Courier — rest of Georgia",
-      "EXPRESS": "Express"
+      "pickup": "Collect in person",
+      "tbilisi": "Courier — Tbilisi",
+      "georgia": "Courier — rest of Georgia",
+      "express": "Express"
     }
   },
   "payReturn": {

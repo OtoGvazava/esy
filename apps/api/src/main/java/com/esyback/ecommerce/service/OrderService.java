@@ -73,9 +73,11 @@ public class OrderService {
         // from a number the browser sent: the shopper picks a route, not a fee.
         String route = req.getDeliveryRoute() == null || req.getDeliveryRoute().isBlank()
             ? DeliveryOption.PICKUP
-            : req.getDeliveryRoute().trim().toUpperCase();
-        BigDecimal deliveryFee = deliveryService.feeFor(route, total);
+            : req.getDeliveryRoute().trim().toLowerCase();
+        boolean express = Boolean.TRUE.equals(req.getDeliveryExpress());
+        BigDecimal deliveryFee = deliveryService.feeFor(route, express, total);
         order.setDeliveryRoute(route);
+        order.setDeliveryExpress(express);
         order.setDeliveryFee(deliveryFee);
 
         // The charged total includes delivery — it is what BOG collects and
@@ -84,7 +86,7 @@ public class OrderService {
 
         // Only a courier route needs somewhere to deliver to. On collection
         // there is nothing to post, and checkout does not even ask.
-        if (DeliveryOption.COURIER_ROUTES.contains(route) || DeliveryOption.EXPRESS.equals(route)) {
+        if (DeliveryOption.COURIER_ROUTES.contains(route)) {
             applyDeliveryAddress(order, user, req);
         }
 

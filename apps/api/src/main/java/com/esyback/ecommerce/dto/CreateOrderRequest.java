@@ -17,6 +17,9 @@ public class CreateOrderRequest {
     /** The delivery route the shopper chose (D9). Defaults to collection. */
     private String deliveryRoute;
 
+    /** Whether the shopper added the express upgrade on top of that route. */
+    private Boolean deliveryExpress;
+
     public List<Item> getItems() { return items; }
     public void setItems(List<Item> items) { this.items = items; }
     public Long getAddressId() { return addressId; }
@@ -24,6 +27,9 @@ public class CreateOrderRequest {
 
     public String getDeliveryRoute() { return deliveryRoute; }
     public void setDeliveryRoute(String deliveryRoute) { this.deliveryRoute = deliveryRoute; }
+
+    public Boolean getDeliveryExpress() { return deliveryExpress; }
+    public void setDeliveryExpress(Boolean deliveryExpress) { this.deliveryExpress = deliveryExpress; }
     public InlineAddress getAddress() { return address; }
     public void setAddress(InlineAddress address) { this.address = address; }
 
