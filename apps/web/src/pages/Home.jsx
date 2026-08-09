@@ -11,6 +11,7 @@ import GlowSearchBar from '../components/glow/GlowSearchBar';
 import GlowProductCard from '../components/glow/GlowProductCard';
 import GlowLoadMore from '../components/glow/GlowLoadMore';
 import { ThemePill, LangPill } from '../components/glow/GlowPills';
+import { StoreContacts } from '../components/store/ContactChannels';
 
 const PAGE_SIZE = 12;
 
@@ -167,6 +168,8 @@ export default function Home() {
           </div>
           <div style={{ font: `700 ${heroName} ${T.font}`, color: T.text, letterSpacing: '-0.035em', marginBottom: 8 }}>{tenant.name}</div>
           <div style={{ font: `400 ${isDesktop ? 14 : 12.5}px/1.5 ${T.font}`, color: T.textDim, maxWidth: 540 }}>{tenant.bio}</div>
+          {/* Renders nothing when the store has listed no public channels. */}
+          <StoreContacts T={T} style={{ marginTop: 14 }} />
         </div>
         <div ref={searchRef} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: isDesktop ? 0 : 20 }}>
           <GlowSearchBar T={T} value={query} onChange={setQuery} compact={!isDesktop} />

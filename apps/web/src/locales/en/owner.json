@@ -95,5 +95,33 @@
     "cancelled": "Cancel order"
   },
   "cat_sport": "Sport",
-  "cat_wear": "Clothing"
+  "cat_wear": "Clothing",
+  "contacts": {
+    "title": "Contact channels",
+    "sub": "How shoppers reach you. Each entry saves on its own — hiding one keeps the value, deleting discards it.",
+    "loading": "Loading channels…",
+    "empty": "No channels yet. Add the number shoppers should call first.",
+    "loadFailed": "Could not load your contact channels.",
+    "saveFailed": "Could not save this channel.",
+    "deleteFailed": "Could not delete this channel.",
+    "deleteConfirm": "Delete {{value}}? Hiding it instead keeps the value for later.",
+    "add": "Add",
+    "delete": "Delete",
+    "shown": "Shown",
+    "hidden": "Hidden",
+    "primary": "Primary",
+    "makePrimary": "Make primary",
+    "type": {
+      "PHONE": "Phone",
+      "WHATSAPP": "WhatsApp",
+      "FACEBOOK": "Facebook",
+      "INSTAGRAM": "Instagram"
+    },
+    "placeholder": {
+      "PHONE": "Phone number",
+      "WHATSAPP": "WhatsApp number",
+      "FACEBOOK": "Facebook page or handle",
+      "INSTAGRAM": "Instagram handle"
+    }
+  }
 }

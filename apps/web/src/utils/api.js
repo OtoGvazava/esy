@@ -279,6 +279,37 @@ export const paymentApi = {
 // ---- Tenant API -------------------------------------------------------------
 // The backend resolves the tenant from the request Host header, so `current`
 // is implicitly scoped to whatever subdomain the SPA is served from.
+// The store's contact channels (D10). Two reads on purpose: `listPublic` is
+// what a shopper's browser calls and never returns a hidden entry, while
+// `list` is the owner's and includes them. They are separate endpoints rather
+// than one with a flag, so leaking a hidden number cannot be a one-line slip.
+export const contactApi = {
+  listPublic(devTenant, { signal } = {}) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/contact-channels/public${q}`, { signal });
+  },
+  list(devTenant, { signal } = {}) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/contact-channels${q}`, { signal });
+  },
+  create(payload, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.post(`/api/contact-channels${q}`, payload);
+  },
+  update(id, payload, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.put(`/api/contact-channels/${id}${q}`, payload);
+  },
+  remove(id, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.delete(`/api/contact-channels/${id}${q}`);
+  },
+  reorder(ids, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.post(`/api/contact-channels/reorder${q}`, { ids });
+  },
+};
+
 export const tenantApi = {
   // `devTenant` forwards ?tenant=<sub> so a single localhost host can switch
   // tenants in dev (the backend only honors it for localhost; prod resolves

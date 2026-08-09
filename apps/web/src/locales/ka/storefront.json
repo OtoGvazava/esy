@@ -242,5 +242,14 @@
     "day": "დღე",
     "month": "თვე",
     "year": "წელი"
+  },
+  "contact": {
+    "title": "კონტაქტი",
+    "type": {
+      "PHONE": "ტელეფონი",
+      "WHATSAPP": "WhatsApp",
+      "FACEBOOK": "Facebook",
+      "INSTAGRAM": "Instagram"
+    }
   }
 }

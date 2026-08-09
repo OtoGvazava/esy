@@ -7,6 +7,7 @@ import { tenantApi, handleApiError } from '../utils/api';
 import { useGlow } from '../styles/glow';
 import { Icon } from '../components/glow/GlowPrimitives';
 import { GlowScreen } from '../components/glow/GlowChrome';
+import { ContactChannelsEditor } from '../components/store/ContactChannels';
 
 // Server-allowed store categories (mirrors TenantService.CATEGORIES).
 const CATEGORIES = ['fashion', 'electronics', 'home', 'food', 'art', 'sport', 'wear'];
@@ -371,6 +372,13 @@ export default function StoreSettings() {
                 {t('bog.disconnect')}
               </button>
             )}
+          </div>
+
+          {/* Contact channels save themselves per entry rather than riding the
+              form's Save button — each row is its own write, so a half-typed
+              new number cannot block saving the rest of the store's settings. */}
+          <div style={{ padding: '16px 0', borderTop: `1px solid ${T.border}` }}>
+            <ContactChannelsEditor T={T} devTenant={devTenant()} />
           </div>
 
           {apiError && (

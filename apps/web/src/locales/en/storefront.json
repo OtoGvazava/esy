@@ -242,5 +242,14 @@
     "day": "Day",
     "month": "Month",
     "year": "Year"
+  },
+  "contact": {
+    "title": "Contact",
+    "type": {
+      "PHONE": "Phone",
+      "WHATSAPP": "WhatsApp",
+      "FACEBOOK": "Facebook",
+      "INSTAGRAM": "Instagram"
+    }
   }
 }
