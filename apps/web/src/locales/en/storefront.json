@@ -69,7 +69,15 @@
     "payError": "Payment could not be started. Please try again.",
     "bogSecure": "Secure card payment via Bank of Georgia",
     "recipient": "Recipient",
-    "phone": "Phone"
+    "phone": "Phone",
+    "deliveryMethod": "Delivery",
+    "free": "Free",
+    "route": {
+      "PICKUP": "Collect in person",
+      "TBILISI": "Courier — Tbilisi",
+      "GEORGIA": "Courier — rest of Georgia",
+      "EXPRESS": "Express"
+    }
   },
   "payReturn": {
     "checkingTitle": "Confirming your payment…",

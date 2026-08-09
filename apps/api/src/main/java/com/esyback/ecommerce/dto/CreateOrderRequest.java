@@ -14,10 +14,16 @@ public class CreateOrderRequest {
     private Long addressId;
     private InlineAddress address;
 
+    /** The delivery route the shopper chose (D9). Defaults to collection. */
+    private String deliveryRoute;
+
     public List<Item> getItems() { return items; }
     public void setItems(List<Item> items) { this.items = items; }
     public Long getAddressId() { return addressId; }
     public void setAddressId(Long addressId) { this.addressId = addressId; }
+
+    public String getDeliveryRoute() { return deliveryRoute; }
+    public void setDeliveryRoute(String deliveryRoute) { this.deliveryRoute = deliveryRoute; }
     public InlineAddress getAddress() { return address; }
     public void setAddress(InlineAddress address) { this.address = address; }
 

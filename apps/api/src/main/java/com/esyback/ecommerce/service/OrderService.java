@@ -3,6 +3,7 @@ package com.esyback.ecommerce.service;
 import com.esyback.ecommerce.config.PlatformProperties;
 import com.esyback.ecommerce.dto.CreateOrderRequest;
 import com.esyback.ecommerce.entity.Address;
+import com.esyback.ecommerce.entity.DeliveryOption;
 import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.OrderItem;
 import com.esyback.ecommerce.entity.StoreMembership;
@@ -30,6 +31,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final MembershipService membershipService;
+    private final DeliveryService deliveryService;
     private final ProductService productService;
     private final AddressRepository addressRepository;
     // Platform service fee (fraction of order total). Read at call time from a
@@ -60,12 +62,31 @@ public class OrderService {
             order.addItem(oi);
             total = total.add(price.multiply(BigDecimal.valueOf(qty)));
         }
-        order.setTotal(total);
-        // 2% platform fee, frozen at order time. Server-side only — never sent
-        // to the client and never added to the BOG charge.
+        // 2% platform fee, frozen at order time, computed on the GOODS total
+        // before delivery is added (D9). Delivery is a courier's money passing
+        // through the merchant, so billing commission on it would charge them
+        // for something they never keep. Server-side only — never sent to the
+        // client and never added to the BOG charge.
         order.setServiceFee(total.multiply(platformProperties.getServiceFeeRate()).setScale(2, RoundingMode.HALF_UP));
 
-        applyDeliveryAddress(order, user, req);
+        // Delivery is priced server-side from the store's own routes, never
+        // from a number the browser sent: the shopper picks a route, not a fee.
+        String route = req.getDeliveryRoute() == null || req.getDeliveryRoute().isBlank()
+            ? DeliveryOption.PICKUP
+            : req.getDeliveryRoute().trim().toUpperCase();
+        BigDecimal deliveryFee = deliveryService.feeFor(route, total);
+        order.setDeliveryRoute(route);
+        order.setDeliveryFee(deliveryFee);
+
+        // The charged total includes delivery — it is what BOG collects and
+        // what the shopper agreed to. revenue() subtracts it back out.
+        order.setTotal(total.add(deliveryFee));
+
+        // Only a courier route needs somewhere to deliver to. On collection
+        // there is nothing to post, and checkout does not even ask.
+        if (DeliveryOption.COURIER_ROUTES.contains(route) || DeliveryOption.EXPRESS.equals(route)) {
+            applyDeliveryAddress(order, user, req);
+        }
 
         // Buying makes the account a CUSTOMER of the store (no downgrade of owners).
         if (user != null) membershipService.ensure(user, tenant, StoreMembership.Role.CUSTOMER);
@@ -245,12 +266,30 @@ public class OrderService {
     // Decision D2: refunded money is not revenue, and neither are cancelled
     // orders. Without these filters the stats screen silently counts money
     // that was returned to shoppers.
+    //
+    // Delivery is subtracted too (D9). Order.total is what the shopper was
+    // charged, delivery included, because that is what BOG collects — but a
+    // courier charge the merchant hands straight on is not their earnings.
+    // Counting it would make a store doing heavy delivery look more profitable
+    // than it is, and this figure feeds both the merchant's own stats and the
+    // platform's billing screen, which must not disagree.
     public BigDecimal revenue(Tenant tenant) {
         return orderRepository.findByTenantOrderByCreatedAtDesc(tenant).stream()
             .filter(o -> o.getStatus() != Order.Status.CANCELLED)
             .filter(o -> o.getPaymentStatus() != Order.PaymentStatus.REFUNDED)
-            .map(Order::getTotal)
+            .map(OrderService::goodsTotal)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * What the order was worth in goods: the charged total less any delivery.
+     * Orders placed before delivery existed have a null fee and are already
+     * goods-only, so they need no adjustment.
+     */
+    private static BigDecimal goodsTotal(Order o) {
+        BigDecimal total = o.getTotal() == null ? BigDecimal.ZERO : o.getTotal();
+        BigDecimal delivery = o.getDeliveryFee();
+        return delivery == null ? total : total.subtract(delivery);
     }
 
     /**
