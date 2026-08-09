@@ -151,8 +151,10 @@ public class TenantController {
             .collect(Collectors.toList()));
     }
 
-    // Lightweight count of new (PLACED) orders for the current store — drives
-    // the storefront owner-bar Orders badge without pulling the full list.
+    // Lightweight count of new (PLACED) orders for the current store, without
+    // pulling the full list. Currently unused by the SPA: it drove the
+    // storefront owner-bar badge, which the manager migration removed. Kept
+    // deliberately — the manager design reinstates it as the Orders nav badge.
     @GetMapping("/orders/new-count")
     @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
     public ResponseEntity<Map<String, Object>> currentStoreNewOrderCount() {

@@ -354,13 +354,6 @@ export const tenantApi = {
       body: JSON.stringify({ status }),
     });
   },
-  // Count of new (unhandled) orders — drives the owner-bar Orders badge.
-  newOrderCount(devTenant) {
-    const path = devTenant
-      ? `/api/tenant/orders/new-count?tenant=${encodeURIComponent(devTenant)}`
-      : '/api/tenant/orders/new-count';
-    return api.get(path);
-  },
   // Public store directory (active stores).
   list() {
     return api.get('/api/tenant');

@@ -1,10 +1,4 @@
 {
-  "addProduct": "Add product",
-  "settings": "Settings",
-  "enableClientView": "Enable client view",
-  "disableClientView": "Disable client view",
-  "manageOrders": "Orders",
-  "ordersNewBadge": "{{count}} new orders",
   "ordersEyebrow": "Store orders",
   "ordersBack": "Back to store",
   "ordersError": "Couldn't load orders",
@@ -34,7 +28,6 @@
   "statOrders": "Orders",
   "statRevenue": "Revenue",
   "statFeesOwed": "Fees owed",
-  "statFollowers": "Followers",
   "addTitle": "Add product",
   "editTitle": "Edit product",
   "fieldTitle": "Title",
@@ -94,13 +87,13 @@
   "storeSaveFailed": "Couldn't save the store",
   "settingsSaved": "Saved",
   "subdomainLocked": "{{domain}} · subdomain is locked",
-  "ownerEdit": "Edit",
-  "ownerDelete": "Delete",
   "manageStore": "Manage store",
   "orderAdvance": {
     "shipped": "Mark shipped",
     "out_for_delivery": "Out for delivery",
     "delivered": "Mark delivered",
     "cancelled": "Cancel order"
-  }
+  },
+  "cat_sport": "Sport",
+  "cat_wear": "Clothing"
 }

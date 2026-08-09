@@ -50,8 +50,12 @@ public class TenantService {
     private static final String DEFAULT_PRIMARY = "#6366f1";
     private static final String DEFAULT_SECONDARY = "#8b5cf6";
 
+    // Union of the original set and the design's set — the design introduced
+    // "sport" and "wear" while keeping food/home/art, and existing stores are
+    // already filed under fashion/electronics. Keeping both avoids migrating
+    // live stores into categories their owners did not choose.
     private static final Set<String> CATEGORIES = Set.of(
-        "fashion", "electronics", "home", "food", "art");
+        "fashion", "electronics", "home", "food", "art", "sport", "wear");
 
     /**
      * Live subdomain check for the registration wizard.

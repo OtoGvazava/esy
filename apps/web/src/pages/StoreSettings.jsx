@@ -9,7 +9,7 @@ import { Icon } from '../components/glow/GlowPrimitives';
 import { GlowScreen } from '../components/glow/GlowChrome';
 
 // Server-allowed store categories (mirrors TenantService.CATEGORIES).
-const CATEGORIES = ['fashion', 'electronics', 'home', 'food', 'art'];
+const CATEGORIES = ['fashion', 'electronics', 'home', 'food', 'art', 'sport', 'wear'];
 
 const devTenant = () => {
   try { return new URLSearchParams(window.location.search).get('tenant') || undefined; }

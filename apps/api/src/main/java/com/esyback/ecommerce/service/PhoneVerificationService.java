@@ -12,10 +12,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Dev stand-in phone verification: generates a 6-digit code, logs it (no real
+ * Dev stand-in phone verification: generates a 4-digit code, logs it (no real
  * SMS is sent) and checks it against an in-memory store. The HTTP contract is
  * the same one a real SMS provider would use, so swapping {@link #sendCode}
- * for Twilio/etc. later needs no controller or frontend changes.
+ * for a Georgian SMS aggregator later needs no controller or frontend changes.
+ *
+ * Four digits, not six: the design draws four cells and its copy says "a
+ * four-digit code". The length is part of the interface, so the generator
+ * follows the design rather than the other way round.
  */
 @Service
 @RequiredArgsConstructor
@@ -36,7 +40,7 @@ public class PhoneVerificationService {
         if (phone == null || phone.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add a phone number first");
         }
-        String code = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
+        String code = String.format("%04d", ThreadLocalRandom.current().nextInt(0, 10_000));
         pending.put(user.getId(), new Pending(code, Instant.now().plusSeconds(TTL_SECONDS)));
         log.info("DEV phone OTP for {} (user {}) = {}", phone, user.getId(), code);
         return code;

@@ -1,10 +1,4 @@
 {
-  "addProduct": "პროდუქტის დამატება",
-  "settings": "პარამეტრები",
-  "enableClientView": "მომხმარებლის ხედის ჩართვა",
-  "disableClientView": "მომხმარებლის ხედის გამორთვა",
-  "manageOrders": "შეკვეთები",
-  "ordersNewBadge": "{{count}} ახალი შეკვეთა",
   "ordersEyebrow": "მაღაზიის შეკვეთები",
   "ordersBack": "მაღაზიაში დაბრუნება",
   "ordersError": "შეკვეთების ჩატვირთვა ვერ მოხერხდა",
@@ -34,7 +28,6 @@
   "statOrders": "შეკვეთები",
   "statRevenue": "შემოსავალი",
   "statFeesOwed": "გადასახდელი საკომისიო",
-  "statFollowers": "გამომწერები",
   "addTitle": "პროდუქტის დამატება",
   "editTitle": "პროდუქტის რედაქტირება",
   "fieldTitle": "სათაური",
@@ -94,13 +87,13 @@
   "storeSaveFailed": "მაღაზიის შენახვა ვერ მოხერხდა",
   "settingsSaved": "შენახულია",
   "subdomainLocked": "{{domain}} · ქვედომენი დაბლოკილია",
-  "ownerEdit": "რედაქტირება",
-  "ownerDelete": "წაშლა",
   "manageStore": "მაღაზიის მართვა",
   "orderAdvance": {
     "shipped": "გაგზავნილად მონიშვნა",
     "out_for_delivery": "მიტანის პროცესში",
     "delivered": "მიტანილად მონიშვნა",
     "cancelled": "შეკვეთის გაუქმება"
-  }
+  },
+  "cat_sport": "სპორტი",
+  "cat_wear": "ტანსაცმელი"
 }

@@ -11,9 +11,12 @@ export const useAppTheme = () => {
     return prefersDark ? THEME_MODES.DARK : THEME_MODES.LIGHT;
   });
 
+  // Georgian-first, mirroring i18n.js: only an explicit stored 'en' opts out.
+  // Both initializers run before mount, so they must agree or the first paint
+  // flashes the wrong language.
   const [language, setLanguage] = useState(() => {
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEYS.LANGUAGE) : null;
-    return stored === LANGUAGES.KA ? LANGUAGES.KA : LANGUAGES.EN;
+    return stored === LANGUAGES.EN ? LANGUAGES.EN : LANGUAGES.KA;
   });
 
   // Save theme mode to localStorage
