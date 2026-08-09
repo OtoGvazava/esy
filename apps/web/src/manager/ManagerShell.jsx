@@ -30,6 +30,8 @@ import ManagerHome from './ManagerHome';
 import ManagerProducts from './ManagerProducts';
 import ManagerSettings from './ManagerSettings';
 import ManagerTeam from './ManagerTeam';
+import ManagerStats from './ManagerStats';
+import ManagerMoney from './ManagerMoney';
 import StoreOrders from '../pages/StoreOrders';
 import SignIn from '../pages/SignIn';
 import AuthCallback from '../pages/AuthCallback';
@@ -273,6 +275,8 @@ export default function ManagerShell() {
       <Route path="/" element={<ManagerHome />} />
       <Route path="/products" element={<ManagerProducts />} />
       <Route path="/orders" element={<StoreOrders />} />
+      <Route path="/stats" element={<ManagerStats />} />
+      <Route path="/money" element={<ManagerMoney />} />
       <Route path="/team" element={<ManagerTeam />} />
       <Route path="/settings/*" element={<ManagerSettings />} />
       <Route path="*" element={<Navigate to={`/${q}`} replace />} />

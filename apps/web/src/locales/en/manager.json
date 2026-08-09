@@ -77,5 +77,33 @@
     "removeSelfConfirm": "Remove your own access to this store? You will not be able to return unless another owner adds you back.",
     "lastOwner": "The only owner",
     "you": "you"
+  },
+  "stats": {
+    "title": "Statistics",
+    "sub": "Lifetime figures for this store.",
+    "loading": "Loading figures…",
+    "loadFailed": "Could not load the figures.",
+    "revenue": "Revenue",
+    "orders": "Orders",
+    "products": "Products",
+    "feesOwed": "Platform fees owed",
+    "feesHint": "Billed separately",
+    "excludes": "Revenue excludes refunded and cancelled orders, and excludes delivery — a courier charge passes through you, not to you. The order count is every order placed.",
+    "lifetimeOnly": "These are lifetime totals. The 7 / 30 / 90-day windows and the top-products list are designed but not built, so no period selector is shown rather than one that changes nothing."
+  },
+  "money": {
+    "title": "Money",
+    "sub": "What you earned, and what the platform charges ({{percent}}% of goods).",
+    "loading": "Loading…",
+    "loadFailed": "Could not load your figures.",
+    "revenue": "Revenue",
+    "revenueHint": "Goods sold, refunds excluded",
+    "fees": "Platform fee ({{percent}}%)",
+    "kept": "You keep",
+    "keptHint": "Revenue less the platform fee",
+    "howTitle": "How the fee works",
+    "howBody": "{{percent}}% of the goods total is calculated when an order is placed and frozen onto it, so a later rate change never rewrites what you already owe. It is charged on goods alone — never on delivery, and never on an order that was refunded or cancelled.",
+    "deliveryNote": "Delivery you collect is not revenue. It is passed to the courier, and no fee is charged on it.",
+    "noSettlement": "The fee accrues but no statement is sent yet, and there is no payment process behind it. Nothing is owed until that exists."
   }
 }
