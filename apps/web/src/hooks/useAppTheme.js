@@ -42,6 +42,12 @@ export const useAppTheme = () => {
       console.warn('Failed to save language to localStorage:', error);
     }
     if (i18n.language !== language) i18n.changeLanguage(language);
+    // Keep <html lang> honest: it drives screen-reader pronunciation and the
+    // browser's own language-dependent text handling, neither of which follows
+    // i18next. index.html ships lang="ka" for the default; this tracks changes.
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('lang', language);
+    }
   }, [language]);
 
   const theme = useMemo(() => createTheme({
