@@ -108,6 +108,24 @@ public class Order {
     @Column(name = "ship_country")
     private String shipCountry;
 
+    // Delivery, frozen at checkout the same way the address above is (D9). The
+    // route the shopper chose and what they were charged for it: a later change
+    // to the store's delivery prices must not rewrite what this order cost.
+    //
+    // Both nullable, so ddl-auto=update can add them to a populated orders
+    // table — pre-existing orders predate delivery routes and read back as
+    // "none recorded", which is exactly what they are. Deliberately NOT
+    // @Enumerated: an enum column freezes its CHECK at creation, so adding a
+    // fifth route later would reject every write on populated Postgres.
+    //
+    // There is no separate address snapshot: the ship* columns above already
+    // are it. A second copy could only ever disagree with the first.
+    @Column(name = "delivery_fee", precision = 12, scale = 2)
+    private BigDecimal deliveryFee;
+
+    @Column(name = "delivery_route")
+    private String deliveryRoute;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 

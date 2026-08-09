@@ -52,6 +52,10 @@ public class SecurityConfig {
                 // tighten, and narrowly so that tighten does not accidentally
                 // open the owner's list with it.
                 .requestMatchers("/api/contact-channels/public").permitAll()
+                // Same narrow shape as above: a shopper must see the delivery
+                // routes on offer before signing in. The owner's list, which
+                // includes disabled routes, is a different path and is gated.
+                .requestMatchers("/api/delivery/public").permitAll()
                 // BOG's async webhook is server-to-server (no JWT cookie); it
                 // is authenticated by its RSA Callback-Signature, not Spring.
                 // Explicit so it survives a future anyRequest() tighten.

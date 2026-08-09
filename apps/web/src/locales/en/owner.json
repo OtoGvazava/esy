@@ -123,5 +123,32 @@
       "FACEBOOK": "Facebook page or handle",
       "INSTAGRAM": "Instagram handle"
     }
+  },
+  "delivery": {
+    "title": "Delivery",
+    "sub": "Four independent routes, each with its own price and promised time. At least one must always be on.",
+    "loading": "Loading routes…",
+    "loadFailed": "Could not load your delivery routes.",
+    "saveFailed": "Could not save this route.",
+    "on": "On",
+    "off": "Off",
+    "price": "Price",
+    "freeOver": "Free over",
+    "freeOverNever": "Never free",
+    "eta": "Promised time",
+    "pickupAddress": "Pickup address",
+    "pickupHours": "Pickup hours",
+    "route": {
+      "PICKUP": "Collect in person",
+      "TBILISI": "Courier — Tbilisi",
+      "GEORGIA": "Courier — rest of Georgia",
+      "EXPRESS": "Express"
+    },
+    "routeHint": {
+      "PICKUP": "The shopper collects from you. No courier, no price.",
+      "TBILISI": "Delivered within the city.",
+      "GEORGIA": "Delivered outside Tbilisi.",
+      "EXPRESS": "Faster than your courier routes — needs one of them on."
+    }
   }
 }

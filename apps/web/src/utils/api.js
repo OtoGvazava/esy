@@ -310,6 +310,24 @@ export const contactApi = {
   },
 };
 
+// Delivery routes (D9). Same public/owner split as contacts: `listPublic`
+// returns only enabled routes plus whether checkout should ask for an address
+// at all, and both come from one call because checkout needs them together.
+export const deliveryApi = {
+  listPublic(devTenant, { signal } = {}) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/delivery/public${q}`, { signal });
+  },
+  list(devTenant, { signal } = {}) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/delivery${q}`, { signal });
+  },
+  update(route, payload, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.put(`/api/delivery/${encodeURIComponent(route)}${q}`, payload);
+  },
+};
+
 export const tenantApi = {
   // `devTenant` forwards ?tenant=<sub> so a single localhost host can switch
   // tenants in dev (the backend only honors it for localhost; prod resolves

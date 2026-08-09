@@ -8,6 +8,7 @@ import { useGlow } from '../styles/glow';
 import { Icon } from '../components/glow/GlowPrimitives';
 import { GlowScreen } from '../components/glow/GlowChrome';
 import { ContactChannelsEditor } from '../components/store/ContactChannels';
+import DeliveryRoutes from '../components/store/DeliveryRoutes';
 
 // Server-allowed store categories (mirrors TenantService.CATEGORIES).
 const CATEGORIES = ['fashion', 'electronics', 'home', 'food', 'art', 'sport', 'wear'];
@@ -379,6 +380,14 @@ export default function StoreSettings() {
               new number cannot block saving the rest of the store's settings. */}
           <div style={{ padding: '16px 0', borderTop: `1px solid ${T.border}` }}>
             <ContactChannelsEditor T={T} devTenant={devTenant()} />
+          </div>
+
+          {/* Each route saves on its own, same as contacts. When the server
+              refuses a switch — the last route, or the last courier while
+              express is on — its message is what tells the owner which rule
+              they hit, so it is surfaced rather than swallowed. */}
+          <div style={{ padding: '16px 0', borderTop: `1px solid ${T.border}` }}>
+            <DeliveryRoutes T={T} devTenant={devTenant()} />
           </div>
 
           {apiError && (
