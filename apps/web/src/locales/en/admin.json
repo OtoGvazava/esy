@@ -1,0 +1,21 @@
+{
+  "band": {
+    "allStores": "Platform administration — you can see every store"
+  },
+  "nav": {
+    "stores": "Stores",
+    "billing": "Billing",
+    "config": "Configuration",
+    "admins": "Admins"
+  },
+  "gate": {
+    "signInTitle": "Sign in to administration",
+    "signInBody": "This address is the platform back office. Sign in with the account that administers esy.",
+    "signIn": "Continue with Google",
+    "deniedTitle": "This account is not an administrator",
+    "deniedBody": "Your account manages shops, not the platform. To manage your shop, use the back office.",
+    "signedInAs": "Signed in as {{email}}",
+    "backToPlatform": "Back to esy.ge"
+  },
+  "pending": "This screen is designed but its data is not connected yet."
+}

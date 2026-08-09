@@ -7,11 +7,10 @@
 // fetches it once per load — a soft route change would keep the previous
 // store's permission snapshot.
 //
-// Two scopes (see the architecture board): store scope (products / orders /
-// settings, gated per store by OWNER/MANAGER membership) and the admin scope
-// (platform-wide, gated by the ADMIN role). Admin routes live under /admin
-// and call only /api/admin/** — keep it that way so a future split to its own
-// host stays a routing change.
+// This host is store scope ONLY: products, orders and settings, gated per
+// store by OWNER/MANAGER membership. Platform administration moved out to
+// admin.esy.ge (D6) and the back office deliberately has no entry point into
+// it — no tab, no route, no link.
 import { Routes, Route, Navigate, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,7 +21,6 @@ import ManagerHome from './ManagerHome';
 import ManagerProducts from './ManagerProducts';
 import StoreOrders from '../pages/StoreOrders';
 import StoreSettings from '../pages/StoreSettings';
-import ConfigSettings from '../pages/ConfigSettings';
 import SignIn from '../pages/SignIn';
 import AuthCallback from '../pages/AuthCallback';
 
@@ -42,7 +40,6 @@ function TopBar() {
   const tenant = params.get('tenant');
   const { pathname } = useLocation();
   const q = tenant ? `?tenant=${encodeURIComponent(tenant)}` : '';
-  const isAdmin = user?.role === 'admin';
 
   const tabs = tenant ? [
     { to: `/products${q}`, label: t('nav.products'), active: pathname.startsWith('/products') },
@@ -85,9 +82,6 @@ function TopBar() {
         {tabs.map(({ to, label, active }) => (
           <Link key={to} to={to} style={tab(active)}>{label}</Link>
         ))}
-        {isAdmin && (
-          <Link to="/admin/config" style={tab(pathname.startsWith('/admin'))}>{t('nav.admin')}</Link>
-        )}
       </nav>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -112,23 +106,6 @@ function TopBar() {
   );
 }
 
-// Admin scope: ADMIN only — mirrors the backend's hasRole('ADMIN') gate on
-// /api/admin/** so non-admins get a message instead of a broken screen.
-function AdminGate({ children }) {
-  const { t } = useTranslation('manager');
-  const { user, loading } = useAuth();
-  const { T } = useGlow();
-  if (loading) return null;
-  if (user?.role !== 'admin') {
-    return (
-      <div style={{ padding: 48, textAlign: 'center', font: `600 15px ${T.font}`, color: T.textDim }}>
-        {t('admin.restricted')}
-      </div>
-    );
-  }
-  return children;
-}
-
 export default function ManagerShell() {
   const { T } = useGlow();
   return (
@@ -139,7 +116,6 @@ export default function ManagerShell() {
         <Route path="/products" element={<ManagerProducts />} />
         <Route path="/orders" element={<StoreOrders />} />
         <Route path="/settings" element={<StoreSettings />} />
-        <Route path="/admin/config" element={<AdminGate><ConfigSettings /></AdminGate>} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -24,8 +24,10 @@ import enStorefront from './locales/en/storefront.json';
 import kaStorefront from './locales/ka/storefront.json';
 import enOwner from './locales/en/owner.json';
 import kaOwner from './locales/ka/owner.json';
+import enAdmin from './locales/en/admin.json';
 import enAdminConfig from './locales/en/adminConfig.json';
 import enManager from './locales/en/manager.json';
+import kaAdmin from './locales/ka/admin.json';
 import kaAdminConfig from './locales/ka/adminConfig.json';
 import kaManager from './locales/ka/manager.json';
 
@@ -42,6 +44,7 @@ const resources = {
     platform: enPlatform,
     storefront: enStorefront,
     owner: enOwner,
+    admin: enAdmin,
     adminConfig: enAdminConfig,
     manager: enManager,
   },
@@ -57,6 +60,7 @@ const resources = {
     platform: kaPlatform,
     storefront: kaStorefront,
     owner: kaOwner,
+    admin: kaAdmin,
     adminConfig: kaAdminConfig,
     manager: kaManager,
   },
@@ -76,7 +80,7 @@ i18n
     // rather than a raw key, and English is the language every contributor reads.
     fallbackLng: LANGUAGES.EN,
     interpolation: { escapeValue: false },
-    ns: ['navbar', 'home', 'cart', 'product', 'auth', 'orders', 'account', 'common', 'platform', 'storefront', 'owner', 'adminConfig', 'manager'],
+    ns: ['navbar', 'home', 'cart', 'product', 'auth', 'orders', 'account', 'common', 'platform', 'storefront', 'owner', 'adminConfig', 'manager', 'admin'],
     defaultNS: 'navbar',
   });
 

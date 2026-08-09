@@ -4,6 +4,7 @@
 // Auth is a server-set HttpOnly cookie (esy_token, Domain=esy.ge) — never
 // readable from JS — so requests just need to carry cookies; there is no
 // token in localStorage. "Am I signed in?" is answered by /api/auth/user.
+import { isManagerHostname } from './hosts';
 
 // ---- Low-level client -------------------------------------------------------
 export class ApiError extends Error {
@@ -14,12 +15,9 @@ export class ApiError extends Error {
   }
 }
 
-function isManagerHostname() {
-  if (typeof window === 'undefined') return false;
-  const h = window.location.hostname;
-  return h === 'manager.esy.ge' || h === 'manager.lvh.me' || h === 'manager.localhost';
-}
-
+// Store scoping applies to the back office only. The admin host is deliberately
+// excluded: administration is cross-store and names its target explicitly in
+// the /api/admin/** namespace, and the backend ignores ?tenant there.
 function withManagerTenant(endpoint) {
   if (!isManagerHostname() || !endpoint.startsWith('/api/')) return endpoint;
   if (/[?&]tenant=/.test(endpoint)) return endpoint;

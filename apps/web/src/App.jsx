@@ -18,8 +18,9 @@ import GlowDock from './components/glow/GlowDock';
 import ProfileGate from './components/ProfileGate';
 import PlatformShell from './platform/PlatformShell';
 import ManagerShell from './manager/ManagerShell';
+import AdminShell from './admin/AdminShell';
 import { useAppTheme } from './hooks/useAppTheme';
-import { usePlatformHost, isManagerHost } from './hooks/usePlatformHost';
+import { usePlatformHost, isManagerHost, isAdminHost } from './hooks/usePlatformHost';
 import { ThemeModeProvider } from './contexts/ThemeModeContext';
 
 // Storefront: shopping only (scope rule: no admin functions in the store).
@@ -54,6 +55,7 @@ function AppShell() {
 // <sub>.esy.ge → tenant storefront. Same bundle, host-selected shell.
 function Shell() {
   const platform = usePlatformHost(); // unconditional — hooks rules
+  if (isAdminHost()) return <AdminShell />;
   if (isManagerHost()) return <ManagerShell />;
   return platform ? <PlatformShell /> : <AppShell />;
 }
