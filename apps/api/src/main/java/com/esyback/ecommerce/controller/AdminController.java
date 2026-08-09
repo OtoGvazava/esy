@@ -84,6 +84,31 @@ public class AdminController {
         return adminService.reactivate(subdomain, actor(authentication));
     }
 
+    // ------------------------------------------------------------ membership
+
+    /**
+     * Body: {"email": "…", "role": "OWNER"|"MANAGER"}. Returns the refreshed
+     * store detail so the caller renders the new member list from the server's
+     * answer rather than guessing at it.
+     */
+    @PostMapping("/stores/{subdomain}/members")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Map<String, Object> assignMember(@PathVariable String subdomain,
+                                            @RequestBody(required = false) Map<String, String> body,
+                                            Authentication authentication) {
+        String email = body == null ? null : body.get("email");
+        String role = body == null ? null : body.get("role");
+        return adminService.assignMember(subdomain, email, role, actor(authentication));
+    }
+
+    @DeleteMapping("/stores/{subdomain}/members/{email}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Map<String, Object> removeMember(@PathVariable String subdomain,
+                                            @PathVariable String email,
+                                            Authentication authentication) {
+        return adminService.removeMember(subdomain, email, actor(authentication));
+    }
+
     // --------------------------------------------------------------- billing
 
     @GetMapping("/billing")

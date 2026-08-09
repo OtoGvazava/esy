@@ -408,6 +408,19 @@ export const adminApi = {
     return api.post(`/api/admin/stores/${encodeURIComponent(subdomain)}/reactivate`, {});
   },
 
+  // Give someone OWNER or MANAGER of a store, or change the role they hold.
+  // The account must already exist — an identity comes from Google, so the
+  // server answers 404 for an address that has never signed in. Both calls
+  // return the refreshed store detail, members included.
+  assignMember(subdomain, email, role) {
+    return api.post(`/api/admin/stores/${encodeURIComponent(subdomain)}/members`, { email, role });
+  },
+  removeMember(subdomain, email) {
+    return api.delete(
+      `/api/admin/stores/${encodeURIComponent(subdomain)}/members/${encodeURIComponent(email)}`,
+    );
+  },
+
   // { totalAccrued, stores:[{ subdomain, name, orderCount, revenue, feesOwed }] }
   getBilling({ signal } = {}) {
     return api.get('/api/admin/billing', { signal });

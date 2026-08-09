@@ -8,7 +8,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { adminApi, handleApiError } from '../utils/api';
 import { useAdminTokens } from './adminTokens';
-import { Btn, Card, Chip, Note, SectionTitle } from '../core/primitives';
+import { Btn, Card, Chip, Field, Note, SectionTitle } from '../core/primitives';
 import { Mark, RoleChip, StatusPair } from '../core/domain';
 import { Icons } from '../core/icons';
 import {
@@ -38,7 +38,10 @@ function Panel({ T, title, children, sub }) {
   );
 }
 
-function MemberRow({ T, t, member }) {
+const STAFF_ROLES = ['OWNER', 'MANAGER'];
+
+function MemberRow({ T, t, member, busy, onAssign, onRemove }) {
+  const other = STAFF_ROLES.find((r) => r !== member.role);
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
@@ -54,7 +57,72 @@ function MemberRow({ T, t, member }) {
         label={t(`role.${member.role}`, { defaultValue: member.role })}
         showCode={false}
       />
+      {other && (
+        <Btn T={T} kind="quiet" size="sm" disabled={busy} onClick={() => onAssign(member.email, other)}>
+          {t(`detail.makeRole.${other}`)}
+        </Btn>
+      )}
+      <Btn T={T} kind="danger" size="sm" disabled={busy} onClick={() => onRemove(member)}>
+        {t('detail.removeMember')}
+      </Btn>
     </div>
+  );
+}
+
+/**
+ * Adding staff is a plain form rather than a dialog: unlike suspending a store
+ * it takes nothing away, and it is the action an admin came to this screen to
+ * perform. Removing one is confirmed, because it can leave a person unable to
+ * reach a shop they were running.
+ */
+function AddMember({ T, t, busy, onAssign }) {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('MANAGER');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const value = email.trim();
+    if (!value) return;
+    const ok = await onAssign(value, role);
+    if (ok) setEmail('');
+  };
+
+  return (
+    <form onSubmit={submit} style={{ padding: '14px 16px', borderTop: `1px solid ${T.border}` }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div style={{ flex: 1, minWidth: 190 }}>
+          <Field
+            T={T}
+            label={t('detail.addMemberLabel')}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t('admins.addPlaceholder')}
+            type="email"
+            autoComplete="off"
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {STAFF_ROLES.map((r) => (
+            <Btn
+              key={r}
+              T={T}
+              kind={role === r ? 'dark' : 'quiet'}
+              size="md"
+              type="button"
+              onClick={() => setRole(r)}
+            >
+              {t(`role.${r}`, { defaultValue: r })}
+            </Btn>
+          ))}
+        </div>
+        <Btn T={T} kind="dark" size="md" type="submit" disabled={busy || !email.trim()}>
+          {t('detail.addMember')}
+        </Btn>
+      </div>
+      <div style={{ marginTop: 8, font: `500 11.5px ${T.font}`, color: T.textMute, lineHeight: 1.5 }}>
+        {t('detail.addMemberHint')}
+      </div>
+    </form>
   );
 }
 
@@ -133,6 +201,42 @@ export default function AdminStoreDetail() {
   const applyWrite = (updated) => {
     if (updated?.subdomain) setStore((prev) => ({ ...prev, ...updated }));
     else load();
+  };
+
+  // Both member writes answer with the full refreshed detail — members
+  // included — so the list is replaced with the server's version rather than
+  // patched locally. A role change can cascade (promoting a second owner
+  // changes what is allowed for the first), and a guessed list would diverge.
+  const applyDetail = (updated) => {
+    if (updated?.subdomain) setStore(updated);
+    else load();
+  };
+
+  const assignMember = async (email, role) => {
+    setBusy(true);
+    setActionError('');
+    try {
+      applyDetail(await adminApi.assignMember(store.subdomain, email, role));
+      return true;
+    } catch (e) {
+      setActionError(handleApiError(e, t('detail.assignFailed')));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeMember = async (member) => {
+    if (!window.confirm(t('detail.removeMemberConfirm', { email: member.email }))) return;
+    setBusy(true);
+    setActionError('');
+    try {
+      applyDetail(await adminApi.removeMember(store.subdomain, member.email));
+    } catch (e) {
+      setActionError(handleApiError(e, t('detail.removeMemberFailed')));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const reactivate = async () => {
@@ -256,8 +360,19 @@ export default function AdminStoreDetail() {
               {t('detail.noMembers')}
             </div>
           ) : (
-            members.map((m) => <MemberRow key={`${m.email}-${m.role}`} T={T} t={t} member={m} />)
+            members.map((m) => (
+              <MemberRow
+                key={`${m.email}-${m.role}`}
+                T={T}
+                t={t}
+                member={m}
+                busy={busy}
+                onAssign={assignMember}
+                onRemove={removeMember}
+              />
+            ))
           )}
+          <AddMember T={T} t={t} busy={busy} onAssign={assignMember} />
         </Panel>
 
         <Panel T={T} title={t('detail.recentOrders')} sub={t('detail.recentOrdersSub')}>

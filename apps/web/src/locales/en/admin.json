@@ -100,7 +100,18 @@
     "statFees": "Fees owed",
     "members": "Members",
     "membersSub": "Accounts that can manage this store",
-    "noMembers": "No members on record.",
+    "noMembers": "Nobody can run this store yet. Give someone OWNER below.",
+    "addMember": "Add",
+    "addMemberLabel": "Give someone a role",
+    "addMemberHint": "The account must have signed in at least once — identities come from Google, so an address nobody has used yet cannot be given a role.",
+    "makeRole": {
+      "OWNER": "Make owner",
+      "MANAGER": "Make manager"
+    },
+    "removeMember": "Remove",
+    "removeMemberConfirm": "Remove {{email}} from this store? They lose access to the back office; their shopping history is untouched.",
+    "removeMemberFailed": "Could not remove this member.",
+    "assignFailed": "Could not change this role.",
     "recentOrders": "Recent orders",
     "recentOrdersSub": "Newest first",
     "noOrders": "No orders yet."

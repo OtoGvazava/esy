@@ -5,6 +5,7 @@ import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.PlatformAdmin;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
+import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.AuditLogRepository;
 import com.esyback.ecommerce.repository.PlatformAdminRepository;
 import com.esyback.ecommerce.repository.ProductRepository;
@@ -68,6 +69,7 @@ public class AdminService {
     private final PlatformAdminRepository platformAdminRepository;
     private final OrderService orderService;
     private final UserService userService;
+    private final MembershipService membershipService;
     // The ADMIN allowlist, read live (Redis override → env ADMIN_EMAILS → ""),
     // exactly as UserService reads it when it grants the role at sign-in.
     private final ConfigStore configStore;
@@ -85,6 +87,8 @@ public class AdminService {
     private static final String ACTION_STORE_REACTIVATED = "STORE_REACTIVATED";
     private static final String ACTION_ADMIN_GRANTED = "ADMIN_GRANTED";
     private static final String ACTION_ADMIN_REVOKED = "ADMIN_REVOKED";
+    private static final String ACTION_MEMBER_ASSIGNED = "STORE_MEMBER_ASSIGNED";
+    private static final String ACTION_MEMBER_REMOVED = "STORE_MEMBER_REMOVED";
 
     /** How many orders the store detail carries. Bounded: a store's order list grows without limit. */
     private static final int RECENT_ORDERS = 10;
@@ -204,6 +208,92 @@ public class AdminService {
         body.put("totalAccrued", totalAccrued);
         body.put("stores", stores);
         return body;
+    }
+
+    // ------------------------------------------------------------ membership
+
+    /**
+     * Put someone in charge of a store, or change the role they already hold.
+     *
+     * <p>This exists because removing the "platform ADMIN can do anything"
+     * shortcut left no sanctioned way to grant store authority — the only route
+     * was editing the database by hand. Granting a membership is the auditable
+     * replacement: it names a person, it names a store, and it leaves a row
+     * saying who decided it.
+     *
+     * <p>Only OWNER and MANAGER can be assigned here. CUSTOMER is not a grant —
+     * it is the record of having shopped, written automatically at sign-in, and
+     * handing it out from an admin screen would mean nothing.
+     */
+    @Transactional
+    public Map<String, Object> assignMember(String subdomain, String email, String role, String actorEmail) {
+        Tenant tenant = requireStore(subdomain);
+        String normalized = PlatformAdmin.normalizeEmail(blankToNull(email));
+        if (normalized == null || !EMAIL.matcher(normalized).matches()) {
+            throw bad("A valid email address is required");
+        }
+
+        StoreMembership.Role target;
+        try {
+            target = StoreMembership.Role.valueOf(String.valueOf(role).trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw bad("Role must be OWNER or MANAGER");
+        }
+        if (!STAFF.contains(target)) {
+            throw bad("Role must be OWNER or MANAGER — CUSTOMER is recorded automatically, not granted");
+        }
+
+        // The account has to exist. There is no way to create one here: an
+        // identity comes from Google, so a row invented for an address nobody
+        // has signed in with would never match the person who eventually does.
+        User user = userService.findByEmail(normalized).orElseThrow(() -> new ResponseStatusException(
+            HttpStatus.NOT_FOUND,
+            normalized + " has no account yet — they must sign in once before they can be given a role"));
+
+        StoreMembership existing = membershipRepository.findByUserAndTenant(user, tenant).orElse(null);
+        StoreMembership.Role was = existing == null ? null : existing.getRole();
+        if (was == target) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                normalized + " is already " + target + " of this store");
+        }
+        // Demoting the last owner would leave the shop with nobody who can
+        // change its settings — the unmanageable state this whole screen exists
+        // to resolve. Promote the replacement first.
+        if (was == StoreMembership.Role.OWNER && membershipService.ownerCount(tenant) <= 1) {
+            throw bad("This is the store's only owner — give someone else OWNER before changing this one");
+        }
+
+        membershipService.assign(user, tenant, target);
+        audit(actorEmail, ACTION_MEMBER_ASSIGNED, TARGET_STORE, tenant.getSubdomain(),
+            normalized + " -> " + target + (was == null ? "" : " (was " + was + ")"));
+        return storeDetail(tenant.getSubdomain());
+    }
+
+    /** Take away a store role. Shopping history is untouched — see the service. */
+    @Transactional
+    public Map<String, Object> removeMember(String subdomain, String email, String actorEmail) {
+        Tenant tenant = requireStore(subdomain);
+        String normalized = PlatformAdmin.normalizeEmail(blankToNull(email));
+        if (normalized == null) {
+            throw bad("An email address is required");
+        }
+        User user = userService.findByEmail(normalized).orElseThrow(() -> new ResponseStatusException(
+            HttpStatus.NOT_FOUND, normalized + " has no account"));
+
+        StoreMembership existing = membershipRepository.findByUserAndTenant(user, tenant)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                normalized + " holds no role in this store"));
+        if (!STAFF.contains(existing.getRole())) {
+            throw bad(normalized + " is a customer of this store, not staff — there is no role to remove");
+        }
+        if (existing.getRole() == StoreMembership.Role.OWNER && membershipService.ownerCount(tenant) <= 1) {
+            throw bad("This is the store's only owner — a store cannot be left with nobody who can run it");
+        }
+
+        membershipService.remove(user, tenant);
+        audit(actorEmail, ACTION_MEMBER_REMOVED, TARGET_STORE, tenant.getSubdomain(),
+            normalized + " was " + existing.getRole());
+        return storeDetail(tenant.getSubdomain());
     }
 
     // ---------------------------------------------------------------- admins
