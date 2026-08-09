@@ -14,8 +14,12 @@
     "settings": "Settings",
     "admin": "Platform admin",
     "switchStore": "Switch store",
-    "viewStore": "View live store",
-    "signOut": "Sign out"
+    "viewStore": "View store",
+    "signOut": "Sign out",
+    "overview": "Overview",
+    "stats": "Statistics",
+    "money": "Money",
+    "team": "Team"
   },
   "products": {
     "title": "Products",
@@ -33,5 +37,24 @@
     "config": "Live configuration"
   },
   "signInRequired": "Sign in to manage your stores",
-  "signIn": "Continue with Google"
+  "signIn": "Continue with Google",
+  "role": {
+    "OWNER": "Owner",
+    "MANAGER": "Manager",
+    "CUSTOMER": "Customer"
+  },
+  "settings": {
+    "shop": "Shop",
+    "shopSub": "Name, descriptions, category",
+    "brand": "Brand",
+    "brandSub": "Logo, colour, address",
+    "delivery": "Delivery",
+    "deliverySub": "Pickup, courier, express",
+    "contact": "Contact",
+    "contactSub": "Phone, WhatsApp, social",
+    "integrations": "Integrations",
+    "integrationsSub": "Card payments, cart",
+    "shopNote": "Shop and brand still share one form. Splitting the fields is a separate job from splitting the navigation.",
+    "brandNote": "Shop and brand still share one form. Splitting the fields is a separate job from splitting the navigation."
+  }
 }

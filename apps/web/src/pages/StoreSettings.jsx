@@ -7,8 +7,6 @@ import { tenantApi, handleApiError } from '../utils/api';
 import { useGlow } from '../styles/glow';
 import { Icon } from '../components/glow/GlowPrimitives';
 import { GlowScreen } from '../components/glow/GlowChrome';
-import { ContactChannelsEditor } from '../components/store/ContactChannels';
-import DeliveryRoutes from '../components/store/DeliveryRoutes';
 
 // Server-allowed store categories (mirrors TenantService.CATEGORIES).
 const CATEGORIES = ['fashion', 'electronics', 'home', 'food', 'art', 'sport', 'wear'];
@@ -23,7 +21,10 @@ const devTenant = () => {
 // 460px column, same field + colour controls. Owner/admin only — shoppers and
 // non-owners are bounced home. Branding only: subdomain + unique name stay
 // fixed (routing key / SSO cookie domain).
-export default function StoreSettings() {
+// `embedded` renders the form alone, for use inside a manager settings pane:
+// no full-screen wrapper, no close button and no page title, because the pane
+// around it already supplies all three.
+export default function StoreSettings({ embedded = false }) {
   const navigate = useNavigate();
   const { t } = useTranslation(['owner', 'common']);
   const { isStoreOwner, loading: authLoading } = useAuth();
@@ -51,8 +52,8 @@ export default function StoreSettings() {
   const [bogDirty, setBogDirty] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !isStoreOwner) navigate('/'); // OWNER-only: the API refuses MANAGERs here
-  }, [authLoading, isStoreOwner, navigate]);
+    if (!embedded && !authLoading && !isStoreOwner) navigate('/'); // OWNER-only: the API refuses MANAGERs here
+  }, [embedded, authLoading, isStoreOwner, navigate]);
 
   useEffect(() => {
     if (!tenant) return;
@@ -192,8 +193,8 @@ export default function StoreSettings() {
     </div>
   );
 
-  return (
-    <GlowScreen T={T} padBottom={40}>
+  const inner = (
+    <>
       <div style={{ position: 'absolute', top: -160, left: -80, right: -80, height: 360, background: `radial-gradient(60% 80% at 50% 30%, ${form.primaryColor}48, transparent 70%)`, filter: 'blur(20px)', pointerEvents: 'none' }} />
       <div style={{ maxWidth: 460, margin: '0 auto', position: 'relative' }}>
         <div style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'flex-end' }}>
@@ -375,20 +376,10 @@ export default function StoreSettings() {
             )}
           </div>
 
-          {/* Contact channels save themselves per entry rather than riding the
-              form's Save button — each row is its own write, so a half-typed
-              new number cannot block saving the rest of the store's settings. */}
-          <div style={{ padding: '16px 0', borderTop: `1px solid ${T.border}` }}>
-            <ContactChannelsEditor T={T} devTenant={devTenant()} />
-          </div>
-
-          {/* Each route saves on its own, same as contacts. When the server
-              refuses a switch — the last route, or the last courier while
-              express is on — its message is what tells the owner which rule
-              they hit, so it is surfaced rather than swallowed. */}
-          <div style={{ padding: '16px 0', borderTop: `1px solid ${T.border}` }}>
-            <DeliveryRoutes T={T} devTenant={devTenant()} />
-          </div>
+          {/* Delivery and contact channels used to be appended here. They are
+              now settings sub-screens of their own (manager/ManagerSettings),
+              which is what the design specifies — this page was becoming the
+              long scroll that split was meant to prevent. */}
 
           {apiError && (
             <div style={{ padding: '12px 14px', borderRadius: 12, background: `${T.danger}14`, border: `1px solid ${T.danger}40`, color: T.danger, font: `500 12.5px ${T.font}` }}>
@@ -407,6 +398,11 @@ export default function StoreSettings() {
           )}
         </div>
       </div>
-    </GlowScreen>
+    </>
   );
+
+  // Embedded in a manager settings pane, the pane owns the screen, the title
+  // and the way back — so the form renders alone.
+  if (embedded) return inner;
+  return <GlowScreen T={T} padBottom={40}>{inner}</GlowScreen>;
 }
