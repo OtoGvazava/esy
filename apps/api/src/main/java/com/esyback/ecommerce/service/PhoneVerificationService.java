@@ -31,11 +31,37 @@ import java.util.concurrent.ThreadLocalRandom;
 @Slf4j
 public class PhoneVerificationService {
 
-    private record Pending(String code, Instant expiresAt) {}
+    /** Mutable because the attempt count changes without a new code. */
+    private static final class Pending {
+        final String code;
+        final Instant expiresAt;
+        int attempts;
+
+        Pending(String code, Instant expiresAt) {
+            this.code = code;
+            this.expiresAt = expiresAt;
+        }
+    }
 
     private static final long TTL_SECONDS = 600; // 10 minutes
 
+    /**
+     * Guesses allowed per issued code. Four digits is 10 000 combinations, so
+     * unlimited attempts inside the ten-minute window is a few seconds of
+     * scripting — the length is fixed by D13, which means the brute-force
+     * defence has to be here rather than in a longer code.
+     */
+    private static final int MAX_ATTEMPTS = 5;
+
+    /**
+     * Minimum gap between sends for one account. Every message costs real
+     * money and lands on someone's phone, so an unthrottled endpoint is both a
+     * bill and a way to harass a number the requester does not own.
+     */
+    private static final long RESEND_COOLDOWN_SECONDS = 60;
+
     private final ConcurrentHashMap<Long, Pending> pending = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, Instant> lastSentAt = new ConcurrentHashMap<>();
     private final UserService userService;
     private final SmsSender sms;
     private final SmsTemplates templates;
@@ -53,6 +79,17 @@ public class PhoneVerificationService {
         if (phone == null || phone.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add a phone number first");
         }
+        // Throttle before generating anything: a refused request must not
+        // replace the code the person is currently typing.
+        Instant last = lastSentAt.get(user.getId());
+        if (last != null) {
+            long wait = RESEND_COOLDOWN_SECONDS - java.time.Duration.between(last, Instant.now()).toSeconds();
+            if (wait > 0) {
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Wait " + wait + "s before asking for another code");
+            }
+        }
+
         String code = String.format("%04d", ThreadLocalRandom.current().nextInt(0, 10_000));
 
         // The master switch is off: no message can be sent, and falling back to
@@ -64,7 +101,7 @@ public class PhoneVerificationService {
         }
 
         if (!sms.isConfigured()) {
-            pending.put(user.getId(), new Pending(code, Instant.now().plusSeconds(TTL_SECONDS)));
+            issue(user, code);
             log.info("DEV phone OTP for user {} = {} (no SMS account configured)", user.getId(), code);
             return code;
         }
@@ -81,16 +118,36 @@ public class PhoneVerificationService {
     }
 
 
-    /** Verifies a submitted code and marks the user's phone verified. */
+    /** Records a freshly issued code and the moment it went out. */
+    private void issue(User user, String code) {
+        pending.put(user.getId(), new Pending(code, Instant.now().plusSeconds(TTL_SECONDS)));
+        lastSentAt.put(user.getId(), Instant.now());
+    }
+
+    /**
+     * Verifies a submitted code and marks the user's phone verified.
+     *
+     * <p>A wrong guess costs one of {@link #MAX_ATTEMPTS}. Running out discards
+     * the code entirely rather than merely refusing that guess: leaving it live
+     * would let an attacker keep trying with a fresh request, and the whole
+     * point is that a four-digit secret must not survive being guessed at.
+     */
     public void verify(User user, String code) {
         Pending p = pending.get(user.getId());
-        if (p == null || Instant.now().isAfter(p.expiresAt())) {
+        if (p == null || Instant.now().isAfter(p.expiresAt)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code expired — request a new one");
         }
-        if (code == null || !code.trim().equals(p.code())) {
+        if (code == null || !code.trim().equals(p.code)) {
+            p.attempts++;
+            if (p.attempts >= MAX_ATTEMPTS) {
+                pending.remove(user.getId());
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Too many wrong codes — request a new one");
+            }
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incorrect code");
         }
         pending.remove(user.getId());
+        lastSentAt.remove(user.getId());
         user.setPhoneVerified(true);
         userService.save(user);
     }
