@@ -249,6 +249,27 @@ export default function AdminIntegrations() {
         </div>
       )}
 
+      {/* The provider's own answer for why the last message failed. Without
+          this the only symptom is a shopper seeing "could not send the code",
+          and the cause sits in a log on a host nobody opens. */}
+      {sms.lastFailure && (
+        <div style={{
+          marginBottom: 14, padding: '13px 15px', borderRadius: 14,
+          background: T.dangerBg, border: `1px solid ${T.danger}55`,
+        }}>
+          <div style={{ font: `700 13px ${T.font}`, color: T.dangerFg }}>
+            {t('integrations.lastFailureTitle')}
+          </div>
+          <div style={{ marginTop: 5, font: `500 12.5px/1.55 ${T.font}`, color: T.text }}>
+            {sms.lastFailure.reason}
+          </div>
+          <div style={{ marginTop: 6, font: `500 10.5px ${T.mono}`, color: T.textMute }}>
+            {sms.lastFailure.errorCode != null && `ErrorCode ${sms.lastFailure.errorCode} · `}
+            {sms.lastFailure.at}
+          </div>
+        </div>
+      )}
+
       <Card T={T} pad={0} style={{ overflow: 'hidden', marginBottom: 20 }}>
         <div style={{ padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <span style={{ flex: 1, minWidth: 0 }}>

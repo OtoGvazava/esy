@@ -12,6 +12,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 
 /**
@@ -46,6 +47,30 @@ public class SmsSender {
     private final SmsProperties props;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
 
+    /**
+     * Why the last send failed, for the admin integrations screen.
+     *
+     * <p>The provider tells us exactly what is wrong — wrong key, no balance,
+     * unregistered sender — and until now that answer went only to the
+     * application log, which on a hosted deployment is the one place the person
+     * who can fix it is least likely to look. A failed verification showed them
+     * "could not send the code" and nothing else. It is held in memory rather
+     * than the config store because it is a diagnostic, not configuration, and
+     * must remain readable when that store is exactly what is broken.
+     */
+    private volatile Failure lastFailure;
+
+    public record Failure(String reason, Integer errorCode, Instant at) {}
+
+    public Failure getLastFailure() {
+        return lastFailure;
+    }
+
+    private boolean fail(String reason, Integer errorCode) {
+        lastFailure = new Failure(reason, errorCode, Instant.now());
+        return false;
+    }
+
     public boolean isConfigured() {
         return props.isConfigured();
     }
@@ -71,7 +96,7 @@ public class SmsSender {
         String destination = normalise(phone);
         if (destination == null) {
             log.warn("SMS not sent: phone number is not a usable Georgian mobile");
-            return false;
+            return fail("The phone number is not a usable Georgian mobile", null);
         }
         try {
             String body = form(Map.of(
@@ -87,23 +112,24 @@ public class SmsSender {
             HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (res.statusCode() / 100 != 2) {
                 log.warn("SMS Office returned HTTP {}", res.statusCode());
-                return false;
+                return fail("SMS Office returned HTTP " + res.statusCode(), null);
             }
             // The body is small and flat; the one field that decides the
             // outcome is ErrorCode, where 0 is "accepted for delivery".
             int errorCode = errorCode(res.body());
             if (errorCode != 0) {
                 log.warn("SMS Office rejected the message, ErrorCode={} ({})", errorCode, meaning(errorCode));
-                return false;
+                return fail(meaning(errorCode), errorCode);
             }
+            lastFailure = null;
             return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("SMS send interrupted");
-            return false;
+            return fail("The send was interrupted", null);
         } catch (Exception e) {
             log.warn("SMS send failed: {}", e.getClass().getSimpleName());
-            return false;
+            return fail("Could not reach SMS Office (" + e.getClass().getSimpleName() + ")", null);
         }
     }
 

@@ -2,6 +2,7 @@ package com.esyback.ecommerce.controller;
 
 import com.esyback.ecommerce.config.SmsProperties;
 import com.esyback.ecommerce.service.ConfigStore;
+import com.esyback.ecommerce.service.SmsSender;
 import com.esyback.ecommerce.service.SmsTemplates;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -36,6 +37,7 @@ public class AdminIntegrationsController {
 
     private final SmsProperties smsProperties;
     private final SmsTemplates templates;
+    private final SmsSender smsSender;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -51,6 +53,17 @@ public class AdminIntegrationsController {
         // edit can be saved, so the UI has to be able to say so up front rather
         // than let an admin discover it one failed save at a time.
         sms.put("storeReady", smsProperties.isStoreReady());
+        // Why the last send failed, straight from the provider. Without this a
+        // merchant sees only "could not send the code" and the answer sits in a
+        // log on a host nobody opens.
+        SmsSender.Failure f = smsSender.getLastFailure();
+        if (f != null) {
+            Map<String, Object> last = new LinkedHashMap<>();
+            last.put("reason", f.reason());
+            last.put("errorCode", f.errorCode());
+            last.put("at", f.at());
+            sms.put("lastFailure", last);
+        }
 
         List<Map<String, Object>> rows = new ArrayList<>();
         for (String key : SmsTemplates.KEYS) {
