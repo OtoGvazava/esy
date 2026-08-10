@@ -103,6 +103,13 @@ const mapListItem = (dto) => ({
   // So a card can send the shopper to choose rather than adding a product
   // checkout would refuse for having no combination (D11).
   hasVariants: !!dto.hasVariants,
+  // The line under the title on a card.
+  blurb: dto.blurb || '',
+  // The corner badge. The design also shows "hit" and "new"; both would need
+  // sales history or a creation date the list endpoint does not return, and a
+  // badge invented from nothing is a claim to a shopper about a real shop. So
+  // only the one the data actually supports is shown: stock running out.
+  tag: dto.quantity != null && dto.quantity > 0 && dto.quantity <= 5 ? 'low' : null,
 });
 
 // Backend detail: { id, title, description, imageUrl, price, quantity,

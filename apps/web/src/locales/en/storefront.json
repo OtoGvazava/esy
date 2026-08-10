@@ -260,7 +260,12 @@
     "title": "About",
     "contact": "Contact",
     "delivery": "Delivery",
-    "deliveryNote": "Delivery is charged once per order and shown again before you pay."
+    "deliveryNote": "Delivery is charged once per order and shown again before you pay.",
+    "since": "on esy since {{year}}",
+    "productsN": "{{n}} products",
+    "cardPayments": "Card payments",
+    "orderOnline": "Order online",
+    "browseStore": "Browse the shop"
   },
   "variant": {
     "struckWith": "Struck through — not available with {{other}}.",

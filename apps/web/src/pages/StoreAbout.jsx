@@ -13,10 +13,10 @@ import { useGlow } from '../styles/glow';
 import { useTenant } from '../contexts/TenantContext';
 import { GlowScreen, GlowTopNav } from '../components/glow/GlowChrome';
 import { Icon } from '../components/glow/GlowPrimitives';
-import { Card, Note } from '../core/primitives';
+import { Card, Chip, Note } from '../core/primitives';
 import { Mark } from '../core/domain';
 import { StoreContacts } from '../components/store/ContactChannels';
-import { deliveryApi } from '../utils/api';
+import { deliveryApi, productApi } from '../utils/api';
 
 export default function StoreAbout() {
   const { T, tenant } = useGlow();
@@ -24,6 +24,8 @@ export default function StoreAbout() {
   const { t, i18n } = useTranslation('storefront');
   const navigate = useNavigate();
   const [routes, setRoutes] = useState([]);
+  // The chip row states how much the shop sells, so it needs the real count.
+  const [productCount, setProductCount] = useState(null);
 
   // How a shopper receives goods is part of what they want to know about a
   // shop, so the About page states it rather than saving it for checkout.
@@ -32,6 +34,9 @@ export default function StoreAbout() {
     deliveryApi.listPublic(undefined, { signal: ac.signal })
       .then((res) => { if (!ac.signal.aborted) setRoutes(Array.isArray(res?.routes) ? res.routes : []); })
       .catch(() => { if (!ac.signal.aborted) setRoutes([]); });
+    productApi.list({ page: 0, size: 1, signal: ac.signal })
+      .then((r) => { if (!ac.signal.aborted) setProductCount(r.totalElements ?? null); })
+      .catch(() => {});
     return () => ac.abort();
   }, []);
 
@@ -42,7 +47,12 @@ export default function StoreAbout() {
     <GlowScreen T={T} padBottom={40}>
       <GlowTopNav T={T} title={t('about.title')} onBack={() => navigate(-1)} />
 
-      <div style={{ padding: `0 ${pad}px`, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* The design gutters this page to a readable measure. Without it the
+          text ran the full width of a desktop window. */}
+      <div style={{
+        padding: `0 ${pad}px`, maxWidth: 820, margin: '0 auto',
+        display: 'flex', flexDirection: 'column', gap: 14,
+      }}>
         <Card
           T={T}
           pad={24}
@@ -57,14 +67,30 @@ export default function StoreAbout() {
           <div style={{ font: `700 22px ${T.font}`, color: T.text, letterSpacing: '-0.03em' }}>
             {tenant?.name}
           </div>
-          {store?.addressCity && (
+          {(store?.addressCity || store?.establishedYear) && (
             <div style={{
               marginTop: 6, font: `500 12.5px ${T.font}`, color: T.textDim,
               display: 'inline-flex', alignItems: 'center', gap: 6,
             }}>
-              <Icon.pin /> {[store.addressStreet, store.addressCity].filter(Boolean).join(', ')}
+              <Icon.pin />
+              {[
+                [store.addressStreet, store.addressCity].filter(Boolean).join(', '),
+                store.establishedYear ? t('about.since', { year: store.establishedYear }) : null,
+              ].filter(Boolean).join(' · ')}
             </div>
           )}
+
+          {/* The design's chip row. Only facts the store actually has: an
+              invented rating on a real shop would be a lie about strangers. */}
+          <div style={{ marginTop: 14, display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {productCount != null && (
+              <Chip T={T} tone="accent">{t('about.productsN', { n: productCount })}</Chip>
+            )}
+            {store?.category && <Chip T={T}>{store.category}</Chip>}
+            <Chip T={T} tone={store?.bogConfigured ? 'success' : 'neutral'}>
+              {store?.bogConfigured ? t('about.cardPayments') : t('about.orderOnline')}
+            </Chip>
+          </div>
         </Card>
 
         {store?.description && (
@@ -78,7 +104,7 @@ export default function StoreAbout() {
         {/* Contacts render nothing at all when the store has published none,
             so this card would be an empty promise — it is only drawn once
             there is something in it. */}
-        <ContactsCard T={T} t={t} label={label} pad={pad} />
+        <ContactsCard T={T} t={t} label={label} pad={pad} store={store} />
 
         {routes.length > 0 && (
           <Card T={T} pad={pad}>
@@ -116,6 +142,17 @@ export default function StoreAbout() {
             <Note T={T} style={{ marginTop: 12 }}>{t('about.deliveryNote')}</Note>
           </Card>
         )}
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          style={{
+            height: 48, borderRadius: 14, border: `1px solid ${T.border}`,
+            background: 'transparent', color: T.text, cursor: 'pointer',
+            font: `700 13.5px ${T.font}`,
+          }}
+        >
+          {t('about.browseStore')}
+        </button>
       </div>
     </GlowScreen>
   );
@@ -126,14 +163,33 @@ export default function StoreAbout() {
  * null when nothing is published, and a "Contact" card with nothing under it
  * reads as "you cannot reach this shop" rather than "it has not said yet".
  */
-function ContactsCard({ T, t, label, pad }) {
+function ContactsCard({ T, t, label, pad, store }) {
   const [hasAny, setHasAny] = useState(false);
+
+  // The address is a way to reach a shop too, so the card is worth drawing
+  // when there is one even if no channel has been published.
+  const location = [store?.addressStreet, store?.addressCity, store?.addressCountry]
+    .filter(Boolean).join(', ');
+  if (!hasAny && !location) {
+    // Keep the component mounted so its fetch can still report back.
+    return <div style={{ display: 'none' }}><StoreContacts T={T} onLoaded={setHasAny} /></div>;
+  }
+
+  const row = {
+    display: 'flex', alignItems: 'center', gap: 10,
+    font: `500 13px ${T.font}`, color: T.textDim, marginTop: 10,
+  };
+
   return (
-    <div style={{ display: hasAny ? 'block' : 'none' }}>
-      <Card T={T} pad={pad}>
-        <div style={label}>{t('about.contact')}</div>
-        <StoreContacts T={T} onLoaded={setHasAny} />
-      </Card>
-    </div>
+    <Card T={T} pad={pad}>
+      <div style={label}>{t('about.contact')}</div>
+      <StoreContacts T={T} onLoaded={setHasAny} />
+      {location && (
+        <span style={row}>
+          <span style={{ color: T.accentFg, display: 'inline-flex' }}><Icon.pin /></span>
+          {location}
+        </span>
+      )}
+    </Card>
   );
 }

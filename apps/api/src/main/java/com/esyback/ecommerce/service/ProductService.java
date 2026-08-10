@@ -169,7 +169,23 @@ public class ProductService {
             product.getQuantity()
         );
         dto.setHasVariants(product.variantsEnabled());
+        dto.setBlurb(blurbOf(product.getDescription()));
         return dto;
+    }
+
+    /**
+     * The card's one-line excerpt. Cut at a word boundary so it reads as a
+     * phrase rather than a string truncated mid-word, and taken from the first
+     * line only — a description's opening line is the merchant's own summary,
+     * whereas prose from further down arrives without its context.
+     */
+    private static String blurbOf(String description) {
+        if (description == null) return null;
+        String first = description.strip().split("\\r?\\n", 2)[0].strip();
+        if (first.isEmpty()) return null;
+        if (first.length() <= 70) return first;
+        int cut = first.lastIndexOf(' ', 70);
+        return (cut > 30 ? first.substring(0, cut) : first.substring(0, 70)).strip() + "…";
     }
     
     private ProductDto convertToProductDto(Product product) {
