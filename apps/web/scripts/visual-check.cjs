@@ -36,26 +36,41 @@ const ADM = process.env.ADMIN_URL || 'http://admin.lvh.me:8092';
 const USER = process.env.VISUAL_USER || 'visual-check@esy.test';
 const Q = '?tenant=fashion';
 
+// Every screen the design sources on disk can render, paired with the app
+// route that is meant to be it. `design: null` means the design source for
+// that surface is not on disk — captured one-sided rather than skipped.
 const PAIRS = [
-  // Public storefront
+  // ── Storefront (s-store.jsx) ────────────────────────────────────────────
   { name: 'store-home', design: 'screen=SHome&size=web', app: `${STORE}/`, w: 1440, h: 1100 },
   { name: 'store-home-mob', design: 'screen=SHome&size=mob', app: `${STORE}/`, w: 390, h: 900 },
+  { name: 'store-search', design: 'screen=SSearch&size=web&state=results', app: `${STORE}/search`, w: 1440, h: 900 },
   { name: 'store-product', design: 'screen=SProduct&size=web', app: `${STORE}/product/5`, w: 1440, h: 1000 },
+  { name: 'store-product-mob', design: 'screen=SProduct&size=mob', app: `${STORE}/product/5`, w: 390, h: 900 },
   { name: 'store-cart', design: 'screen=SCart&size=web&state=empty', app: `${STORE}/cart`, w: 1440, h: 700 },
+  { name: 'store-checkout', design: 'screen=SCheckout&size=web', app: `${STORE}/checkout`, w: 1440, h: 1000, auth: true },
+  { name: 'store-payreturn', design: 'screen=SPayReturn&size=web&outcome=paid', app: `${STORE}/pay/return`, w: 1440, h: 800 },
+  { name: 'store-orders', design: 'screen=SOrders&size=web', app: `${STORE}/orders`, w: 1440, h: 900, auth: true },
   { name: 'store-about', design: 'screen=SAbout&size=web', app: `${STORE}/about`, w: 1440, h: 1000 },
 
-  // Back office — needs the session cookie
+  // ── Back office (s-manager.jsx) — needs the session cookie ──────────────
   { name: 'mgr-overview', design: 'screen=MOverview&size=web', app: `${MGR}/${Q}`, w: 1440, h: 1000, auth: true },
+  { name: 'mgr-overview-mob', design: 'screen=MOverview&size=mob', app: `${MGR}/${Q}`, w: 390, h: 900, auth: true },
   { name: 'mgr-products', design: 'screen=MProducts&size=web', app: `${MGR}/products${Q}`, w: 1440, h: 1000, auth: true },
   { name: 'mgr-orders', design: 'screen=MOrders&size=web', app: `${MGR}/orders${Q}`, w: 1440, h: 1000, auth: true },
   { name: 'mgr-team', design: 'screen=MTeam&size=web', app: `${MGR}/team${Q}`, w: 1440, h: 900, auth: true },
   { name: 'mgr-money', design: 'screen=MMoney&size=web', app: `${MGR}/money${Q}`, w: 1440, h: 900, auth: true },
+  { name: 'mgr-stats', design: 'screen=MOverview&size=web', app: `${MGR}/stats${Q}`, w: 1440, h: 900, auth: true },
   { name: 'mgr-settings', design: 'screen=MSettings&size=web', app: `${MGR}/settings/shop${Q}`, w: 1440, h: 1100, auth: true },
+  { name: 'mgr-set-delivery', design: 'screen=MSettings&size=web&tab=delivery', app: `${MGR}/settings/delivery${Q}`, w: 1440, h: 1000, auth: true },
+  { name: 'mgr-set-contact', design: 'screen=MSettings&size=web&tab=contact', app: `${MGR}/settings/contact${Q}`, w: 1440, h: 1000, auth: true },
+  // Designed but not built — captured so the gap is visible, not asserted.
+  { name: 'mgr-bulk', design: 'screen=MBulkUpload&size=web', app: `${MGR}/products${Q}`, w: 1440, h: 900, auth: true },
 
-  // Platform admin — design sources not on disk yet.
+  // ── Platform admin — design sources not on disk yet ─────────────────────
   { name: 'adm-stores', design: null, app: `${ADM}/stores`, w: 1440, h: 1000, auth: true },
   { name: 'adm-billing', design: null, app: `${ADM}/billing`, w: 1440, h: 900, auth: true },
   { name: 'adm-admins', design: null, app: `${ADM}/admins`, w: 1440, h: 900, auth: true },
+  { name: 'adm-config', design: null, app: `${ADM}/config`, w: 1440, h: 900, auth: true },
 ];
 
 (async () => {
@@ -70,7 +85,9 @@ const PAIRS = [
       const page = await ctx.newPage();
       const url = side === 'design' ? `${DESIGN}?${p.design}` : p.app;
       try {
-        await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
+        // lvh.me resolves over public DNS and is intermittently slow.
+        try { await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }); }
+        catch { await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 }); }
         // Babel compiles the design sources in-page; the app hydrates and
         // fetches. Neither is finished at networkidle.
         await page.waitForTimeout(2200);
