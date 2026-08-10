@@ -11,6 +11,8 @@ export const CATEGORIES = [
   { id: 'home', label: 'Home' },
   { id: 'food', label: 'Food' },
   { id: 'art', label: 'Art' },
+  { id: 'sport', label: 'Sport' },
+  { id: 'wear', label: 'Clothing' },
 ];
 
 // Featured carousel — by subdomain, falls back to first N stores if absent.

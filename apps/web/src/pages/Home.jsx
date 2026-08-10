@@ -145,15 +145,19 @@ export default function Home() {
         filter: 'blur(20px)', pointerEvents: 'none',
       }} />
 
-      {/* topbar */}
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `28px ${gutter}px 0` }}>
-        <GlowLogo T={T} tenant={tenant} size={isDesktop ? 22 : 20} />
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <ManageButton />
-          <ThemePill T={T} dark={mode === 'dark'} onClick={toggleTheme} />
-          <LangPill T={T} lang={language} onClick={() => navigate('/settings/language')} />
+      {/* Phone header. Above mobile the StoreBar in App.jsx carries identity,
+          search, cart and account, so repeating the logo here would be a
+          second header stacked under the first. */}
+      {!isDesktop && (
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `28px ${gutter}px 0` }}>
+          <GlowLogo T={T} tenant={tenant} size={20} />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <ManageButton />
+            <ThemePill T={T} dark={mode === 'dark'} onClick={toggleTheme} />
+            <LangPill T={T} lang={language} onClick={() => navigate('/settings/language')} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* hero + search */}
       <div style={{
@@ -167,6 +171,21 @@ export default function Home() {
           </div>
           <div style={{ font: `700 ${heroName} ${T.font}`, color: T.text, letterSpacing: '-0.035em', marginBottom: 8 }}>{tenant.name}</div>
           <div style={{ font: `400 ${isDesktop ? 14 : 12.5}px/1.5 ${T.font}`, color: T.textDim, maxWidth: 540 }}>{tenant.bio}</div>
+          {/* Contacts live on the About page (D10), not the hero — this is the
+              way in. The hero is for what the shop sells; how to reach it is a
+              page of its own. */}
+          <button
+            type="button"
+            onClick={() => navigate('/about')}
+            style={{
+              marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 999, cursor: 'pointer',
+              border: `1px solid ${T.border}`, background: 'transparent',
+              color: T.textDim, font: `600 12.5px ${T.font}`,
+            }}
+          >
+            {t('aboutStore')} <Icon.arrowR />
+          </button>
         </div>
         <div ref={searchRef} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: isDesktop ? 0 : 20 }}>
           <GlowSearchBar T={T} value={query} onChange={setQuery} compact={!isDesktop} />

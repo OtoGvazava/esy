@@ -28,7 +28,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ShoppingCartCheckoutIcon from '@mui/icons-material/ShoppingCartCheckout';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import { useTranslation } from 'react-i18next';
-import { useCart } from '../contexts/CartContext';
+import { useCart, lineKey } from '../contexts/CartContext';
 
 export default function CartDrawer({ open, onClose }) {
   const { t, i18n } = useTranslation('cart');
@@ -41,11 +41,13 @@ export default function CartDrawer({ open, onClose }) {
     ).format(price);
   };
 
-  const handleQuantityChange = (itemId, newQuantity) => {
+  // Takes a line key, not a product id: with variants (D11) a product id no
+  // longer names one row of the cart.
+  const handleQuantityChange = (key, newQuantity) => {
     if (newQuantity <= 0) {
-      removeFromCart(itemId);
+      removeFromCart(key);
     } else {
-      updateQuantity(itemId, newQuantity);
+      updateQuantity(key, newQuantity);
     }
   };
 
@@ -301,7 +303,7 @@ export default function CartDrawer({ open, onClose }) {
                               <Stack direction="row" alignItems="center" spacing={1}>
                                 <IconButton
                                   size="small"
-                                  onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                  onClick={() => handleQuantityChange(lineKey(item), item.quantity - 1)}
                                   sx={{
                                     width: 32,
                                     height: 32,
@@ -340,7 +342,7 @@ export default function CartDrawer({ open, onClose }) {
                                 
                                 <IconButton
                                   size="small"
-                                  onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                  onClick={() => handleQuantityChange(lineKey(item), item.quantity + 1)}
                                   sx={{
                                     width: 32,
                                     height: 32,
@@ -360,7 +362,7 @@ export default function CartDrawer({ open, onClose }) {
 
                             {/* Remove Button */}
                             <IconButton
-                              onClick={() => removeFromCart(item.id)}
+                              onClick={() => removeFromCart(lineKey(item))}
                               sx={{
                                 color: 'error.main',
                                 bgcolor: 'rgba(244, 67, 54, 0.1)',

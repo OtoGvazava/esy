@@ -11,9 +11,12 @@ export const useAppTheme = () => {
     return prefersDark ? THEME_MODES.DARK : THEME_MODES.LIGHT;
   });
 
+  // Georgian-first, mirroring i18n.js: only an explicit stored 'en' opts out.
+  // Both initializers run before mount, so they must agree or the first paint
+  // flashes the wrong language.
   const [language, setLanguage] = useState(() => {
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEYS.LANGUAGE) : null;
-    return stored === LANGUAGES.KA ? LANGUAGES.KA : LANGUAGES.EN;
+    return stored === LANGUAGES.EN ? LANGUAGES.EN : LANGUAGES.KA;
   });
 
   // Save theme mode to localStorage
@@ -39,6 +42,12 @@ export const useAppTheme = () => {
       console.warn('Failed to save language to localStorage:', error);
     }
     if (i18n.language !== language) i18n.changeLanguage(language);
+    // Keep <html lang> honest: it drives screen-reader pronunciation and the
+    // browser's own language-dependent text handling, neither of which follows
+    // i18next. index.html ships lang="ka" for the default; this tracks changes.
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('lang', language);
+    }
   }, [language]);
 
   const theme = useMemo(() => createTheme({

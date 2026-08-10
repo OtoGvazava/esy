@@ -46,11 +46,26 @@ public class Product {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
     
+    // What this means depends on hasVariants (D11). Without variants it IS the
+    // stock. With them it is a cached sum of the variant rows, kept current so
+    // list queries and the storefront badge do not have to aggregate — the
+    // variant rows remain the truth, and ProductVariantService recomputes this
+    // whenever they change.
     @NotNull(message = "Quantity is required")
     @PositiveOrZero(message = "Quantity must be 0 or positive")
     @Column(nullable = false)
     private Integer quantity;
-    
+
+    // Nullable so it can be added to a populated products table; null reads as
+    // false, which is correct for every product that predates variants — they
+    // simply have no variant rows.
+    @Column(name = "has_variants")
+    private Boolean hasVariants;
+
+    public boolean variantsEnabled() {
+        return Boolean.TRUE.equals(hasVariants);
+    }
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

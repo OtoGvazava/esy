@@ -15,6 +15,7 @@
     "shop": "Shop",
     "search": "Search",
     "bag": "Bag",
-    "account": "Account"
+    "account": "Account",
+    "orders": "Orders"
   }
 }

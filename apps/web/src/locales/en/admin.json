@@ -1,62 +1,164 @@
 {
-  "title": "Admin Dashboard",
-  "subtitle": "Manage your products and inventory",
-  "products": {
-    "title": "Products",
-    "addProduct": "Add Product",
-    "editProduct": "Edit Product",
-    "deleteProduct": "Delete Product",
-    "viewProduct": "View Product",
-    "noProducts": "No products found",
-    "totalProducts": "Total Products",
-    "activeProducts": "Active Products",
-    "totalValue": "Total Value",
-    "lowStock": "Low Stock"
+  "band": {
+    "allStores": "Platform administration — you can see every store"
   },
-  "form": {
-    "title": "Product Title",
-    "description": "Description",
-    "price": "Price",
-    "stock": "Stock Quantity",
-    "category": "Category",
-    "brand": "Brand",
-    "status": "Status",
-    "images": "Product Images",
-    "addImage": "Add Image",
-    "enterImageUrl": "Enter image URL",
-    "required": "This field is required",
-    "validPrice": "Valid price is required",
-    "validStock": "Valid stock quantity is required",
-    "addProduct": "Add Product",
-    "updateProduct": "Update Product",
-    "saving": "Saving...",
-    "cancel": "Cancel"
+  "nav": {
+    "stores": "Stores",
+    "billing": "Billing",
+    "config": "Configuration",
+    "admins": "Admins"
   },
-  "table": {
-    "product": "Product",
-    "category": "Category",
-    "price": "Price",
-    "stock": "Stock",
-    "status": "Status",
-    "actions": "Actions"
+  "gate": {
+    "signInTitle": "Sign in to administration",
+    "signInBody": "This address is the platform back office. Sign in with the account that administers esy.",
+    "signIn": "Continue with Google",
+    "deniedTitle": "This account is not an administrator",
+    "deniedBody": "Your account manages shops, not the platform. To manage your shop, use the back office.",
+    "signedInAs": "Signed in as {{email}}",
+    "backToPlatform": "Back to esy.ge",
+    "backToManager": "Go to manager.esy.ge"
   },
-  "status": {
-    "active": "Active",
-    "inactive": "Inactive",
-    "draft": "Draft"
-  },
-  "delete": {
-    "title": "Delete Product",
-    "message": "Are you sure you want to delete \"{{title}}\"? This action cannot be undone.",
+  "pending": "This screen is designed but its data is not connected yet.",
+  "ui": {
+    "loading": "Loading…",
+    "retry": "Try again",
     "cancel": "Cancel",
-    "delete": "Delete",
-    "deleting": "Deleting..."
+    "working": "Working…",
+    "failedTitle": "That request did not go through",
+    "failedBody": "Nothing is shown here — figures that may be out of date would read as current."
   },
-  "access": {
-    "denied": "Access Denied",
-    "noPermission": "You don't have admin permissions to access this page.",
-    "loginRequired": "Please log in to access the admin panel",
-    "authRequired": "You need to be authenticated to view this page."
+  "money": {
+    "excludesRefunds": "Revenue and fees exclude refunded and cancelled orders — a refund is not revenue. The order count is every order placed."
+  },
+  "role": {
+    "OWNER": "Owner",
+    "MANAGER": "Manager",
+    "CUSTOMER": "Customer",
+    "ADMIN": "Administrator"
+  },
+  "orderStatus": {
+    "PLACED": "Placed",
+    "SHIPPED": "Shipped",
+    "OUT_FOR_DELIVERY": "Out for delivery",
+    "DELIVERED": "Delivered",
+    "CANCELLED": "Cancelled"
+  },
+  "paymentStatus": {
+    "NONE": "No payment",
+    "PENDING": "Pending",
+    "PAID": "Paid",
+    "FAILED": "Failed",
+    "REFUNDED": "Refunded"
+  },
+  "stores": {
+    "title": "Stores",
+    "sub": "Every store on the platform — live and suspended.",
+    "searchLabel": "Search stores",
+    "searchPlaceholder": "Name, address or owner email",
+    "clearSearch": "Clear search",
+    "resultCount": "{{n}} stores",
+    "loadFailed": "Could not load the store list.",
+    "empty": "No stores yet",
+    "emptyBody": "The first store to register appears here.",
+    "emptyQuery": "Nothing matches this search",
+    "emptyQueryBody": "Try the address, or part of the owner's email.",
+    "colProducts": "Products",
+    "colOrders": "Orders",
+    "colRevenue": "Revenue",
+    "colFees": "Fees owed",
+    "noOwner": "No owner on record",
+    "noReason": "No reason was recorded",
+    "active": "Active",
+    "suspended": "Suspended",
+    "suspend": "Suspend",
+    "reactivate": "Reactivate",
+    "reactivateFailed": "Could not reactivate this store."
+  },
+  "suspend": {
+    "title": "Suspend {{store}}",
+    "body": "The storefront stops serving customers immediately and the owner sees this reason. Orders already placed are not touched.",
+    "reasonLabel": "Reason (required)",
+    "reasonPlaceholder": "Why this store is being suspended",
+    "reasonHint": "The owner reads this and it stays on the record. Be specific.",
+    "reasonTooShort": "Write at least {{n}} characters so the reason is usable.",
+    "review": "Review",
+    "confirmPrompt": "Suspend {{store}} for the reason above?",
+    "confirm": "Yes, suspend it",
+    "back": "Go back",
+    "failed": "Could not suspend this store."
+  },
+  "detail": {
+    "back": "All stores",
+    "loadFailed": "Could not load this store.",
+    "notFound": "No store at this address",
+    "notFoundBody": "Nothing on the platform answers to “{{sub}}”.",
+    "noCategory": "Uncategorised",
+    "suspendedOn": "Suspended {{at}}",
+    "dateUnknown": "date not recorded",
+    "statProducts": "Products",
+    "statOrders": "Orders",
+    "statRevenue": "Revenue",
+    "statFees": "Fees owed",
+    "members": "Members",
+    "membersSub": "Accounts that can manage this store",
+    "noMembers": "Nobody can run this store yet. Give someone OWNER below.",
+    "addMember": "Add",
+    "addMemberLabel": "Give someone a role",
+    "addMemberHint": "The account must have signed in at least once — identities come from Google, so an address nobody has used yet cannot be given a role.",
+    "makeRole": {
+      "OWNER": "Make owner",
+      "MANAGER": "Make manager"
+    },
+    "removeMember": "Remove",
+    "removeMemberConfirm": "Remove {{email}} from this store? They lose access to the back office; their shopping history is untouched.",
+    "removeMemberFailed": "Could not remove this member.",
+    "assignFailed": "Could not change this role.",
+    "recentOrders": "Recent orders",
+    "recentOrdersSub": "Newest first",
+    "noOrders": "No orders yet."
+  },
+  "billing": {
+    "title": "Billing",
+    "sub": "Service fees accrued by each store.",
+    "totalAccrued": "Accrued platform-wide",
+    "storeCount": "across {{n}} stores",
+    "loadFailed": "Could not load billing.",
+    "empty": "Nothing accrued yet",
+    "emptyBody": "Fees appear here as soon as a store takes its first paid order.",
+    "colStore": "Store",
+    "colOrders": "Orders",
+    "colRevenue": "Revenue",
+    "colFees": "Fees owed"
+  },
+  "admins": {
+    "title": "Admins",
+    "sub": "Accounts that can open this host.",
+    "loadFailed": "Could not load the admin list.",
+    "empty": "No administrators listed",
+    "emptyBody": "Nobody can open this host until an address is added — check ADMIN_EMAILS on the server.",
+    "listHead": "Administrators",
+    "addLabel": "Add an administrator",
+    "addPlaceholder": "name@example.com",
+    "addHint": "The account signs in with Google using this address. Access begins at their next sign-in — if they are signed in now, they must sign out first.",
+    "add": "Add",
+    "addFailed": "Could not add this administrator.",
+    "invalidEmail": "Enter a valid email address.",
+    "duplicate": "This address is already an administrator.",
+    "sourceEnv": "Configuration",
+    "sourceDb": "Added here",
+    "envSource": "From server configuration",
+    "envLocked": "Granted by the app.admin-emails setting, not by this screen, so it can't be removed here. Change it in the configuration store, or in the ADMIN_EMAILS variable it falls back to.",
+    "granted": "Added {{at}}",
+    "grantedBy": "by {{email}}",
+    "grantedUnknown": "Origin not recorded",
+    "remove": "Remove",
+    "removeFailed": "Could not remove this administrator.",
+    "removeConfirm": "Remove {{email}} from administration?",
+    "removeConfirmYes": "Yes, remove",
+    "removeSelf": "This is your own account — you will lose access to this host.",
+    "you": "you"
+  },
+  "shell": {
+    "sidebarNote": "A separate host, separate routes, admin API only. Scopes are never mixed in one response."
   }
 }
-

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useGlow } from '../../styles/glow';
 import { Icon } from '../glow/GlowPrimitives';
 import { productApi, handleApiError } from '../../utils/api';
+import VariantEditor from './VariantEditor';
 import GlowModal from './GlowModal';
 import MarkdownField from './MarkdownField';
 import { glowField, glowLabel, glowPrimaryBtn, glowGhostBtn, glowError } from './glowForm';
@@ -12,6 +13,9 @@ const EMPTY = { title: '', description: '', price: '', quantity: '' };
 // Glow-styled product add/edit form (matches the store's CreateStore look) +
 // a DB-backed photo gallery. No external image URL — photos are uploaded.
 export default function ProductEditorDialog({ open, product, onClose, onSaved }) {
+  // Whether this product uses variants — reported up by the editor below so
+  // the quantity field can lock itself (D11).
+  const [hasVariants, setHasVariants] = useState(false);
   const { t } = useTranslation(['owner', 'common']);
   const { T } = useGlow();
   const isEdit = Boolean(product);
@@ -193,10 +197,32 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
           {fieldWrap('quantity', t('fieldQuantity'), (
             <input
               type="number" min="0" step="1" value={form.quantity}
+              // Once a product has variants its stock is the sum of the
+              // combinations (D11), so editing it here would be overwritten by
+              // the next variant save. Disabled rather than hidden: the number
+              // is still worth seeing.
+              disabled={hasVariants}
+              title={hasVariants ? t('variants.quantityLocked') : undefined}
               onChange={set('quantity')} style={glowField(T)}
             />
           ))}
+          {hasVariants && (
+            <div style={{ marginTop: 6, font: `500 11.5px ${T.font}`, color: T.textMute }}>
+              {t('variants.quantityLocked')}
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Variants live below the basics: they only make sense once the product
+          has a title and a base price for a row to fall back to. */}
+      <div style={{ paddingTop: 4 }}>
+        <VariantEditor
+          T={T}
+          productId={product?.id}
+          basePrice={form.price}
+          onChanged={setHasVariants}
+        />
       </div>
 
       <div>

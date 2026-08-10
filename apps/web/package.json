@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "i18n:check": "node scripts/check-i18n-parity.mjs",
-    "prepare": "cd ../.. && husky apps/web/.husky || true"
+    "prepare": "cd ../.. && husky apps/web/.husky || true",
+    "visual:check": "node scripts/visual-check.cjs"
   },
   "lint-staged": {
     "src/**/*.{js,jsx}": "eslint"
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "@playwright/test": "^1.62.1",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.4",
@@ -39,6 +41,7 @@
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
     "husky": "^9.1.7",
+    "jsonwebtoken": "^9.0.3",
     "lint-staged": "^15.2.10",
     "vite": "^7.1.7"
   }

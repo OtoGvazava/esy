@@ -8,6 +8,7 @@ import { useGlow } from '../styles/glow';
 import { Icon, Placeholder, PoweredBy } from '../components/glow/GlowPrimitives';
 import { money } from '../components/glow/GlowChrome';
 import GlowProductCard from '../components/glow/GlowProductCard';
+import VariantPicker from '../components/store/VariantPicker';
 
 function iconBtn(T) {
   return {
@@ -27,6 +28,9 @@ export default function ProductDetails() {
   const { T, isDesktop, tenant } = useGlow();
 
   const [product, setProduct] = useState(null);
+  // Variants (D11): the document and the row the shopper has chosen.
+  const [variants, setVariants] = useState(null);
+  const [pickedRow, setPickedRow] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +48,9 @@ export default function ProductDetails() {
         setProduct(data);
         setImgIdx(0);
         setImgOk(Boolean(data.images?.[0] || data.thumbnail));
+        // Null for a product that does not use variants.
+        const vdoc = await productApi.getVariants(id).catch(() => null);
+        if (alive) { setVariants(vdoc); setPickedRow(null); }
         const list = await productApi.list({ page: 0, size: 6 });
         if (alive) setRelated(list.products.filter((p) => String(p.id) !== String(id)));
       } catch (err) {
@@ -60,9 +67,27 @@ export default function ProductDetails() {
     : (product?.thumbnail ? [product.thumbnail] : []);
   const heroImg = gallery[imgIdx] || gallery[0] || product?.thumbnail;
 
+  // With variants the chosen row decides both what is added and what it costs
+  // — the server prices it again from the same row, so this is what the
+  // shopper reads, never what they are charged.
+  const hasVariants = !!variants?.axes?.length;
+  const shownPrice = pickedRow?.price != null ? pickedRow.price : product?.price;
+  const pickedStock = hasVariants ? Number(pickedRow?.stock ?? 0) : (product?.quantity ?? product?.stock ?? 0);
+
   const addAndOpenCart = () => {
     if (!product) return;
-    addToCart({ id: product.id, title: product.title, price: product.price, image: heroImg, thumbnail: product.thumbnail });
+    // A variant product cannot be added without a combination: the server
+    // refuses it, and the cart would otherwise hold a line nobody can fulfil.
+    if (hasVariants && !pickedRow) return;
+    addToCart({
+      id: product.id,
+      title: product.title,
+      price: shownPrice,
+      image: heroImg,
+      thumbnail: product.thumbnail,
+      variantId: pickedRow?.id,
+      variantLabel: pickedRow?.label,
+    });
     navigate('/cart');
   };
 
@@ -91,7 +116,9 @@ export default function ProductDetails() {
     );
   }
 
-  const inStock = (product.quantity ?? product.stock ?? 0) > 0;
+  // With variants, in-stock means the CHOSEN combination has stock — a
+  // product with 12 across other sizes is not in stock in the one picked.
+  const inStock = pickedStock > 0;
   const imageBlock = (
     <div>
     <div style={{ position: 'relative', height: isDesktop ? 520 : 460, borderRadius: isDesktop ? 22 : 0, overflow: 'hidden' }}>
@@ -135,7 +162,7 @@ export default function ProductDetails() {
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, marginBottom: 8 }}>
         <div style={{ font: `700 ${isDesktop ? 30 : 22}px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.025em', flex: 1 }}>{product.title}</div>
-        <div style={{ font: `800 ${isDesktop ? 30 : 22}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(product.price)}</div>
+        <div style={{ font: `800 ${isDesktop ? 30 : 22}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(shownPrice)}</div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, font: `500 12px ${T.font}`, color: T.textDim, marginBottom: 18 }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: T.text }}><Icon.star style={{ color: T.warn }} /> {t('badgeNew')}</span>
@@ -145,6 +172,19 @@ export default function ProductDetails() {
           {inStock ? t('inStockBadge') : t('outOfStock')}
         </span>
       </div>
+
+      {/* The picker sits above the description: it is a decision the shopper
+          must make before the buy button means anything. */}
+      {hasVariants && (
+        <div style={{ marginBottom: 20 }}>
+          <VariantPicker
+            T={T}
+            variants={variants}
+            basePrice={product.price}
+            onChange={setPickedRow}
+          />
+        </div>
+      )}
       {renderMarkdown(product.description) ? (
         <>
           <style>{`.glow-md{margin-bottom:22px}.glow-md p{margin:0 0 10px}.glow-md p:last-child{margin-bottom:0}.glow-md h3,.glow-md h4,.glow-md h5{color:${T.text};margin:14px 0 6px;line-height:1.25}.glow-md h3{font-size:17px}.glow-md h4{font-size:15px}.glow-md h5{font-size:13.5px}.glow-md ul,.glow-md ol{margin:0 0 10px;padding-left:20px}.glow-md li{margin:3px 0}.glow-md a{color:${T.accentFg};text-decoration:underline}.glow-md code{background:${T.surface};border:1px solid ${T.border};border-radius:5px;padding:1px 5px;font-size:12.5px}`}</style>
@@ -174,7 +214,7 @@ export default function ProductDetails() {
       {isDesktop && (
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={addAndOpenCart} disabled={!inStock} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: inStock ? T.grad : T.surface2, color: inStock ? '#fff' : T.textMute, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: inStock ? 'pointer' : 'not-allowed', boxShadow: inStock ? `0 10px 28px ${T.accent}55` : 'none' }}>
-            <Icon.bag /> {inStock ? t('addToBag', { price: money(product.price) }) : t('outOfStock')}
+            <Icon.bag /> {inStock ? t('addToBag', { price: money(shownPrice) }) : t('outOfStock')}
           </button>
         </div>
       )}
@@ -208,7 +248,7 @@ export default function ProductDetails() {
       {!isDesktop && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 92, padding: '14px 16px', background: T.bg, borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 10, zIndex: 1100 }}>
           <button onClick={addAndOpenCart} disabled={!inStock} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: inStock ? T.grad : T.surface2, color: inStock ? '#fff' : T.textMute, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: inStock ? 'pointer' : 'not-allowed', boxShadow: inStock ? `0 10px 28px ${T.accent}55` : 'none' }}>
-            <Icon.bag /> {inStock ? t('addToBag', { price: money(product.price) }) : t('outOfStock')}
+            <Icon.bag /> {inStock ? t('addToBag', { price: money(shownPrice) }) : t('outOfStock')}
           </button>
         </div>
       )}

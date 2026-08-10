@@ -6,7 +6,7 @@ import { useOrders } from '../contexts/OrdersContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
 import { useGlow } from '../styles/glow';
-import { paymentApi, addressApi, handleApiError } from '../utils/api';
+import { paymentApi, addressApi, deliveryApi, handleApiError } from '../utils/api';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
 import PhoneVerifyBox from '../components/PhoneVerifyBox';
 
@@ -27,7 +27,7 @@ function Field({ T, label, value, onChange, span }) {
 export default function Checkout() {
   const { T, tenant } = useGlow();
   const navigate = useNavigate();
-  const { t } = useTranslation('storefront');
+  const { t, i18n } = useTranslation('storefront');
   const { items, getTotalPrice, clearCart } = useCart();
   const { createOrder } = useOrders();
   const { user } = useAuth();
@@ -40,6 +40,16 @@ export default function Checkout() {
   // Delivery address (decision D4). Prefilled from the platform-wide address
   // book's default entry; whatever is submitted gets frozen onto the order
   // server-side, and a new inline address is saved to the book for next time.
+  // Delivery routes the store actually offers (D9). An unconfigured store
+  // still answers with collection in person, so this is never empty.
+  const [routes, setRoutes] = useState([]);
+  // Express is not a route. It is bought on top of a courier one, so it has
+  // its own offer and its own checkbox rather than a place in the list.
+  const [express, setExpress] = useState(null);
+  const [wantExpress, setWantExpress] = useState(false);
+  const [requiresAddress, setRequiresAddress] = useState(false);
+  const [deliveryRoute, setDeliveryRoute] = useState('pickup');
+
   const [savedAddressId, setSavedAddressId] = useState(null);
   // Snapshot of the loaded saved address — "did the shopper change anything?"
   // is answered by value comparison, not a touched flag: a set-only flag would
@@ -51,6 +61,28 @@ export default function Checkout() {
   const [line, setLine] = useState('');
   const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');
+
+  // Delivery routes load for everyone, signed in or not — a guest still needs
+  // to see what the shop offers before deciding to sign in.
+  useEffect(() => {
+    const ac = new AbortController();
+    deliveryApi.listPublic(undefined, { signal: ac.signal })
+      .then((res) => {
+        if (ac.signal.aborted) return;
+        const list = Array.isArray(res?.routes) ? res.routes : [];
+        setRoutes(list);
+        setExpress(res?.express || null);
+        setRequiresAddress(!!res?.requiresAddress);
+        // Preselect the cheapest route rather than the first: the shopper can
+        // always pick a faster one, and defaulting to the dearest would charge
+        // for a choice they never made.
+        const cheapest = [...list].sort(
+          (a, b) => Number(a.price ?? 0) - Number(b.price ?? 0))[0];
+        if (cheapest) setDeliveryRoute(cheapest.route);
+      })
+      .catch(() => { /* falls back to PICKUP, which every store offers */ });
+    return () => ac.abort();
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -77,31 +109,67 @@ export default function Checkout() {
   }, [user?.id]);
 
   const addressComplete = recipient.trim() && phone.trim() && line.trim() && city.trim();
+
+  const subtotal = getTotalPrice();
+  const count = items.reduce((s, it) => s + it.quantity, 0);
+
+  // Delivery (D9). The fee shown here is the store's own published price for
+  // the chosen route; the server prices the order again from the same rows at
+  // checkout, so a tampered browser cannot set its own delivery charge — this
+  // number is for the shopper to read, never the one that is charged.
+  const chosen = routes.find((r) => r.route === deliveryRoute);
+
+  // Express is only on the table once a courier is chosen — there is nothing
+  // to accelerate about collecting in person.
+  const canExpress = !!express && !!chosen?.courier;
+  const expressOn = canExpress && wantExpress;
+
+  const deliveryFee = (() => {
+    if (!chosen) return 0;
+    const price = Number(chosen.price ?? 0);
+    const freeOver = chosen.freeOverTotal == null ? null : Number(chosen.freeOverTotal);
+    // The threshold frees the route, never the speed.
+    const base = freeOver != null && subtotal >= freeOver ? 0 : price;
+    return base + (expressOn ? Number(express.price ?? 0) : 0);
+  })();
+
+  // Only a courier route needs an address. With both couriers off the store
+  // posts nothing, so checkout does not ask and does not block on it. Declared
+  // before delivery() because that closure reads it.
+  const needsAddress = requiresAddress && !!chosen?.courier;
+
   const delivery = () => {
+    // The route is all the server needs to price delivery — it looks the fee
+    // up from the store's own rows rather than trusting anything sent here.
+    const base = { deliveryRoute, deliveryExpress: expressOn };
+
+    // On collection there is nothing to post. Sending an address anyway would
+    // freeze one onto an order nobody is delivering, and the server ignores it.
+    if (!needsAddress) return base;
+
     const matchesSaved = savedAddressId != null && savedSnapshot
       && recipient.trim() === savedSnapshot.recipient
       && phone.trim() === savedSnapshot.phone
       && line.trim() === savedSnapshot.line
       && city.trim() === savedSnapshot.city
       && postalCode.trim() === savedSnapshot.postalCode;
-    if (matchesSaved) return { addressId: savedAddressId };
-    return { address: {
+    if (matchesSaved) return { ...base, addressId: savedAddressId };
+    return { ...base, address: {
       recipient: recipient.trim(), phone: phone.trim(), line: line.trim(),
       city: city.trim(), postalCode: postalCode.trim() || null, country: null,
     } };
   };
 
-  const subtotal = getTotalPrice();
-  const count = items.reduce((s, it) => s + it.quantity, 0);
-  // The shopper pays exactly the item subtotal — no shipping, no tax line.
   // The 2% platform service fee is computed/persisted server-side and billed
   // to the store later; it is invisible here and not added to the charge.
-  const total = subtotal;
+  const total = subtotal + deliveryFee;
+
   const email = user?.email || 'guest@esy.shop';
   // Ordering requires a complete profile AND a verified phone (the backend
   // enforces this too — see OrderController.requireOrderEligible), plus a
   // complete delivery address to freeze onto the order.
-  const eligible = !!user && user.profileComplete && !!user.phoneVerified && !!addressComplete;
+  const eligible = !!user && user.profileComplete && !!user.phoneVerified
+    && (!needsAddress || !!addressComplete);
 
   if (items.length === 0) {
     return (
@@ -121,7 +189,9 @@ export default function Checkout() {
     if (!eligible || placing) return;
     setPayError('');
     setPlacing(true);
-    const cartItems = items.map((i) => ({ id: i.id, title: i.title, price: i.price, quantity: i.quantity }));
+    // variantId rides along so the server can price the chosen row and take
+    // stock from it (D11); it is absent for a product without variants.
+    const cartItems = items.map((i) => ({ id: i.id, title: i.title, price: i.price, quantity: i.quantity, variantId: i.variantId }));
 
     // Stores that connected Bank of Georgia: create the order + BOG payment,
     // then hand the browser to the bank-hosted page. The cart is kept until
@@ -186,7 +256,85 @@ export default function Checkout() {
           </div>
         </div>
 
-        {/* shipping form active */}
+        {/* delivery routes (D9) */}
+        {(routes.length > 1 || canExpress) && (
+          <div style={{ padding: '0 16px 14px' }}>
+            <div style={{ padding: '14px', borderRadius: 16, background: T.surface, border: `1.5px solid ${T.border}` }}>
+              <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>
+                {t('checkout.deliveryMethod')}
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {routes.map((r) => {
+                  const active = r.route === deliveryRoute;
+                  const free = r.freeOverTotal != null && subtotal >= Number(r.freeOverTotal);
+                  const eta = i18n.language === 'ka' ? r.etaKa : r.etaEn;
+                  return (
+                    <button
+                      key={r.route} type="button" onClick={() => setDeliveryRoute(r.route)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                        padding: '11px 13px', borderRadius: 13, cursor: 'pointer',
+                        border: `1.5px solid ${active ? T.accent : T.border}`,
+                        background: active ? T.accentBg : 'transparent',
+                      }}
+                    >
+                      <span style={{ flex: 1 }}>
+                        <span style={{ display: 'block', font: `700 13px ${T.font}`, color: T.text }}>
+                          {t(`checkout.route.${r.route}`)}
+                        </span>
+                        {(eta || r.pickupAddress) && (
+                          <span style={{ display: 'block', font: `400 11.5px ${T.font}`, color: T.textMute, marginTop: 2 }}>
+                            {[eta, r.pickupAddress].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                      </span>
+                      <span style={{ font: `700 12.5px ${T.font}`, color: free || !Number(r.price) ? T.success : T.text }}>
+                        {free || !Number(r.price) ? t('checkout.free') : money(Number(r.price))}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* The upgrade, not a route: it appears only once a courier is
+                  chosen, and its price reads as "+₾" because it is added to
+                  the route above rather than replacing it. */}
+              {canExpress && (
+                <button
+                  type="button"
+                  onClick={() => setWantExpress((v) => !v)}
+                  style={{
+                    marginTop: 10, width: '100%', textAlign: 'left',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '11px 13px', borderRadius: 13, cursor: 'pointer',
+                    border: `1.5px solid ${expressOn ? T.accent : T.border}`,
+                    background: expressOn ? T.accentBg : 'transparent',
+                  }}
+                >
+                  <span style={{ color: expressOn ? T.accentFg : T.textMute, display: 'inline-flex' }}>
+                    <Icon.check />
+                  </span>
+                  <span style={{ flex: 1 }}>
+                    <span style={{ display: 'block', font: `700 13px ${T.font}`, color: T.text }}>
+                      {t('checkout.route.express')}
+                    </span>
+                    {(i18n.language === 'ka' ? express.etaKa : express.etaEn) && (
+                      <span style={{ display: 'block', font: `400 11.5px ${T.font}`, color: T.textMute, marginTop: 2 }}>
+                        {i18n.language === 'ka' ? express.etaKa : express.etaEn}
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ font: `700 12.5px ${T.font}`, color: T.text, flexShrink: 0 }}>
+                    +{money(Number(express.price ?? 0))}
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* shipping form active — only when something is actually being posted */}
+        {needsAddress && (
         <div style={{ padding: '0 16px 14px' }}>
           <div style={{ padding: '14px 14px 16px', borderRadius: 16, background: T.surface, border: `1.5px solid ${T.accent}` }}>
             <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>{t('checkout.shippingAddress')}</div>
@@ -199,6 +347,7 @@ export default function Checkout() {
             </div>
           </div>
         </div>
+        )}
 
         {/* order eligibility: complete profile + verified phone */}
         {!eligible && (
@@ -230,6 +379,16 @@ export default function Checkout() {
         {/* order summary */}
         <div style={{ padding: '0 22px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', font: `500 13px ${T.font}`, color: T.textDim }}><span>{t('checkout.itemCount', { count })}</span><span style={{ color: T.text }}>{money(subtotal)}</span></div>
+          {/* Delivery is its own line — a total that silently absorbed it
+              would leave the shopper unable to see what they are paying for. */}
+          {chosen && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, font: `500 13px ${T.font}`, color: T.textDim }}>
+              <span>{t(`checkout.route.${chosen.route}`)}{expressOn ? ` + ${t('checkout.route.express')}` : ''}</span>
+              <span style={{ color: deliveryFee ? T.text : T.success }}>
+                {deliveryFee ? money(deliveryFee) : t('checkout.free')}
+              </span>
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}><span style={{ font: `700 14px ${T.font}`, color: T.text }}>{t('checkout.total')}</span><span style={{ font: `800 18px ${T.font}`, color: T.text }}>{money(total)}</span></div>
         </div>
 

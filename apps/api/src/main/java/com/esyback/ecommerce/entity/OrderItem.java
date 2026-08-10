@@ -39,4 +39,17 @@ public class OrderItem {
 
     @Column(nullable = false)
     private Integer quantity = 1;
+
+    // The chosen combination, frozen the same way title and price are (D11):
+    // "38 · black". Nullable — a product without variants has none, and so
+    // does every order placed before variants existed.
+    @Column(name = "variant_label")
+    private String variantLabel;
+
+    // Which variant row the stock came out of. Kept as a plain id rather than
+    // a FK for the same reason productId is: the order must survive the
+    // variant being renamed or deleted, and variantLabel above is what a human
+    // reads. This is only used to put stock back on a cancellation.
+    @Column(name = "variant_id")
+    private Long variantId;
 }

@@ -91,7 +91,9 @@
       "electronics": "Electronics",
       "home": "Home",
       "food": "Food",
-      "art": "Art"
+      "art": "Art",
+      "sport": "Sport",
+      "wear": "Clothing"
     }
   },
   "reg": {

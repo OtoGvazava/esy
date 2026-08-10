@@ -36,7 +36,7 @@ The storefront chrome (`Header`, `Navbar`, `MobileFooter`, `SearchIsland`,
 `SearchSuggestions`, `GoogleStyleSearch`, `ProductCard`, `CartDrawer`, `AuthModal`,
 `ProfileMenu`, `FloatingCart`, `FloatingContacts`, `Logo`) and the account/owner forms
 (`PersonalInfo`, `ProfileGate`, `PhoneVerifyBox`, `DateOfBirthPicker`, `MarkdownField`,
-`GlowModal`, `ProductEditorDialog`, `DeleteProductDialog`, `OwnerBar`, `ViewModeToggle`)
+`GlowModal`, `ProductEditorDialog`, `DeleteProductDialog`)
 read their own theme/context — pass behavioural props and children, not tokens.
 
 ### What's in the library
@@ -49,21 +49,19 @@ read their own theme/context — pass behavioural props and children, not tokens
   `ProfileMenu`, `FloatingCart`, `FloatingContacts`, `Logo`.
 - **Account & forms** — `PersonalInfo`, `ProfileGate`, `PhoneVerifyBox`,
   `DateOfBirthPicker`.
-- **Owner / admin** — `OwnerBar`, `ViewModeToggle`, `GlowModal`, `MarkdownField`,
-  `ProductEditorDialog`, `DeleteProductDialog`.
+- **Owner / admin** — `GlowModal`, `MarkdownField`, `ProductEditorDialog`,
+  `DeleteProductDialog`. These are back-office parts: management lives at
+  manager.esy.ge, and the storefront has no inline owner tools.
 - **Platform** — `EsyMark`, `StoreMark`, `StatusPill`, `PTopBar`, `PFooter`,
   `StoreArtStrip`.
 
 ### Provider / setup
 
 Components read **i18n** (`react-i18next`), the **MUI theme**, a **Router**, and app
-contexts (cart / saved / auth / tenant / device) from context. Wrap the tree in a provider
-that supplies them — the app uses `AppProviders` + a Router. Notes:
+contexts (cart / orders / auth / tenant / device) from context. Wrap the tree in a
+provider that supplies all of those plus a Router. Notes:
 - **`GlowDock`, `Navbar`, `ProfileMenu`** need the Router and cart/auth contexts — they
   render live route and cart state.
-- **`OwnerBar` / `ViewModeToggle`** only render for a user who can manage the current
-  store (`OwnerTools.canManage` ← `auth.canManageStore`). `OwnerToolsProvider` also renders
-  the `ViewModeToggle` as global chrome — don't also mount it yourself inside that provider.
 - **`ProfileGate`** renders only for a signed-in user whose `profileComplete` is false.
 - **Responsive gating is real**: `MobileFooter` renders only ≤768px; `FloatingCart` /
   `FloatingContacts` only >768px. They are alternatives, not companions.
@@ -71,7 +69,7 @@ that supplies them — the app uses `AppProviders` + a Router. Notes:
 ### Layout gotcha
 
 `GlowDock`, `GlowStickyCTA`, `Header`, `Navbar`, `MobileFooter`, `FloatingCart`,
-`FloatingContacts`, `ViewModeToggle` and `GlowModal` (plus the dialogs built on it) are
+`FloatingContacts` and `GlowModal` (plus the dialogs built on it) are
 `position: fixed`. Inside a bounded region give them a containing block
 (`position: relative; transform: translateZ(0)`), or they escape to the viewport.
 

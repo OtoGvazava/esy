@@ -190,13 +190,18 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
     isUser: user?.role === 'user' || !user?.role,
-    // Strictly the OWNER of the store currently being viewed (or a global
-    // admin) — the gate for settings/logo/integrations, which the API
-    // refuses to MANAGERs.
-    isStoreOwner: user?.role === 'admin' || !!user?.ownerOfCurrentStore,
-    // Allowed to run the store day-to-day (products, orders, stats):
-    // a global admin, the OWNER, or a MANAGER (decision D5).
-    canManageStore: user?.role === 'admin' || !!user?.ownsCurrentStore,
+    // Store powers come from StoreMembership ONLY. Platform ADMIN is not
+    // consulted: it grants sight across all stores via admin.esy.ge, never
+    // authority inside one (D6, the two independent axes). These flags mirror
+    // StoreAccessGuard exactly — if they ever OR in the admin role again, the
+    // UI starts offering actions the API answers with 403.
+    //
+    // Strictly the OWNER — the gate for settings/logo/integrations, which the
+    // API refuses to a MANAGER.
+    isStoreOwner: !!user?.ownerOfCurrentStore,
+    // Allowed to run the store day-to-day (products, orders, stats): OWNER or
+    // MANAGER (D5).
+    canManageStore: !!user?.ownsCurrentStore,
   };
 
   return (

@@ -74,11 +74,15 @@ dialog needs the same wrapper.**
 ## Known render warns (triaged — expected on re-sync, not new)
 - `[CSS_RUNTIME]` — this DS is CSS-in-JS / inline-style; there is no static stylesheet, so
   the converter writes a self-styling `styles.css`. Non-blocking, expected.
-- A residual handful of `[GRID_OVERFLOW] escape` warns on components whose previews use the
-  `transform`/fixed wrapper above. **Verified by eye** (contact sheets + individual cards):
-  the cards present correctly. The suggested `cardMode: single` remedy would collapse
-  variant sweeps for no gain, and does not even clear the flag for components already set to
-  `column` (Header/Navbar). Do not chase.
+- `[GRID_OVERFLOW] escape` on **`Header` and `Navbar`** only. **Verified by eye** (contact
+  sheets + individual cards): the cards present correctly. The suggested `cardMode: single`
+  remedy would collapse variant sweeps for no gain, and does not even clear the flag for
+  these two, which are already `column`. Do not chase.
+- `PhoneVerifyBox` and `StoreArtStrip` used to flag `[GRID_OVERFLOW] wide` and were
+  genuinely **cropped at the cell edge** (confirmed on the contact sheets). Fixed in
+  2026-08 by adding `{"cardMode": "column"}` to both in `overrides` — they no longer
+  flag. `wide` is a real defect with an effective remedy; `escape` on the two fixed-position
+  chrome components is the one to leave alone. Don't conflate them.
 
 ## Excluded / not synced
 - **`EsyLogo` — excluded (`componentSrcMap: null`).** It imports `../assets/dark.png`,
@@ -147,6 +151,29 @@ node .ds-sync/resync.mjs --config .design-sync/config.json \
 ```
 (fetch the project's `_ds_sync.json` → `.design-sync/.cache/remote-sync.json` first;
 re-stage `.ds-sync/` and install its deps on any fresh clone — see "Toolchain is
-per-machine"). Add `--no-render-check` **only** when the diff shows `renderHashes`
-matching the anchor 43/43, i.e. nothing can have changed visually; otherwise install
-playwright + chromium and let the render check run.
+per-machine").
+
+### `--no-render-check` needs TWO conditions, not one (corrected 2026-08)
+The earlier rule here said "skip the render check when `renderHashes` all match the
+anchor". **That is necessary but not sufficient.** `renderHash` covers the emitted card
+artifacts, not the compiled components: a card's `.html` renders
+`window.EsyGlow.<Name>` out of `_ds_bundle.js` at runtime, so a component can change
+appearance completely while its `renderHash` stays byte-identical.
+
+Proven on the manager-migration re-sync: `GlowProductCard` lost its heart control and
+`GlowDock` lost a nav item, yet only `GlowTopNav`'s `renderHash` moved. What gave it
+away was `bundleSha12` changing.
+
+**The rule: skip the render check only when `renderHashes` match AND `bundleSha12` is
+unchanged.** If the bundle moved, install playwright + chromium and let it run —
+those are exactly the runs where a card can silently go blank.
+
+### Playwright is installed here now
+`.ds-sync/node_modules/playwright` + `%LOCALAPPDATA%\ms-playwright\chromium-1234`
+(playwright-core 1.62.1). `.ds-sync/` is gitignored, so a fresh clone re-installs.
+
+### Do NOT run `package-capture.mjs` unscoped
+A bare `--out ./ds-bundle` re-captures all 41 and marks every previously
+verified-by-upload component as needing a grade. Harmless (the next driver run
+restores the correct partition) but it wastes a full capture pass. Use the driver, or
+`--components A,B`.

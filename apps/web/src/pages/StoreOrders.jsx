@@ -148,7 +148,6 @@ export default function StoreOrders() {
     { id: 'orders', label: t('statOrders'), value: stats.orders ?? 0 },
     { id: 'revenue', label: t('statRevenue'), value: money(stats.revenue ?? 0) },
     { id: 'fees', label: t('statFeesOwed'), value: money(stats.serviceFeesOwed ?? 0) },
-    { id: 'followers', label: t('statFollowers'), value: stats.followers ?? 0 },
   ] : [];
 
   return (

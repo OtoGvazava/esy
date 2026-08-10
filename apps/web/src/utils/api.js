@@ -4,6 +4,7 @@
 // Auth is a server-set HttpOnly cookie (esy_token, Domain=esy.ge) — never
 // readable from JS — so requests just need to carry cookies; there is no
 // token in localStorage. "Am I signed in?" is answered by /api/auth/user.
+import { isManagerHostname } from './hosts';
 
 // ---- Low-level client -------------------------------------------------------
 export class ApiError extends Error {
@@ -14,12 +15,9 @@ export class ApiError extends Error {
   }
 }
 
-function isManagerHostname() {
-  if (typeof window === 'undefined') return false;
-  const h = window.location.hostname;
-  return h === 'manager.esy.ge' || h === 'manager.lvh.me' || h === 'manager.localhost';
-}
-
+// Store scoping applies to the back office only. The admin host is deliberately
+// excluded: administration is cross-store and names its target explicitly in
+// the /api/admin/** namespace, and the backend ignores ?tenant there.
 function withManagerTenant(endpoint) {
   if (!isManagerHostname() || !endpoint.startsWith('/api/')) return endpoint;
   if (/[?&]tenant=/.test(endpoint)) return endpoint;
@@ -102,6 +100,16 @@ const mapListItem = (dto) => ({
   image: dto.imageUrl,
   quantity: dto.quantity,
   stock: dto.quantity,
+  // So a card can send the shopper to choose rather than adding a product
+  // checkout would refuse for having no combination (D11).
+  hasVariants: !!dto.hasVariants,
+  // The line under the title on a card.
+  blurb: dto.blurb || '',
+  // The corner badge. The design also shows "hit" and "new"; both would need
+  // sales history or a creation date the list endpoint does not return, and a
+  // badge invented from nothing is a claim to a shopper about a real shop. So
+  // only the one the data actually supports is shown: stock running out.
+  tag: dto.quantity != null && dto.quantity > 0 && dto.quantity <= 5 ? 'low' : null,
 });
 
 // Backend detail: { id, title, description, imageUrl, price, quantity,
@@ -194,6 +202,17 @@ export const productApi = {
     return mapDetail(await res.json());
   },
 
+  // Variants (D11). The read is public — a shopper must see the sizes before
+  // choosing one; the write is store management and replaces the whole
+  // document, because editing a variant grid is a single act.
+  getVariants(id, { signal } = {}) {
+    return api.get(`/api/products/${id}/variants`, { signal });
+  },
+
+  putVariants(id, doc) {
+    return api.put(`/api/products/${id}/variants`, doc);
+  },
+
   async deleteImage(id, imageId) {
     return mapDetail(await api.delete(`/api/products/${id}/images/${imageId}`));
   },
@@ -281,6 +300,74 @@ export const paymentApi = {
 // ---- Tenant API -------------------------------------------------------------
 // The backend resolves the tenant from the request Host header, so `current`
 // is implicitly scoped to whatever subdomain the SPA is served from.
+// The store's contact channels (D10). Two reads on purpose: `listPublic` is
+// what a shopper's browser calls and never returns a hidden entry, while
+// `list` is the owner's and includes them. They are separate endpoints rather
+// than one with a flag, so leaking a hidden number cannot be a one-line slip.
+export const contactApi = {
+  listPublic(devTenant, { signal } = {}) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/contact-channels/public${q}`, { signal });
+  },
+  list(devTenant, { signal } = {}) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/contact-channels${q}`, { signal });
+  },
+  create(payload, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.post(`/api/contact-channels${q}`, payload);
+  },
+  update(id, payload, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.put(`/api/contact-channels/${id}${q}`, payload);
+  },
+  remove(id, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.delete(`/api/contact-channels/${id}${q}`);
+  },
+  reorder(ids, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.post(`/api/contact-channels/reorder${q}`, { ids });
+  },
+};
+
+// Delivery routes (D9). Same public/owner split as contacts: `listPublic`
+// returns only enabled routes plus whether checkout should ask for an address
+// at all, and both come from one call because checkout needs them together.
+export const deliveryApi = {
+  listPublic(devTenant, { signal } = {}) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/delivery/public${q}`, { signal });
+  },
+  list(devTenant, { signal } = {}) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/delivery${q}`, { signal });
+  },
+  update(route, payload, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.put(`/api/delivery/${encodeURIComponent(route)}${q}`, payload);
+  },
+};
+
+// Who runs THIS store, from the merchant's own back office (D17). Distinct
+// from adminApi's member calls: those name a store by path and are for the
+// platform, these act on the store the request already resolved to. Both go
+// through the same server-side rules.
+export const teamApi = {
+  list(devTenant, { signal } = {}) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/store/team${q}`, { signal });
+  },
+  assign(email, role, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.post(`/api/store/team${q}`, { email, role });
+  },
+  remove(email, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.delete(`/api/store/team/${encodeURIComponent(email)}${q}`);
+  },
+};
+
 export const tenantApi = {
   // `devTenant` forwards ?tenant=<sub> so a single localhost host can switch
   // tenants in dev (the backend only honors it for localhost; prod resolves
@@ -331,6 +418,12 @@ export const tenantApi = {
   },
   // Owner/admin store stats for the current store (server resolves it by
   // Host; @storeAccess gates it).
+  // Unread PLACED orders — drives the sidebar badge.
+  newOrderCount(devTenant, opts) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/tenant/orders/new-count${q}`, opts || {});
+  },
+
   stats(devTenant) {
     const path = devTenant
       ? `/api/tenant/stats?tenant=${encodeURIComponent(devTenant)}`
@@ -354,13 +447,6 @@ export const tenantApi = {
       body: JSON.stringify({ status }),
     });
   },
-  // Count of new (unhandled) orders — drives the owner-bar Orders badge.
-  newOrderCount(devTenant) {
-    const path = devTenant
-      ? `/api/tenant/orders/new-count?tenant=${encodeURIComponent(devTenant)}`
-      : '/api/tenant/orders/new-count';
-    return api.get(path);
-  },
   // Public store directory (active stores).
   list() {
     return api.get('/api/tenant');
@@ -371,7 +457,16 @@ export const tenantApi = {
   },
 };
 
-// ---- Admin: live config (ADMIN only) ---------------------------------------
+// ---- Admin: platform administration (ADMIN only) ---------------------------
+// Every endpoint here is @PreAuthorize("hasRole('ADMIN')") and lives under
+// /api/admin. Administration is cross-store: the target is always named in the
+// path, never inferred from the Host header or ?tenant (withManagerTenant
+// skips this host on purpose), so these calls mean the same thing whichever
+// surface they are made from.
+//
+// Money fields (revenue, feesOwed, totalAccrued) are BigDecimal and EXCLUDE
+// refunded orders (decision D2 — a refund is not revenue). Anything rendering
+// them has to say so rather than let the figure read as gross takings.
 export const adminApi = {
   // { serviceFeeRate, bogEnv, bogAuthUrl, bogBaseUrl, publicBaseUrl, storeReady }
   getConfig() {
@@ -380,6 +475,68 @@ export const adminApi = {
   // Send only the keys you changed; server validates + writes to the config store.
   updateConfig(patch) {
     return api.put('/api/admin/config', patch);
+  },
+
+  // [{ subdomain, name, displayName, category, active, suspendedAt,
+  //    suspendReason, productCount, orderCount, revenue, feesOwed, ownerEmail }]
+  // `q` matches name / subdomain / owner email; omitted when empty so the
+  // unfiltered list is a plain GET.
+  listStores(q = '', { signal } = {}) {
+    const query = q ? `?q=${encodeURIComponent(q)}` : '';
+    return api.get(`/api/admin/stores${query}`, { signal });
+  },
+
+  // The list item plus members:[{email, role}] and
+  // recentOrders:[{orderNumber, total, status, paymentStatus, createdAt}].
+  getStore(subdomain, { signal } = {}) {
+    return api.get(`/api/admin/stores/${encodeURIComponent(subdomain)}`, { signal });
+  },
+
+  // Pulls the storefront down. `reason` is required by the server and is shown
+  // to the store owner — never send a placeholder. Returns the updated store.
+  suspendStore(subdomain, reason) {
+    return api.post(`/api/admin/stores/${encodeURIComponent(subdomain)}/suspend`, { reason });
+  },
+
+  // Puts it back. Returns the updated store.
+  reactivateStore(subdomain) {
+    return api.post(`/api/admin/stores/${encodeURIComponent(subdomain)}/reactivate`, {});
+  },
+
+  // Give someone OWNER or MANAGER of a store, or change the role they hold.
+  // The account must already exist — an identity comes from Google, so the
+  // server answers 404 for an address that has never signed in. Both calls
+  // return the refreshed store detail, members included.
+  assignMember(subdomain, email, role) {
+    return api.post(`/api/admin/stores/${encodeURIComponent(subdomain)}/members`, { email, role });
+  },
+  removeMember(subdomain, email) {
+    return api.delete(
+      `/api/admin/stores/${encodeURIComponent(subdomain)}/members/${encodeURIComponent(email)}`,
+    );
+  },
+
+  // { totalAccrued, stores:[{ subdomain, name, orderCount, revenue, feesOwed }] }
+  getBilling({ signal } = {}) {
+    return api.get('/api/admin/billing', { signal });
+  },
+
+  // [{ email, source: 'env'|'db', grantedAt, grantedBy }]. An 'env' row comes
+  // from ADMIN_EMAILS and cannot be removed over the API (the server answers
+  // 400) — only by editing that variable and redeploying.
+  listAdmins({ signal } = {}) {
+    return api.get('/api/admin/admins', { signal });
+  },
+  addAdmin(email) {
+    return api.post('/api/admin/admins', { email });
+  },
+  removeAdmin(email) {
+    return api.delete(`/api/admin/admins/${encodeURIComponent(email)}`);
+  },
+
+  // [{ at, actorEmail, action, targetType, targetId, detail }] — newest first.
+  listAudit(limit = 50, { signal } = {}) {
+    return api.get(`/api/admin/audit?limit=${encodeURIComponent(limit)}`, { signal });
   },
 };
 

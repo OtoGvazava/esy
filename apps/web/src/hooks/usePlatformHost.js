@@ -1,40 +1,51 @@
-// Decides which face of the SPA a hostname gets. The same bundle serves all
-// three; these are the switches.
+// Decides which face of the SPA a hostname gets. One bundle serves all four;
+// these are the switches. The host rules themselves live in utils/hosts.js,
+// which mirrors the backend's PlatformHosts.java — do not re-list hosts here.
 //
 //  - esy.ge / www.esy.ge            → platform
 //  - manager.esy.ge                 → manager        (back office)
+//  - admin.esy.ge                   → admin          (platform administration)
 //  - <sub>.esy.ge                   → storefront
-//  - lvh.me / www.lvh.me            → platform      (local dev)
-//  - manager.lvh.me                 → manager        (local dev)
-//  - <sub>.lvh.me                   → storefront    (local wildcard dev)
-//  - <sub>.localhost                → storefront   (local wildcard, Chrome)
-//  - www.localhost / localhost      → platform      (esy.ge dev)
+//  - the same four on lvh.me and localhost, for local dev
 //  - localhost with ?tenant=<sub>   → storefront    (dev store simulation)
-//  - ?platform=1 / ?store=1 / ?manager=1 → explicit override
+//  - ?platform=1 / ?store=1 / ?manager=1 / ?admin=1 → explicit override
+import {
+  isAdminHostname,
+  isApexHostname,
+  isManagerHostname,
+  overrides,
+  storefrontSubdomain,
+  adminUrl,
+  managerUrl,
+} from '../utils/hosts';
+
 export function isManagerHost() {
   if (typeof window === 'undefined') return false;
-  const { hostname, search } = window.location;
-  if (new URLSearchParams(search).has('manager')) return true;
-  return hostname === 'manager.esy.ge'
-    || hostname === 'manager.lvh.me'
-    || hostname === 'manager.localhost';
+  if (overrides.manager()) return true;
+  return isManagerHostname();
+}
+
+export function isAdminHost() {
+  if (typeof window === 'undefined') return false;
+  if (overrides.admin()) return true;
+  return isAdminHostname();
 }
 
 export function isPlatformHost() {
   if (typeof window === 'undefined') return true;
-  const { hostname, search } = window.location;
-  const params = new URLSearchParams(search);
+  // The back office and administration are their own faces, not the front door.
+  if (isManagerHost() || isAdminHost()) return false;
+  if (overrides.platform()) return true;
+  if (overrides.store()) return false;
+  try {
+    if (new URLSearchParams(window.location.search).get('tenant')) return false;
+  } catch { /* SSR */ }
 
-  if (isManagerHost()) return false; // manager is its own face, not the front door
-  if (params.has('platform')) return true;
-  if (params.has('store') || params.get('tenant')) return false;
-
-  if (hostname === 'esy.ge' || hostname === 'www.esy.ge' || hostname === 'www.localhost'
-      || hostname === 'lvh.me' || hostname === 'www.lvh.me') return true;
-  if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
-  if (hostname.endsWith('.esy.ge') || hostname.endsWith('.localhost')
-      || hostname.endsWith('.lvh.me')) return false; // a tenant subdomain
-
+  const { hostname } = window.location;
+  const h = hostname.toLowerCase();
+  if (isApexHostname(h)) return true;
+  if (h === 'localhost' || h === '127.0.0.1') return true;
+  if (storefrontSubdomain(h)) return false; // a tenant subdomain
   // Unknown host (e.g. *.onrender.com preview) → platform by default.
   return true;
 }
@@ -43,14 +54,4 @@ export function usePlatformHost() {
   return isPlatformHost();
 }
 
-/** Absolute URL of the back office for the current environment. */
-export function managerUrl(path = '/') {
-  if (typeof window === 'undefined') return `https://manager.esy.ge${path}`;
-  const { hostname, port, protocol } = window.location;
-  const p = port ? `:${port}` : '';
-  if (hostname.endsWith('lvh.me')) return `${protocol}//manager.lvh.me${p}${path}`;
-  if (hostname.endsWith('localhost') || hostname === '127.0.0.1') {
-    return `${protocol}//manager.localhost${p}${path}`;
-  }
-  return `https://manager.esy.ge${path}`;
-}
+export { managerUrl, adminUrl };

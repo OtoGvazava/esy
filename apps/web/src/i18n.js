@@ -24,8 +24,10 @@ import enStorefront from './locales/en/storefront.json';
 import kaStorefront from './locales/ka/storefront.json';
 import enOwner from './locales/en/owner.json';
 import kaOwner from './locales/ka/owner.json';
+import enAdmin from './locales/en/admin.json';
 import enAdminConfig from './locales/en/adminConfig.json';
 import enManager from './locales/en/manager.json';
+import kaAdmin from './locales/ka/admin.json';
 import kaAdminConfig from './locales/ka/adminConfig.json';
 import kaManager from './locales/ka/manager.json';
 
@@ -42,6 +44,7 @@ const resources = {
     platform: enPlatform,
     storefront: enStorefront,
     owner: enOwner,
+    admin: enAdmin,
     adminConfig: enAdminConfig,
     manager: enManager,
   },
@@ -57,6 +60,7 @@ const resources = {
     platform: kaPlatform,
     storefront: kaStorefront,
     owner: kaOwner,
+    admin: kaAdmin,
     adminConfig: kaAdminConfig,
     manager: kaManager,
   },
@@ -66,10 +70,17 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: (typeof window !== 'undefined' && window.localStorage.getItem(STORAGE_KEYS.LANGUAGE)) || LANGUAGES.EN,
+    // Georgian-first: esy serves Georgian merchants and shoppers, so a first
+    // visit lands in Georgian and English is one toggle away. A stored choice
+    // always wins. Keep this in step with useAppTheme's initializer — both are
+    // read before React mounts, so a disagreement shows as a flash of the
+    // wrong language.
+    lng: (typeof window !== 'undefined' && window.localStorage.getItem(STORAGE_KEYS.LANGUAGE)) || LANGUAGES.KA,
+    // Fallback stays English: an untranslated key should surface readable text
+    // rather than a raw key, and English is the language every contributor reads.
     fallbackLng: LANGUAGES.EN,
     interpolation: { escapeValue: false },
-    ns: ['navbar', 'home', 'cart', 'product', 'auth', 'orders', 'account', 'common', 'platform', 'storefront', 'owner', 'adminConfig', 'manager'],
+    ns: ['navbar', 'home', 'cart', 'product', 'auth', 'orders', 'account', 'common', 'platform', 'storefront', 'owner', 'adminConfig', 'manager', 'admin'],
     defaultNS: 'navbar',
   });
 

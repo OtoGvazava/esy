@@ -2,6 +2,7 @@ package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.TenantRepository;
+import com.esyback.ecommerce.security.PlatformHosts;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -37,42 +38,34 @@ public class TenantContextService {
         }
         String h = host.split(":")[0].toLowerCase();
 
+        // Administration is cross-store by definition and reads only the
+        // /api/admin/** namespace, which names its target store explicitly.
+        // It deliberately does NOT honour ?tenant: letting the admin host adopt
+        // a store scope is exactly the "never mix platform and merchant scope
+        // in one response" rule the split was built to keep (D6).
+        if (PlatformHosts.isAdmin(h)) {
+            return DEFAULT_TENANT_SUBDOMAIN;
+        }
+
         // The back office serves every store from one host, so the Host header
         // cannot carry the store. The shell passes ?tenant=<sub> instead (the
         // same mechanism the bare-localhost dev fallback uses); @storeAccess
         // still checks membership against whatever resolves, so pointing the
         // param at someone else's store just yields 403s on management calls.
-        if (isManagerHost(h)) {
+        if (PlatformHosts.isManager(h)) {
             String subdomain = request.getParameter("tenant");
             return subdomain != null ? subdomain : DEFAULT_TENANT_SUBDOMAIN;
         }
 
-        // <sub>.esy.ge -> sub  (prod)
-        if (h.endsWith(".esy.ge")) {
-            return h.substring(0, h.length() - ".esy.ge".length());
+        // <sub>.<base domain> -> sub, for every domain esy serves. Returns null
+        // for the apex, www and any platform surface.
+        String storefront = PlatformHosts.storefrontSubdomain(h);
+        if (storefront != null) {
+            return storefront;
         }
 
-        // <sub>.lvh.me -> sub  (local lvh.me dev domain)
-        if (h.endsWith(".lvh.me")) {
-            return h.substring(0, h.length() - ".lvh.me".length());
-        }
-
-        // lvh.me / www.lvh.me -> platform
-        if (h.equals("lvh.me") || h.equals("www.lvh.me")) {
-            return DEFAULT_TENANT_SUBDOMAIN;
-        }
-
-        // <sub>.localhost -> sub  (local wildcard, no /etc/hosts — Chrome
-        // resolves *.localhost to 127.0.0.1). www.localhost = platform.
-        if (h.endsWith(".localhost")) {
-            String label = h.substring(0, h.length() - ".localhost".length());
-            if (!label.isEmpty() && !label.equals("www")) {
-                return label;
-            }
-        }
-
-        // Bare localhost: ?tenant=<sub> dev fallback.
-        if (h.equals("localhost") || h.equals("127.0.0.1") || h.endsWith(".localhost")) {
+        // Bare localhost / 127.0.0.1: ?tenant=<sub> dev fallback.
+        if (h.equals("localhost") || h.equals("127.0.0.1")) {
             String subdomain = request.getParameter("tenant");
             return subdomain != null ? subdomain : DEFAULT_TENANT_SUBDOMAIN;
         }
@@ -104,39 +97,39 @@ public class TenantContextService {
         }
         String h = host.split(":")[0].toLowerCase();
 
-        // Apex / www = platform.
-        if (h.equals("esy.ge") || h.equals("www.esy.ge") || h.equals("www.localhost")
-                || h.equals("lvh.me") || h.equals("www.lvh.me")) {
-            return true;
-        }
-        // The back office is a platform host, not a tenant: no store resolves
-        // from it, and store scoping there comes from the API calls the shell
-        // makes, not from the Host header. The subdomain is in TenantService's
-        // RESERVED list so no merchant can ever register it.
-        if (isManagerHost(h)) {
+        // Apex/www, the back office and administration are all platform
+        // surfaces: no store resolves from their Host header. Store scoping on
+        // the back office comes from the API calls the shell makes; the admin
+        // host has no store scope at all. Both subdomains are in TenantService's
+        // RESERVED list, so no merchant can register them and shadow a surface.
+        if (PlatformHosts.isPlatformSurface(h)) {
             return true;
         }
         // Bare localhost = platform unless ?tenant= forces a storefront.
         if (h.equals("localhost") || h.equals("127.0.0.1")) {
             return request.getParameter("tenant") == null;
         }
-        // <sub>.esy.ge / <sub>.localhost / <sub>.lvh.me = a tenant storefront.
+        // <sub>.<base domain> = a tenant storefront.
         return false;
     }
 
     /** manager.esy.ge / manager.lvh.me / manager.localhost — the back office. */
     public boolean isManagerHost() {
-        ServletRequestAttributes attributes =
-            (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attributes == null) return false;
-        String host = attributes.getRequest().getHeader("Host");
-        if (host == null) return false;
-        return isManagerHost(host.split(":")[0].toLowerCase());
+        return PlatformHosts.isManager(bareHost());
     }
 
-    private static boolean isManagerHost(String bareHost) {
-        return bareHost.equals("manager.esy.ge")
-            || bareHost.equals("manager.lvh.me")
-            || bareHost.equals("manager.localhost");
+    /** admin.esy.ge / admin.lvh.me / admin.localhost — platform administration. */
+    public boolean isAdminHost() {
+        return PlatformHosts.isAdmin(bareHost());
+    }
+
+    /** The request's Host header without its port, lowercased; "" when absent. */
+    private static String bareHost() {
+        ServletRequestAttributes attributes =
+            (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) return "";
+        String host = attributes.getRequest().getHeader("Host");
+        if (host == null) return "";
+        return host.split(":")[0].toLowerCase();
     }
 }

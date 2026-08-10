@@ -14,10 +14,22 @@ public class CreateOrderRequest {
     private Long addressId;
     private InlineAddress address;
 
+    /** The delivery route the shopper chose (D9). Defaults to collection. */
+    private String deliveryRoute;
+
+    /** Whether the shopper added the express upgrade on top of that route. */
+    private Boolean deliveryExpress;
+
     public List<Item> getItems() { return items; }
     public void setItems(List<Item> items) { this.items = items; }
     public Long getAddressId() { return addressId; }
     public void setAddressId(Long addressId) { this.addressId = addressId; }
+
+    public String getDeliveryRoute() { return deliveryRoute; }
+    public void setDeliveryRoute(String deliveryRoute) { this.deliveryRoute = deliveryRoute; }
+
+    public Boolean getDeliveryExpress() { return deliveryExpress; }
+    public void setDeliveryExpress(Boolean deliveryExpress) { this.deliveryExpress = deliveryExpress; }
     public InlineAddress getAddress() { return address; }
     public void setAddress(InlineAddress address) { this.address = address; }
 
@@ -48,9 +60,13 @@ public class CreateOrderRequest {
         private String title;
         private BigDecimal price;
         private Integer quantity;
+        /** The chosen combination (D11), when the product has variants. */
+        private Long variantId;
 
         public Long getProductId() { return productId; }
         public void setProductId(Long productId) { this.productId = productId; }
+        public Long getVariantId() { return variantId; }
+        public void setVariantId(Long variantId) { this.variantId = variantId; }
         public String getTitle() { return title; }
         public void setTitle(String title) { this.title = title; }
         public BigDecimal getPrice() { return price; }

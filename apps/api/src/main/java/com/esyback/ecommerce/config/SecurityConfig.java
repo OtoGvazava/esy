@@ -45,6 +45,17 @@ public class SecurityConfig {
                 .requestMatchers("/api/products/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/tenant/**").permitAll()
+                // A shopper reads the store's public contact channels without
+                // signing in. ONLY the /public path — the owner's list carries
+                // hidden entries and is gated by @PreAuthorize on its own
+                // endpoint. Listed explicitly so it survives an anyRequest()
+                // tighten, and narrowly so that tighten does not accidentally
+                // open the owner's list with it.
+                .requestMatchers("/api/contact-channels/public").permitAll()
+                // Same narrow shape as above: a shopper must see the delivery
+                // routes on offer before signing in. The owner's list, which
+                // includes disabled routes, is a different path and is gated.
+                .requestMatchers("/api/delivery/public").permitAll()
                 // BOG's async webhook is server-to-server (no JWT cookie); it
                 // is authenticated by its RSA Callback-Signature, not Spring.
                 // Explicit so it survives a future anyRequest() tighten.

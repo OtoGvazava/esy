@@ -69,7 +69,15 @@
     "payError": "Payment could not be started. Please try again.",
     "bogSecure": "Secure card payment via Bank of Georgia",
     "recipient": "Recipient",
-    "phone": "Phone"
+    "phone": "Phone",
+    "deliveryMethod": "Delivery",
+    "free": "Free",
+    "route": {
+      "pickup": "Collect in person",
+      "tbilisi": "Courier — Tbilisi",
+      "georgia": "Courier — rest of Georgia",
+      "express": "Express"
+    }
   },
   "payReturn": {
     "checkingTitle": "Confirming your payment…",
@@ -242,5 +250,28 @@
     "day": "Day",
     "month": "Month",
     "year": "Year"
+  },
+  "contact": {
+    "call": "Call",
+    "write": "Write",
+    "open": "Open"
+  },
+  "about": {
+    "title": "About",
+    "contact": "Contact",
+    "delivery": "Delivery",
+    "deliveryNote": "Delivery is charged once per order and shown again before you pay.",
+    "since": "on esy since {{year}}",
+    "productsN": "{{n}} products",
+    "cardPayments": "Card payments",
+    "orderOnline": "Order online",
+    "browseStore": "Browse the shop"
+  },
+  "variant": {
+    "struckWith": "Struck through — not available with {{other}}.",
+    "struckAlone": "Struck through — not available right now.",
+    "onlyLeft": "Only {{n}} left",
+    "soldOut": "Sold out in this combination",
+    "priceForCombination": "This price is for the combination you picked."
   }
 }

@@ -34,6 +34,9 @@ public class ProductController {
 
     @Autowired
     private ProductImageService productImageService;
+
+    @Autowired
+    private com.esyback.ecommerce.service.ProductVariantService productVariantService;
     
     @GetMapping
     public ResponseEntity<PagedResponse<ProductListDto>> getProducts(
@@ -148,5 +151,26 @@ public class ProductController {
     public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException ex) {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
             .body(Map.of("error", "Image too large (max 5MB each, 25MB per upload)"));
+    }
+
+    // ─── Variants (D11) ─────────────────────────────────────────────────────
+    // Read is public: a shopper must see the sizes before choosing one. Write
+    // is store-management, like every other product mutation.
+
+    @GetMapping("/{id}/variants")
+    public ResponseEntity<Map<String, Object>> getVariants(@PathVariable Long id) {
+        return productService.findEntity(id)
+            .map(p -> ResponseEntity.ok(productVariantService.read(p)))
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** Replaces the whole variant document; no axes means variants off. */
+    @PutMapping("/{id}/variants")
+    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> putVariants(@PathVariable Long id,
+                                                           @RequestBody Map<String, Object> body) {
+        return productService.findEntity(id)
+            .map(p -> ResponseEntity.ok(productVariantService.replace(p, body)))
+            .orElse(ResponseEntity.notFound().build());
     }
 }
