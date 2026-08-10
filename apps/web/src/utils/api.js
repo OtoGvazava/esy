@@ -411,6 +411,12 @@ export const tenantApi = {
   },
   // Owner/admin store stats for the current store (server resolves it by
   // Host; @storeAccess gates it).
+  // Unread PLACED orders — drives the sidebar badge.
+  newOrderCount(devTenant, opts) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/tenant/orders/new-count${q}`, opts || {});
+  },
+
   stats(devTenant) {
     const path = devTenant
       ? `/api/tenant/stats?tenant=${encodeURIComponent(devTenant)}`

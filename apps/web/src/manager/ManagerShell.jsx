@@ -17,9 +17,11 @@
 // and a store header plus a five-item dock on a phone. Unlike the design's
 // three fixed artboards, the shape here is chosen at runtime from the actual
 // viewport.
+import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
+import { tenantApi } from '../utils/api';
 import { useDevice } from '../contexts/DeviceContext';
 import { useTK } from '../core/useTK';
 import { Btn, Chip } from '../core/primitives';
@@ -27,6 +29,7 @@ import { EsyMark, Mark, RoleChip } from '../core/domain';
 import { Icons } from '../core/icons';
 import { MNAV, MDOCK, OWNER_ONLY } from './nav';
 import ManagerHome from './ManagerHome';
+import ManagerOverview from './ManagerOverview';
 import ManagerProducts from './ManagerProducts';
 import ManagerSettings from './ManagerSettings';
 import ManagerTeam from './ManagerTeam';
@@ -77,7 +80,7 @@ function NavItem({ T, to, label, icon, on, locked, badge, style = {} }) {
   return <Link to={to} style={css}>{body}</Link>;
 }
 
-function Side({ T, t, store, sub, active, role, q, isOwner }) {
+function Side({ T, t, store, sub, active, role, q, isOwner, newOrders }) {
   return (
     <div style={{
       width: 252, flexShrink: 0, borderRight: `1px solid ${T.border}`,
@@ -111,7 +114,7 @@ function Side({ T, t, store, sub, active, role, q, isOwner }) {
       </a>
 
       <div style={{ margin: '6px 4px 14px' }}>
-        <RoleChip T={T} role={role} label={t(`role.${role}`, { defaultValue: role })} showCode={false} />
+        <RoleChip T={T} role={role} label={t(`role.${role}`, { defaultValue: role })} />
       </div>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -120,6 +123,9 @@ function Side({ T, t, store, sub, active, role, q, isOwner }) {
             key={k} T={T} to={`${route}${q}`} icon={icon}
             label={t(`nav.${k}`)} on={k === active}
             locked={OWNER_ONLY.includes(k) && !isOwner}
+            // New orders are the one thing a merchant opens the back office
+            // for, so the count rides the nav rather than waiting on the page.
+            badge={k === 'orders' && newOrders ? newOrders : null}
           />
         ))}
       </nav>
@@ -240,12 +246,24 @@ export default function ManagerShell() {
   const { T } = useTK();
   const { t } = useTranslation('manager');
   const { user, isStoreOwner } = useAuth();
+  // Unread orders, for the sidebar badge. Failure is silent: a missing count
+  // should cost the merchant a badge, never the whole back office.
+  const [newOrders, setNewOrders] = useState(0);
   const { isDesktop, isTablet } = useDevice();
   const [params] = useSearchParams();
   const { pathname } = useLocation();
 
   const sub = params.get('tenant');
   const q = sub ? `?tenant=${encodeURIComponent(sub)}` : '';
+  useEffect(() => {
+    if (!sub) return undefined;
+    const ac = new AbortController();
+    tenantApi.newOrderCount(sub, { signal: ac.signal })
+      .then((n) => { if (!ac.signal.aborted) setNewOrders(Number(n?.count ?? n ?? 0) || 0); })
+      .catch(() => {});
+    return () => ac.abort();
+  }, [sub]);
+
   const active = activeKey(pathname);
   const role = isStoreOwner ? 'OWNER' : 'MANAGER';
   const store = { name: sub || t('title'), accent: T.accent };
@@ -272,7 +290,7 @@ export default function ManagerShell() {
 
   const pages = (
     <Routes>
-      <Route path="/" element={<ManagerHome />} />
+      <Route path="/" element={<ManagerOverview />} />
       <Route path="/products" element={<ManagerProducts />} />
       <Route path="/orders" element={<StoreOrders />} />
       <Route path="/stats" element={<ManagerStats />} />
@@ -288,7 +306,7 @@ export default function ManagerShell() {
       <div style={{ minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}` }}>
         <div style={{ display: 'flex', alignItems: 'stretch' }}>
           {isDesktop
-            ? <Side T={T} t={t} store={store} sub={sub} active={active} role={role} q={q} isOwner={isStoreOwner} />
+            ? <Side T={T} t={t} store={store} sub={sub} active={active} role={role} q={q} isOwner={isStoreOwner} newOrders={newOrders} />
             : <Rail T={T} t={t} store={store} sub={sub} active={active} q={q} isOwner={isStoreOwner} />}
           <div style={{ flex: 1, minWidth: 0, padding: isDesktop ? '26px 30px 34px' : '20px 20px 28px' }}>
             {pages}

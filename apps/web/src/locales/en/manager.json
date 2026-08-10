@@ -17,9 +17,9 @@
     "viewStore": "View store",
     "signOut": "Sign out",
     "overview": "Overview",
-    "stats": "Statistics",
-    "money": "Money",
-    "team": "Team"
+    "stats": "Analytics",
+    "money": "Money and fees",
+    "team": "Team and roles"
   },
   "products": {
     "title": "Products",
@@ -105,5 +105,17 @@
     "howBody": "{{percent}}% of the goods total is calculated when an order is placed and frozen onto it, so a later rate change never rewrites what you already owe. It is charged on goods alone — never on delivery, and never on an order that was refunded or cancelled.",
     "deliveryNote": "Delivery you collect is not revenue. It is passed to the courier, and no fee is charged on it.",
     "noSettlement": "The fee accrues but no statement is sent yet, and there is no payment process behind it. Nothing is owed until that exists."
+  },
+  "overview": {
+    "title": "Overview",
+    "loading": "Loading…",
+    "loadFailed": "Could not load this store’s figures.",
+    "revenue": "Revenue",
+    "orders": "Orders",
+    "feesOwed": "Platform fees owed",
+    "products": "Products",
+    "excludes": "Revenue excludes refunded and cancelled orders, and excludes delivery — a courier charge passes through you, not to you.",
+    "chartsPending": "The sales-by-day chart and the best-sellers list are designed but not built: both need per-day and per-product totals this endpoint does not return. An empty chart frame would read as “no sales”, which is a different and wrong message.",
+    "seeStats": "See statistics"
   }
 }
