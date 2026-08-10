@@ -12,5 +12,7 @@
   "reachedEnd": "სია დასრულდა",
   "loadingMore": "იტვირთება…",
   "loadingMoreN": "იტვირთება კიდევ {{count}}…",
-  "aboutStore": "მაღაზიის შესახებ"
+  "aboutStore": "მაღაზიის შესახებ",
+  "searchPlaceholder": "მოძებნე პროდუქტი…",
+  "account": "ანგარიში"
 }

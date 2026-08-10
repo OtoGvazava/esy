@@ -49,6 +49,9 @@ export default function GlowDock() {
     { key: 'shop', icon: <Icon.grid />, label: t('dock.shop'), to: '/', active: pathname === '/' || pathname.startsWith('/product') },
     { key: 'search', icon: <Icon.search />, label: t('dock.search'), to: '/search', active: pathname === '/search' },
     { key: 'bag', icon: <Icon.bag />, label: t('dock.bag'), to: '/cart', badge: cartCount, active: ['/cart', '/checkout', '/success'].includes(pathname) },
+    // The design's fifth item. Orders is where a shopper goes back to, and
+    // burying it under Account cost a tap on the journey they repeat most.
+    { key: 'orders', icon: <Icon.check />, label: t('dock.orders'), to: '/orders', active: pathname === '/orders' },
     { key: 'account', icon: accountIcon, label: accountLabel, to: '/account', active: pathname === '/account' },
   ];
 

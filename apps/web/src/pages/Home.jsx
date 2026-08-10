@@ -145,15 +145,19 @@ export default function Home() {
         filter: 'blur(20px)', pointerEvents: 'none',
       }} />
 
-      {/* topbar */}
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `28px ${gutter}px 0` }}>
-        <GlowLogo T={T} tenant={tenant} size={isDesktop ? 22 : 20} />
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <ManageButton />
-          <ThemePill T={T} dark={mode === 'dark'} onClick={toggleTheme} />
-          <LangPill T={T} lang={language} onClick={() => navigate('/settings/language')} />
+      {/* Phone header. Above mobile the StoreBar in App.jsx carries identity,
+          search, cart and account, so repeating the logo here would be a
+          second header stacked under the first. */}
+      {!isDesktop && (
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `28px ${gutter}px 0` }}>
+          <GlowLogo T={T} tenant={tenant} size={20} />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <ManageButton />
+            <ThemePill T={T} dark={mode === 'dark'} onClick={toggleTheme} />
+            <LangPill T={T} lang={language} onClick={() => navigate('/settings/language')} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* hero + search */}
       <div style={{

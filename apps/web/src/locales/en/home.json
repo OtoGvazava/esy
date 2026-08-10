@@ -12,5 +12,7 @@
   "reachedEnd": "You’ve reached the end",
   "loadingMore": "loading more…",
   "loadingMoreN": "loading {{count}} more…",
-  "aboutStore": "About this shop"
+  "aboutStore": "About this shop",
+  "searchPlaceholder": "Search products…",
+  "account": "Account"
 }

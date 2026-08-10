@@ -16,6 +16,8 @@ import LanguageSettings from './pages/LanguageSettings';
 import AppearanceSettings from './pages/AppearanceSettings';
 import AppProviders from './providers/AppProviders';
 import GlowDock from './components/glow/GlowDock';
+import StoreBar from './components/store/StoreBar';
+import { useDevice } from './contexts/DeviceContext';
 import ProfileGate from './components/ProfileGate';
 import PlatformShell from './platform/PlatformShell';
 import ManagerShell from './manager/ManagerShell';
@@ -28,8 +30,13 @@ import { ThemeModeProvider } from './contexts/ThemeModeContext';
 // Management lives at manager.esy.ge — the ManageButton on Home is the one
 // affordance, and the old /manage + /settings/store|config routes are gone.
 function AppShell() {
+  // The storefront takes two shapes, as the design specifies: a bar across the
+  // top on desktop and tablet, the dock on a phone. It had only ever had the
+  // phone shape, so a desktop shopper got a dock and no search or cart.
+  const { isMobile } = useDevice();
   return (
     <>
+      {!isMobile && <StoreBar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetails />} />
@@ -47,7 +54,7 @@ function AppShell() {
         <Route path="/settings/language" element={<LanguageSettings />} />
         <Route path="/settings/appearance" element={<AppearanceSettings />} />
       </Routes>
-      <GlowDock />
+      {isMobile && <GlowDock />}
       <ProfileGate />
     </>
   );
