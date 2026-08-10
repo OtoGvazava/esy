@@ -20,16 +20,29 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { adminApi, handleApiError } from '../utils/api';
 import { useAdminTokens } from './adminTokens';
-import { Btn, Card, Chip, Note, SectionTitle } from '../core/primitives';
+import { Btn, Card, Chip, Note, SectionTitle, Toggle } from '../core/primitives';
 import { Failed, Loading } from './AdminUI';
 
-function TemplateRow({ T, t, row, onSaved }) {
+function TemplateRow({ T, t, row, onSaved, canWrite }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.text);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const begin = () => { setDraft(row.text); setError(''); setEditing(true); };
+
+  const toggle = async (on) => {
+    setBusy(true);
+    setError('');
+    try {
+      await adminApi.updateIntegrations({ templateEnabled: { [row.key]: on } });
+      onSaved();
+    } catch (e) {
+      setError(handleApiError(e, t('integrations.saveFailed')));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const save = async (text) => {
     setBusy(true);
@@ -53,8 +66,25 @@ function TemplateRow({ T, t, row, onSaved }) {
 
   return (
     <div style={{ padding: '15px 18px', borderTop: `1px solid ${T.border}` }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-        <span style={{ font: `700 13px ${T.font}`, color: T.text }}>{t(`integrations.tpl.${row.key}`)}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+        {/* The switch sits first: whether a message goes out at all is a bigger
+            fact about it than what it says. The OTP has none — silencing it
+            stops checkout rather than saving money. */}
+        {row.switchable ? (
+          <Toggle
+            T={T}
+            on={row.enabled}
+            disabled={busy || !canWrite}
+            onClick={() => toggle(!row.enabled)}
+          />
+        ) : (
+          <Chip T={T} tone="accent">{t('integrations.always')}</Chip>
+        )}
+        <span style={{
+          font: `700 13px ${T.font}`,
+          color: row.enabled ? T.text : T.textMute,
+          textDecoration: row.enabled ? 'none' : 'line-through',
+        }}>{t(`integrations.tpl.${row.key}`)}</span>
         {row.isDefault && <Chip T={T}>{t('integrations.default')}</Chip>}
         <span style={{ flex: 1 }} />
         <span style={{ font: `500 11px ${T.mono}`, color: units > 1 ? T.warnFg : T.textMute }}>
@@ -133,6 +163,7 @@ export default function AdminIntegrations() {
   const [editingSender, setEditingSender] = useState(false);
   const [senderBusy, setSenderBusy] = useState(false);
   const [senderError, setSenderError] = useState('');
+  const [masterBusy, setMasterBusy] = useState(false);
 
   const load = useCallback(async () => {
     setError('');
@@ -152,6 +183,18 @@ export default function AdminIntegrations() {
   // A write lands in the config store and is read back through its cache, so
   // an immediate re-fetch would show the old value and read as a failed save.
   const reload = useCallback(() => { setTimeout(load, 2500); }, [load]);
+
+  const toggleMaster = async (on) => {
+    setMasterBusy(true);
+    try {
+      await adminApi.updateIntegrations({ enabled: on });
+      reload();
+    } catch (e) {
+      setError(handleApiError(e, t('integrations.saveFailed')));
+    } finally {
+      setMasterBusy(false);
+    }
+  };
 
   const saveSender = async () => {
     setSenderBusy(true);
@@ -186,16 +229,45 @@ export default function AdminIntegrations() {
         )}
       />
 
+      {/* Nothing on this screen can be saved without the config store, so say
+          that before an admin edits five things and loses all of them. */}
+      {!sms.storeReady && (
+        <div style={{ marginBottom: 14 }}>
+          <Note T={T} tone="danger">{t('integrations.storeOffline')}</Note>
+        </div>
+      )}
+
       {!sms.configured && (
         <div style={{ marginBottom: 14 }}>
           <Note T={T} tone="warn">{t('integrations.keyMissingHint')}</Note>
         </div>
       )}
 
+      {sms.configured && !sms.enabled && (
+        <div style={{ marginBottom: 14 }}>
+          <Note T={T} tone="danger">{t('integrations.disabledWarning')}</Note>
+        </div>
+      )}
+
       <Card T={T} pad={0} style={{ overflow: 'hidden', marginBottom: 20 }}>
-        <div style={{ padding: '15px 18px' }}>
-          <div style={{ font: `700 14.5px ${T.font}`, color: T.text }}>SMS Office</div>
-          <div style={{ marginTop: 3, font: `500 11.5px ${T.mono}`, color: T.textMute }}>{sms.endpoint}</div>
+        <div style={{ padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', font: `700 14.5px ${T.font}`, color: T.text }}>SMS Office</span>
+            <span style={{ display: 'block', marginTop: 3, font: `500 11.5px ${T.mono}`, color: T.textMute }}>{sms.endpoint}</span>
+          </span>
+          {/* Master switch. Off stops every message including the code, which
+              stops checkout — the warning above spells that out. */}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ font: `600 12px ${T.font}`, color: sms.enabled ? T.successFg : T.textMute }}>
+              {sms.enabled ? t('integrations.on') : t('integrations.off')}
+            </span>
+            <Toggle
+              T={T}
+              on={!!sms.enabled}
+              disabled={masterBusy || !sms.storeReady}
+              onClick={() => toggleMaster(!sms.enabled)}
+            />
+          </span>
         </div>
 
         {/* The key: status only, never the value. */}
@@ -259,7 +331,7 @@ export default function AdminIntegrations() {
       <SectionTitle T={T} title={t('integrations.templatesTitle')} sub={t('integrations.templatesSub')} />
       <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
         {rows.map((row) => (
-          <TemplateRow key={row.key} T={T} t={t} row={row} onSaved={reload} />
+          <TemplateRow key={row.key} T={T} t={t} row={row} onSaved={reload} canWrite={!!sms.storeReady} />
         ))}
       </Card>
 

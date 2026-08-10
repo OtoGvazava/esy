@@ -286,6 +286,8 @@ public class OrderService {
             default -> null;
         };
         if (template == null) return;
+        // A shop watching its SMS bill can switch any of these off in admin.
+        if (!smsTemplates.isEnabled(template)) return;
         try {
             sms.send(phone, smsTemplates.render(template, orderTokens(order)));
         } catch (RuntimeException e) {

@@ -50,6 +50,11 @@ public class SmsSender {
         return props.isConfigured();
     }
 
+    /** A key exists AND the master switch is on. */
+    public boolean isSending() {
+        return props.isConfigured() && props.isEnabled();
+    }
+
     /**
      * Sends one message. Returns false on any failure — an unconfigured
      * account, a rejected request, a network fault — so the caller can decide
@@ -59,6 +64,10 @@ public class SmsSender {
      */
     public boolean send(String phone, String text) {
         if (!props.isConfigured()) return false;
+        if (!props.isEnabled()) {
+            log.info("SMS suppressed: the master switch is off in admin integrations");
+            return false;
+        }
         String destination = normalise(phone);
         if (destination == null) {
             log.warn("SMS not sent: phone number is not a usable Georgian mobile");

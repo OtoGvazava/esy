@@ -43,8 +43,14 @@ public class AdminIntegrationsController {
         Map<String, Object> sms = new LinkedHashMap<>();
         // Whether, not what.
         sms.put("configured", smsProperties.isConfigured());
+        sms.put("enabled", smsProperties.isEnabled());
         sms.put("sender", smsProperties.getSender());
         sms.put("endpoint", "https://smsoffice.ge/api/v2/send/");
+        // Every switch and text on this screen is written to the config store.
+        // If that store is down the screen still renders current values but no
+        // edit can be saved, so the UI has to be able to say so up front rather
+        // than let an admin discover it one failed save at a time.
+        sms.put("storeReady", smsProperties.isStoreReady());
 
         List<Map<String, Object>> rows = new ArrayList<>();
         for (String key : SmsTemplates.KEYS) {
@@ -56,6 +62,10 @@ public class AdminIntegrationsController {
             row.put("defaultText", SmsTemplates.defaultFor(key));
             row.put("tokens", SmsTemplates.allowedTokens(key).stream().sorted().toList());
             row.put("requiredToken", SmsTemplates.requiredToken(key));
+            row.put("enabled", templates.isEnabled(key));
+            // The OTP has no switch: silencing it does not save money, it stops
+            // checkout, because a phone must be verified before paying.
+            row.put("switchable", SmsTemplates.isSwitchable(key));
             // Shown beside each template: Georgian is Unicode, so 70 characters
             // is one billed unit and 71 is two.
             row.put("length", text.length());
@@ -91,6 +101,22 @@ public class AdminIntegrationsController {
                 throw bad("Sender name may use letters, digits, hyphen and period only");
             }
             smsProperties.setSender(s);
+        }
+
+        if (body.get("enabled") instanceof Boolean on) {
+            smsProperties.setEnabled(on);
+        }
+
+        // Per-message switches: {"templateEnabled": {"orderShipped": false}}
+        if (body.get("templateEnabled") instanceof Map<?, ?> flags) {
+            for (Map.Entry<?, ?> e : flags.entrySet()) {
+                String key = String.valueOf(e.getKey());
+                if (!SmsTemplates.isKnown(key)) throw bad("Unknown template " + key);
+                if (!SmsTemplates.isSwitchable(key)) {
+                    throw bad("The verification code cannot be switched off — checkout needs it");
+                }
+                templates.setEnabled(key, Boolean.TRUE.equals(e.getValue()));
+            }
         }
 
         if (body.get("templates") instanceof Map<?, ?> t) {

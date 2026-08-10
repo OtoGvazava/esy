@@ -55,6 +55,14 @@ public class PhoneVerificationService {
         }
         String code = String.format("%04d", ThreadLocalRandom.current().nextInt(0, 10_000));
 
+        // The master switch is off: no message can be sent, and falling back to
+        // handing the code to the browser would turn a cost decision into a way
+        // past verification. Say so instead.
+        if (sms.isConfigured() && !sms.isSending()) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                "SMS is switched off. Turn it back on in admin integrations.");
+        }
+
         if (!sms.isConfigured()) {
             pending.put(user.getId(), new Pending(code, Instant.now().plusSeconds(TTL_SECONDS)));
             log.info("DEV phone OTP for user {} = {} (no SMS account configured)", user.getId(), code);

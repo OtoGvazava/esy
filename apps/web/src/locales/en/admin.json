@@ -215,6 +215,11 @@
       "orderShipped": "Order shipped",
       "orderOut": "Out for delivery",
       "orderDelivered": "Order delivered"
-    }
+    },
+    "on": "On",
+    "off": "Off",
+    "always": "Always on",
+    "storeOffline": "The config store is unreachable, so nothing on this screen can be saved. Current values are shown but every edit will fail until it is back.",
+    "disabledWarning": "SMS is switched off. No message is sent — including the verification code, so nobody can finish checkout until this is back on."
   }
 }

@@ -101,6 +101,29 @@ public class SmsTemplates {
         config.set(configKey(key), value == null ? "" : value.trim());
     }
 
+    /**
+     * Whether this message is sent at all, on unless turned off.
+     *
+     * <p>The OTP is deliberately NOT switchable: a shopper must verify a phone
+     * before paying, so silencing that message does not save money, it stops
+     * checkout. The four order notifications are courtesies and a shop watching
+     * its SMS bill can legitimately drop any of them.
+     */
+    public boolean isEnabled(String key) {
+        if (OTP.equals(key)) return true;
+        return !"false".equalsIgnoreCase(config.get(enabledKey(key), "true"));
+    }
+
+    public void setEnabled(String key, boolean on) {
+        if (OTP.equals(key)) return;   // not switchable; see isEnabled
+        config.set(enabledKey(key), Boolean.toString(on));
+    }
+
+    /** The OTP is required by checkout, so it has no switch to render. */
+    public static boolean isSwitchable(String key) {
+        return !OTP.equals(key);
+    }
+
     /** Every template with its current text — what the admin screen reads. */
     public Map<String, String> all() {
         Map<String, String> m = new LinkedHashMap<>();
@@ -164,5 +187,9 @@ public class SmsTemplates {
 
     private static String configKey(String key) {
         return "app.sms.template." + key;
+    }
+
+    private static String enabledKey(String key) {
+        return "app.sms.template." + key + ".enabled";
     }
 }

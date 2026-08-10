@@ -52,5 +52,28 @@ public class SmsProperties {
         config.set(SENDER_KEY, value == null ? "" : value.trim());
     }
 
+    /**
+     * Master switch, on unless explicitly turned off.
+     *
+     * <p>Off means NO message leaves the platform, including the verification
+     * code — which is required before paying, so checkout stops working too.
+     * That is the honest behaviour for a kill switch and the admin screen says
+     * so plainly; the alternative, quietly falling back to handing the code to
+     * the browser, would turn a cost decision into a security hole.
+     */
+    public boolean isEnabled() {
+        return !"false".equalsIgnoreCase(config.get(ENABLED_KEY, "true"));
+    }
+
+    public void setEnabled(boolean on) {
+        config.set(ENABLED_KEY, Boolean.toString(on));
+    }
+
+    /** Whether admin writes can persist at all — the config store is Redis. */
+    public boolean isStoreReady() {
+        return config.ready();
+    }
+
     private static final String SENDER_KEY = "app.sms.sender";
+    private static final String ENABLED_KEY = "app.sms.enabled";
 }
