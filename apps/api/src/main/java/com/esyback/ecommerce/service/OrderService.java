@@ -118,7 +118,11 @@ public class OrderService {
 
         // Buying makes the account a CUSTOMER of the store (no downgrade of owners).
         if (user != null) membershipService.ensure(user, tenant, StoreMembership.Role.CUSTOMER);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        // An order is CREATED as PLACED and never transitions into it, so the
+        // status-change path can never send this one — it has to be sent here.
+        notify(saved, SmsTemplates.ORDER_PLACED);
+        return saved;
     }
 
     /**
@@ -277,22 +281,43 @@ public class OrderService {
      * also the one transition a shop is most likely to want to explain itself.
      */
     private void notifyShopper(Order order, Order.Status next) {
-        String phone = order.getShipPhone();
-        if (phone == null || phone.isBlank()) return;   // collection in store
         String template = switch (next) {
             case SHIPPED -> SmsTemplates.ORDER_SHIPPED;
             case OUT_FOR_DELIVERY -> SmsTemplates.ORDER_OUT;
             case DELIVERED -> SmsTemplates.ORDER_DELIVERED;
             default -> null;
         };
-        if (template == null) return;
+        if (template != null) notify(order, template);
+    }
+
+    /** One path for every order message, so all of them obey the same rules. */
+    private void notify(Order order, String template) {
+        String phone = recipientPhone(order);
+        if (phone == null) return;
         // A shop watching its SMS bill can switch any of these off in admin.
         if (!smsTemplates.isEnabled(template)) return;
         try {
             sms.send(phone, smsTemplates.render(template, orderTokens(order)));
         } catch (RuntimeException e) {
-            log.warn("Order status SMS not sent for order {}: {}", order.getId(), e.getClass().getSimpleName());
+            log.warn("Order SMS not sent for order {}: {}", order.getId(), e.getClass().getSimpleName());
         }
+    }
+
+    /**
+     * Who to text about this order.
+     *
+     * <p>The delivery contact first, because on a courier order it is the
+     * person who will actually receive the parcel — which may not be the buyer
+     * at all, as with a gift. Falling back to the account's own number matters
+     * for collection orders: those carry no delivery address, so keying only on
+     * the ship phone meant a pickup buyer heard nothing at any stage, which is
+     * exactly the case where "it is ready" is worth the most.
+     */
+    private static String recipientPhone(Order order) {
+        String ship = order.getShipPhone();
+        if (ship != null && !ship.isBlank()) return ship;
+        String account = order.getUser() == null ? null : order.getUser().getPhoneNumber();
+        return account == null || account.isBlank() ? null : account;
     }
 
     /** Values the order templates may reference. */
