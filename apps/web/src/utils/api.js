@@ -438,6 +438,12 @@ export const tenantApi = {
       : '/api/tenant/orders';
     return api.get(path);
   },
+  // One order with its line items. The list endpoint returns a line COUNT,
+  // which is all a table row needs; the detail screen needs the lines.
+  order(orderId, devTenant, opts) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/tenant/orders/${orderId}${q}`, opts || {});
+  },
   // Owner/manager: advance an order through the fulfilment machine
   // (decision D1). status: SHIPPED | OUT_FOR_DELIVERY | DELIVERED | CANCELLED.
   updateOrderStatus(orderId, status, devTenant) {
@@ -471,6 +477,18 @@ export const adminApi = {
   // { serviceFeeRate, bogEnv, bogAuthUrl, bogBaseUrl, publicBaseUrl, storeReady }
   getConfig() {
     return api.get('/api/admin/config');
+  },
+  // Outbound channels (SMS today). The response reports whether an API key is
+  // set but never its value — see AdminIntegrationsController.
+  getIntegrations() {
+    return api.get('/api/admin/integrations');
+  },
+  // Partial: send only { sender } or only { templates: { key: text } }.
+  updateIntegrations(patch) {
+    return api.request('/api/admin/integrations', {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    });
   },
   // Send only the keys you changed; server validates + writes to the config store.
   updateConfig(patch) {

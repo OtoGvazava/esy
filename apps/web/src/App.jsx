@@ -1,7 +1,10 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useContext, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { platformUrl } from './utils/hosts';
 import Home from './pages/Home';
 import ProductDetails from './pages/ProductDetails';
 import StoreAbout from './pages/StoreAbout';
+import StoreClosed from './pages/StoreClosed';
 import SearchOverlay from './pages/SearchOverlay';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
@@ -10,7 +13,6 @@ import OrderSuccess from './pages/OrderSuccess';
 import Account from './pages/Account';
 import Orders from './pages/Orders';
 import SignIn from './pages/SignIn';
-import CreateStore from './pages/CreateStore';
 import AuthCallback from './pages/AuthCallback';
 import LanguageSettings from './pages/LanguageSettings';
 import AppearanceSettings from './pages/AppearanceSettings';
@@ -18,6 +20,7 @@ import AppProviders from './providers/AppProviders';
 import GlowDock from './components/glow/GlowDock';
 import StoreBar from './components/store/StoreBar';
 import { useDevice } from './contexts/DeviceContext';
+import { TenantContext } from './contexts/TenantContext';
 import ProfileGate from './components/ProfileGate';
 import PlatformShell from './platform/PlatformShell';
 import ManagerShell from './manager/ManagerShell';
@@ -25,6 +28,12 @@ import AdminShell from './admin/AdminShell';
 import { useAppTheme } from './hooks/useAppTheme';
 import { usePlatformHost, isManagerHost, isAdminHost } from './hooks/usePlatformHost';
 import { ThemeModeProvider } from './contexts/ThemeModeContext';
+
+/** Leaves the SPA for another host. react-router only moves within one. */
+function GoTo({ href }) {
+  useEffect(() => { window.location.replace(href); }, [href]);
+  return null;
+}
 
 // Storefront: shopping only (scope rule: no admin functions in the store).
 // Management lives at manager.esy.ge — the ManageButton on Home is the one
@@ -34,6 +43,15 @@ function AppShell() {
   // top on desktop and tablet, the dock on a phone. It had only ever had the
   // phone shape, so a desktop shopper got a dock and no search or cart.
   const { isMobile } = useDevice();
+  const { tenant, loading } = useContext(TenantContext);
+
+  // A suspended shop is closed to shoppers (D15). Nothing below this line
+  // renders — not the bar, not the dock, not a single route — because a
+  // suspended store that still lists products and accepts checkout is exactly
+  // what suspension is supposed to stop. It gates on the resolved tenant, so a
+  // slow first response shows nothing rather than flashing the shop open.
+  if (!loading && tenant?.suspended) return <StoreClosed />;
+
   return (
     <>
       {!isMobile && <StoreBar />}
@@ -49,10 +67,17 @@ function AppShell() {
         <Route path="/account" element={<Account />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/signin" element={<SignIn />} />
-        <Route path="/create-store" element={<CreateStore />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/settings/language" element={<LanguageSettings />} />
         <Route path="/settings/appearance" element={<AppearanceSettings />} />
+        {/* /create-store was a real storefront route until the duplicate
+            wizard was removed. Bookmarks and old links still point at it, so
+            it forwards to the one flow that remains rather than dead-ending. */}
+        <Route path="/create-store" element={<GoTo href={platformUrl('/sell')} />} />
+        {/* Without this, an unknown path rendered a blank page — the shell
+            drew, the router matched nothing, and the shopper got the chrome
+            around an empty middle. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {isMobile && <GlowDock />}
       <ProfileGate />

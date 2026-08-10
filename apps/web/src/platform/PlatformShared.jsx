@@ -4,7 +4,7 @@
 // on store cards (the "wall of brands against calm indigo chrome" rule).
 // (Shared module: intentionally exports hooks + components together.)
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGlow, glowTokens, shiftHue } from '../styles/glow';
 import { useThemeMode } from '../contexts/ThemeModeContext';
@@ -236,11 +236,23 @@ export function PTopBar({ current = 'home' }) {
 export function PFooter({ compact = false }) {
   const { T, isDesktop } = usePlatform();
   const { t } = useTranslation('platform');
+  // `to` where a real destination exists. Everything else stays plain text:
+  // the whole footer used to be spans with a pointer cursor, so every entry
+  // looked clickable and none of them was. A label that cannot go anywhere
+  // should not pretend it can.
   const cols = [
-    { title: t('footer.col.esy'), items: [t('footer.link.about'), t('footer.link.brand'), t('footer.link.careers'), t('footer.link.press')] },
-    { title: t('footer.col.sellers'), items: [t('footer.link.openStore'), t('footer.link.pricing'), t('footer.link.sellerDocs'), t('footer.link.api')] },
-    { title: t('footer.col.shoppers'), items: [t('footer.link.browseStores'), t('footer.link.giftCards'), t('footer.link.orderStatus'), t('footer.link.refunds')] },
-    { title: t('footer.col.resources'), items: [t('footer.link.helpCenter'), t('footer.link.status'), t('footer.link.terms'), t('footer.link.privacy')] },
+    { title: t('footer.col.esy'), items: [
+      { label: t('footer.link.about') }, { label: t('footer.link.brand') },
+      { label: t('footer.link.careers') }, { label: t('footer.link.press') }] },
+    { title: t('footer.col.sellers'), items: [
+      { label: t('footer.link.openStore'), to: '/sell' }, { label: t('footer.link.pricing') },
+      { label: t('footer.link.sellerDocs') }, { label: t('footer.link.api') }] },
+    { title: t('footer.col.shoppers'), items: [
+      { label: t('footer.link.browseStores'), to: '/stores' }, { label: t('footer.link.giftCards') },
+      { label: t('footer.link.orderStatus') }, { label: t('footer.link.refunds'), to: '/returns' }] },
+    { title: t('footer.col.resources'), items: [
+      { label: t('footer.link.helpCenter'), to: '/help' }, { label: t('footer.link.status') },
+      { label: t('footer.link.terms'), to: '/terms' }, { label: t('footer.link.privacy'), to: '/privacy' }] },
   ];
   const darkT = { ...T, text: '#f2f2f7', textDim: 'rgba(242,242,247,0.6)', textMute: 'rgba(242,242,247,0.4)' };
   if (!isDesktop) {
@@ -251,9 +263,16 @@ export function PFooter({ compact = false }) {
           {t('footer.taglineShort')}
         </div>
         <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px', font: `500 12px ${T.font}` }}>
-          {[t('footer.link.about'), t('footer.link.pricing'), t('footer.link.helpCenter'), t('footer.link.openStore'), t('footer.link.browseStores'), t('footer.link.terms')].map((it) => (
-            <span key={it} style={{ color: '#cfd0d8' }}>{it}</span>
-          ))}
+          {[
+            { label: t('footer.link.about') },
+            { label: t('footer.link.pricing') },
+            { label: t('footer.link.helpCenter'), to: '/help' },
+            { label: t('footer.link.openStore'), to: '/sell' },
+            { label: t('footer.link.browseStores'), to: '/stores' },
+            { label: t('footer.link.terms'), to: '/terms' },
+          ].map((it) => (it.to
+            ? <Link key={it.label} to={it.to} style={{ color: '#cfd0d8', textDecoration: 'none' }}>{it.label}</Link>
+            : <span key={it.label} style={{ color: 'rgba(242,242,247,0.45)' }}>{it.label}</span>))}
         </div>
         <div style={{ marginTop: 22, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', font: `400 10.5px ${T.font}`, color: 'rgba(242,242,247,0.4)' }}>
           <span>{t('footer.rightsShort')}</span><span>{t('footer.langs')}</span>
@@ -277,7 +296,9 @@ export function PFooter({ compact = false }) {
           <div key={col.title}>
             <div style={{ font: `700 10.5px ${T.font}`, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(242,242,247,0.7)', marginBottom: 14 }}>{col.title}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-              {col.items.map((it) => <span key={it} style={{ color: '#cfd0d8', cursor: 'pointer' }}>{it}</span>)}
+              {col.items.map((it) => (it.to
+                ? <Link key={it.label} to={it.to} style={{ color: '#cfd0d8', textDecoration: 'none' }}>{it.label}</Link>
+                : <span key={it.label} style={{ color: 'rgba(242,242,247,0.45)' }}>{it.label}</span>))}
             </div>
           </div>
         ))}

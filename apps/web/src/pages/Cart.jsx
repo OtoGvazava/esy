@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCart, lineKey } from '../contexts/CartContext';
@@ -5,14 +6,26 @@ import { useGlow } from '../styles/glow';
 import { Icon, Placeholder } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
 
-const FREE_SHIP = 100;
+// No free-shipping threshold and no flat rate live here any more.
+//
+// This screen used to show a progress bar toward "free delivery over 100 ₾" and
+// add a 6 ₾ fee below it. Neither number came from anywhere: D9 makes delivery
+// four per-store routes, each with its own price and its own optional
+// free-over threshold, and the shopper picks one at CHECKOUT. So the bar
+// promised a threshold no store had set, and the fee named a price no store
+// charged. The bag now shows what it actually knows — the goods — and says
+// delivery is decided at the next step.
 
 function Thumb({ T, item, tenant }) {
   const src = item.image || item.thumbnail;
+  // A broken image URL used to hide the <img> and leave an empty white square.
+  // Falling back to the placeholder keeps the row looking like a product —
+  // ProductDetails already tracks load failure this way.
+  const [ok, setOk] = useState(Boolean(src));
   return (
     <div style={{ width: 76, height: 76, borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}>
-      {src ? (
-        <img src={src} alt={item.title} onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {src && ok ? (
+        <img src={src} alt={item.title} onError={() => setOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         <Placeholder label={item.title} hue={tenant.hue} dark={T.dark} />
       )}
@@ -27,10 +40,6 @@ export default function Cart() {
   const { items, updateQuantity, removeFromCart, getTotalPrice } = useCart();
 
   const subtotal = getTotalPrice();
-  const shipping = items.length && subtotal < FREE_SHIP ? 6 : 0;
-  const total = subtotal + shipping;
-  const remaining = Math.max(FREE_SHIP - subtotal, 0);
-  const pct = Math.min(100, Math.round((subtotal / FREE_SHIP) * 100));
 
   if (items.length === 0) {
     return (
@@ -56,21 +65,6 @@ export default function Cart() {
     <GlowScreen T={T} padBottom={180}>
       <GlowTopNav T={T} title={t('bagCount', { count: items.length })} onBack={() => navigate(-1)} />
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
-        {/* free-shipping progress */}
-        <div style={{ padding: '6px 18px 14px' }}>
-          <div style={{ padding: '12px 14px', borderRadius: 14, background: T.accentBg, border: `1px solid ${T.accent}30`, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div style={{ font: `600 12.5px ${T.font}`, color: T.accentFg, letterSpacing: '-0.01em' }}>
-                {remaining > 0 ? t('freeShipAway', { amount: money(remaining) }) : t('freeShipUnlocked')}
-              </div>
-              <span style={{ font: `700 12.5px ${T.font}`, color: T.accentFg }}>{money(subtotal)} / {money(FREE_SHIP)}</span>
-            </div>
-            <div style={{ height: 6, borderRadius: 999, background: T.dark ? 'rgba(255,255,255,0.08)' : 'rgba(15,15,35,0.06)', overflow: 'hidden' }}>
-              <div style={{ width: `${pct}%`, height: '100%', background: T.grad }} />
-            </div>
-          </div>
-        </div>
-
         {/* line items */}
         <div style={{ padding: '0 16px 8px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {items.map((it) => (
@@ -97,19 +91,16 @@ export default function Cart() {
 
         {/* promo */}
         <div style={{ padding: '12px 16px 4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 14, background: T.surface, border: `1px dashed ${T.borderStr}` }}>
-            <span style={{ width: 28, height: 28, borderRadius: '50%', background: T.accentBg, color: T.accentFg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `800 13px ${T.font}` }}>%</span>
-            <input placeholder={t('promoPlaceholder')} style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', color: T.text, font: `500 13px ${T.font}` }} />
-            <span style={{ font: `600 12px ${T.font}`, color: T.accentFg, cursor: 'pointer' }}>{t('apply')}</span>
-          </div>
+          {/* The promo-code field was removed: there is no discount system, so
+              it accepted a code, discarded it, and changed nothing. An input
+              that silently does nothing is worse than no input. */}
         </div>
 
         {/* totals */}
         <div style={{ padding: '14px 22px 4px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { id: 'subtotal', label: t('subtotal'), value: money(subtotal) },
-            { id: 'shipping', label: t('shipping'), value: shipping ? money(shipping) : t('free') },
-            { id: 'tax', label: t('tax'), value: t('taxNote') },
+            { id: 'shipping', label: t('shipping'), value: t('deliveryAtCheckout') },
           ].map(({ id, label, value }) => (
             <div key={id} style={{ display: 'flex', justifyContent: 'space-between', font: `500 13px ${T.font}`, color: T.textDim }}>
               <span>{label}</span><span style={{ color: T.text }}>{value}</span>
@@ -118,12 +109,12 @@ export default function Cart() {
           <div style={{ height: 1, background: T.border, margin: '6px 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ font: `700 16px ${T.font}`, color: T.text }}>{t('total')}</span>
-            <span style={{ font: `800 20px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(total)}</span>
+            <span style={{ font: `800 20px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(subtotal)}</span>
           </div>
         </div>
       </div>
 
-      <GlowStickyCTA T={T} label={t('continueCheckout')} sub={money(total)} onClick={() => navigate('/checkout')} />
+      <GlowStickyCTA T={T} label={t('continueCheckout')} sub={money(subtotal)} onClick={() => navigate('/checkout')} />
     </GlowScreen>
   );
 }

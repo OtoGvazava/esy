@@ -6,7 +6,8 @@
     "stores": "Stores",
     "billing": "Billing",
     "config": "Configuration",
-    "admins": "Admins"
+    "admins": "Admins",
+    "integrations": "Integrations"
   },
   "gate": {
     "signInTitle": "Sign in to administration",
@@ -160,5 +161,60 @@
   },
   "shell": {
     "sidebarNote": "A separate host, separate routes, admin API only. Scopes are never mixed in one response."
+  },
+  "config": {
+    "title": "Live configuration",
+    "sub": "A change applies within seconds — no redeploy.",
+    "movedNote": "This screen used to sit in the storefront, on a store URL. It moved here because a store contains no admin functions.",
+    "storeConnected": "Config store connected",
+    "storeOffline": "Config store offline",
+    "storeOfflineHint": "The config store is unreachable, so values cannot be written right now. The figures below are the ones currently in effect.",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saveFailed": "Could not save that value.",
+    "unset": "not set",
+    "blankDerives": "leave blank to derive from the environment",
+    "showAdvanced": "Show advanced keys",
+    "hideAdvanced": "Hide advanced keys",
+    "reservedTitle": "Reserved subdomains",
+    "reservedSub": "Names no store can take. This list protects the platform’s own addresses — including manager and admin.",
+    "reservedEmpty": "The server returned no reserved names.",
+    "reservedNote": "Read-only. The list lives in the API so the storefront, the back office and this screen cannot disagree about it.",
+    "desc": {
+      "serviceFeeRate": "The platform’s cut of every order, as a fraction (0.02 = 2%).",
+      "bogEnv": "Which Bank of Georgia environment card payments run against.",
+      "publicBaseUrl": "The canonical public address used in links and redirects.",
+      "bogAuthUrl": "Bank of Georgia auth endpoint. Blank derives it from the environment.",
+      "bogBaseUrl": "Bank of Georgia API base. Blank derives it from the environment."
+    }
+  },
+  "integrations": {
+    "title": "Integrations",
+    "sub": "The channels the platform speaks through. Changes apply within seconds — no redeploy.",
+    "keySet": "API key set",
+    "keyMissing": "No API key",
+    "keyMissingHint": "Without APP_SMS_KEY the one-time code is not sent by SMS — it is logged and returned to the browser so local work needs no messages. Set the key in the deployment before real sign-ups.",
+    "keyNote": "Secret, held in the environment. Never shown here and not editable from this screen — rotating it is a deployment action.",
+    "senderNote": "The name a recipient sees. Must be registered and approved with SMS Office. Max 11 characters; letters, digits, hyphen and period.",
+    "templatesTitle": "Messages",
+    "templatesSub": "Every SMS the platform sends. Georgian is Unicode, so 70 characters is one billed unit and 71 is two.",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "reset": "Reset to default",
+    "default": "default",
+    "saveFailed": "Could not save that.",
+    "units": "{{len}} chars · {{units}} SMS",
+    "requiredHint": "{{token}} is required — without it the message cannot do its job.",
+    "langNote": "Messages go out in Georgian. A shopper’s language lives in their browser, not on their account, so at send time there is nothing on the server that says which language they read — D12 makes Georgian the default.",
+    "cancelNote": "A cancelled order is not texted. That is a conversation, often about money, and a one-line message is the wrong way to start it.",
+    "tpl": {
+      "otp": "Phone verification code",
+      "orderPlaced": "Order received",
+      "orderShipped": "Order shipped",
+      "orderOut": "Out for delivery",
+      "orderDelivered": "Order delivered"
+    }
   }
 }

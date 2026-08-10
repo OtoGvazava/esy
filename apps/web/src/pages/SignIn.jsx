@@ -1,9 +1,10 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useGlow } from '../styles/glow';
 import { Icon } from '../components/glow/GlowPrimitives';
 import { GlowScreen } from '../components/glow/GlowChrome';
+import { platformUrl } from '../utils/hosts';
 
 const GmailGlyph = (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
@@ -14,6 +15,8 @@ export default function SignIn() {
   const navigate = useNavigate();
   const { signInWithGoogle } = useAuth();
   const { t } = useTranslation('storefront');
+  const [searchParams] = useSearchParams();
+  const oauthError = searchParams.get('error');
 
   return (
     <GlowScreen T={T} padBottom={40}>
@@ -33,6 +36,29 @@ export default function SignIn() {
           </div>
         </div>
 
+        {/* The design's SignInError state. AuthCallback already sends a failed
+            round-trip here as ?error=…, but nothing rendered it: the shopper
+            landed back on an ordinary sign-in screen with no hint that the last
+            attempt had failed, and the most likely reading is that the button
+            does nothing. The raw code is shown in mono because it is the one
+            thing worth quoting when someone reports it. */}
+        {oauthError && (
+          <div style={{ padding: '0 20px 4px' }}>
+            <div style={{
+              padding: '13px 15px', borderRadius: 14,
+              background: T.dangerBg, border: `1px solid ${T.danger}55`,
+            }}>
+              <div style={{ font: `700 13px ${T.font}`, color: T.dangerFg }}>{t('signin.errorTitle')}</div>
+              <div style={{ marginTop: 5, font: `400 12.5px/1.5 ${T.font}`, color: T.textDim }}>
+                {t('signin.errorBody')}
+              </div>
+              <div style={{ marginTop: 7, font: `500 10.5px ${T.mono}`, color: T.textMute }}>
+                error: {oauthError}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div style={{ padding: '8px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button onClick={signInWithGoogle} style={{
             width: '100%', height: 56, borderRadius: 14, border: `1px solid ${T.borderStr}`,
@@ -47,7 +73,12 @@ export default function SignIn() {
 
         <div style={{ padding: '20px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, font: `500 12px ${T.font}`, color: T.textDim }}>
           <span>{t('signin.sellPrompt')}</span>
-          <span onClick={() => navigate('/create-store')} style={{ color: T.accentFg, fontWeight: 700, cursor: 'pointer' }}>{t('signin.openStore')}</span>
+          {/* Opening a shop is a PLATFORM action and starts on esy.ge. The
+              storefront used to answer /create-store with a second, simpler
+              form of its own, so which flow a merchant got depended on the
+              host they happened to be standing on. One flow now, on the host
+              that owns it. */}
+          <a href={platformUrl('/sell')} style={{ color: T.accentFg, fontWeight: 700, textDecoration: 'none' }}>{t('signin.openStore')}</a>
         </div>
 
         <div style={{ padding: '20px 24px 28px' }}>

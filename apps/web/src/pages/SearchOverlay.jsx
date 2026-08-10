@@ -31,7 +31,7 @@ export default function SearchOverlay() {
   const recent = readRecent();
 
   const QUICK = [
-    { id: 'p50', label: t('search.qUnder50'), icon: '$' },
+    { id: 'p50', label: t('search.qUnder50'), icon: '₾' },
     { id: 'ship', label: t('search.qFreeShip'), icon: '↑' },
     { id: 'new', label: t('search.qNew'), icon: '✦' },
     { id: 'sale', label: t('search.qSale'), icon: '%' },

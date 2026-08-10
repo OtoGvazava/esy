@@ -14,7 +14,6 @@
   "brand": "Brand",
   "share": "Share",
   "backToShop": "Back to shop",
-  "badgeNew": "New",
   "inStockBadge": "In stock",
   "defaultDescription": "Hand-picked and shipped by an independent maker on esy. Made in small batches — every order supports a small business.",
   "rowPrice": "Price",
@@ -27,5 +26,8 @@
   "tagBest": "best",
   "tagLow": "low stock",
   "tagNew": "new",
-  "tagSale": "sale"
+  "tagSale": "sale",
+  "soldOutTitle": "This item is sold out.",
+  "soldOutBody": "Ask the shop when it comes back — most items return within a week.",
+  "browseStore": "Browse the shop"
 }

@@ -1,27 +1,59 @@
 #!/usr/bin/env bash
 # Stop hook: keep the Miro documentation board in sync with the code.
 #
-# Fires when Claude finishes a turn. If documentation-relevant files changed
-# since the last time this hook prompted (fingerprint = HEAD + working-tree
-# status/diff over scope-bearing paths), it blocks the stop ONCE with an
-# instruction to review/update the Miro board, then records the fingerprint so
-# it stays silent until something else changes. Without that gate this would
-# nag on every stop forever.
+# Fires when Claude finishes a turn. If ARCHITECTURE-bearing files changed since
+# the last prompt, it blocks the stop ONCE with a short instruction, then records
+# a fingerprint so it stays silent until something else changes.
 #
-# State lives in .claude/.miro-sync-state (gitignored, per-machine).
+# Three things keep it from nagging — and, more importantly, from inviting an
+# edit to the board on every turn. Every firing is an invitation to write
+# something, and the board only ever grew:
+#
+#   1. NARROW PATHS. The watched set used to be all of apps/api/src plus
+#      apps/web/src/pages, which is nearly every change in the repo — a
+#      breakpoint fix or a token rename fired it just as loudly as a new
+#      entity. It now watches only what can actually change the ERD, the API
+#      surface, the surface map or the deployment: entities, repositories,
+#      controllers, the host/shell routing files, and deploy config.
+#   2. COOLDOWN. At most one prompt per COOLDOWN_SECS, so a long session that
+#      touches an entity six times is asked once, not six times.
+#   3. SHORT MESSAGE. The editing rules live in .claude/miro-board-rules.md and
+#      are read only if Claude decides the board is genuinely stale. The block
+#      text used to carry ~350 words of rules into the context on every fire.
+#
+# State lives in .claude/.miro-sync-state (gitignored, per-machine): the
+# fingerprint on line 1, the epoch seconds of the last prompt on line 2.
 set -u
 cd "$(dirname "$0")/../.." 2>/dev/null || exit 0
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 
 STATE=".claude/.miro-sync-state"
+RULES=".claude/miro-board-rules.md"
+COOLDOWN_SECS=${MIRO_SYNC_COOLDOWN:-21600}   # 6h; override in the environment
+
 # Paths whose changes can invalidate the architecture/scope documentation.
-# Locales, previews and build config are deliberately excluded — they never
-# change what the board describes.
-PATHS=(apps/api/src apps/web/src/manager apps/web/src/pages apps/web/src/contexts docker-compose.yml Dockerfile render.yaml)
+#
+# Deliberately NOT watched, because they never change what the board describes:
+# locales, styles, core tokens, components, admin/manager screen bodies, tests,
+# design-sync previews, build config.
+PATHS=(
+  apps/api/src/main/java/com/esyback/ecommerce/entity
+  apps/api/src/main/java/com/esyback/ecommerce/repository
+  apps/api/src/main/java/com/esyback/ecommerce/controller
+  apps/api/src/main/java/com/esyback/ecommerce/security
+  apps/api/src/main/resources/application.yml
+  apps/web/src/App.jsx
+  apps/web/src/utils/hosts.js
+  apps/web/src/hooks/usePlatformHost.js
+  apps/web/src/manager/nav.js
+  docker-compose.yml
+  Dockerfile
+  render.yaml
+)
 
 # Use the last commit that TOUCHED a watched path, not bare HEAD — bare HEAD
-# moves on every commit, so a commit to unrelated files (docs, .design-sync,
-# the hook itself) would re-fire this nag with nothing doc-relevant changed.
+# moves on every commit, so a commit to unrelated files would re-fire this with
+# nothing doc-relevant changed.
 FP=$(
   {
     git log -1 --format=%H -- "${PATHS[@]}" 2>/dev/null
@@ -31,18 +63,31 @@ FP=$(
 )
 [ -z "${FP:-}" ] && exit 0
 
-LAST=""
-[ -f "$STATE" ] && LAST=$(cat "$STATE" 2>/dev/null)
-[ "$FP" = "$LAST" ] && exit 0
+LAST_FP=""
+LAST_AT=0
+if [ -f "$STATE" ]; then
+  LAST_FP=$(sed -n '1p' "$STATE" 2>/dev/null)
+  LAST_AT=$(sed -n '2p' "$STATE" 2>/dev/null)
+fi
+[ "$FP" = "$LAST_FP" ] && exit 0
 
-# Record BEFORE blocking: the very next stop (after Claude handles the nag)
-# must not re-fire for the same change-set.
-printf '%s' "$FP" > "$STATE"
+# Cooldown: something changed, but we asked recently. Record the new
+# fingerprint anyway so the next prompt reflects the latest state rather than
+# re-reporting a change-set already superseded.
+NOW=$(date +%s 2>/dev/null || echo 0)
+case "${LAST_AT:-0}" in ''|*[!0-9]*) LAST_AT=0 ;; esac
+if [ "$NOW" -gt 0 ] && [ "$LAST_AT" -gt 0 ] && [ $((NOW - LAST_AT)) -lt "$COOLDOWN_SECS" ]; then
+  printf '%s\n%s' "$FP" "$LAST_AT" > "$STATE"
+  exit 0
+fi
+
+# Record BEFORE blocking: the very next stop must not re-fire for the same set.
+printf '%s\n%s' "$FP" "$NOW" > "$STATE"
 
 # Changed files, sanitized for JSON (paths in this repo carry no quotes).
-CHANGED=$(git status --porcelain -- "${PATHS[@]}" 2>/dev/null | head -10 | tr -d '"\\' | tr '\n' ';')
+CHANGED=$(git status --porcelain -- "${PATHS[@]}" 2>/dev/null | head -8 | tr -d '"\\' | tr '\n' ';')
 [ -z "$CHANGED" ] && CHANGED="(committed changes since last check)"
 
 cat <<EOF
-{"decision":"block","reason":"Documentation-relevant code changed this session, so the Miro board may be stale. Board: 'esy — Surface Map & Product Scope' (https://miro.com/app/board/uXjVHzlpzUQ=/). Check whether the changes affect: the surface-map diagram, scope doc, decision log, ERD (3), order lifecycle (4), backend structure (7), target architecture (8), or migration status (9). If yes: update the affected items now via the Miro tools (diagram_update_mermaid / doc_update), then finish. If the changes genuinely do not alter what the board documents, say so in one sentence and finish — do not update the board for cosmetic code changes. KEEP THE BOARD SHORT — this is the rule most often broken. These docs are read on a canvas, not scrolled like a page, and they have twice had to be cut back after growing into walls of text. So: REPLACE stale wording, never append a correction beside it; edit the row or sentence that is now wrong rather than adding a note that it is wrong. State a fact once, in the one place that owns it — a capability's status belongs in the scope table, its reasoning in the decision log, and neither should restate the other; link by decision id (D9, D17) instead of repeating the argument. A table cell is a cell, not a paragraph: if it runs past about fifteen words, move the detail to the decision that owns it. Prefer deleting a section that has become historical over leaving it to rot. If an edit makes a doc longer, say in your reply what you removed to pay for it. Changed: $CHANGED"}
+{"decision":"block","reason":"Architecture-bearing code changed: $CHANGED Decide whether this alters what the Miro board documents (surface map, scope table, decision log, ERD, order lifecycle, backend structure, migration status). Most changes do NOT — if so, say so in one sentence and finish. If it does, read $RULES first and follow it; the board is read on a canvas and must stay short."}
 EOF

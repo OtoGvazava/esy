@@ -24,7 +24,20 @@ const devTenant = () => {
 // `embedded` renders the form alone, for use inside a manager settings pane:
 // no full-screen wrapper, no close button and no page title, because the pane
 // around it already supplies all three.
-export default function StoreSettings({ embedded = false }) {
+//
+// `section` renders only one group of fields, so the manager's settings
+// sub-screens (shop · brand · integrations) each show their own concern
+// instead of this whole form three times over — which is what they did, and
+// what the split into sub-screens was meant to stop. The form's state, its
+// single save and the logo/BOG handling stay in one place: only the visible
+// fields differ, so saving from any pane still sends a complete, consistent
+// payload rather than a partial one that could blank an untouched field.
+//
+//   all           every field (the standalone route)
+//   shop          name, description, category
+//   brand         logo, colours, address, established
+//   integrations  Bank of Georgia credentials
+export default function StoreSettings({ embedded = false, section = 'all' }) {
   const navigate = useNavigate();
   const { t } = useTranslation(['owner', 'common']);
   const { isStoreOwner, loading: authLoading } = useAuth();
@@ -193,31 +206,42 @@ export default function StoreSettings({ embedded = false }) {
     </div>
   );
 
+  // Which field groups this render shows. `all` keeps the standalone route
+  // whole; a named section is one manager sub-screen.
+  const show = (s) => section === 'all' || section === s;
+
   const inner = (
     <>
-      <div style={{ position: 'absolute', top: -160, left: -80, right: -80, height: 360, background: `radial-gradient(60% 80% at 50% 30%, ${form.primaryColor}48, transparent 70%)`, filter: 'blur(20px)', pointerEvents: 'none' }} />
-      <div style={{ maxWidth: 460, margin: '0 auto', position: 'relative' }}>
-        <div style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={() => navigate(-1)} aria-label={t('cancel', { ns: 'common', defaultValue: 'Close' })} style={{ width: 38, height: 38, borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Icon.close /></button>
-        </div>
-
-        <div style={{ padding: '16px 24px 24px', textAlign: 'center' }}>
-          <div style={{ font: `700 26px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.03em' }}>
-            {t('storeTitle')}
+      {!embedded && <div style={{ position: 'absolute', top: -160, left: -80, right: -80, height: 360, background: `radial-gradient(60% 80% at 50% 30%, ${form.primaryColor}48, transparent 70%)`, filter: 'blur(20px)', pointerEvents: 'none' }} />}
+      <div style={{ maxWidth: embedded ? undefined : 460, margin: '0 auto', position: 'relative' }}>
+        {!embedded && (
+          <div style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={() => navigate(-1)} aria-label={t('cancel', { ns: 'common', defaultValue: 'Close' })} style={{ width: 38, height: 38, borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Icon.close /></button>
           </div>
-          {tenant?.subdomain && (
-            <div style={{ marginTop: 6, font: `400 12.5px ${T.font}`, color: T.textMute }}>
-              {t('subdomainLocked', { domain: `${tenant.subdomain}.esy.ge` })}
-            </div>
-          )}
-        </div>
+        )}
 
-        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {!embedded && (
+          <div style={{ padding: '16px 24px 24px', textAlign: 'center' }}>
+            <div style={{ font: `700 26px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.03em' }}>
+              {t('storeTitle')}
+            </div>
+            {tenant?.subdomain && (
+              <div style={{ marginTop: 6, font: `400 12.5px ${T.font}`, color: T.textMute }}>
+                {t('subdomainLocked', { domain: `${tenant.subdomain}.esy.ge` })}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{ padding: embedded ? 0 : '0 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {show('shop') && (
           <div>
             <div style={label}>{t('fieldDisplayName')}</div>
             <input value={form.displayName} onChange={set('displayName')} style={field} />
           </div>
+          )}
 
+          {show('shop') && (
           <div>
             <div style={label}>{t('fieldStoreDescription')}</div>
             <textarea
@@ -225,12 +249,16 @@ export default function StoreSettings({ embedded = false }) {
               style={{ ...field, height: 'auto', padding: '12px 16px', resize: 'vertical' }}
             />
           </div>
+          )}
 
+          {show('brand') && (
           <div>
             <div style={label}>{t('fieldAddressStreet')}</div>
             <input value={form.addressStreet} onChange={set('addressStreet')} style={field} />
           </div>
+          )}
 
+          {show('brand') && (
           <div style={{ display: 'flex', gap: 12 }}>
             <div style={{ flex: 1 }}>
               <div style={label}>{t('fieldAddressCity')}</div>
@@ -241,7 +269,9 @@ export default function StoreSettings({ embedded = false }) {
               <input value={form.addressCountry} onChange={set('addressCountry')} style={field} />
             </div>
           </div>
+          )}
 
+          {show('brand') && (
           <div style={{ display: 'flex', gap: 12 }}>
             <div style={{ flex: 1 }}>
               <div style={label}>{t('fieldAddressPostal')}</div>
@@ -256,7 +286,9 @@ export default function StoreSettings({ embedded = false }) {
               />
             </div>
           </div>
+          )}
 
+          {show('brand') && (
           <div>
             <div style={label}>{t('fieldLogo')}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -295,7 +327,9 @@ export default function StoreSettings({ embedded = false }) {
             </div>
             <div style={{ marginTop: 8, font: `500 11.5px ${T.font}`, color: T.textMute }}>{t('logoHint')}</div>
           </div>
+          )}
 
+          {show('shop') && (
           <div>
             <div style={label}>{t('fieldCategory')}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -319,18 +353,24 @@ export default function StoreSettings({ embedded = false }) {
               })}
             </div>
           </div>
+          )}
 
+          {show('brand') && (
           <div>
             <div style={label}>{t('fieldPrimary')}</div>
             {colorField('primaryColor')}
           </div>
+          )}
 
+          {show('brand') && (
           <div>
             <div style={label}>{t('fieldSecondary')}</div>
             {colorField('secondaryColor')}
           </div>
+          )}
 
           {/* Payments — Bank of Georgia merchant credentials */}
+          {show('integrations') && (
           <div style={{ padding: '16px 16px 18px', borderRadius: 16, background: T.surface, border: `1.5px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <div style={{ font: `700 14px ${T.font}`, color: T.text }}>{t('bog.title')}</div>
@@ -375,6 +415,7 @@ export default function StoreSettings({ embedded = false }) {
               </button>
             )}
           </div>
+          )}
 
           {/* Delivery and contact channels used to be appended here. They are
               now settings sub-screens of their own (manager/ManagerSettings),

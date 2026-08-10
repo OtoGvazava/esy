@@ -30,12 +30,14 @@ import AdminStoreDetail from './AdminStoreDetail';
 import AdminBilling from './AdminBilling';
 import AdminAdmins from './AdminAdmins';
 
-const ConfigSettings = lazy(() => import('../pages/ConfigSettings'));
+const AdminConfig = lazy(() => import('./AdminConfig'));
+const AdminIntegrations = lazy(() => import('./AdminIntegrations'));
 
 /** [key, icon, route] — the order the sidebar shows them in. */
 const ANAV = [
   ['stores', 'grid', '/stores'],
   ['billing', 'card', '/billing'],
+  ['integrations', 'phone', '/integrations'],
   ['config', 'gear', '/config'],
   ['admins', 'shield', '/admins'],
 ];
@@ -302,7 +304,8 @@ export default function AdminShell() {
         <Route path="/stores" element={<AdminStores />} />
         <Route path="/stores/:sub" element={<AdminStoreDetail />} />
         <Route path="/billing" element={<AdminBilling />} />
-        <Route path="/config" element={<ConfigSettings />} />
+        <Route path="/integrations" element={<AdminIntegrations />} />
+        <Route path="/config" element={<AdminConfig />} />
         <Route path="/admins" element={<AdminAdmins />} />
         <Route path="*" element={<Navigate to="/stores" replace />} />
       </Routes>

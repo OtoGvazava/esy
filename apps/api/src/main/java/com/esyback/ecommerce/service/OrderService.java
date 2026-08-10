@@ -15,6 +15,7 @@ import com.esyback.ecommerce.repository.AddressRepository;
 import com.esyback.ecommerce.repository.OrderRepository;
 import com.esyback.ecommerce.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,12 +25,14 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -43,6 +46,8 @@ public class OrderService {
     // live config bean so the rate can change via the admin config UI
     // without a redeploy.
     private final PlatformProperties platformProperties;
+    private final SmsSender sms;
+    private final SmsTemplates smsTemplates;
 
     public Order createOrder(User user, Tenant tenant, CreateOrderRequest req) {
         if (req.getItems() == null || req.getItems().isEmpty()) {
@@ -255,7 +260,48 @@ public class OrderService {
                 "Illegal transition " + order.getStatus() + " -> " + next);
         }
         order.setStatus(next);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        notifyShopper(saved, next);
+        return saved;
+    }
+
+    /**
+     * Texts the shopper that their order moved (the design's SMS thread).
+     *
+     * <p>Best-effort, and deliberately after the save: a courier marking a
+     * parcel shipped must not have that fail because an SMS gateway is down.
+     * The status is the fact; the message is a courtesy about it.
+     *
+     * <p>CANCELLED is not messaged. A cancellation is a conversation — often
+     * about money — and a one-line text is the wrong way to open it. It is
+     * also the one transition a shop is most likely to want to explain itself.
+     */
+    private void notifyShopper(Order order, Order.Status next) {
+        String phone = order.getShipPhone();
+        if (phone == null || phone.isBlank()) return;   // collection in store
+        String template = switch (next) {
+            case SHIPPED -> SmsTemplates.ORDER_SHIPPED;
+            case OUT_FOR_DELIVERY -> SmsTemplates.ORDER_OUT;
+            case DELIVERED -> SmsTemplates.ORDER_DELIVERED;
+            default -> null;
+        };
+        if (template == null) return;
+        try {
+            sms.send(phone, smsTemplates.render(template, orderTokens(order)));
+        } catch (RuntimeException e) {
+            log.warn("Order status SMS not sent for order {}: {}", order.getId(), e.getClass().getSimpleName());
+        }
+    }
+
+    /** Values the order templates may reference. */
+    private Map<String, String> orderTokens(Order order) {
+        String number = order.getOrderNumber() == null ? String.valueOf(order.getId()) : order.getOrderNumber();
+        String store = order.getTenant() == null ? "" : order.getTenant().getDisplayName();
+        String sub = order.getTenant() == null ? null : order.getTenant().getSubdomain();
+        return Map.of(
+            "order", number,
+            "store", store == null ? "" : store,
+            "url", sub == null ? "" : sub + ".esy.ge/orders");
     }
 
     private static boolean isLegalTransition(Order.Status from, Order.Status to) {
@@ -274,6 +320,20 @@ public class OrderService {
 
     public List<Order> ordersForTenant(Tenant tenant) {
         return orderRepository.findByTenantOrderByCreatedAtDesc(tenant);
+    }
+
+    /**
+     * One order, scoped to the store that owns it.
+     *
+     * <p>The tenant is part of the lookup rather than checked afterwards: an id
+     * from another store must read as "not found" here, not as a row the caller
+     * then has to remember to reject. Same rule as {@link #updateStatus} —
+     * never mix scopes in one response.
+     */
+    public Optional<Order> orderForTenant(Tenant tenant, Long orderId) {
+        if (tenant == null || orderId == null) return Optional.empty();
+        return orderRepository.findById(orderId)
+            .filter(o -> o.getTenant() != null && o.getTenant().getId().equals(tenant.getId()));
     }
 
     public long orderCount(Tenant tenant) {

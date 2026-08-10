@@ -49,7 +49,7 @@
     "live": "live",
     "social": "{{makers}} makers · {{paid}} paid out last quarter",
     "exampleStore": "An example esy store",
-    "orderPing": "+$48 order · 32s ago",
+    "orderPing": "+48 ₾ order · 32s ago",
     "howItWorks": "How it works",
     "howTitle": "From idea to live storefront in under five minutes.",
     "h1": "Claim a subdomain",
@@ -65,7 +65,9 @@
     "feeBody": "No subscription. No listing fees. No surprise tiers. You keep 98% of every sale.",
     "feeListing": "Listing fees",
     "feeMonthly": "Monthly fee",
-    "feeCommission": "Commission"
+    "feeCommission": "Commission",
+    "h4": "Get paid",
+    "h4d": "Money goes straight to your bank account. esy takes 2% of a sale and never holds the rest."
   },
   "directory": {
     "storeCount": "{{n}} shops · live",
@@ -147,7 +149,12 @@
     "liveBody": "{{name}} is now hosted on esy. Share the link below — the first sale is the hardest one.",
     "copy": "Copy",
     "openDashboard": "Open the dashboard",
-    "visitStore": "Visit {{host}}"
+    "visitStore": "Visit {{host}}",
+    "category": "Category",
+    "phoneGateEyebrow": "Before you open",
+    "phoneGateTitle": "Verify your number",
+    "phoneGateBody": "Buyers and couriers call this number. It is verified once and works at every shop.",
+    "phoneGateNote": "Both requirements are platform-level — if you have shopped on esy before, you have already passed them."
   },
   "account": {
     "loading": "Loading your account…",
@@ -192,5 +199,155 @@
     "claim": "Claim it",
     "browse": "← Browse stores",
     "home": "Home"
+  },
+  "cat": {
+    "fashion": "Fashion",
+    "electronics": "Electronics",
+    "home": "Home",
+    "food": "Food",
+    "art": "Art",
+    "sport": "Sport",
+    "wear": "Clothing"
+  },
+  "legal": {
+    "updated": "Updated: 1 August 2026",
+    "terms": {
+      "title": "Terms of service",
+      "s": [
+        [
+          "1 · Who we are",
+          "esy.ge is a platform where anyone can open a shop.",
+          "esy does not sell goods. We give a merchant a place, a subdomain and tools. The contract of sale is between the buyer and the shop."
+        ],
+        [
+          "2 · Your account",
+          "One account covers both buying and selling.",
+          "You sign in with Google. There is no separate seller account — a shop attaches to an existing one. A verified phone is required before paying and before opening a shop."
+        ],
+        [
+          "3 · Opening a shop",
+          "It is free, and there is no subscription.",
+          "The subdomain is assigned at creation and cannot change afterwards. Platform names — including manager — are reserved and cannot be registered as a shop."
+        ],
+        [
+          "4 · The fee",
+          "esy takes 2% of a sale. Nothing else.",
+          "The fee is frozen onto the order at creation and paid once a month on a single statement. Refunded orders are excluded. Card processing fees belong to the bank."
+        ],
+        [
+          "5 · Prohibited items",
+          "Illegal or dangerous goods are not allowed.",
+          "esy may remove a product or suspend a shop. Suspension closes the storefront — the data remains."
+        ],
+        [
+          "6 · Liability",
+          "In a dispute esy mediates; the contract is between buyer and shop.",
+          "We help both sides reach a resolution and protect buyers against bad-faith behaviour."
+        ]
+      ]
+    },
+    "privacy": {
+      "title": "Privacy",
+      "s": [
+        [
+          "What we keep",
+          "Your name, email, phone and addresses.",
+          "This data is platform-level and works at every shop. We never store a password — sign-in goes through Google."
+        ],
+        [
+          "What a shop sees",
+          "Only what an order needs.",
+          "A shop sees your name, phone and delivery address — for the order you placed with it. It cannot see orders from other shops."
+        ],
+        [
+          "The address copy",
+          "Every order keeps its own.",
+          "An order stores the address as it was at purchase. Editing or deleting an address later does not change past orders."
+        ],
+        [
+          "Deletion",
+          "You can delete your account at any time.",
+          "Order history stays with the shop for accounting purposes; personal data is removed."
+        ]
+      ]
+    },
+    "returns": {
+      "title": "Cancellations, returns, refunds",
+      "s": [
+        [
+          "Cancelling as a buyer",
+          "You can, while the order is placed and unpaid.",
+          "Cancelling a paid order means a refund, which is a different operation — contact the shop in that case."
+        ],
+        [
+          "Cancelling as a shop",
+          "A shop can cancel at Placed or Shipped.",
+          "After delivery there is no cancellation — that is a return."
+        ],
+        [
+          "Returns",
+          "14 days from delivery.",
+          "The item must be unused and in its original condition. Start a return from the order page or by calling the shop."
+        ],
+        [
+          "Refunds",
+          "Money returns to the same card in 3–5 working days.",
+          "A refund does not change the fulfilment status: a delivered order can be refunded — that is normal, not a data error."
+        ],
+        [
+          "Disputes",
+          "Cannot agree? esy steps in.",
+          "Write to help@esy.ge. We hear both sides and decide within 5 working days."
+        ]
+      ]
+    }
+  },
+  "help": {
+    "title": "How can we help?",
+    "searchPlaceholder": "Type your question…",
+    "commonQuestions": "Common questions",
+    "cats": {
+      "orders": {
+        "k": "My orders",
+        "s": "Where is it, cancelling, returns"
+      },
+      "pay": {
+        "k": "Payments",
+        "s": "Cards, receipts, safety"
+      },
+      "sell": {
+        "k": "Selling on esy",
+        "s": "Opening a shop, products, the fee"
+      },
+      "acc": {
+        "k": "Account",
+        "s": "Sign-in, phone, addresses"
+      }
+    },
+    "qa": [
+      [
+        "Where is my order?",
+        "Open the order in your account — it shows the stage it is at and the shop’s phone number."
+      ],
+      [
+        "Can I cancel an order?",
+        "Yes, while it is Placed and unpaid. After that, contact the shop."
+      ],
+      [
+        "Why do you need my phone?",
+        "The shop and the courier call this number. It is verified once and works at every shop."
+      ],
+      [
+        "What does opening a shop cost?",
+        "Nothing. esy takes 2% of a sale — there is no other charge."
+      ],
+      [
+        "Where do I manage my shop?",
+        "At manager.esy.ge. There are no management controls in the storefront — a shop is for shopping."
+      ]
+    ],
+    "talkTitle": "Talk to a person",
+    "talkBody": "Mon–Sat 10:00–19:00 · +995 322 40 12 00 · help@esy.ge",
+    "call": "Call us"
   }
 }

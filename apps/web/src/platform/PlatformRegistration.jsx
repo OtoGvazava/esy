@@ -5,7 +5,8 @@ import { glowTokens, shiftHue } from '../styles/glow';
 import { usePlatform } from './PlatformShared';
 import { useAuth } from '../contexts/AuthContext';
 import { tenantApi, handleApiError } from './../utils/api';
-import { storeUrl } from './platformData';
+import { CATEGORIES, storeUrl } from './platformData';
+import PhoneVerifyBox from '../components/PhoneVerifyBox';
 
 const REG_STEP_KEYS = ['reg.stepAccount', 'reg.stepIdentity', 'reg.stepBrand', 'reg.stepReview', 'reg.stepLive'];
 const BRAND_SWATCHES = ['#6366f1', '#c95b30', '#3f8a4a', '#0f766e', '#0891b2', '#a23b72', '#7c3aed', '#dc2626', '#f59e0b', '#65a30d', '#1e40af', '#0d0d0d'];
@@ -52,8 +53,9 @@ export default function PlatformRegistration() {
   const { T, dark } = usePlatform();
   const { t } = useTranslation('platform');
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const signedIn = isAuthenticated;
+  const phoneVerified = !!user?.phoneVerified;
 
   const [step, setStep] = useState(signedIn ? 1 : 0);
   const [name, setName] = useState('');
@@ -62,12 +64,21 @@ export default function PlatformRegistration() {
   const [subState, setSubState] = useState('invalid');
   const [color, setColor] = useState('#6366f1');
   const [desc, setDesc] = useState('');
+  const [category, setCategory] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [created, setCreated] = useState(null);
 
   const subdomain = subTouched ? sub : slugify(name);
   const previewT = glowTokens(dark, color);
+
+  // `useState(signedIn ? 1 : 0)` reads the flag on the FIRST render, and auth
+  // resolves a moment later — so a signed-in merchant opening /sell was left
+  // on the sign-in step while the stepper above it already said "skipped". The
+  // two disagreed on screen. Advance once the session is known.
+  useEffect(() => {
+    if (signedIn) setStep((s) => (s === 0 ? 1 : s));
+  }, [signedIn]);
 
   // Live subdomain availability (debounced) against the real backend.
   const checkSeq = useRef(0);
@@ -94,7 +105,7 @@ export default function PlatformRegistration() {
     setSubmitting(true);
     setError(null);
     try {
-      const t = await tenantApi.create({ name: name.trim(), subdomain, primaryColor: color, description: desc.trim() || undefined });
+      const t = await tenantApi.create({ name: name.trim(), subdomain, primaryColor: color, description: desc.trim() || undefined, category: category || undefined });
       setCreated(t);
       setStep(4);
     } catch (e) {
@@ -144,8 +155,29 @@ export default function PlatformRegistration() {
         </div>
       )}
 
+      {/* Second gate: a verified phone (design's NSGate, kind='phone').
+          Both gates are platform-level facts, so a person who has already
+          shopped on esy passes straight through them. Only the sign-in half was
+          enforced — a merchant could open a shop with no reachable number,
+          which is the one thing a buyer and a courier both need. */}
+      {step === 1 && signedIn && !phoneVerified && (
+        <div style={{ ...screen, position: 'relative' }}>
+          <div style={{ padding: '0 0 18px' }}>
+            <div style={{ font: `600 10.5px ${T.font}`, color: T.accentFg, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 8 }}>{t('reg.phoneGateEyebrow')}</div>
+            <h1 style={{ font: `700 24px/1.2 ${T.font}`, color: T.text, letterSpacing: '-0.03em', margin: '0 0 8px' }}>{t('reg.phoneGateTitle')}</h1>
+            <div style={{ font: `400 13.5px/1.5 ${T.font}`, color: T.textDim }}>{t('reg.phoneGateBody')}</div>
+          </div>
+          <div style={{ borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, padding: 16 }}>
+            <PhoneVerifyBox compact />
+          </div>
+          <div style={{ marginTop: 14, font: `400 11.5px/1.5 ${T.font}`, color: T.textMute }}>
+            {t('reg.phoneGateNote')}
+          </div>
+        </div>
+      )}
+
       {/* STEP 1 — Identity */}
-      {step === 1 && (
+      {step === 1 && (!signedIn || phoneVerified) && (
         <div style={{ ...screen, position: 'relative' }}>
           <div style={{ padding: '0 0 18px' }}>
             <div style={{ font: `600 10.5px ${T.font}`, color: T.accentFg, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 8 }}>{t('reg.yourStore')}</div>
@@ -208,6 +240,34 @@ export default function PlatformRegistration() {
           </div>
           <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('reg.shortDescription')}</div>
           <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={t('reg.descPlaceholder')} style={{ width: '100%', height: 76, resize: 'none', padding: '10px 12px', borderRadius: 12, background: T.surface, border: `1.5px solid ${T.border}`, color: T.text, font: `400 13px/1.4 ${T.font}`, outline: 'none', marginBottom: 18 }} />
+
+          {/* Category (D14). The wizard never asked, so every store opened
+              uncategorised and could not be found under any filter in the
+              directory — the owner had to discover the field later in settings.
+              The taxonomy is the union the decision fixes; `all` is a filter
+              value, not something a store can be. */}
+          <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>{t('reg.category')}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 18 }}>
+            {CATEGORIES.filter((c) => c.id !== 'all').map((c) => {
+              const on = category === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setCategory(on ? '' : c.id)}
+                  style={{
+                    padding: '9px 13px', borderRadius: 999, cursor: 'pointer',
+                    font: `600 12.5px ${T.font}`,
+                    background: on ? color : T.surface,
+                    color: on ? '#fff' : T.textDim,
+                    border: `1px solid ${on ? color : T.border}`,
+                  }}
+                >
+                  {t(`cat.${c.id}`, { defaultValue: c.label })}
+                </button>
+              );
+            })}
+          </div>
           <button onClick={() => setStep(3)} style={primaryBtn(`linear-gradient(135deg, ${color} 0%, ${shiftHue(color, 25)} 100%)`, `0 12px 28px ${color}55`)}>
             {t('reg.reviewYourStore')}
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>

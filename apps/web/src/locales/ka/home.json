@@ -2,7 +2,6 @@
   "noMore": "სხვა პროდუქტები აღარ არის",
   "failedToLoad": "პროდუქტების ჩატვირთვა ვერ მოხერხდა",
   "established": "დაარსდა {{year}}",
-  "addFilter": "ფილტრის დამატება",
   "sortNewest": "დალაგება: უახლესი",
   "productCount_one": "{{count}} პროდუქტი",
   "productCount_other": "{{count}} პროდუქტი",

@@ -130,13 +130,23 @@ public class AccountController {
         return ResponseEntity.ok(userMap(user));
     }
 
-    /** Dev stand-in: returns the generated code so it can be entered without a
-     *  real SMS. A real provider would only deliver it out-of-band. */
+    /**
+     * Sends the one-time code by SMS.
+     *
+     * <p>{@code devCode} is present ONLY when no SMS account is configured, so
+     * a local stack can be used without messages. With a key wired up the
+     * response carries no code at all — it used to return it unconditionally,
+     * which handed the verification code to whoever called the endpoint and
+     * made the check decorative.
+     */
     @PostMapping("/phone/send-code")
     public ResponseEntity<Map<String, Object>> sendPhoneCode(Authentication authentication) {
         User user = requireUser(authentication);
-        String code = phoneVerificationService.sendCode(user);
-        return ResponseEntity.ok(Map.of("sent", true, "devCode", code));
+        String devCode = phoneVerificationService.sendCode(user);
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("sent", true);
+        if (devCode != null) body.put("devCode", devCode);
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping("/phone/verify")

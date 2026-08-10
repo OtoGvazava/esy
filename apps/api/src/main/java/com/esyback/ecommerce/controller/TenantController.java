@@ -151,6 +151,36 @@ public class TenantController {
             .collect(Collectors.toList()));
     }
 
+    /**
+     * One order for the current store, with its line items.
+     *
+     * <p>The list endpoint returns an item COUNT, which is all a table row
+     * needs; a detail screen needs the lines themselves. They are added here
+     * rather than to the list so a store with hundreds of orders does not pay
+     * for every line on every page load.
+     */
+    @GetMapping("/orders/{orderId}")
+    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> currentStoreOrder(@PathVariable Long orderId) {
+        Tenant tenant = tenantContextService.getCurrentTenant();
+        return orderService.orderForTenant(tenant, orderId)
+            .map(order -> {
+                Map<String, Object> m = new java.util.HashMap<>(OrderController.toMap(order));
+                m.put("lines", order.getItems().stream().map(it -> {
+                    Map<String, Object> line = new java.util.HashMap<>();
+                    line.put("id", it.getId());
+                    line.put("productId", it.getProductId());
+                    line.put("title", it.getTitle());
+                    line.put("price", it.getPrice());
+                    line.put("quantity", it.getQuantity());
+                    line.put("variantLabel", it.getVariantLabel());
+                    return line;
+                }).collect(Collectors.toList()));
+                return ResponseEntity.ok(m);
+            })
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     // Lightweight count of new (PLACED) orders for the current store, without
     // pulling the full list. Currently unused by the SPA: it drove the
     // storefront owner-bar badge, which the manager migration removed. Kept

@@ -4,10 +4,14 @@
 import { Icon } from './GlowPrimitives';
 
 // Platform currency is GEL (₾) for every store.
-export const money = (n) => {
-  const v = Number(n) || 0;
-  return `₾${Number.isInteger(v) ? v : v.toFixed(2)}`;
-};
+//
+// Re-exported from core/money rather than defined here: this module used to
+// render the symbol as a PREFIX (₾199.99) while the design, the manager screens
+// and the admin screens all put it after the amount (199.99 ₾), so the same
+// price read differently depending on which screen you were on. core/money is
+// the design's own formatter — it also drops a whole number's ".00" and returns
+// an em-dash for a missing amount instead of a confident ₾0.
+export { money } from '../../core/money';
 
 export function GlowScreen({ T, children, padBottom = 120 }) {
   return (

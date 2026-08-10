@@ -127,6 +127,14 @@ app:
   # is assigned). Overridable live via the config store (config:app.admin-emails).
   admin-emails: ${ADMIN_EMAILS:}
 
+  # SMS delivery for the phone one-time code (smsoffice.ge). Empty key = no
+  # account: the code is logged and returned to the browser so local work needs
+  # no messages. Set it and the code is delivered only by SMS. The sender name
+  # must be registered with SMS Office; it is read live from the config store
+  # (config:app.sms.sender) so it can be changed without a redeploy.
+  sms:
+    key: ${APP_SMS_KEY:}
+
   # AES key for secrets stored at rest (per-tenant BOG client secret). Any
   # length (SHA-256 derived, like the JWT key). Dev default works locally;
   # MUST be overridden in prod — changing it invalidates stored secrets, so

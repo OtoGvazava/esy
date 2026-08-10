@@ -6,7 +6,9 @@
     "sellPrompt": "Want to sell on esy?",
     "openStore": "Open your store",
     "encrypted": "Encrypted end-to-end. esy never sees your Google password.",
-    "terms": "By continuing you agree to esy's Terms & Privacy Policy"
+    "terms": "By continuing you agree to esy's Terms & Privacy Policy",
+    "errorTitle": "Sign-in did not finish",
+    "errorBody": "The window may have closed, or the connection dropped. Try again — nothing was lost."
   },
   "createStore": {
     "errNameRequired": "Store name is required",
@@ -191,7 +193,7 @@
     "trending": "Trending in {{name}}",
     "popularMeta": "popular",
     "placeholder": "try \"olive oil 1L\" or \"ceramic\"…",
-    "qUnder50": "Under $50",
+    "qUnder50": "Under 50 ₾",
     "qFreeShip": "Free shipping",
     "qNew": "New this week",
     "qSale": "On sale",
@@ -200,10 +202,10 @@
     "tNewWeek": "new this week",
     "tOnSale": "on sale",
     "tBestSellers": "best sellers",
-    "tUnder30": "under $30"
+    "tUnder30": "under 30 ₾"
   },
   "searchBar": {
-    "defaultPlaceholder": "try \"under $50\" or \"in stock\"…"
+    "defaultPlaceholder": "try \"under 50 ₾\" or \"in stock\"…"
   },
   "settings": {
     "cancel": "Cancel",
@@ -273,5 +275,10 @@
     "onlyLeft": "Only {{n}} left",
     "soldOut": "Sold out in this combination",
     "priceForCombination": "This price is for the combination you picked."
+  },
+  "closed": {
+    "title": "{{name}} is closed right now",
+    "body": "This shop is not accepting orders at the moment. Everything else on esy is still open.",
+    "browse": "Browse other shops"
   }
 }

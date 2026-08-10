@@ -105,7 +105,7 @@ export default function PlatformLanding() {
                 ))}
               </div>
               <span style={{ font: `500 12px ${T.font}`, color: T.textMute }}>
-                {t('landing.social', { makers: '1,240+', paid: '$2.1M' })}
+                {t('landing.social', { makers: '1,240+', paid: '2.1M ₾' })}
               </span>
             </div>
           </div>
@@ -154,10 +154,14 @@ export default function PlatformLanding() {
         <h2 style={{ font: `700 ${isDesktop ? 38 : 24}px/1.06 ${T.font}`, color: T.text, letterSpacing: '-0.035em', margin: '0 0 28px', maxWidth: 540 }}>
           {t('landing.howTitle')}
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr 1fr 1fr' : '1fr', gap: isDesktop ? 28 : 20 }}>
+        {/* Four steps, as the design draws them. The fourth — getting paid —
+            was missing, which left the sequence ending at "share the link" and
+            never answering the question a merchant actually has. */}
+        <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr', gap: isDesktop ? 24 : 20 }}>
           <HowStep T={T} n="1" title={t('landing.h1')} body={t('landing.h1d')} />
           <HowStep T={T} n="2" title={t('landing.h2')} body={t('landing.h2d')} />
           <HowStep T={T} n="3" title={t('landing.h3')} body={t('landing.h3d')} />
+          <HowStep T={T} n="4" title={t('landing.h4')} body={t('landing.h4d')} />
         </div>
       </div>
 
@@ -189,7 +193,7 @@ export default function PlatformLanding() {
             {t('landing.feeBody')}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxWidth: 420 }}>
-            {[[t('landing.feeListing'), '$0'], [t('landing.feeMonthly'), '$0'], [t('landing.feeCommission'), '2%']].map(([k, v]) => (
+            {[[t('landing.feeListing'), '0 ₾'], [t('landing.feeMonthly'), '0 ₾'], [t('landing.feeCommission'), '2%']].map(([k, v]) => (
               <div key={k}>
                 <div style={{ font: `700 ${isDesktop ? 28 : 22}px ${T.font}`, color: T.text, letterSpacing: '-0.04em' }}>{v}</div>
                 <div style={{ font: `500 ${isDesktop ? 11 : 9.5}px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 4 }}>{k}</div>

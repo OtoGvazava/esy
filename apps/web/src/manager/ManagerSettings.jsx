@@ -69,18 +69,24 @@ function SetNav({ T, t, q, column }) {
 }
 
 /**
- * Shop and brand still render the original settings page. Splitting the form
- * itself is a separate job from splitting the navigation, and shipping the
- * nav first means delivery and contact reach their own screens now rather
- * than waiting on a form rewrite.
+ * One concern's fields from the store form (the design's SetShop / SetBrand /
+ * SetIntegrations).
+ *
+ * All three used to render the WHOLE form, so a merchant on /settings/brand
+ * scrolled past the shop fields and their bank credentials to reach a colour
+ * picker — the exact long scroll that splitting settings into sub-screens was
+ * meant to end. The form still owns its state, its save and the logo/BOG
+ * handling; `section` only decides which fields this pane draws.
  */
-function LegacyForm({ T, t, which }) {
+function FormPane({ T, t, section, note }) {
   return (
     <div>
-      <Note T={T} style={{ marginBottom: 14 }}>
-        {t(which === 'shop' ? 'settings.shopNote' : 'settings.brandNote')}
-      </Note>
-      <StoreSettings embedded />
+      {note && (
+        <Note T={T} style={{ marginBottom: 14 }}>{t(note)}</Note>
+      )}
+      <Card T={T} pad={18}>
+        <StoreSettings embedded section={section} />
+      </Card>
     </div>
   );
 }
@@ -118,12 +124,12 @@ export default function ManagerSettings() {
       <Route path="/" element={<Navigate to={`/settings/shop${q}`} replace />} />
       <Route path="/shop" element={
         <Pane T={T} mode={mode} title={t('settings.shop')} sub={t('settings.shopSub')}>
-          <LegacyForm T={T} t={t} which="shop" />
+          <FormPane T={T} t={t} section="shop" />
         </Pane>
       } />
       <Route path="/brand" element={
         <Pane T={T} mode={mode} title={t('settings.brand')} sub={t('settings.brandSub')}>
-          <LegacyForm T={T} t={t} which="brand" />
+          <FormPane T={T} t={t} section="brand" />
         </Pane>
       } />
       <Route path="/delivery" element={
@@ -138,7 +144,7 @@ export default function ManagerSettings() {
       } />
       <Route path="/integrations" element={
         <Pane T={T} mode={mode} title={t('settings.integrations')} sub={t('settings.integrationsSub')}>
-          <LegacyForm T={T} t={t} which="shop" />
+          <FormPane T={T} t={t} section="integrations" note="settings.integrationsNote" />
         </Pane>
       } />
       <Route path="*" element={<Navigate to={`/settings/shop${q}`} replace />} />

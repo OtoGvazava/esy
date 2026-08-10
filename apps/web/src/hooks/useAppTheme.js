@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createTheme } from '@mui/material/styles';
 import i18n from '../i18n';
+import { FONT } from '../core/tokens';
 import { STORAGE_KEYS, THEME_MODES, LANGUAGES } from '../constants';
 
 export const useAppTheme = () => {
@@ -50,6 +51,11 @@ export const useAppTheme = () => {
     }
   }, [language]);
 
+  // typography.fontFamily must be set explicitly: without it MUI falls back to
+  // its default Roboto, which ships no Georgian coverage, so every MUI-rendered
+  // Button/TextField/Dialog label rendered Mkhedruli in a substituted system
+  // face while the inline-styled markup around it used the design stack. Same
+  // constant as the design tokens (core/tokens.js) so the two cannot drift.
   const theme = useMemo(() => createTheme({
     palette: {
       mode,
@@ -58,6 +64,7 @@ export const useAppTheme = () => {
         paper: mode === 'dark' ? '#121214' : '#ffffff',
       },
     },
+    typography: { fontFamily: FONT },
     shape: { borderRadius: 12 },
   }), [mode]);
 

@@ -13,6 +13,9 @@
 !.claude/commands/
 !.claude/hooks/
 !.claude/settings.json
+# The Miro board's editing rules — referenced by the stop hook, so it has to
+# travel with the hook rather than being per-machine.
+!.claude/miro-board-rules.md
 
 # Node / Vite (apps/web)
 node_modules/

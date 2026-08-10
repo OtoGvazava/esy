@@ -16,13 +16,7 @@
   "emptyTitle": "Your bag is empty",
   "emptyBody": "Add something you love from the storefront — the cart updates live.",
   "browse": "Browse {{name}}",
-  "freeShipAway": "You're {{amount}} away from free shipping",
-  "freeShipUnlocked": "You’ve unlocked free shipping",
-  "promoPlaceholder": "Promo code",
-  "apply": "Apply",
   "shipping": "Shipping",
-  "free": "Free",
-  "tax": "Tax",
-  "taxNote": "calculated at checkout",
-  "continueCheckout": "Continue to checkout"
+  "continueCheckout": "Continue to checkout",
+  "deliveryAtCheckout": "Chosen at checkout"
 }

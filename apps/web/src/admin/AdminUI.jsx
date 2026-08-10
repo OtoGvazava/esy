@@ -29,8 +29,13 @@ export function lari(value, lang) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(n);
-  // Georgian sets the symbol after the amount, English before it.
-  return localeFor(lang) === 'ka-GE' ? `${num} ₾` : `₾${num}`;
+  // The symbol always follows the amount, in both languages. This used to put it
+  // before the number in English, which made the same figure read two ways
+  // depending on the active language and disagreed with every other surface
+  // (core/money, the manager screens, the storefront). Grouping and the fixed
+  // two decimals stay — an admin reads these as a ledger, where aligned columns
+  // and a visible trailing 00 are worth more than the design's shorter form.
+  return `${num} ₾`;
 }
 
 /** A whole number (counts). Null for anything unparseable. */

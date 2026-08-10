@@ -29,17 +29,16 @@ import ShoppingCartCheckoutIcon from '@mui/icons-material/ShoppingCartCheckout';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import { useTranslation } from 'react-i18next';
 import { useCart, lineKey } from '../contexts/CartContext';
+import { money } from '../core/money';
 
 export default function CartDrawer({ open, onClose }) {
-  const { t, i18n } = useTranslation('cart');
+  const { t } = useTranslation('cart');
   const { items, removeFromCart, updateQuantity, clearCart, getTotalItems, getTotalPrice } = useCart();
   
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat(
-      i18n.language === 'ka' ? 'ka-GE' : 'en-US', 
-      { style: 'currency', currency: 'GEL', maximumFractionDigits: 2 },
-    ).format(price);
-  };
+  // The platform's one money format (core/money): the ₾ always follows the
+  // amount. Intl's GEL currency style put the symbol before the number in
+  // English, so a cart line and the checkout total disagreed on the same price.
+  const formatPrice = (price) => money(price);
 
   // Takes a line key, not a product id: with variants (D11) a product id no
   // longer names one row of the cart.

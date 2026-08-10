@@ -4,9 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { productApi, handleApiError } from '../utils/api';
 import { useCart } from '../contexts/CartContext';
 import { useThemeMode } from '../contexts/ThemeModeContext';
+import { useDevice } from '../contexts/DeviceContext';
 import ManageButton from '../components/ManageButton';
 import { useGlow } from '../styles/glow';
-import { Icon, PoweredBy, GlowToken } from '../components/glow/GlowPrimitives';
+import { Chip } from '../core/primitives';
+import { StoreContacts } from '../components/store/ContactChannels';
+// Glyphs come from the ported design set (core/icons), not the Glow set: the
+// Glow set has no chevron-down, and this is the set the design itself draws.
+import { Icons } from '../core/icons';
+import { PoweredBy } from '../components/glow/GlowPrimitives';
 import GlowSearchBar from '../components/glow/GlowSearchBar';
 import GlowProductCard from '../components/glow/GlowProductCard';
 import GlowLoadMore from '../components/glow/GlowLoadMore';
@@ -47,8 +53,14 @@ function useDebouncedValue(value, delayMs) {
   return debounced;
 }
 
+// The design draws the grid at three widths, not two. Reading `isDesktop` from
+// useGlow() meant MUI's `md` (900px) decided the layout, so a tablet got the
+// phone's two-column grid and the phone's type sizes. DeviceContext carries the
+// design's own breakpoints (mobile ≤768 · tablet 769–1024 · desktop ≥1025), so
+// the three-way split comes from there.
 export default function Home() {
-  const { T, isDesktop, tenant } = useGlow();
+  const { T, tenant } = useGlow();
+  const { isMobile, isTablet, isDesktop } = useDevice();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { mode, toggle: toggleTheme, language } = useThemeMode();
@@ -133,8 +145,9 @@ export default function Home() {
   const handleAdd = (p) => addToCart({ id: p.id, title: p.title, price: p.price, image: p.image, thumbnail: p.thumbnail });
   const openProduct = (p) => navigate(`/product/${p.id}`);
 
-  const gutter = isDesktop ? 40 : 18;
-  const heroName = isDesktop ? '48px/1' : '26px/1.05';
+  const gutter = isMobile ? 16 : 40;
+  const cols = isDesktop ? 4 : isTablet ? 3 : 2;
+  const heroName = isDesktop ? '42px/1.08' : isTablet ? '34px/1.08' : '26px/1.08';
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}`, paddingBottom: 120 }}>
@@ -148,7 +161,7 @@ export default function Home() {
       {/* Phone header. Above mobile the StoreBar in App.jsx carries identity,
           search, cart and account, so repeating the logo here would be a
           second header stacked under the first. */}
-      {!isDesktop && (
+      {isMobile && (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `28px ${gutter}px 0` }}>
           <GlowLogo T={T} tenant={tenant} size={20} />
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -159,49 +172,39 @@ export default function Home() {
         </div>
       )}
 
-      {/* hero + search */}
+      {/* hero */}
       <div style={{
-        position: 'relative', padding: `${isDesktop ? 32 : 18}px ${gutter}px 14px`,
-        display: isDesktop ? 'grid' : 'block',
-        gridTemplateColumns: isDesktop ? '1.05fr 1fr' : undefined, gap: 36, alignItems: 'end',
+        position: 'relative', padding: `${isMobile ? 18 : 32}px ${gutter}px 14px`,
       }}>
         <div>
-          <div style={{ font: `500 ${isDesktop ? 11 : 10.5}px ${T.font}`, color: T.accentFg, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 10, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Icon.pin /> {tenant.location} · {t('established', { year: tenant.since })}
+          <div style={{ marginBottom: 12 }}>
+            <Chip T={T} tone="accent">
+              <Icons.pin size={12} /> {tenant.location} · {t('established', { year: tenant.since })}
+            </Chip>
           </div>
           <div style={{ font: `700 ${heroName} ${T.font}`, color: T.text, letterSpacing: '-0.035em', marginBottom: 8 }}>{tenant.name}</div>
-          <div style={{ font: `400 ${isDesktop ? 14 : 12.5}px/1.5 ${T.font}`, color: T.textDim, maxWidth: 540 }}>{tenant.bio}</div>
-          {/* Contacts live on the About page (D10), not the hero — this is the
-              way in. The hero is for what the shop sells; how to reach it is a
-              page of its own. */}
-          <button
-            type="button"
-            onClick={() => navigate('/about')}
-            style={{
-              marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', borderRadius: 999, cursor: 'pointer',
-              border: `1px solid ${T.border}`, background: 'transparent',
-              color: T.textDim, font: `600 12.5px ${T.font}`,
-            }}
-          >
-            {t('aboutStore')} <Icon.arrowR />
-          </button>
+          <div style={{ font: `400 ${isMobile ? 13 : 14.5}px/1.6 ${T.font}`, color: T.textDim, maxWidth: 560 }}>{tenant.bio}</div>
         </div>
-        <div ref={searchRef} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: isDesktop ? 0 : 20 }}>
-          <GlowSearchBar T={T} value={query} onChange={setQuery} compact={!isDesktop} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <GlowToken T={T} outline removable={false}><Icon.plus /> {t('addFilter')}</GlowToken>
-            <span style={{ flex: 1 }} />
-            <GlowToken T={T} outline removable={false}><Icon.filter width="13" height="13" /> {t('sortNewest')}</GlowToken>
+
+        {/* Search belongs in the hero on a phone only. Above mobile the StoreBar
+            carries it, and rendering both put two search fields on one desktop
+            screen. */}
+        {isMobile && (
+          <div ref={searchRef} style={{ marginTop: 20 }}>
+            <GlowSearchBar T={T} value={query} onChange={setQuery} compact />
           </div>
-        </div>
+        )}
       </div>
 
-      {/* result meta */}
-      <div style={{ position: 'relative', padding: `14px ${gutter}px 6px` }}>
-        <div style={{ font: `600 11px ${T.font}`, color: T.textDim, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+      {/* result meta — the sort control sits here, on the row it describes */}
+      <div style={{
+        position: 'relative', padding: `14px ${gutter}px 6px`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+      }}>
+        <div style={{ font: `600 11px ${T.font}`, color: T.textDim, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           {t('productCount', { count: total })} · {t('shown', { count: products.length })}
         </div>
+        <Chip T={T}>{t('sortNewest')} <Icons.chevD size={12} /></Chip>
       </div>
 
       {error && (
@@ -211,15 +214,29 @@ export default function Home() {
       {/* product grid */}
       <div style={{
         position: 'relative', display: 'grid',
-        gridTemplateColumns: `repeat(${isDesktop ? 4 : 2}, 1fr)`,
-        gap: isDesktop ? 16 : 12, padding: `4px ${gutter}px 8px`,
+        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+        gap: isMobile ? 12 : 16, padding: `4px ${gutter}px 8px`,
       }}>
-        {products.map((p) => (
-          <GlowProductCard
-            key={p.id} T={T} p={p} hue={tenant.hue} compact={!isDesktop}
-            onOpen={openProduct} onAdd={handleAdd}
-          />
-        ))}
+        {/* A first load drew nothing at all until the request came back. The
+            design fills the grid with card-shaped skeletons so the page keeps
+            its shape and the wait reads as loading rather than as an empty
+            shop. */}
+        {isLoading && products.length === 0
+          ? Array.from({ length: cols * 2 }).map((_, i) => (
+            <div key={i} style={{ borderRadius: 16, overflow: 'hidden', background: T.surface, border: `1px solid ${T.border}` }}>
+              <div style={{ aspectRatio: '1 / 1', background: T.surface2 }} />
+              <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ height: 12, width: '70%', borderRadius: 6, background: T.surface2 }} />
+                <div style={{ height: 10, width: '45%', borderRadius: 6, background: T.surface2 }} />
+              </div>
+            </div>
+          ))
+          : products.map((p) => (
+            <GlowProductCard
+              key={p.id} T={T} p={p} hue={tenant.hue} compact={isMobile}
+              onOpen={openProduct} onAdd={handleAdd}
+            />
+          ))}
       </div>
 
       {products.length === 0 && !isLoading && !error && (
@@ -235,7 +252,52 @@ export default function Home() {
         {!hasMore && products.length > 0 && <GlowLoadMore T={T} done count={0} />}
       </div>
 
-      <div style={{ position: 'relative', padding: `6px ${gutter}px 8px` }}>
+      {/* About strip — D10's third placement for public contact channels (the
+          store page). The About route was the only one built; the top bar is
+          still outstanding. No rating chip: the design draws ★ 4.8 but there is
+          no review system, and a rating is a claim made to a shopper about a
+          real shop. */}
+      <div style={{ position: 'relative', padding: `0 ${gutter}px ${isMobile ? 30 : 40}px` }}>
+        <div style={{ borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`, padding: isMobile ? 16 : 22 }}>
+          <div style={{ font: `700 15px ${T.font}`, color: T.text, marginBottom: 8 }}>{t('aboutStore')}</div>
+          {/* The design puts the SHORT description in the hero and the LONG one
+              here. The store has a single description field, so rendering it in
+              both places printed the same sentence twice. It stays in the hero;
+              this block carries what the hero does not — where the shop is, how
+              to reach it, and the way to the full About page. Restore the
+              paragraph when the short/long split exists. */}
+          {tenant.location && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Chip T={T}><Icons.pin size={12} /> {tenant.location}</Chip>
+            </div>
+          )}
+          <div style={{ marginTop: 12 }}>
+            <StoreContacts T={T} compact={isMobile} />
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/about')}
+            style={{
+              marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 999, cursor: 'pointer',
+              border: `1px solid ${T.border}`, background: 'transparent',
+              color: T.textDim, font: `600 12.5px ${T.font}`,
+            }}
+          >
+            {t('aboutStore')} <Icons.arrowR size={14} />
+          </button>
+        </div>
+      </div>
+
+      <div style={{
+        position: 'relative', margin: `0 ${gutter}px`, paddingTop: 18,
+        borderTop: `1px solid ${T.border}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 10,
+      }}>
+        <span style={{ font: `400 11.5px ${T.font}`, color: T.textMute }}>
+          © {tenant.name} · {tenant.domain}
+        </span>
         <PoweredBy T={T} />
       </div>
     </div>

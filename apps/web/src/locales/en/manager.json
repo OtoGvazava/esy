@@ -54,8 +54,7 @@
     "contactSub": "Phone, WhatsApp, social",
     "integrations": "Integrations",
     "integrationsSub": "Card payments, cart",
-    "shopNote": "Shop and brand still share one form. Splitting the fields is a separate job from splitting the navigation.",
-    "brandNote": "Shop and brand still share one form. Splitting the fields is a separate job from splitting the navigation."
+    "integrationsNote": "The payment keys belong to your shop — money goes straight to your account; esy never holds it."
   },
   "team": {
     "title": "Team",
@@ -117,5 +116,60 @@
     "excludes": "Revenue excludes refunded and cancelled orders, and excludes delivery — a courier charge passes through you, not to you.",
     "chartsPending": "The sales-by-day chart and the best-sellers list are designed but not built: both need per-day and per-product totals this endpoint does not return. An empty chart frame would read as “no sales”, which is a different and wrong message.",
     "seeStats": "See statistics"
+  },
+  "orders": {
+    "title": "Orders",
+    "loading": "Loading orders…",
+    "error": "Could not load the orders.",
+    "filterAll": "All",
+    "colOrder": "Order",
+    "colBuyer": "Buyer",
+    "colTotal": "Total",
+    "colStatus": "Status",
+    "colDate": "Date",
+    "youReceive": "You receive",
+    "noBuyer": "No name given",
+    "empty": "No orders yet",
+    "emptyBody": "When someone buys, the order lands here and the buyer gets an email.",
+    "emptyFilter": "Nothing in this state",
+    "emptyFilterBody": "No order currently sits at this step. Try another filter.",
+    "buyerNotified": "The buyer sees this status on their own order page. Email and SMS notifications are not built yet.",
+    "refundNotRevenue": "A refunded order is not revenue: it is excluded from your payout and from the platform fee.",
+    "status": {
+      "placed": "Placed",
+      "shipped": "Shipped",
+      "out_for_delivery": "Out for delivery",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "payment": {
+      "none": "No payment",
+      "pending": "Payment pending",
+      "paid": "Paid",
+      "failed": "Payment failed",
+      "refunded": "Refunded"
+    },
+    "advance": {
+      "shipped": "Mark shipped",
+      "out_for_delivery": "Out for delivery",
+      "delivered": "Mark delivered",
+      "cancelled": "Cancel"
+    }
+  },
+  "detail": {
+    "backToOrders": "Back to orders",
+    "whereIsIt": "Where is this order?",
+    "payment": "Payment",
+    "twoStatusNote": "Fulfilment and payment are separate. A delivered order can still be unpaid, and a paid order can still be cancelled.",
+    "refundNotBuilt": "Refunds are not available from this screen yet. Money would have to go back through Bank of Georgia, and that path is not built — arrange a refund with the bank directly.",
+    "cancelOrder": "Cancel this order",
+    "cancelConfirm": "Cancel this order? The items go back to stock.",
+    "cancelYes": "Yes, cancel it",
+    "cancelNo": "Keep it",
+    "cancelNote": "A store can cancel while an order is placed or shipped. After delivery it is a return, which is a different flow.",
+    "deliveryAddress": "Delivery address",
+    "pickupInStore": "Collection in store — no delivery address",
+    "call": "Call",
+    "esyFee": "esy fee (2%)"
   }
 }

@@ -8,12 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useTheme } from '../hooks/useTheme';
 import { useProductCardDimensions } from '../hooks/useProductCardDimensions';
-import { PLACEHOLDER_IMAGES, CURRENCY, ROUTES } from '../constants';
+import { PLACEHOLDER_IMAGES, ROUTES } from '../constants';
+import { money } from '../core/money';
 import Button from './common/Button';
 import Card from './common/Card';
 
 const ProductCard = memo(({ product, onClick }) => {
-  const { t, i18n } = useTranslation(['product', 'cart']);
+  const { t } = useTranslation(['product', 'cart']);
   const { addToCart, removeFromCart, items } = useCart();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -31,19 +32,14 @@ const ProductCard = memo(({ product, onClick }) => {
     [image, thumbnail],
   );
   
-  const displayPrice = useMemo(() => {
-    if (typeof price === 'number') {
-      return new Intl.NumberFormat(
-        i18n.language === 'ka' ? CURRENCY.LOCALE.KA : CURRENCY.LOCALE.EN, 
-        { 
-          style: 'currency', 
-          currency: CURRENCY.CODE, 
-          maximumFractionDigits: 0, 
-        },
-      ).format(price);
-    }
-    return price || '';
-  }, [price, i18n.language]);
+  // The platform's one money format (core/money): the ₾ always follows the
+  // amount. Intl's GEL currency style placed it before the number in English,
+  // and rounded to whole lari here while every other price on the same page
+  // showed tetri.
+  const displayPrice = useMemo(
+    () => (typeof price === 'number' ? money(price) : price || ''),
+    [price],
+  );
 
   // Check if product is already in cart
   const isInCart = useMemo(() => {

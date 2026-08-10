@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { accountApi, handleApiError } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useGlow } from '../styles/glow';
+import { useTK } from '../core/useTK';
 
 function StoreCard({ T, store, role, t }) {
   const live = store.status === 'live';
@@ -48,7 +48,7 @@ function StoreCard({ T, store, role, t }) {
 export default function ManagerHome() {
   const { t } = useTranslation('manager');
   const { isAuthenticated, loading: authLoading, signInWithGoogle } = useAuth();
-  const { T } = useGlow();
+  const { T } = useTK();
   const [stores, setStores] = useState(null);
   const [error, setError] = useState(null);
 

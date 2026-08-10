@@ -4,6 +4,7 @@ import com.esyback.ecommerce.config.AppProperties;
 import com.esyback.ecommerce.config.BogProperties;
 import com.esyback.ecommerce.config.PlatformProperties;
 import com.esyback.ecommerce.service.ConfigStore;
+import com.esyback.ecommerce.service.TenantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,11 @@ public class AdminConfigController {
         m.put("publicBaseUrl", app.getPublicBaseUrl());
         // Whether writes are possible right now (config store reachable).
         m.put("storeReady", store.ready());
+        // Read-only: the names no merchant can register. The admin config screen
+        // shows these beside the editable values because they are the other half
+        // of "what is fixed about this platform", and sorted so the list reads
+        // the same on every request.
+        m.put("reservedSubdomains", TenantService.reservedSubdomains().stream().sorted().toList());
         return m;
     }
 

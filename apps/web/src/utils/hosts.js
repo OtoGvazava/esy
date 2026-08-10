@@ -85,6 +85,21 @@ export const managerUrl = (path = '/') => surfaceUrl(MANAGER, path);
 /** Absolute URL of platform administration for the current environment. */
 export const adminUrl = (path = '/') => surfaceUrl(ADMIN, path);
 
+/**
+ * Absolute URL of the platform front door (the apex) for the current
+ * environment. Same shape as the two above, minus the subdomain — a storefront
+ * pointing a shopper back to esy.ge must not send a local session to
+ * production, and must not hard-code `esy.ge` on lvh.me.
+ */
+export function platformUrl(path = '/') {
+  if (typeof window === 'undefined') return `https://esy.ge${path}`;
+  const { hostname: h, port, protocol } = window.location;
+  const p = port ? `:${port}` : '';
+  const base = BASE_DOMAINS.find((d) => h === d || h.endsWith(`.${d}`));
+  if (base && base !== 'esy.ge') return `${protocol}//${base}${p}${path}`;
+  return `https://esy.ge${path}`;
+}
+
 /** Dev/preview overrides: ?manager=1, ?admin=1, ?platform=1, ?store=1. */
 export const overrides = {
   manager: () => hasParam('manager'),

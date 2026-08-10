@@ -2,7 +2,6 @@
   "noMore": "No more products",
   "failedToLoad": "Failed to load products",
   "established": "est {{year}}",
-  "addFilter": "Add filter",
   "sortNewest": "Sort: Newest",
   "productCount_one": "{{count}} product",
   "productCount_other": "{{count}} products",

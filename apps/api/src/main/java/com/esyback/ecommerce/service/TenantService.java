@@ -47,6 +47,18 @@ public class TenantService {
         "manager", "manage"
     );
 
+    /**
+     * The reserved list, for the admin config screen to display.
+     *
+     * <p>Exposed as a read-only accessor rather than copied into the frontend:
+     * this set and {@code PlatformHosts} already have to agree, and a third copy
+     * in JavaScript would drift the first time a surface is added. {@code Set.of}
+     * is immutable, so the caller cannot alter the rule by holding the set.
+     */
+    public static Set<String> reservedSubdomains() {
+        return RESERVED;
+    }
+
     private static final String DEFAULT_PRIMARY = "#6366f1";
     private static final String DEFAULT_SECONDARY = "#8b5cf6";
 

@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { productApi, handleApiError } from '../utils/api';
 import { renderMarkdown } from '../utils/markdown';
 import { useCart } from '../contexts/CartContext';
+import { useDevice } from '../contexts/DeviceContext';
 import { useGlow } from '../styles/glow';
+import { Chip } from '../core/primitives';
+import { StoreContacts } from '../components/store/ContactChannels';
 import { Icon, Placeholder, PoweredBy } from '../components/glow/GlowPrimitives';
 import { money } from '../components/glow/GlowChrome';
 import GlowProductCard from '../components/glow/GlowProductCard';
@@ -25,7 +28,11 @@ export default function ProductDetails() {
   const navigate = useNavigate();
   const { t } = useTranslation('product');
   const { addToCart } = useCart();
-  const { T, isDesktop, tenant } = useGlow();
+  const { T, tenant } = useGlow();
+  // Three widths, as on Home: the two-column layout is right for a tablet too,
+  // and reading MUI's `md` gave a tablet the phone's single stacked column.
+  const { isMobile, isTablet, isDesktop } = useDevice();
+  const cols = isDesktop ? 4 : isTablet ? 3 : 2;
 
   const [product, setProduct] = useState(null);
   // Variants (D11): the document and the row the shopper has chosen.
@@ -121,13 +128,13 @@ export default function ProductDetails() {
   const inStock = pickedStock > 0;
   const imageBlock = (
     <div>
-    <div style={{ position: 'relative', height: isDesktop ? 520 : 460, borderRadius: isDesktop ? 22 : 0, overflow: 'hidden' }}>
+    <div style={{ position: 'relative', height: isMobile ? 460 : 520, borderRadius: isMobile ? 0 : 20, overflow: 'hidden' }}>
       {imgOk ? (
         <img src={heroImg} alt={product.title} onError={() => setImgOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         <Placeholder label={product.title} hue={tenant.hue} dark={T.dark} />
       )}
-      <div style={{ position: 'absolute', top: isDesktop ? 16 : 50, left: 16, right: 16, display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ position: 'absolute', top: isMobile ? 50 : 16, left: 16, right: 16, display: 'flex', justifyContent: 'space-between' }}>
         <button onClick={() => navigate(-1)} style={iconBtn(T)} aria-label="back"><Icon.arrowR style={{ transform: 'rotate(180deg)' }} /></button>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={share} style={iconBtn(T)} aria-label="share"><Icon.share /></button>
@@ -135,7 +142,7 @@ export default function ProductDetails() {
       </div>
     </div>
     {gallery.length > 1 && (
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, overflowX: 'auto', padding: isDesktop ? 0 : '0 16px' }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, overflowX: 'auto', padding: isMobile ? '0 16px' : 0 }}>
         {gallery.map((src, i) => (
           <button
             key={`${src}-${i}`}
@@ -156,21 +163,28 @@ export default function ProductDetails() {
   );
 
   const info = (
-    <div style={{ padding: isDesktop ? 0 : '18px 20px 0' }}>
+    <div style={{ padding: isMobile ? '18px 20px 0' : 0 }}>
       <div style={{ font: `500 11px ${T.font}`, color: T.accentFg, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 8, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
         <Icon.pin /> {tenant.name}
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, marginBottom: 8 }}>
-        <div style={{ font: `700 ${isDesktop ? 30 : 22}px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.025em', flex: 1 }}>{product.title}</div>
-        <div style={{ font: `800 ${isDesktop ? 30 : 22}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(shownPrice)}</div>
+        <div style={{ font: `700 ${isMobile ? 23 : 30}px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.025em', flex: 1 }}>{product.title}</div>
+        <div style={{ font: `800 ${isMobile ? 23 : 30}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(shownPrice)}</div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, font: `500 12px ${T.font}`, color: T.textDim, marginBottom: 18 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: T.text }}><Icon.star style={{ color: T.warn }} /> {t('badgeNew')}</span>
-        <span>·</span>
-        <span style={{ color: inStock ? T.success : T.danger, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: inStock ? T.success : T.danger }} />
-          {inStock ? t('inStockBadge') : t('outOfStock')}
-        </span>
+      {/* The "new" star was printed on every product regardless of age — there
+          is no creation date in the payload, so it was decoration claiming to
+          be data. Same rule the product cards already follow: a badge shown to
+          a shopper has to be backed by a real signal. Stock is real, so it
+          stays. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+        {inStock ? (
+          <Chip T={T} tone="success">
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: T.success }} />
+            {t('inStockBadge')}{hasVariants ? '' : ` · ${product.quantity ?? product.stock ?? 0}`}
+          </Chip>
+        ) : (
+          <Chip T={T} tone="danger">{t('outOfStock')}</Chip>
+        )}
       </div>
 
       {/* The picker sits above the description: it is a decision the shopper
@@ -211,10 +225,36 @@ export default function ProductDetails() {
           </div>
         ))}
       </div>
-      {isDesktop && (
+      {/* Sold out is a dead end unless the shop is reachable from it. A shopper
+          who wanted this item is the most likely person to ask when it returns,
+          so the design replaces the buy control with the shop's own channels
+          (D10) rather than leaving a disabled button. */}
+      {!inStock && (
+        <div style={{ borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, padding: 16, marginBottom: 16 }}>
+          <div style={{ font: `700 14px ${T.font}`, color: T.text }}>{t('soldOutTitle')}</div>
+          <div style={{ marginTop: 6, font: `400 12.5px/1.55 ${T.font}`, color: T.textDim }}>{t('soldOutBody')}</div>
+          <div style={{ marginTop: 12 }}><StoreContacts T={T} compact /></div>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            style={{
+              marginTop: 12, height: 40, padding: '0 16px', borderRadius: 12,
+              border: 'none', background: T.surface2, color: T.text,
+              font: `600 12.5px ${T.font}`, cursor: 'pointer',
+            }}
+          >
+            {t('browseStore')}
+          </button>
+        </div>
+      )}
+
+      {/* The inline buy control belongs to every width with room for it. Only a
+          phone gets the sticky bar, because only a phone has the dock it sits
+          above — a tablet showed neither before this. */}
+      {!isMobile && inStock && (
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={addAndOpenCart} disabled={!inStock} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: inStock ? T.grad : T.surface2, color: inStock ? '#fff' : T.textMute, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: inStock ? 'pointer' : 'not-allowed', boxShadow: inStock ? `0 10px 28px ${T.accent}55` : 'none' }}>
-            <Icon.bag /> {inStock ? t('addToBag', { price: money(shownPrice) }) : t('outOfStock')}
+          <button onClick={addAndOpenCart} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: T.grad, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55` }}>
+            <Icon.bag /> {t('addToBag', { price: money(shownPrice) })}
           </button>
         </div>
       )}
@@ -222,33 +262,33 @@ export default function ProductDetails() {
   );
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}`, paddingBottom: isDesktop ? 120 : 200 }}>
-      <div style={{ maxWidth: isDesktop ? 1100 : '100%', margin: '0 auto', padding: isDesktop ? '28px 40px 0' : 0 }}>
-        <div style={{ display: isDesktop ? 'grid' : 'block', gridTemplateColumns: isDesktop ? '1.15fr 1fr' : undefined, gap: 40 }}>
+    <div style={{ position: 'relative', minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}`, paddingBottom: isMobile ? 200 : 120 }}>
+      <div style={{ maxWidth: isMobile ? '100%' : 1100, margin: '0 auto', padding: isMobile ? 0 : '28px 40px 0' }}>
+        <div style={{ display: isMobile ? 'block' : 'grid', gridTemplateColumns: isMobile ? undefined : isDesktop ? '1.05fr 1fr' : '1fr 1fr', gap: isDesktop ? 44 : 26 }}>
           {imageBlock}
           {info}
         </div>
 
         {/* related */}
         {related.length > 0 && (
-          <div style={{ padding: isDesktop ? '36px 0 0' : '8px 20px 0' }}>
+          <div style={{ padding: isMobile ? '8px 20px 0' : '36px 0 0' }}>
             <div style={{ font: `700 16px ${T.font}`, color: T.text, letterSpacing: '-0.02em', marginBottom: 12 }}>{t('youMayAlsoLike')}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isDesktop ? 4 : 2}, 1fr)`, gap: 12 }}>
-              {related.slice(0, isDesktop ? 4 : 2).map((rp) => (
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>
+              {related.slice(0, cols).map((rp) => (
                 <GlowProductCard key={rp.id} T={T} p={rp} hue={tenant.hue} compact onOpen={(p) => navigate(`/product/${p.id}`)} onAdd={(p) => addToCart({ id: p.id, title: p.title, price: p.price, image: p.image, thumbnail: p.thumbnail })} />
               ))}
             </div>
           </div>
         )}
 
-        <div style={{ padding: isDesktop ? '28px 0 0' : '24px 20px 0' }}><PoweredBy T={T} /></div>
+        <div style={{ padding: isMobile ? '24px 20px 0' : '28px 0 0' }}><PoweredBy T={T} /></div>
       </div>
 
       {/* mobile sticky CTA — sits above the global dock */}
-      {!isDesktop && (
+      {isMobile && inStock && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 92, padding: '14px 16px', background: T.bg, borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 10, zIndex: 1100 }}>
-          <button onClick={addAndOpenCart} disabled={!inStock} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: inStock ? T.grad : T.surface2, color: inStock ? '#fff' : T.textMute, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: inStock ? 'pointer' : 'not-allowed', boxShadow: inStock ? `0 10px 28px ${T.accent}55` : 'none' }}>
-            <Icon.bag /> {inStock ? t('addToBag', { price: money(shownPrice) }) : t('outOfStock')}
+          <button onClick={addAndOpenCart} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: T.grad, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55` }}>
+            <Icon.bag /> {t('addToBag', { price: money(shownPrice) })}
           </button>
         </div>
       )}

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { productApi, handleApiError } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useGlow } from '../styles/glow';
+import { useTK } from '../core/useTK';
 import { money } from '../components/glow/GlowChrome';
 import ProductEditorDialog from '../components/owner/ProductEditorDialog';
 import DeleteProductDialog from '../components/owner/DeleteProductDialog';
@@ -13,7 +13,7 @@ import DeleteProductDialog from '../components/owner/DeleteProductDialog';
 export default function ManagerProducts() {
   const { t } = useTranslation('manager');
   const { canManageStore, loading: authLoading } = useAuth();
-  const { T } = useGlow();
+  const { T } = useTK();
   const [products, setProducts] = useState(null);
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(null);   // product | 'new' | null

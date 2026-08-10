@@ -5,6 +5,8 @@ import PlatformRegistration from './PlatformRegistration';
 import PlatformAccount from './PlatformAccount';
 import PlatformAuth from './PlatformAuth';
 import PlatformNotFound from './PlatformNotFound';
+import PlatformLegal from './PlatformLegal';
+import PlatformHelp from './PlatformHelp';
 import AuthCallback from '../pages/AuthCallback';
 
 // esy.ge — the platform front door. Mounted (instead of the storefront shell)
@@ -20,6 +22,11 @@ export default function PlatformShell() {
       <Route path="/create-store" element={<PlatformRegistration />} />
       <Route path="/account" element={<PlatformAccount />} />
       <Route path="/signin" element={<PlatformAuth />} />
+      {/* The footer has always linked to these; until now every one 404'd. */}
+      <Route path="/help" element={<PlatformHelp />} />
+      <Route path="/terms" element={<PlatformLegal kind="terms" />} />
+      <Route path="/privacy" element={<PlatformLegal kind="privacy" />} />
+      <Route path="/returns" element={<PlatformLegal kind="returns" />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="*" element={<PlatformNotFound />} />
     </Routes>

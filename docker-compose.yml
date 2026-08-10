@@ -65,6 +65,11 @@ services:
       # Signing key for the session JWT. Unset falls back to the dev default in
       # application.yml, which invalidates tokens whenever that default changes.
       JWT_SECRET: ${JWT_SECRET:-}
+      # SMS (smsoffice.ge) — delivers the phone one-time code. Leave UNSET
+      # locally: with no key the code is logged and returned to the browser so
+      # verification works without spending messages. Set it and the code is
+      # only ever delivered by SMS.
+      APP_SMS_KEY: ${APP_SMS_KEY:-}
       # Payments (Bank of Georgia). Per-store creds are entered in Store
       # Settings; these are platform knobs. All optional locally — unset
       # APP_SECRET_ENC_KEY falls back to a dev key, unset BOG_PUBLIC_KEY

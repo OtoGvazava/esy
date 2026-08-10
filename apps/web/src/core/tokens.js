@@ -31,10 +31,39 @@ export function track(lang, latin) {
   return String(lang || '').toLowerCase().startsWith('ka') ? '-0.005em' : latin;
 }
 
+// The default platform accent, used whenever a tenant brand is unset or unusable.
+export const DEFAULT_ACCENT = '#6366f1';
+
+// The design's type stacks, named so they can be applied outside a TK() call —
+// MUI's createTheme needs the same family, or every Button, TextField and
+// Dialog falls back to MUI's default Roboto while the surrounding inline-styled
+// markup uses this. Noto Sans Georgian leads because Georgian is the default
+// language; both faces are loaded in index.html.
+export const FONT = "'Noto Sans Georgian', 'Inter', -apple-system, system-ui, sans-serif";
+export const MONO = "ui-monospace, 'SF Mono', Menlo, monospace";
+
+// mixHex parses hex pairs positionally, so a malformed accent silently produces
+// `rgb(NaN, NaN, NaN)` for accentFg and a broken gradient. tenant.primaryColor is
+// owner-editable and arrives from the API, so every caller of TK() must validate
+// at that boundary rather than trusting it — TK routes the accent through mixHex
+// twice. This lives here, beside TK, because it guards TK's one precondition.
+const HEX6 = /^#[0-9a-f]{6}$/i;
+
+export function safeAccent(value, fallback = DEFAULT_ACCENT) {
+  if (typeof value !== 'string') return fallback;
+  const v = value.trim();
+  if (HEX6.test(v)) return v;
+  // Expand #abc → #aabbcc rather than discarding a usable shorthand.
+  if (/^#[0-9a-f]{3}$/i.test(v)) {
+    return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
+  }
+  return fallback;
+}
+
 // The design's token factory. `dark` selects the theme, `accent` is the tenant
 // brand colour and must be a 6-digit `#rrggbb` (accentFg and grad run it through
-// mixHex, which parses hex pairs positionally).
-export function TK(dark, accent = '#6366f1') {
+// mixHex, which parses hex pairs positionally) — pass it through safeAccent first.
+export function TK(dark, accent = DEFAULT_ACCENT) {
   return {
     bg: dark ? '#0a0a12' : '#fafafe',
     bg2: dark ? '#07070d' : '#f2f2f7',
@@ -61,8 +90,8 @@ export function TK(dark, accent = '#6366f1') {
     admin: '#0f766e',
     adminFg: dark ? '#3fa89f' : '#0b5d57',
     adminBg: dark ? '#0f766e33' : '#0f766e14',
-    font: "'Noto Sans Georgian', 'Inter', -apple-system, system-ui, sans-serif",
-    mono: "ui-monospace, 'SF Mono', Menlo, monospace",
+    font: FONT,
+    mono: MONO,
     shadow: dark ? '0 20px 50px rgba(0,0,0,0.5)' : '0 12px 40px rgba(20,20,60,0.10)',
     dark,
   };
