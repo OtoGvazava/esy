@@ -50,7 +50,22 @@ export default function Orders() {
             const tone = status === 'delivered' ? T.success
               : status === 'cancelled' ? T.danger : T.accentFg;
             return (
-              <div key={o.id || idx} style={{ padding: '14px 14px', borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+              // Rows open the order. Without this the list was a dead end:
+              // the only screen a shopper could reach said how many items and
+              // what it cost, never what they had actually bought.
+              <div
+                key={o.id || idx}
+                role="button"
+                tabIndex={0}
+                onClick={() => o.orderNumber && navigate(`/orders/${encodeURIComponent(o.orderNumber)}`)}
+                onKeyDown={(e) => {
+                  if ((e.key === 'Enter' || e.key === ' ') && o.orderNumber) {
+                    e.preventDefault();
+                    navigate(`/orders/${encodeURIComponent(o.orderNumber)}`);
+                  }
+                }}
+                style={{ padding: '14px 14px', borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12, cursor: o.orderNumber ? 'pointer' : 'default' }}
+              >
                 <span style={{ width: 42, height: 42, borderRadius: 12, background: T.accentBg, color: T.accentFg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.bag /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ font: `700 13px ${T.mono}`, color: T.text }}>#{id}</div>

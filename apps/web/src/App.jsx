@@ -12,6 +12,7 @@ import PayReturn from './pages/PayReturn';
 import OrderSuccess from './pages/OrderSuccess';
 import Account from './pages/Account';
 import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
 import SignIn from './pages/SignIn';
 import AuthCallback from './pages/AuthCallback';
 import LanguageSettings from './pages/LanguageSettings';
@@ -66,6 +67,7 @@ function AppShell() {
         <Route path="/success" element={<OrderSuccess />} />
         <Route path="/account" element={<Account />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/orders/:orderNumber" element={<OrderDetail />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/settings/language" element={<LanguageSettings />} />

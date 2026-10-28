@@ -128,6 +128,36 @@
       "refunded": "refunded"
     }
   },
+  "orderDetail": {
+    "title": "Order",
+    "loading": "Loading your order…",
+    "loadFailed": "Could not load this order.",
+    "notFoundTitle": "Order not found",
+    "notFoundBody": "This order does not exist, or it is not on your account.",
+    "backToOrders": "Back to orders",
+    "placedOn": "Placed {{date}}",
+    "items": "Items",
+    "noLines": "No items were recorded on this order.",
+    "qtyAt_one": "{{count}} × {{price}}",
+    "qtyAt_other": "{{count}} × {{price}}",
+    "total": "Total",
+    "itemsSubtotal": "Items add up to {{amount}}",
+    "deliverTo": "Delivering to",
+    "soldBy": "Sold by",
+    "cancelTitle": "Cancel this order",
+    "cancelBody": "You can cancel while the store has not started preparing it. Once it ships, contact the store instead.",
+    "cancelCta": "Cancel order",
+    "cancelConfirm": "Yes, cancel it",
+    "cancelKeep": "Keep it",
+    "cancelling": "Cancelling…",
+    "cancelFailed": "Could not cancel this order.",
+    "payment": {
+      "pending": "payment pending",
+      "paid": "paid",
+      "failed": "payment failed",
+      "refunded": "refunded"
+    }
+  },
   "authCallback": {
     "signingIn": "Signing you in…",
     "bringingBack": "Bringing you back to {{name}}"

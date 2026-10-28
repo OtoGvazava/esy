@@ -50,6 +50,22 @@ public class OrderController {
     }
 
     /**
+     * One order, with its line items.
+     *
+     * <p>The list deliberately carries {@code items} as a count, because a
+     * list of twenty orders does not need every line in it. That left the
+     * shopper with no way to see WHAT they had ordered — only how many things
+     * and what it cost. This is the screen that answers that, so it is the one
+     * endpoint that sends the lines.
+     */
+    @GetMapping("/{orderNumber}")
+    public ResponseEntity<Map<String, Object>> one(@PathVariable String orderNumber,
+                                                   Authentication authentication) {
+        User user = currentUser(authentication);
+        return ResponseEntity.ok(toDetailMap(orderService.orderForShopper(orderNumber, user)));
+    }
+
+    /**
      * Shopper self-cancel (decision D1): allowed only while the order is still
      * PLACED and unpaid — the service enforces both. Paid or in-payment orders
      * return 409 and the shopper is told to contact the store.
@@ -105,6 +121,35 @@ public class OrderController {
             ship.put("country", o.getShipCountry());
             m.put("delivery", ship);
         }
+        return m;
+    }
+
+    /**
+     * The list shape plus the lines, and whether the shopper may still cancel.
+     *
+     * <p>{@code cancellable} is computed here rather than left to the browser
+     * because it is the same two conditions {@code cancelByShopper} enforces
+     * (PLACED, and no payment taken). Re-deriving them in the client would be a
+     * second copy of a rule that decides whether money can be undone, and the
+     * two would drift.
+     */
+    static Map<String, Object> toDetailMap(Order o) {
+        Map<String, Object> m = toMap(o);
+        m.put("lines", o.getItems().stream().map(i -> {
+            Map<String, Object> line = new HashMap<>();
+            line.put("title", i.getTitle());
+            line.put("variant", i.getVariantLabel());
+            line.put("quantity", i.getQuantity());
+            line.put("price", i.getPrice());
+            // The line total, worked out once on the server so the screen never
+            // has to multiply money in floating point.
+            line.put("lineTotal", i.getPrice() == null || i.getQuantity() == null
+                ? null
+                : i.getPrice().multiply(java.math.BigDecimal.valueOf(i.getQuantity())));
+            return line;
+        }).collect(Collectors.toList()));
+        Order.PaymentStatus ps = o.getPaymentStatus() == null ? Order.PaymentStatus.NONE : o.getPaymentStatus();
+        m.put("cancellable", o.getStatus() == Order.Status.PLACED && ps == Order.PaymentStatus.NONE);
         return m;
     }
 

@@ -264,6 +264,17 @@ export const orderApi = {
   list() {
     return api.get('/api/orders');
   },
+  // One order WITH its lines + a server-computed `cancellable`. The list
+  // carries only an item count, so this is the only way to see what was
+  // actually ordered.
+  get(orderNumber) {
+    return api.get(`/api/orders/${encodeURIComponent(orderNumber)}`);
+  },
+  // Shopper self-cancel (D1). Refused with 409 once the store has shipped or
+  // any payment has been taken.
+  cancel(orderNumber) {
+    return api.post(`/api/orders/${encodeURIComponent(orderNumber)}/cancel`, {});
+  },
 };
 
 // ---- Address book (platform-wide, decision D4) ------------------------------

@@ -232,6 +232,21 @@ public class OrderService {
      * purpose — a payment in flight must settle (or fail) first, otherwise a
      * late success callback would pay for a cancelled order.
      */
+    /**
+     * One of the shopper's own orders, by its public number.
+     *
+     * <p>Not found and not-yours are deliberately the same 404. Order numbers
+     * are guessable enough that a distinct 403 would confirm which ones exist,
+     * and a shopper has no legitimate reason to learn that someone else's order
+     * is real. Cancel keeps its separate 403 because the caller already proved
+     * ownership to reach it.
+     */
+    public Order orderForShopper(String orderNumber, User user) {
+        return findByOrderNumber(orderNumber)
+            .filter(o -> user != null && o.getUser() != null && o.getUser().getId().equals(user.getId()))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+    }
+
     public Order cancelByShopper(String orderNumber, User user) {
         Order order = findByOrderNumber(orderNumber)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));

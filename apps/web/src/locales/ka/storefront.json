@@ -128,6 +128,36 @@
       "refunded": "თანხა დაბრუნდა"
     }
   },
+  "orderDetail": {
+    "title": "შეკვეთა",
+    "loading": "იტვირთება…",
+    "loadFailed": "შეკვეთის ჩატვირთვა ვერ მოხერხდა.",
+    "notFoundTitle": "შეკვეთა ვერ მოიძებნა",
+    "notFoundBody": "ეს შეკვეთა არ არსებობს, ან არ არის თქვენს ანგარიშზე.",
+    "backToOrders": "შეკვეთებში დაბრუნება",
+    "placedOn": "გაკეთდა {{date}}",
+    "items": "ნივთები",
+    "noLines": "ამ შეკვეთაზე ნივთები არ აღირიცხა.",
+    "qtyAt_one": "{{count}} × {{price}}",
+    "qtyAt_other": "{{count}} × {{price}}",
+    "total": "ჯამი",
+    "itemsSubtotal": "ნივთების ჯამი {{amount}}",
+    "deliverTo": "მიწოდების მისამართი",
+    "soldBy": "გამყიდველი",
+    "cancelTitle": "შეკვეთის გაუქმება",
+    "cancelBody": "გაუქმება შესაძლებელია სანამ მაღაზია მომზადებას არ დაიწყებს. გაგზავნის შემდეგ დაუკავშირდით მაღაზიას.",
+    "cancelCta": "შეკვეთის გაუქმება",
+    "cancelConfirm": "დიახ, გაუქმდეს",
+    "cancelKeep": "დარჩეს",
+    "cancelling": "უქმდება…",
+    "cancelFailed": "შეკვეთის გაუქმება ვერ მოხერხდა.",
+    "payment": {
+      "pending": "გადახდა მოლოდინში",
+      "paid": "გადახდილი",
+      "failed": "გადახდა ჩაიშალა",
+      "refunded": "დაბრუნებული"
+    }
+  },
   "authCallback": {
     "signingIn": "მიმდინარეობს შესვლა…",
     "bringingBack": "გიბრუნებთ {{name}}-ში"
