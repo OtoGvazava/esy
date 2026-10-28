@@ -48,6 +48,9 @@ public class OrderService {
     private final PlatformProperties platformProperties;
     private final SmsSender sms;
     private final SmsTemplates smsTemplates;
+    // No cycle: BogPaymentService depends only on config, the cipher and an
+    // HTTP client — it does not reach back into orders.
+    private final BogPaymentService bogPaymentService;
 
     public Order createOrder(User user, Tenant tenant, CreateOrderRequest req) {
         if (req.getItems() == null || req.getItems().isEmpty()) {
@@ -262,6 +265,83 @@ public class OrderService {
         }
         order.setStatus(Order.Status.CANCELLED);
         return orderRepository.save(order);
+    }
+
+    /**
+     * Sends money back for one of the store's own orders (decision D2).
+     *
+     * <p>D2 holds that a refund is not a cancellation. Cancelling withdraws an
+     * order before it is fulfilled; refunding returns money for one that was
+     * paid, and the two are allowed at different times by different people.
+     * Nothing here touches {@link Order.Status} — a delivered, refunded order
+     * stays delivered, because that is what happened.
+     *
+     * <p>The order of operations matters. Headroom is claimed in the database
+     * first, in one conditional UPDATE, so two clicks cannot both decide the
+     * money is available; only then is the bank called. If the bank refuses,
+     * the exception rolls the claim back. If the bank does not answer at all,
+     * the claim deliberately stands: the refund may well have gone through, and
+     * a clean rollback would invite a second attempt at the same money.
+     *
+     * <p>Stock is not returned to the shelf. A refunded item may be back in the
+     * shop or may be in a bin; only the merchant knows, and silently
+     * re-stocking something they do not have would oversell it.
+     *
+     * @param amount the partial amount, or null to refund everything still
+     *               refundable on the order
+     */
+    @Transactional
+    public Order requestRefund(Tenant tenant, Long orderId, BigDecimal amount) {
+        Order order = orderForTenant(tenant, orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        Order.PaymentStatus ps = order.getPaymentStatus() == null
+            ? Order.PaymentStatus.NONE : order.getPaymentStatus();
+        if (ps != Order.PaymentStatus.PAID && ps != Order.PaymentStatus.REFUND_PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                ps == Order.PaymentStatus.NONE
+                    ? "Nothing was paid online for this order, so there is nothing to refund"
+                    : "This order cannot be refunded while its payment is " + ps.name().toLowerCase());
+        }
+
+        BigDecimal refundable = order.refundableAmount();
+        if (refundable.signum() <= 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This order has already been refunded in full");
+        }
+        BigDecimal asked = amount == null ? refundable : amount.setScale(2, RoundingMode.HALF_UP);
+        if (asked.signum() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "A refund has to be more than zero");
+        }
+        if (asked.compareTo(refundable) > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "That is more than is left to refund on this order (" + refundable.toPlainString() + ")");
+        }
+
+        if (orderRepository.claimRefund(order.getId(), asked) != 1) {
+            // Lost the race, or the state moved under us. Either way the safe
+            // answer is "look again" rather than sending a second instruction.
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This order changed while the refund was being sent — reload it and check before retrying");
+        }
+
+        // Whole-order refunds omit the amount, which is what BOG documents and
+        // avoids a rounding argument with the bank over the final lari.
+        boolean whole = asked.compareTo(order.getTotal() == null ? asked : order.getTotal()) == 0
+            && order.refundedOrZero().signum() == 0;
+        BogPaymentService.RefundResult result =
+            bogPaymentService.refund(tenant, order.getBogOrderId(), whole ? null : asked);
+
+        if (!result.accepted()) {
+            // An explicit refusal is safe to undo: no money moved.
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                result.message() == null ? "The bank refused the refund" : result.message());
+        }
+
+        log.info("Refund of {} requested on order {} (store {})",
+            asked.toPlainString(), order.getOrderNumber(), tenant.getSubdomain());
+        return findByOrderNumber(order.getOrderNumber()).orElse(order);
     }
 
     /**

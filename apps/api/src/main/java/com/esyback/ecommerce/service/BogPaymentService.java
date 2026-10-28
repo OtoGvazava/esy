@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayInputStream;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -31,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -279,6 +281,109 @@ public class BogPaymentService {
         } catch (Exception e) {
             log.warn("BOG callback signature verification error: {}", e.getMessage());
             return false;
+        }
+    }
+
+    // ---- Refund -------------------------------------------------------------
+
+    /**
+     * What BOG said about a refund request.
+     *
+     * @param accepted the request was taken (HTTP 2xx). NOT "the money moved" —
+     *                 see below.
+     * @param key      BOG's status key; {@code request_received} on acceptance
+     * @param message  BOG's human-readable line, shown to the operator as-is
+     *                 when something went wrong
+     * @param actionId BOG's identifier for the action, worth keeping in the log
+     *                 so a disputed refund can be traced with the bank
+     */
+    public record RefundResult(boolean accepted, String key, String message, String actionId) {}
+
+    /**
+     * Asks BOG to send money back.
+     *
+     * <p>{@code POST /payments/v1/payment/refund/{order_id}}, with {@code
+     * amount} omitted for the whole order. Partial refunds may be repeated
+     * until the processed total is reached.
+     *
+     * <p><b>This is asynchronous.</b> A 2xx means "request_received" — BOG has
+     * accepted the instruction, not completed it. The settled outcome arrives
+     * the same way a payment's does: a callback, or the next receipt poll,
+     * where {@code refunded}/{@code refunded_partially} map to REFUNDED. So
+     * acceptance must never be recorded as money returned.
+     *
+     * <p>An {@code Idempotency-Key} is sent on every attempt. BOG replays the
+     * original response for a repeated key, which is the protection against a
+     * retried HTTP call turning into two refunds.
+     *
+     * @param amount the partial amount, or null for the full order
+     */
+    public RefundResult refund(Tenant tenant, String bogOrderId, BigDecimal amount) {
+        if (!isConfigured(tenant)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This store has no Bank of Georgia connection, so nothing can be refunded through it");
+        }
+        if (bogOrderId == null || bogOrderId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This order has no payment at the bank to refund");
+        }
+        // The documented example sends amount as a quoted decimal; an omitted
+        // field means the full amount.
+        String body = amount == null
+            ? "{}"
+            : "{\"amount\":\"" + amount.toPlainString() + "\"}";
+        try {
+            HttpRequest req = HttpRequest.newBuilder(
+                    URI.create(baseUrl() + "/payments/v1/payment/refund/" + bogOrderId))
+                .timeout(Duration.ofSeconds(20))
+                .header("Authorization", "Bearer " + accessToken(tenant))
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+                .build();
+            HttpResponse<byte[]> res = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
+            String raw = bodyString(res);
+            String key = null;
+            String message = null;
+            String actionId = null;
+            try {
+                JsonNode json = objectMapper.readTree(raw);
+                key = json.path("key").asText(null);
+                message = json.path("message").asText(null);
+                actionId = json.path("action_id").asText(null);
+            } catch (Exception ignored) {
+                // A body we cannot parse does not change whether it was accepted;
+                // the status code decides, and the raw text goes to the log.
+            }
+            if (res.statusCode() / 100 != 2) {
+                log.warn("BOG refund for {} -> HTTP {}: {}", bogOrderId, res.statusCode(), raw);
+                return new RefundResult(false, key,
+                    message != null ? message : "The bank refused the refund (HTTP " + res.statusCode() + ")",
+                    actionId);
+            }
+            log.info("BOG refund accepted for {} (amount={}, key={}, action={})",
+                bogOrderId, amount == null ? "full" : amount.toPlainString(), key, actionId);
+            return new RefundResult(true, key, message, actionId);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            // Deliberately NOT turned into "refused". A timeout or a dropped
+            // connection leaves the refund's real state unknown, and reporting
+            // it as a failure would invite a second attempt at money that may
+            // already be on its way back. The caller keeps its claim and tells
+            // the operator to check with the bank.
+            log.error("BOG refund call failed for {}: {}", bogOrderId, e.getClass().getSimpleName());
+            throw new BogUnreachableException(
+                "The refund was sent but the bank did not answer. Check the order at the bank "
+                    + "before trying again — it may already be refunded.");
+        }
+    }
+
+    /** The bank's answer never arrived; the refund's state is unknown. */
+    public static class BogUnreachableException extends RuntimeException {
+        public BogUnreachableException(String message) {
+            super(message);
         }
     }
 

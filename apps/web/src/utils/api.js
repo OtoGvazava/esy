@@ -494,6 +494,20 @@ export const tenantApi = {
       body: JSON.stringify({ status }),
     });
   },
+  // Refund one of this store's orders (D2). Owner-only server-side; a manager
+  // gets 403. Pass an empty amount to return everything still refundable.
+  //
+  // The order comes back with paymentStatus `refund_pending`, not `refunded` —
+  // BOG's refund API is asynchronous and the settled outcome arrives later by
+  // callback. It also carries `refunded` and `refundable` so the screen can
+  // show what is left without recomputing it.
+  refundOrder(orderId, amount, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    const body = amount === undefined || amount === null || `${amount}`.trim() === ''
+      ? {}
+      : { amount: `${amount}`.trim() };
+    return api.post(`/api/tenant/orders/${orderId}/refund${q}`, body);
+  },
   // Public store directory (active stores).
   list() {
     return api.get('/api/tenant');

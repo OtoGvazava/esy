@@ -11,10 +11,12 @@
 // can be unpaid and a PAID order can be cancelled, so they are never merged
 // into one "status".
 //
-// Refunds are NOT here yet, deliberately — see the payment card.
+// Refunds live in the payment card, owner-only (D2): a refund is not a
+// cancellation, so it never touches the fulfilment timeline beside it.
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useTK } from '../core/useTK';
 import { Btn, Card, Chip, Note } from '../core/primitives';
@@ -83,6 +85,9 @@ function Row({ T, k, v }) {
 export default function ManagerOrderDetail() {
   const { T } = useTK();
   const { t } = useTranslation('manager');
+  // Refunds are owner-only and the API enforces it; this just keeps a manager
+  // from being shown a control that would refuse them.
+  const { isStoreOwner } = useAuth();
   const { isMobile, isDesktop } = useDevice();
   const navigate = useNavigate();
   const { orderId } = useParams();
@@ -97,6 +102,8 @@ export default function ManagerOrderDetail() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [refunding, setRefunding] = useState(false);
+  const [refundAmount, setRefundAmount] = useState('');
 
   const load = useCallback(() => {
     let alive = true;
@@ -126,6 +133,20 @@ export default function ManagerOrderDetail() {
     }
   };
 
+  const refund = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const updated = await tenantApi.refundOrder(order.id, refundAmount, sub);
+      setOrder((prev) => ({ ...prev, ...updated, lines: prev.lines }));
+      setRefunding(false);
+    } catch (e) {
+      setError(handleApiError(e, t('detail.refundFailed')));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) {
     return <div style={{ font: `500 13px ${T.font}`, color: T.textMute }}>{t('orders.loading')}</div>;
   }
@@ -146,6 +167,12 @@ export default function ManagerOrderDetail() {
   const payment = enumName(order.paymentStatus);
   const total = Number(order.total) || 0;
   const fee = feeOf(total);
+  // Server-supplied, not inferred from the status: partial refunds mean the
+  // remaining figure is the only thing that says what is still refundable.
+  const refunded = Number(order.refunded) || 0;
+  const refundable = order.refundable != null
+    ? Number(order.refundable) || 0
+    : (payment === 'PAID' ? total - refunded : 0);
   const dead = status === 'CANCELLED' || payment === 'REFUNDED';
   const next = NEXT_STEP[status];
   const lines = Array.isArray(order.lines) ? order.lines : [];
@@ -234,15 +261,67 @@ export default function ManagerOrderDetail() {
               </Chip>
             </div>
             <div style={{ font: `400 12.5px/1.6 ${T.font}`, color: T.textDim }}>{t('detail.twoStatusNote')}</div>
-            {/* The design puts an "issue refund" button here. There is no refund
-                operation behind it: money would have to go back through Bank of
-                Georgia, and no card payment has ever been run end to end on
-                this platform. A button that looks like it returns a shopper's
-                money and does not is worse than its absence, so the screen says
-                where a refund happens today instead. */}
-            <div style={{ marginTop: 13 }}>
-              <Note T={T} tone="warn">{t('detail.refundNotBuilt')}</Note>
-            </div>
+
+            {/* The refund control, owner-only — the API refuses a manager.
+                Fulfilment is a manager's job; sending money back out of the
+                business is the owner's, and they are different permissions.
+
+                Amount defaults to everything still refundable and can be
+                lowered for a partial refund. What it never claims is that the
+                money has arrived: BOG's refund API is asynchronous, so a
+                successful request shows as "refund pending" until the bank
+                confirms it. */}
+            {refundable > 0 && isStoreOwner && (
+              <div style={{ marginTop: 13, paddingTop: 13, borderTop: `1px solid ${T.border}` }}>
+                {refunded > 0 && (
+                  <div style={{ font: `500 11.5px ${T.font}`, color: T.textMute, marginBottom: 8 }}>
+                    {t('detail.refundedSoFar', { amount: money(refunded) })}
+                  </div>
+                )}
+                {!refunding ? (
+                  <Btn T={T} kind="ghost" size="sm" onClick={() => { setRefunding(true); setRefundAmount(String(refundable)); }}>
+                    {t('detail.refundCta')}
+                  </Btn>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                    <label style={{ font: `600 11.5px ${T.font}`, color: T.textDim }}>
+                      {t('detail.refundAmount', { max: money(refundable) })}
+                    </label>
+                    <input
+                      value={refundAmount}
+                      onChange={(e) => setRefundAmount(e.target.value)}
+                      inputMode="decimal"
+                      style={{
+                        height: 40, padding: '0 12px', borderRadius: 10,
+                        border: `1px solid ${T.border}`, background: T.dark ? T.surface2 : '#fff',
+                        color: T.text, font: `600 13px ${T.font}`, outline: 'none',
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <Btn T={T} kind="danger" size="sm" disabled={busy} onClick={refund}>
+                        {busy ? t('detail.refunding') : t('detail.refundConfirm')}
+                      </Btn>
+                      <Btn T={T} kind="ghost" size="sm" disabled={busy} onClick={() => setRefunding(false)}>
+                        {t('detail.refundCancel')}
+                      </Btn>
+                    </div>
+                    <span style={{ font: `400 11.5px/1.5 ${T.font}`, color: T.textMute }}>
+                      {t('detail.refundNote')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+            {refundable <= 0 && refunded > 0 && (
+              <div style={{ marginTop: 13 }}>
+                <Note T={T}>{t('detail.refundedInFull', { amount: money(refunded) })}</Note>
+              </div>
+            )}
+            {refundable > 0 && !isStoreOwner && (
+              <div style={{ marginTop: 13 }}>
+                <Note T={T}>{t('detail.refundOwnerOnly')}</Note>
+              </div>
+            )}
           </Card>
         </div>
 

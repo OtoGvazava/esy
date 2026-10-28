@@ -43,4 +43,31 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     default int claimPaid(String orderNumber) {
         return claimPaid(orderNumber, Order.PaymentStatus.PAID, Order.PaymentStatus.PENDING);
     }
+
+    /**
+     * Reserves refund headroom before the bank is called.
+     *
+     * <p>One conditional UPDATE, for the same reason {@code claimPaid} is one:
+     * two clicks on Refund arrive as two transactions that would each read
+     * {@code refunded_amount = 0} under READ COMMITTED and each decide the full
+     * amount was available. Here the database decides, so exactly one caller
+     * sees {@code claimed == 1} and exactly one refund is sent.
+     *
+     * <p>The order must already be PAID or mid-refund, and the running total
+     * must not exceed what was charged.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Order o set o.refundedAmount = coalesce(o.refundedAmount, 0) + :amount, "
+        + "o.paymentStatus = :refundPending "
+        + "where o.id = :id "
+        + "and o.paymentStatus in (:paid, :refundPending) "
+        + "and coalesce(o.refundedAmount, 0) + :amount <= o.total")
+    int claimRefund(@Param("id") Long id,
+                    @Param("amount") java.math.BigDecimal amount,
+                    @Param("paid") Order.PaymentStatus paid,
+                    @Param("refundPending") Order.PaymentStatus refundPending);
+
+    default int claimRefund(Long id, java.math.BigDecimal amount) {
+        return claimRefund(id, amount, Order.PaymentStatus.PAID, Order.PaymentStatus.REFUND_PENDING);
+    }
 }

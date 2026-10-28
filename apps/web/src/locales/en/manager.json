@@ -148,7 +148,8 @@
       "pending": "Payment pending",
       "paid": "Paid",
       "failed": "Payment failed",
-      "refunded": "Refunded"
+      "refunded": "Refunded",
+      "refund_pending": "refund pending"
     },
     "advance": {
       "shipped": "Mark shipped",
@@ -162,7 +163,6 @@
     "whereIsIt": "Where is this order?",
     "payment": "Payment",
     "twoStatusNote": "Fulfilment and payment are separate. A delivered order can still be unpaid, and a paid order can still be cancelled.",
-    "refundNotBuilt": "Refunds are not available from this screen yet. Money would have to go back through Bank of Georgia, and that path is not built — arrange a refund with the bank directly.",
     "cancelOrder": "Cancel this order",
     "cancelConfirm": "Cancel this order? The items go back to stock.",
     "cancelYes": "Yes, cancel it",
@@ -171,6 +171,16 @@
     "deliveryAddress": "Delivery address",
     "pickupInStore": "Collection in store — no delivery address",
     "call": "Call",
-    "esyFee": "esy fee (2%)"
+    "esyFee": "esy fee (2%)",
+    "refundCta": "Refund this order",
+    "refundAmount": "Amount to refund (up to {{max}})",
+    "refundConfirm": "Send the refund",
+    "refundCancel": "Not now",
+    "refunding": "Sending…",
+    "refundFailed": "The refund could not be sent.",
+    "refundNote": "The bank processes refunds asynchronously, so this will show as pending until they confirm it. The order stays as it is — a refund is not a cancellation.",
+    "refundedSoFar": "{{amount}} refunded so far.",
+    "refundedInFull": "Refunded in full ({{amount}}).",
+    "refundOwnerOnly": "Only the store owner can issue a refund."
   }
 }

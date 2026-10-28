@@ -29,9 +29,20 @@ public class Order {
      * PENDING  = BOG order created, customer redirected, awaiting the result.
      * PAID     = BOG callback/receipt confirmed a completed payment.
      * FAILED   = BOG reported rejected/failed, or the customer abandoned it.
-     * REFUNDED = fully/partially refunded via BOG.
+     * REFUND_PENDING = a refund has been asked for and BOG accepted the
+     *            request, but the money has not moved yet. BOG's refund API is
+     *            asynchronous: it answers "request_received", and the outcome
+     *            arrives later by callback or on the next receipt poll. Showing
+     *            REFUNDED at request time would tell a shopper they had been
+     *            paid back before they had.
+     * REFUNDED = BOG confirmed the money went back, fully or partially.
+     *
+     * Adding REFUND_PENDING is only safe because `payment_status` carries
+     * columnDefinition="varchar(255)", which suppresses the @Enumerated CHECK
+     * Hibernate would otherwise have frozen at the original five values — see
+     * the enum-CHECK trap in CLAUDE.md. Do not remove that columnDefinition.
      */
-    public enum PaymentStatus { NONE, PENDING, PAID, FAILED, REFUNDED }
+    public enum PaymentStatus { NONE, PENDING, PAID, FAILED, REFUND_PENDING, REFUNDED }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -84,6 +95,31 @@ public class Order {
     // callback can't reach us (e.g. local dev).
     @Column(name = "bog_order_id")
     private String bogOrderId;
+
+    // How much of this order has been asked back from BOG, cumulatively —
+    // partial refunds can be repeated until the paid total is reached, so a
+    // boolean would not do.
+    //
+    // Nullable with NO DB default, for both ddl-auto=update traps at once: a
+    // NOT NULL column cannot be added to a populated table, and a "default" in
+    // columnDefinition gets re-emitted every boot as an invalid ALTER (see
+    // serviceFee above). Null means nothing has been refunded, which is correct
+    // for every order placed before refunds existed — read it through
+    // refundedOrZero() rather than directly.
+    @Column(name = "refunded_amount", precision = 12, scale = 2)
+    private BigDecimal refundedAmount;
+
+    /** Cumulative refunded amount, with null read as zero. */
+    public BigDecimal refundedOrZero() {
+        return refundedAmount == null ? BigDecimal.ZERO : refundedAmount;
+    }
+
+    /** What could still be refunded: never negative, even on odd legacy data. */
+    public BigDecimal refundableAmount() {
+        BigDecimal paid = total == null ? BigDecimal.ZERO : total;
+        BigDecimal left = paid.subtract(refundedOrZero());
+        return left.signum() < 0 ? BigDecimal.ZERO : left;
+    }
 
     // Delivery address, frozen at checkout (decision D4). Plain columns, not a
     // FK to Address: the user's address book is mutable and deletable, but an

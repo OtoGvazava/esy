@@ -13,6 +13,7 @@ import com.esyback.ecommerce.service.TenantContextService;
 import com.esyback.ecommerce.service.TenantLogoService;
 import com.esyback.ecommerce.service.TenantService;
 import com.esyback.ecommerce.service.UserService;
+import com.esyback.ecommerce.service.BogPaymentService;
 import com.esyback.ecommerce.web.TenantMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
@@ -210,6 +211,51 @@ public class TenantController {
         }
         Tenant tenant = tenantContextService.getCurrentTenant();
         return ResponseEntity.ok(OrderController.toMap(orderService.updateStatus(tenant, orderId, next)));
+    }
+
+    /**
+     * Refunds money for one of the current store's orders (decision D2).
+     *
+     * <p>Owner-only, unlike the fulfilment transition above. A manager moves
+     * orders along; sending money back out of the business is the owner's
+     * decision, and the two should not share a permission.
+     *
+     * <p>Body: {@code {"amount": "10.50"}} for a partial refund, or {@code {}}
+     * to return everything still refundable. D2 keeps this separate from
+     * cancellation: the fulfilment status is not touched, because a delivered
+     * order that was refunded was still delivered.
+     *
+     * <p>The response's paymentStatus will read {@code refund_pending}, not
+     * {@code refunded} — BOG's refund API is asynchronous and only confirms
+     * later, via the callback or the next receipt poll.
+     */
+    @PostMapping("/orders/{orderId}/refund")
+    @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> refundOrder(@PathVariable Long orderId,
+                                                           @RequestBody(required = false) Map<String, String> body) {
+        String raw = body == null ? null : body.get("amount");
+        java.math.BigDecimal amount = null;
+        if (raw != null && !raw.isBlank()) {
+            try {
+                amount = new java.math.BigDecimal(raw.trim().replace(",", "."));
+            } catch (NumberFormatException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "\"" + raw + "\" is not an amount");
+            }
+        }
+        Tenant tenant = tenantContextService.getCurrentTenant();
+        try {
+            Order refunded = orderService.requestRefund(tenant, orderId, amount);
+            Map<String, Object> m = new java.util.HashMap<>(OrderController.toMap(refunded));
+            m.put("refunded", refunded.refundedOrZero());
+            m.put("refundable", refunded.refundableAmount());
+            return ResponseEntity.ok(m);
+        } catch (BogPaymentService.BogUnreachableException e) {
+            // 502 with the bank's silence spelled out. The claim was kept on
+            // purpose, so the operator must check before retrying rather than
+            // being invited to send the same money twice.
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, e.getMessage());
+        }
     }
 
     // Surface the validation/conflict reason as { error }. Spring's default
