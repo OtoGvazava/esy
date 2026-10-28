@@ -1,4 +1,5 @@
-# Render Blueprint — a Docker web service (SPA + API).
+# Render Blueprint — a Docker web service (SPA + API) and the Key Value store
+# behind live config.
 # By default the DB is in-memory H2 (data resets on every deploy). For real
 # persistence, provision a Render PostgreSQL and set SPRING_DATASOURCE_URL/
 # USERNAME/PASSWORD on the web service (see deploy/render.md). JPA_DDL_AUTO is
@@ -21,3 +22,26 @@ services:
       # fresh schema each boot. On Postgres it preserves data across deploys.
       - key: JPA_DDL_AUTO
         value: update
+      # ConfigStore reads and writes here. Without it every write from
+      # admin.esy.ge/config and /integrations fails with a 502 and those
+      # screens are read-only — which is the state prod was in.
+      - key: SPRING_DATA_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: esy-kv
+          property: connectionString
+
+  # Live config: the service-fee rate, the SMS sender and the message
+  # templates. Small and write-rarely — the app re-reads through an 8s cache
+  # and degrades to env/defaults whenever this is unreachable, so the site
+  # stays up if it goes away.
+  - type: keyvalue
+    name: esy-kv
+    plan: free
+    region: oregon
+    # Private network only: nothing outside Render needs to reach it.
+    ipAllowList: []
+    # NOT the allkeys-lru default. These keys are configuration, not a cache —
+    # evicting one silently reverts a setting an admin deliberately made, and
+    # the app would read the old env value with nothing to indicate why.
+    maxmemoryPolicy: noeviction

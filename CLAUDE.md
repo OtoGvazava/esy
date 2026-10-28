@@ -59,6 +59,13 @@ Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
 - Render: `render.yaml` blueprint, free plan, **`autoDeploy: true`** (push to
   `main` ⇒ Render rebuilds). Live: `esy-r5ee.onrender.com`, `www.esy.ge`.
 - Setup runbook: `deploy/render.md` (incl. Google OAuth + custom domain steps).
+- **Live config needs the Key Value store.** `ConfigStore` is Redis-backed and
+  `SPRING_DATA_REDIS_URL` comes from the `esy-kv` service in the blueprint.
+  Without it every write from `admin.esy.ge/config` and `/integrations` 502s
+  and both screens go read-only (reads still work — the store degrades to
+  env/default). Its free tier is **non-persistent**, so an override can vanish
+  on its restart and silently fall back to the env value; anything that must
+  survive (`APP_SMS_KEY`, `APP_SMS_SENDER`) belongs in the environment.
 
 ## Gotchas (these cost real time — heed them)
 
