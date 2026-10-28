@@ -63,6 +63,8 @@
   "storeTitle": "Store settings",
   "fieldDisplayName": "Display name",
   "fieldStoreDescription": "Description",
+  "fieldStoreTagline": "Tagline",
+  "taglineHint": "{{count}} characters left — one line, shown in the hero and the directory",
   "fieldLogo": "Logo",
   "logoUpload": "Upload logo",
   "logoReplace": "Replace logo",

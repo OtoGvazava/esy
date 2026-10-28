@@ -43,8 +43,27 @@ public class Tenant {
     @Column(name = "display_name")
     private String displayName;
     
+    /**
+     * The long description: the About page's paragraph, and the shop's own
+     * account of itself.
+     */
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    /**
+     * The short description — one line, for the storefront hero and the
+     * platform directory.
+     *
+     * <p>The design has always drawn two: a tagline in the hero and a
+     * paragraph on the About page. With one field the same sentence printed in
+     * both places, so the Home About strip dropped its paragraph rather than
+     * repeat the hero. Nullable with no default, which is the only shape of new
+     * column {@code ddl-auto=update} can add to a populated table; a store that
+     * predates it simply has none, and every reader falls back to
+     * {@code description} so nothing goes blank.
+     */
+    @Column(name = "tagline")
+    private String tagline;
     
     @Column(name = "logo_url")
     private String logoUrl;

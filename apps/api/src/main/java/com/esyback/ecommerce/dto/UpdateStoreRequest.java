@@ -10,6 +10,9 @@ public class UpdateStoreRequest {
 
     private String displayName;
     private String description;
+    // The one-line version, for the hero and the directory. TenantService
+    // collapses whitespace and clamps it to the column width.
+    private String tagline;
     private String logoUrl;
     private String primaryColor;
     private String secondaryColor;
@@ -46,6 +49,14 @@ public class UpdateStoreRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getTagline() {
+        return tagline;
+    }
+
+    public void setTagline(String tagline) {
+        this.tagline = tagline;
     }
 
     public String getLogoUrl() {

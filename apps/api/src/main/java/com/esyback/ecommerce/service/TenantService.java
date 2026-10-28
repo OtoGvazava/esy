@@ -116,6 +116,7 @@ public class TenantService {
         tenant.setSubdomain(subdomain);
         tenant.setDisplayName(blankToNull(req.getDisplayName()) == null ? name : req.getDisplayName().trim());
         tenant.setDescription(blankToNull(req.getDescription()));
+        tenant.setTagline(clampTagline(req.getTagline()));
         tenant.setLogoUrl(blankToNull(req.getLogoUrl()));
         tenant.setPrimaryColor(normalizeColor(req.getPrimaryColor(), DEFAULT_PRIMARY));
         tenant.setSecondaryColor(normalizeColor(req.getSecondaryColor(), DEFAULT_SECONDARY));
@@ -141,6 +142,7 @@ public class TenantService {
         String displayName = blankToNull(req.getDisplayName());
         tenant.setDisplayName(displayName == null ? tenant.getName() : displayName);
         tenant.setDescription(blankToNull(req.getDescription()));
+        tenant.setTagline(clampTagline(req.getTagline()));
         tenant.setLogoUrl(blankToNull(req.getLogoUrl()));
         tenant.setPrimaryColor(normalizeColor(req.getPrimaryColor(), DEFAULT_PRIMARY));
         tenant.setSecondaryColor(normalizeColor(req.getSecondaryColor(), DEFAULT_SECONDARY));
@@ -205,6 +207,24 @@ public class TenantService {
         String t = s.trim();
         return t.isEmpty() ? null : t;
     }
+
+    /**
+     * The hero tagline, trimmed to one line and cut to the column width.
+     *
+     * <p>It is a {@code varchar(255)}, and it renders on one line in the hero
+     * and in a directory card, so a pasted paragraph would either be rejected
+     * by the database or wreck the layout. Newlines collapse to spaces for the
+     * same reason: this field has exactly one line to live on.
+     */
+    static String clampTagline(String s) {
+        String t = blankToNull(s);
+        if (t == null) return null;
+        t = t.replaceAll("\\s+", " ").trim();
+        return t.length() <= TAGLINE_MAX ? t : t.substring(0, TAGLINE_MAX).trim();
+    }
+
+    /** Matches the column; the editor counts down to the same number. */
+    public static final int TAGLINE_MAX = 160;
 
     private static String normalizeColor(String color, String fallback) {
         String c = blankToNull(color);

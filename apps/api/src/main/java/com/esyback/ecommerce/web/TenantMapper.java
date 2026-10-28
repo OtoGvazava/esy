@@ -17,6 +17,10 @@ public final class TenantMapper {
         m.put("subdomain", t.getSubdomain());
         m.put("displayName", t.getDisplayName());
         m.put("description", t.getDescription());
+        // The short/long pair. Readers prefer tagline and fall back to
+        // description, so a store that has not written one yet looks exactly
+        // as it did before this field existed.
+        m.put("tagline", t.getTagline());
         m.put("logoUrl", t.getLogoUrl());
         m.put("category", t.getCategory());
         m.put("primaryColor", t.getPrimaryColor());

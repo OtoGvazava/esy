@@ -63,6 +63,8 @@
   "storeTitle": "მაღაზიის პარამეტრები",
   "fieldDisplayName": "საჩვენებელი სახელი",
   "fieldStoreDescription": "აღწერა",
+  "fieldStoreTagline": "სლოგანი",
+  "taglineHint": "დარჩა {{count}} სიმბოლო — ერთი ხაზი, ჩანს მთავარზე და კატალოგში",
   "fieldLogo": "ლოგო",
   "logoUpload": "ლოგოს ატვირთვა",
   "logoReplace": "ლოგოს შეცვლა",

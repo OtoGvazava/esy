@@ -92,7 +92,13 @@ export function useGlow() {
     ? {
         ...TENANT,
         name: tenant.displayName || tenant.name || TENANT.name,
-        bio: tenant.description || TENANT.bio,
+        // The short/long pair the design draws. `bio` is the one-liner in the
+        // hero; `about` is the paragraph. bio falls back to the long form so a
+        // store that has not written a tagline looks exactly as it did before
+        // the split existed — and callers that show both compare the two, which
+        // is how the About strip avoids printing the same sentence twice.
+        bio: tenant.tagline || tenant.description || TENANT.bio,
+        about: tenant.description || '',
         location:
           [tenant.addressCity, tenant.addressCountry].filter(Boolean).join(' · ') ||
           TENANT.location,

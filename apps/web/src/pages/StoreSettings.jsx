@@ -8,6 +8,11 @@ import { useGlow } from '../styles/glow';
 import { Icon } from '../components/glow/GlowPrimitives';
 import { GlowScreen } from '../components/glow/GlowChrome';
 
+// Mirrors TenantService.TAGLINE_MAX — the server collapses whitespace and
+// cuts at this length, so the field stops the owner before it is trimmed
+// silently under them.
+const TAGLINE_MAX = 160;
+
 // Server-allowed store categories (mirrors TenantService.CATEGORIES).
 const CATEGORIES = ['fashion', 'electronics', 'home', 'food', 'art', 'sport', 'wear'];
 
@@ -34,7 +39,7 @@ const devTenant = () => {
 // payload rather than a partial one that could blank an untouched field.
 //
 //   all           every field (the standalone route)
-//   shop          name, description, category
+//   shop          name, tagline, description, category
 //   brand         logo, colours, address, established
 //   integrations  Bank of Georgia credentials
 export default function StoreSettings({ embedded = false, section = 'all' }) {
@@ -45,7 +50,7 @@ export default function StoreSettings({ embedded = false, section = 'all' }) {
   const { tenant, refresh } = useTenant();
 
   const [form, setForm] = useState({
-    displayName: '', description: '', logoUrl: '',
+    displayName: '', description: '', tagline: '', logoUrl: '',
     category: '', primaryColor: '#6366f1', secondaryColor: '#8b5cf6',
     addressStreet: '', addressCity: '', addressCountry: '',
     addressPostalCode: '', establishedYear: '',
@@ -73,6 +78,7 @@ export default function StoreSettings({ embedded = false, section = 'all' }) {
     setForm({
       displayName: tenant.displayName || tenant.name || '',
       description: tenant.description || '',
+      tagline: tenant.tagline || '',
       logoUrl: tenant.logoUrl || '',
       category: tenant.category || '',
       primaryColor: tenant.primaryColor || '#6366f1',
@@ -135,6 +141,7 @@ export default function StoreSettings({ embedded = false, section = 'all' }) {
       const payload = {
         displayName: form.displayName.trim(),
         description: form.description.trim(),
+        tagline: form.tagline.trim(),
         logoUrl: form.logoUrl.trim(),
         category: form.category,
         primaryColor: form.primaryColor,
@@ -238,6 +245,21 @@ export default function StoreSettings({ embedded = false, section = 'all' }) {
           <div>
             <div style={label}>{t('fieldDisplayName')}</div>
             <input value={form.displayName} onChange={set('displayName')} style={field} />
+          </div>
+          )}
+
+          {show('shop') && (
+          <div>
+            <div style={label}>{t('fieldStoreTagline')}</div>
+            {/* One line, and the hero gives it one line. The counter is the
+                only warning before the server trims it. */}
+            <input
+              value={form.tagline} onChange={set('tagline')}
+              maxLength={TAGLINE_MAX} style={field}
+            />
+            <div style={{ marginTop: 6, font: `500 11.5px ${T.font}`, color: T.textMute }}>
+              {t('taglineHint', { count: TAGLINE_MAX - form.tagline.length })}
+            </div>
           </div>
           )}
 

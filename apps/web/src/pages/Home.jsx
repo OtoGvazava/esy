@@ -261,11 +261,14 @@ export default function Home() {
         <div style={{ borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`, padding: isMobile ? 16 : 22 }}>
           <div style={{ font: `700 15px ${T.font}`, color: T.text, marginBottom: 8 }}>{t('aboutStore')}</div>
           {/* The design puts the SHORT description in the hero and the LONG one
-              here. The store has a single description field, so rendering it in
-              both places printed the same sentence twice. It stays in the hero;
-              this block carries what the hero does not — where the shop is, how
-              to reach it, and the way to the full About page. Restore the
-              paragraph when the short/long split exists. */}
+              here. Now that stores have both, the paragraph is back — but only
+              when a tagline exists, because without one the hero falls back to
+              this same text and the strip would repeat it. */}
+          {tenant.about && tenant.about !== tenant.bio && (
+            <div style={{ font: `400 13.5px/1.7 ${T.font}`, color: T.textDim, marginBottom: 12 }}>
+              {tenant.about}
+            </div>
+          )}
           {tenant.location && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Chip T={T}><Icons.pin size={12} /> {tenant.location}</Chip>

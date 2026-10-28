@@ -10,6 +10,9 @@ public class CreateTenantRequest {
     private String subdomain;
     private String displayName;
     private String description;
+    // One-line store blurb for the hero and the directory; the long form
+    // stays in description. TenantService collapses and clamps it.
+    private String tagline;
     private String logoUrl;
     private String primaryColor;
     private String secondaryColor;
@@ -54,6 +57,14 @@ public class CreateTenantRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getTagline() {
+        return tagline;
+    }
+
+    public void setTagline(String tagline) {
+        this.tagline = tagline;
     }
 
     public String getLogoUrl() {

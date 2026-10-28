@@ -23,7 +23,7 @@ function StoreCard({ T, t, store, onOpen, layout = 'tall' }) {
         </div>
       </div>
       <div style={{ font: `400 12.5px/1.45 ${T.font}`, color: T.textDim, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden', minHeight: 36 }}>
-        {store.description || t('directory.anIndependentShop')}
+        {store.tagline || store.description || t('directory.anIndependentShop')}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
         <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{store.category ? t(`directory.cat.${store.category}`) : t('directory.shop')}</div>
@@ -75,7 +75,7 @@ function QuickView({ T, t, store, onClose }) {
             {store.category && <span style={{ textTransform: 'capitalize' }}>{t(`directory.cat.${store.category}`)}</span>}
             <StatusPill T={T} kind="live">{t('directory.live')}</StatusPill>
           </div>
-          <div style={{ marginTop: 16, font: `400 14px/1.55 ${T.font}`, color: T.textDim }}>{store.description || t('directory.anIndependentShop')}</div>
+          <div style={{ marginTop: 16, font: `400 14px/1.55 ${T.font}`, color: T.textDim }}>{store.tagline || store.description || t('directory.anIndependentShop')}</div>
           <div style={{ marginTop: 22, display: 'flex', gap: 10 }}>
             <button onClick={() => { window.location.href = storeUrl(store); }} style={{
               flex: 1, height: 50, borderRadius: 14, border: 'none',
@@ -109,7 +109,8 @@ export default function PlatformDirectory() {
     if (cat !== 'all') r = r.filter((s) => s.category === cat);
     if (q.trim()) {
       const t = q.trim().toLowerCase();
-      r = r.filter((s) => `${s.name} ${s.description || ''} ${s.subdomain}`.toLowerCase().includes(t));
+      r = r.filter((s) => `${s.name} ${s.tagline || ''} ${s.description || ''} ${s.subdomain}`
+        .toLowerCase().includes(t));
     }
     r = [...r];
     if (sort === 'az') r.sort((a, b) => a.name.localeCompare(b.name));
