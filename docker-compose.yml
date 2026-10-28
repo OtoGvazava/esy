@@ -70,6 +70,9 @@ services:
       # verification works without spending messages. Set it and the code is
       # only ever delivered by SMS.
       APP_SMS_KEY: ${APP_SMS_KEY:-}
+      # Sender name shown to the recipient. Must be registered with SMS Office
+      # or every send is refused with ErrorCode 150. Blank uses "esy.ge".
+      APP_SMS_SENDER: ${APP_SMS_SENDER:-}
       # Payments (Bank of Georgia). Per-store creds are entered in Store
       # Settings; these are platform knobs. All optional locally — unset
       # APP_SECRET_ENC_KEY falls back to a dev key, unset BOG_PUBLIC_KEY

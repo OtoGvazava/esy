@@ -179,13 +179,36 @@ public class SmsSender {
         }
     }
 
-    /** Only the codes worth naming in a log; everything else stays numeric. */
-    private static String meaning(int code) {
+    /**
+     * SMS Office's full error table, in plain words.
+     *
+     * <p>This started as three codes and a "see SMS Office docs" fallback, and
+     * the very first real failure was 150 — which fell through it. The point of
+     * surfacing the provider's answer is that an operator can act on it without
+     * leaving the screen, so a code we cannot name defeats the whole exercise.
+     */
+    static String meaning(int code) {
         return switch (code) {
-            case 20 -> "insufficient balance";
-            case 80 -> "no user for this API key";
-            case 120 -> "API access disabled in the SMS Office profile";
-            default -> "see SMS Office docs";
+            case 10 -> "The destination contains invalid numbers";
+            case 20 -> "Insufficient balance on the SMS Office account";
+            case 40 -> "The message is longer than 160 characters";
+            case 60 -> "No message content was sent";
+            case 70 -> "No destination number was sent";
+            case 75 -> "Every number is on the stop list";
+            case 76 -> "Every number is incorrectly formatted";
+            case 77 -> "Every number is either stopped or incorrectly formatted";
+            case 80 -> "No SMS Office account matches this API key";
+            case 110 -> "The sender name is not understood";
+            case 120 -> "API access is not activated in the SMS Office profile";
+            // The one that actually happened: the sender must be registered and
+            // approved with SMS Office before any message using it is accepted.
+            case 150 -> "The sender name is not registered with SMS Office — register it, or set one that is";
+            case 500 -> "The API key was missing from the request";
+            case 600 -> "The destination was missing from the request";
+            case 700 -> "The sender was missing from the request";
+            case 800 -> "The content was missing from the request";
+            case -100 -> "SMS Office is temporarily unavailable — try again shortly";
+            default -> "SMS Office error " + code + " — see their documentation";
         };
     }
 }

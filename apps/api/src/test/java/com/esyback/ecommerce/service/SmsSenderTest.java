@@ -4,13 +4,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The two pure pieces of the SMS Office client: turning a stored phone number
- * into the bare international form the API demands, and reading the outcome
- * out of its response. Both are places where being quietly wrong means the
- * message silently never arrives.
+ * The pure pieces of the SMS Office client: turning a stored phone number into
+ * the bare international form the API demands, reading the outcome out of its
+ * response, and saying what that outcome means. All three are places where
+ * being quietly wrong means the message silently never arrives.
  */
 class SmsSenderTest {
 
@@ -52,5 +54,28 @@ class SmsSenderTest {
         assertEquals(-1, SmsSender.errorCode("{\"Success\":true}"));
         assertEquals(-1, SmsSender.errorCode(null));
         assertEquals(-1, SmsSender.errorCode("not json"));
+    }
+
+    @Test
+    @DisplayName("the codes SMS Office actually returns are named, not left numeric")
+    void namesEveryDocumentedError() {
+        // 150 is the one that happened first, and the original three-code
+        // switch fell through to "see SMS Office docs" — useless to whoever
+        // has to fix it, which is the entire reason the failure is surfaced.
+        assertTrue(SmsSender.meaning(150).contains("not registered"));
+        assertTrue(SmsSender.meaning(20).toLowerCase().contains("balance"));
+        assertTrue(SmsSender.meaning(80).toLowerCase().contains("api key"));
+        assertTrue(SmsSender.meaning(120).toLowerCase().contains("not activated"));
+        assertTrue(SmsSender.meaning(-100).toLowerCase().contains("temporarily"));
+
+        // Every documented code says something a person can act on.
+        int[] documented = {10, 20, 40, 60, 70, 75, 76, 77, 80, 110, 120, 150, 500, 600, 700, 800, -100};
+        for (int c : documented) {
+            assertFalse(SmsSender.meaning(c).contains("see their documentation"),
+                "code " + c + " should have a plain-words meaning");
+        }
+
+        // An undocumented code still carries its number rather than a shrug.
+        assertTrue(SmsSender.meaning(999).contains("999"));
     }
 }

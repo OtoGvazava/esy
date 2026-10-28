@@ -134,6 +134,13 @@ app:
   # (config:app.sms.sender) so it can be changed without a redeploy.
   sms:
     key: ${APP_SMS_KEY:}
+    # The name a recipient sees. SMS Office refuses any message whose sender is
+    # not registered with them (ErrorCode 150), so this must match one they have
+    # approved. It is read through the config store, which resolves Redis
+    # override → this env value → the built-in default — so a deployment with no
+    # Key Value service can still set it here, which is the only way to change
+    # it when the admin screen cannot save.
+    sender: ${APP_SMS_SENDER:}
 
   # AES key for secrets stored at rest (per-tenant BOG client secret). Any
   # length (SHA-256 derived, like the JWT key). Dev default works locally;
