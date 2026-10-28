@@ -60,17 +60,25 @@ Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
   `main` ⇒ Render rebuilds). Live: `esy-r5ee.onrender.com`, `www.esy.ge`.
 - Setup runbook: `deploy/render.md` (incl. Google OAuth + custom domain steps).
 - **Live config needs the Key Value store.** `ConfigStore` is Redis-backed and
-  `SPRING_DATA_REDIS_URL` comes from the `esy-kv` service in the blueprint.
+  `SPRING_DATA_REDIS_URL` comes from the `esy-config` service in the blueprint
+  — that name must match the instance prod already runs against, or a sync
+  provisions a second, empty store and repoints the app at it.
   Without it every write from `admin.esy.ge/config` and `/integrations` 502s
   and both screens go read-only (reads still work — the store degrades to
   env/default). Its free tier is **non-persistent**, so an override can vanish
   on its restart and silently fall back to the env value; anything that must
-  survive (`APP_SMS_KEY`, `APP_SMS_SENDER`) belongs in the environment.
+  survive (`APP_SMS_KEY`, `APP_SMS_SENDER`) belongs in the environment. This
+  has already bitten once: `esy-config` restarted, took the admin-set
+  `app.sms.sender` with it, and every OTP went out under the built-in default
+  sender — so `APP_SMS_SENDER` must be set in the Render environment even
+  though the admin screen can also set it.
 
 ## Gotchas (these cost real time — heed them)
 
 - **JDK 17 only.** Machine default is JDK 25; Spring Boot 3.2 will not compile
-  on it. Always set `JAVA_HOME` to the `ms-17.0.18` JDK for any `mvn`.
+  on it. Always set `JAVA_HOME` for any `mvn` — on this machine that is
+  `C:\Program Files\Microsoft\jdk-17.0.20.8-hotspot` (there is no `mvnw`
+  wrapper; `mvn` lives in `%LOCALAPPDATA%\Programs\apache-maven-3.9.9\bin`).
 - **Vite dev server needs Node 18–22.** Node 25 crashes `vite`/`vite preview`
   silently (the Docker build pins Node 20). `vite build` works on Node 25.
 - **Prod runs on Render PostgreSQL** (`SPRING_DATASOURCE_*` +

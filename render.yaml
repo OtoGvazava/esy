@@ -28,15 +28,28 @@ services:
       - key: SPRING_DATA_REDIS_URL
         fromService:
           type: keyvalue
-          name: esy-kv
+          name: esy-config
           property: connectionString
+      # The sender name SMS Office checks against its registered list. It is
+      # ALSO settable from admin.esy.ge/integrations, which stores it in the
+      # Key Value above — and that store is non-persistent on the free plan, so
+      # a restart drops the override and the app silently falls back to here,
+      # then to the built-in "esy.ge". If this is unset and the registered name
+      # is anything else, every message is refused or quietly undelivered from
+      # the moment the store restarts. Set in the dashboard, not the blueprint.
+      - key: APP_SMS_SENDER
+        sync: false
 
   # Live config: the service-fee rate, the SMS sender and the message
   # templates. Small and write-rarely — the app re-reads through an 8s cache
   # and degrades to env/defaults whenever this is unreachable, so the site
   # stays up if it goes away.
+  # The name must stay `esy-config`: that is the instance production already
+  # runs against. A blueprint sync matches by name, so calling it anything else
+  # provisions a SECOND store, repoints SPRING_DATA_REDIS_URL at the empty one
+  # and abandons every override an admin has saved.
   - type: keyvalue
-    name: esy-kv
+    name: esy-config
     plan: free
     region: oregon
     # Private network only: nothing outside Render needs to reach it.

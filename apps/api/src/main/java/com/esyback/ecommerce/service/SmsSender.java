@@ -118,10 +118,18 @@ public class SmsSender {
             // outcome is ErrorCode, where 0 is "accepted for delivery".
             int errorCode = errorCode(res.body());
             if (errorCode != 0) {
-                log.warn("SMS Office rejected the message, ErrorCode={} ({})", errorCode, meaning(errorCode));
+                log.warn("SMS Office rejected the message, ErrorCode={} ({}) sender={} destination={}",
+                    errorCode, meaning(errorCode), props.getSender(), mask(destination));
                 return fail(meaning(errorCode), errorCode);
             }
             lastFailure = null;
+            // Accepted is not the same as delivered, and the sender name is the
+            // field that decides which. It is read live from the config store,
+            // whose free tier is non-persistent, so a restart can quietly swap
+            // it back to the built-in default — recording the one actually used
+            // is what makes that visible afterwards.
+            log.info("SMS accepted by SMS Office: sender={} destination={}",
+                props.getSender(), mask(destination));
             return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -146,6 +154,20 @@ public class SmsSender {
         // A bare 9-digit mobile (5xxxxxxxx) is Georgian; prefix the country code.
         if (digits.length() == 9 && digits.startsWith("5")) digits = "995" + digits;
         return digits.length() >= 11 && digits.length() <= 15 ? digits : null;
+    }
+
+    /**
+     * A destination with its middle digits removed, for the log.
+     *
+     * <p>Enough to confirm {@link #normalise} produced a sane international
+     * number — the country code and a tail to match against the account — but
+     * not a readable phone number sitting in a log aggregator.
+     */
+    static String mask(String destination) {
+        if (destination == null || destination.length() < 6) return "??";
+        return destination.substring(0, 3)
+            + "*".repeat(destination.length() - 5)
+            + destination.substring(destination.length() - 2);
     }
 
     private static String form(Map<String, String> params) {

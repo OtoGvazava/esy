@@ -77,7 +77,7 @@ public class PhoneVerificationService {
     public String sendCode(User user) {
         String phone = user.getPhoneNumber();
         if (phone == null || phone.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add a phone number first");
+            throw refuse(user, HttpStatus.BAD_REQUEST, "Add a phone number first");
         }
         // Throttle before generating anything: a refused request must not
         // replace the code the person is currently typing.
@@ -85,7 +85,7 @@ public class PhoneVerificationService {
         if (last != null) {
             long wait = RESEND_COOLDOWN_SECONDS - java.time.Duration.between(last, Instant.now()).toSeconds();
             if (wait > 0) {
-                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                throw refuse(user, HttpStatus.TOO_MANY_REQUESTS,
                     "Wait " + wait + "s before asking for another code");
             }
         }
@@ -96,7 +96,7 @@ public class PhoneVerificationService {
         // handing the code to the browser would turn a cost decision into a way
         // past verification. Say so instead.
         if (sms.isConfigured() && !sms.isSending()) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+            throw refuse(user, HttpStatus.SERVICE_UNAVAILABLE,
                 "SMS is switched off. Turn it back on in admin integrations.");
         }
 
@@ -110,11 +110,31 @@ public class PhoneVerificationService {
         // pending code the person never received, and the next attempt would
         // replace it anyway — better that a failed send changes nothing.
         if (!sms.send(phone, templates.render(SmsTemplates.OTP, java.util.Map.of("code", code)))) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+            throw refuse(user, HttpStatus.SERVICE_UNAVAILABLE,
                 "Could not send the code right now. Please try again.");
         }
-        pending.put(user.getId(), new Pending(code, Instant.now().plusSeconds(TTL_SECONDS)));
+        // issue(), not a bare pending.put(): it also records the send time, and
+        // the cooldown above reads that. Setting it only on the dev path left
+        // the throttle inert in exactly the deployment where a message costs
+        // money — an account could ask for codes in a loop all day.
+        issue(user, code);
+        log.info("Phone OTP sent for user {}", user.getId());
         return null;
+    }
+
+    /**
+     * Refuses a send, in the log as well as to the caller.
+     *
+     * <p>Every one of these paths used to return a status and nothing else.
+     * {@link SmsSender} logs its own failures, so an operator reasonably reads
+     * silence as "the provider accepted it" — but a refusal here never reaches
+     * the provider, and a successful send was equally silent, so the log could
+     * not tell the two apart. Chasing a live "verification does not work" came
+     * down to guessing between four indistinguishable outcomes.
+     */
+    private ResponseStatusException refuse(User user, HttpStatus status, String reason) {
+        log.warn("Phone OTP refused for user {}: {} ({})", user.getId(), reason, status.value());
+        return new ResponseStatusException(status, reason);
     }
 
 

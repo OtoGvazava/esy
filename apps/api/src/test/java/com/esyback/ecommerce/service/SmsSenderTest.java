@@ -78,4 +78,16 @@ class SmsSenderTest {
         // An undocumented code still carries its number rather than a shrug.
         assertTrue(SmsSender.meaning(999).contains("999"));
     }
+
+    @Test
+    @DisplayName("a logged destination shows the route, not the number")
+    void masksTheDestination() {
+        // Country code and a tail: enough to tell a correctly normalised
+        // number from a mangled one, which is what the log is for.
+        assertEquals("995*******88", SmsSender.mask("995555204188"));
+        assertFalse(SmsSender.mask("995555204188").contains("5552041"));
+        // Never crashes on what normalise() would have rejected anyway.
+        assertEquals("??", SmsSender.mask(null));
+        assertEquals("??", SmsSender.mask("123"));
+    }
 }
