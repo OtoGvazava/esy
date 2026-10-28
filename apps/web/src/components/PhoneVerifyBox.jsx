@@ -8,7 +8,7 @@ import { usePhoneVerify } from '../hooks/usePhoneVerify';
 export default function PhoneVerifyBox({ compact = false }) {
   const { T } = useGlow();
   const { t } = useTranslation('storefront');
-  const { sent, devCode, code, setCode, busy, error, request, confirm } = usePhoneVerify();
+  const { sent, devCode, destination, code, setCode, busy, error, request, confirm } = usePhoneVerify();
 
   const input = {
     padding: '11px 12px', borderRadius: 10, border: `1px solid ${T.border}`,
@@ -33,7 +33,13 @@ export default function PhoneVerifyBox({ compact = false }) {
         </button>
       ) : (
         <>
-          <div style={{ font: `500 12px ${T.font}`, color: T.textDim }}>{t('phone.sentHint')}</div>
+          {/* Naming the number is the point: it is how someone spots that they
+              mistyped it, rather than waiting for a code that reached a
+              stranger's phone. Falls back to the generic line only if the
+              server did not say where it sent. */}
+          <div style={{ font: `500 12px ${T.font}`, color: T.textDim }}>
+            {destination ? t('phone.sentHintTo', { destination }) : t('phone.sentHint')}
+          </div>
           {devCode && (
             <div style={{ font: `600 12px ${T.mono || T.font}`, color: T.textMute }}>
               {t('phone.devCode', { code: devCode })}
@@ -44,7 +50,8 @@ export default function PhoneVerifyBox({ compact = false }) {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               inputMode="numeric"
-              placeholder="······"
+              maxLength={4}
+              placeholder="····"
               style={{ ...input, flex: 1 }}
             />
             <button

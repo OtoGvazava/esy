@@ -6,6 +6,7 @@ import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.StoreMembershipRepository;
 import com.esyback.ecommerce.service.OrderService;
 import com.esyback.ecommerce.service.PhoneVerificationService;
+import com.esyback.ecommerce.service.SmsSender;
 import com.esyback.ecommerce.service.UserService;
 import com.esyback.ecommerce.web.TenantMapper;
 import lombok.RequiredArgsConstructor;
@@ -138,6 +139,14 @@ public class AccountController {
      * response carries no code at all — it used to return it unconditionally,
      * which handed the verification code to whoever called the endpoint and
      * made the check decorative.
+     *
+     * <p>{@code destination} is the masked number the message was actually
+     * addressed to. The screen used to say only "we sent a code to your
+     * phone", so a mistyped number produced a confident success and a code
+     * delivered to a stranger, with nothing on screen to suggest where it had
+     * gone. It is the caller's own number, which they can already read in full
+     * on this same screen, so masking is convention rather than secrecy — the
+     * last two digits are what makes a wrong number obvious.
      */
     @PostMapping("/phone/send-code")
     public ResponseEntity<Map<String, Object>> sendPhoneCode(Authentication authentication) {
@@ -145,6 +154,7 @@ public class AccountController {
         String devCode = phoneVerificationService.sendCode(user);
         Map<String, Object> body = new java.util.HashMap<>();
         body.put("sent", true);
+        body.put("destination", SmsSender.maskPhone(user.getPhoneNumber()));
         if (devCode != null) body.put("devCode", devCode);
         return ResponseEntity.ok(body);
     }

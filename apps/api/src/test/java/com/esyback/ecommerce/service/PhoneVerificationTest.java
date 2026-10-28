@@ -99,6 +99,18 @@ class PhoneVerificationTest {
     }
 
     @Test
+    @DisplayName("a number no message can reach is refused with the real reason")
+    void unreachableNumberIsNotATransientFailure() {
+        user.setPhoneNumber("+995 555 20 41 8");   // one digit short
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+            () -> service.sendCode(user));
+        // 400, not the 503 a failed send produces: retrying cannot help, and
+        // "please try again" is the advice that wasted the most time here.
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        assertTrue(e.getReason().contains("check it"));
+    }
+
+    @Test
     @DisplayName("a phone number is required before a code can be sent")
     void needsAPhoneNumber() {
         user.setPhoneNumber(null);

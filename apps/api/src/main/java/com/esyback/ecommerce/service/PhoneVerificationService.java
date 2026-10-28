@@ -79,6 +79,14 @@ public class PhoneVerificationService {
         if (phone == null || phone.isBlank()) {
             throw refuse(user, HttpStatus.BAD_REQUEST, "Add a phone number first");
         }
+        // A number no message can reach is the caller's mistake, not a
+        // transient fault: the generic "could not send, please try again" that
+        // a failed send produces would invite them to retry forever. Say what
+        // is actually wrong, and say it before a code is generated.
+        if (!SmsSender.isUsable(phone)) {
+            throw refuse(user, HttpStatus.BAD_REQUEST,
+                "That phone number does not look right — check it and save it again");
+        }
         // Throttle before generating anything: a refused request must not
         // replace the code the person is currently typing.
         Instant last = lastSentAt.get(user.getId());

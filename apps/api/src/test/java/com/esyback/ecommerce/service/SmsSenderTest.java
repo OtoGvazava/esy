@@ -44,6 +44,32 @@ class SmsSenderTest {
     }
 
     @Test
+    @DisplayName("a mistyped Georgian number is refused, not sent to nobody")
+    void rejectsMistypedGeorgianNumbers() {
+        // This is the one that actually happened. The old rule was "11 to 15
+        // digits", so losing a single digit still passed, SMS Office accepted
+        // it with ErrorCode 0, and the code went to a number nobody owns —
+        // indistinguishable from success in the response and in the log.
+        assertNull(SmsSender.normalise("+995 555 20 41 8"));    // one digit short
+        assertNull(SmsSender.normalise("+995 555 20 41 889"));  // one digit over
+        // A 995 number that is not a mobile cannot receive a text at all.
+        assertNull(SmsSender.normalise("+995 32 2 12 34 56"));  // Tbilisi landline
+
+        // The correct number is still untouched by the stricter rule.
+        assertEquals("995555204188", SmsSender.normalise("+995 555 20 41 88"));
+    }
+
+    @Test
+    @DisplayName("a number from outside Georgia keeps the broad bounds")
+    void foreignNumbersStillPass() {
+        // We cannot know another country's national format, so only E.164's
+        // overall length applies — being strict there would block a real
+        // shopper from verifying at all.
+        assertEquals("447700900123", SmsSender.normalise("+44 7700 900123"));
+        assertEquals("14155552671", SmsSender.normalise("+1 415 555 2671"));
+    }
+
+    @Test
     @DisplayName("ErrorCode 0 is the only success; a missing field is not success")
     void readsErrorCode() {
         assertEquals(0, SmsSender.errorCode("{\"Success\":true,\"Message\":\"ok\",\"ErrorCode\":0}"));
@@ -89,5 +115,20 @@ class SmsSenderTest {
         // Never crashes on what normalise() would have rejected anyway.
         assertEquals("??", SmsSender.mask(null));
         assertEquals("??", SmsSender.mask("123"));
+    }
+
+    @Test
+    @DisplayName("the helpers the account screen relies on agree with normalise")
+    void publicHelpers() {
+        // maskPhone takes the number as STORED and reports it as DIALLED, so
+        // the hint on screen reflects what was actually sent rather than what
+        // was typed — that is what makes a wrong number visible.
+        assertEquals("995*******88", SmsSender.maskPhone("+995 555 20 41 88"));
+        assertEquals("995*******88", SmsSender.maskPhone("555 20 41 88"));
+        assertEquals("??", SmsSender.maskPhone("+995 555 20 41 8"));
+
+        assertTrue(SmsSender.isUsable("+995 555 20 41 88"));
+        assertFalse(SmsSender.isUsable("+995 555 20 41 8"));
+        assertFalse(SmsSender.isUsable(null));
     }
 }

@@ -243,7 +243,8 @@
     "addPrompt": "Add a phone number to verify it before checkout.",
     "verifyCta": "Verify phone number",
     "sending": "Sending…",
-    "sentHint": "We sent a 6-digit code to your phone.",
+    "sentHint": "We sent a 4-digit code to your phone.",
+    "sentHintTo": "We sent a 4-digit code to {{destination}}.",
     "devCode": "Dev code: {{code}}",
     "confirm": "Confirm",
     "checking": "Checking…"

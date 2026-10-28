@@ -146,6 +146,15 @@ public class SmsSender {
      * no leading {@code +} or {@code 00} and no spaces. Stored numbers are
      * human-formatted ("+995 555 20 41 88"), and a local number may arrive
      * without its country code.
+     *
+     * <p><b>A Georgian number is exactly {@code 995} + nine digits beginning
+     * with 5.</b> This used to accept any 11–15 digit string, which let a
+     * mistyped local number through: drop one digit from a correct number and
+     * the remaining eleven passed, SMS Office answered {@code ErrorCode 0},
+     * and the code went to a number nobody owns. An accepted-but-undeliverable
+     * send is the worst outcome available here — it looks like success to
+     * everyone, including the log — so a number we can already tell is wrong is
+     * rejected before it reaches the provider.
      */
     static String normalise(String phone) {
         if (phone == null) return null;
@@ -153,7 +162,25 @@ public class SmsSender {
         if (digits.startsWith("00")) digits = digits.substring(2);
         // A bare 9-digit mobile (5xxxxxxxx) is Georgian; prefix the country code.
         if (digits.length() == 9 && digits.startsWith("5")) digits = "995" + digits;
+        if (digits.startsWith("995")) {
+            // Every Georgian mobile is 995 5XX XX XX XX. Any other length is a
+            // typo, and a 995 number that does not continue with 5 is not a
+            // mobile, so no text can arrive at it.
+            return digits.length() == 12 && digits.charAt(3) == '5' ? digits : null;
+        }
+        // A number from somewhere else: we cannot know its national format, so
+        // only the broad E.164 bounds apply.
         return digits.length() >= 11 && digits.length() <= 15 ? digits : null;
+    }
+
+    /** The masked form of a stored number, as the send would have dialled it. */
+    public static String maskPhone(String phone) {
+        return mask(normalise(phone));
+    }
+
+    /** Whether a message could be addressed to this number at all. */
+    public static boolean isUsable(String phone) {
+        return normalise(phone) != null;
     }
 
     /**
