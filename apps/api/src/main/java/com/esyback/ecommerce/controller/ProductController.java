@@ -5,6 +5,7 @@ import com.esyback.ecommerce.dto.ProductDto;
 import com.esyback.ecommerce.dto.ProductListDto;
 import com.esyback.ecommerce.entity.ProductImage;
 import com.esyback.ecommerce.service.ProductImageService;
+import com.esyback.ecommerce.service.ProductImportService;
 import com.esyback.ecommerce.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +19,10 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +38,9 @@ public class ProductController {
 
     @Autowired
     private ProductImageService productImageService;
+
+    @Autowired
+    private ProductImportService productImportService;
 
     @Autowired
     private com.esyback.ecommerce.service.ProductVariantService productVariantService;
@@ -99,6 +106,54 @@ public class ProductController {
         boolean deleted = productService.deleteProduct(id);
         return deleted ? ResponseEntity.noContent().build()
                       : ResponseEntity.notFound().build();
+    }
+
+    // ---- Bulk import (decision D7) -----------------------------------------
+
+    /**
+     * Creates products from a CSV file.
+     *
+     * <p>{@code dryRun=true} reports what would happen and writes nothing, so
+     * the screen can show the outcome before the merchant commits to it. A file
+     * with bad rows comes back 200 with the problems listed rather than an
+     * error status: the request was understood and nothing was written — it is
+     * the file that needs an edit, and the screen has a list to render.
+     */
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> importCsv(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "dryRun", defaultValue = "false") boolean dryRun) {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a CSV file first");
+        }
+        String csv;
+        try {
+            csv = new String(file.getBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That file could not be read");
+        }
+        ProductImportService.Report report = productImportService.importCsv(csv, dryRun);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("parsed", report.parsed());
+        body.put("imported", report.imported());
+        body.put("dryRun", report.dryRun());
+        body.put("ok", report.ok());
+        body.put("errors", report.errors().stream()
+            .map(e -> Map.<String, Object>of("line", e.line(), "message", e.message()))
+            .toList());
+        return ResponseEntity.ok(body);
+    }
+
+    /** The column layout, as a file to open in a spreadsheet and fill in. */
+    @GetMapping("/import/template")
+    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    public ResponseEntity<byte[]> importTemplate() {
+        byte[] bytes = ProductImportService.template().getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+            .header("Content-Disposition", "attachment; filename=\"esy-products-template.csv\"")
+            .contentType(MediaType.parseMediaType("text/csv; charset=utf-8"))
+            .body(bytes);
     }
 
     // ---- Product photos (our DB-backed gallery) ----------------------------

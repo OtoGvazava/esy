@@ -202,6 +202,36 @@ export const productApi = {
     return mapDetail(await res.json());
   },
 
+  // Bulk import (D7). Multipart, so it bypasses the JSON client for the same
+  // reason uploadImages does — including applying the manager-host ?tenant
+  // rewrite by hand. dryRun reports what WOULD happen and writes nothing, so
+  // the dialog can show the outcome before the merchant commits.
+  //
+  // A file with bad rows comes back 200 with { ok:false, errors:[...] }; only a
+  // file that cannot be used at all (no header, no rows, too many) is an error
+  // status. So this resolves in both cases and the caller reads `ok`.
+  async importCsv(file, { dryRun = false } = {}) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(
+      withManagerTenant(`/api/products/import?dryRun=${dryRun ? 'true' : 'false'}`),
+      { method: 'POST', body: fd, credentials: 'include' },
+    );
+    if (!res.ok) {
+      let message = `Import failed (${res.status})`;
+      try {
+        const b = await res.json();
+        message = b.error || b.message || message;
+      } catch { /* no JSON body */ }
+      throw new ApiError(message, res.status);
+    }
+    return res.json();
+  },
+
+  importTemplateUrl() {
+    return withManagerTenant('/api/products/import/template');
+  },
+
   // Variants (D11). The read is public — a shopper must see the sizes before
   // choosing one; the write is store management and replaces the whole
   // document, because editing a variant grid is a single act.

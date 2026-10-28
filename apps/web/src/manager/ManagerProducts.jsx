@@ -9,6 +9,7 @@ import { useTK } from '../core/useTK';
 import { money } from '../components/glow/GlowChrome';
 import ProductEditorDialog from '../components/owner/ProductEditorDialog';
 import DeleteProductDialog from '../components/owner/DeleteProductDialog';
+import ImportProductsDialog from '../components/owner/ImportProductsDialog';
 
 export default function ManagerProducts() {
   const { t } = useTranslation('manager');
@@ -18,6 +19,7 @@ export default function ManagerProducts() {
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(null);   // product | 'new' | null
   const [deleting, setDeleting] = useState(null); // product | null
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(() => {
     productApi.list({ size: 100 })
@@ -54,12 +56,21 @@ export default function ManagerProducts() {
     background: T.grad, color: '#fff', font: `700 13px ${T.font}`,
   };
 
+  // Import sits beside Add as the secondary of the pair: adding one product is
+  // the common act, uploading a catalogue the occasional one.
+  const ghost = {
+    padding: '10px 18px', borderRadius: 999, cursor: 'pointer',
+    border: `1px solid ${T.border}`, background: 'transparent',
+    color: T.textDim, font: `600 13px ${T.font}`,
+  };
+
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <h1 style={{ font: `800 22px ${T.font}`, color: T.text, letterSpacing: '-0.02em', margin: 0, flex: 1 }}>
           {t('products.title')}
         </h1>
+        <button onClick={() => setImporting(true)} style={ghost}>{t('products.importCta')}</button>
         <button onClick={() => setEditing('new')} style={btn}>{t('products.add')}</button>
       </div>
 
@@ -117,6 +128,11 @@ export default function ManagerProducts() {
         product={deleting}
         onClose={() => setDeleting(null)}
         onDeleted={() => { setDeleting(null); load(); }}
+      />
+      <ImportProductsDialog
+        open={importing}
+        onClose={() => setImporting(false)}
+        onImported={load}
       />
     </div>
   );

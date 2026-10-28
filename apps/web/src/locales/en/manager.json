@@ -29,7 +29,8 @@
     "inStock": "{{count}} in stock",
     "outOfStock": "Out of stock",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "importCta": "Import CSV"
   },
   "admin": {
     "title": "Platform administration",

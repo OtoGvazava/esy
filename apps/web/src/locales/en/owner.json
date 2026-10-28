@@ -182,5 +182,26 @@
     "saveProductFirst": "Save the product first — combinations are attached to it.",
     "loadFailed": "Could not load the options.",
     "saveFailed": "Could not save the options."
+  },
+  "import": {
+    "title": "Import products from CSV",
+    "intro": "Upload a CSV with a header row naming the columns: title, description, price, quantity. Description is optional. Photos are uploaded per product afterwards.",
+    "downloadTemplate": "Download the template",
+    "checking": "Checking the file…",
+    "checkFailed": "That file could not be checked.",
+    "failed": "The import failed.",
+    "willAdd_one": "{{count}} product will be added.",
+    "willAdd_other": "{{count}} products will be added.",
+    "problems_one": "{{count}} problem to fix",
+    "problems_other": "{{count}} problems to fix",
+    "lineError": "Line {{line}}: {{message}}",
+    "nothingWritten": "Nothing has been created. Fix the file and choose it again — an import is taken whole or not at all.",
+    "commit_one": "Import {{count}} product",
+    "commit_other": "Import {{count}} products",
+    "commitIdle": "Import",
+    "working": "Importing…",
+    "doneBody_one": "{{count}} product imported.",
+    "doneBody_other": "{{count}} products imported.",
+    "close": "Done"
   }
 }
