@@ -39,6 +39,10 @@ services:
       # the moment the store restarts. Set in the dashboard, not the blueprint.
       - key: APP_SMS_SENDER
         sync: false
+      # Resend API key for transactional email. Unset = no mail is sent and
+      # nothing fails. A secret, so it never lives in the blueprint.
+      - key: APP_EMAIL_KEY
+        sync: false
 
   # Live config: the service-fee rate, the SMS sender and the message
   # templates. Small and write-rarely — the app re-reads through an 8s cache

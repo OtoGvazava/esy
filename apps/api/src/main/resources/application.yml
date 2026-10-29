@@ -142,6 +142,14 @@ app:
     # it when the admin screen cannot save.
     sender: ${APP_SMS_SENDER:}
 
+  # Transactional email (Resend). Empty key = nothing is sent and nothing
+  # fails: an order still completes, it just goes unannounced by mail. The
+  # from-address must be on a domain verified with Resend or every send is
+  # refused; it is read through the config store so it can be corrected live,
+  # which is the lesson the SMS sender name taught the hard way.
+  email:
+    key: ${APP_EMAIL_KEY:}
+
   # AES key for secrets stored at rest (per-tenant BOG client secret). Any
   # length (SHA-256 derived, like the JWT key). Dev default works locally;
   # MUST be overridden in prod — changing it invalidates stored secrets, so

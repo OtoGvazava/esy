@@ -221,6 +221,21 @@
     "always": "Always on",
     "storeOffline": "The config store is unreachable, so nothing on this screen can be saved. Current values are shown but every edit will fail until it is back.",
     "disabledWarning": "SMS is switched off. No message is sent — including the verification code, so nobody can finish checkout until this is back on.",
-    "lastFailureTitle": "The last message was refused by SMS Office"
+    "lastFailureTitle": "The last message was refused by SMS Office",
+    "emailTitle": "Email",
+    "emailSub": "Transactional mail through Resend — order notices, cancellations and refunds.",
+    "emailKeyMissingHint": "No Resend key is set, so no mail is sent. Orders still complete; they just go unannounced. Set APP_EMAIL_KEY in the environment.",
+    "emailDisabledWarning": "Email is switched off. Orders still work — shoppers simply hear nothing by mail.",
+    "fromNote": "The address mail goes out as. It must sit on a domain verified with Resend, or every send is refused. \"Name <a@b.ge>\" is accepted.",
+    "emailTemplatesTitle": "Email messages",
+    "emailTemplatesSub": "Subject and body for each notice. Plain text — the HTML is generated, so markup here is escaped rather than rendered.",
+    "emailTemplate": {
+      "orderPlaced": "Order received",
+      "orderShipped": "Order shipped",
+      "orderOut": "Out for delivery",
+      "orderDelivered": "Delivered",
+      "orderCancelled": "Order cancelled (email only)",
+      "orderRefunded": "Refund on its way (email only)"
+    }
   }
 }

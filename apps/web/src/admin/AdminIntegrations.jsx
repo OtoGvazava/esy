@@ -1,6 +1,7 @@
 // /integrations — the channels the platform speaks through.
 //
-// Today that is SMS Office (smsoffice.ge). Two kinds of thing live here and
+// Today that is SMS Office (smsoffice.ge) for text and Resend for mail. Two
+// kinds of thing live here and
 // they behave differently on purpose:
 //
 //   The API key is a SECRET and is not shown or editable. The screen reports
@@ -360,6 +361,279 @@ export default function AdminIntegrations() {
         <Note T={T} tone="admin">{t('integrations.langNote')}</Note>
         <Note T={T}>{t('integrations.cancelNote')}</Note>
       </div>
+
+      <EmailSection T={T} t={t} email={data?.email || {}} onSaved={reload} />
     </>
+  );
+}
+
+// ---- Email (Resend) --------------------------------------------------------
+//
+// The same shape as the SMS block above, because the same two kinds of thing
+// live in it: a secret key that is reported but never shown, and operational
+// wording that is editable and live.
+//
+// Two differences, both deliberate. There are no billed-unit counts — mail is
+// not priced per 70 characters, so the number would be noise. And every
+// template is switchable, including cancellation and refund: nothing in
+// checkout waits on an email, so turning one off costs courtesy rather than
+// function, which is the opposite of the verification SMS.
+function EmailSection({ T, t, email, onSaved }) {
+  const [from, setFrom] = useState(email.from || '');
+  const [editingFrom, setEditingFrom] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const rows = Array.isArray(email.templates) ? email.templates : [];
+  const canWrite = !!email.storeReady;
+
+  const save = async (patch) => {
+    setBusy(true);
+    setError('');
+    try {
+      await adminApi.updateIntegrations({ email: patch });
+      setEditingFrom(false);
+      onSaved();
+    } catch (e) {
+      setError(handleApiError(e, t('integrations.saveFailed')));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 28 }}>
+      <SectionTitle
+        T={T}
+        title={t('integrations.emailTitle')}
+        sub={t('integrations.emailSub')}
+        right={(
+          <Chip T={T} tone={email.configured ? 'success' : 'warn'}>
+            {email.configured ? t('integrations.keySet') : t('integrations.keyMissing')}
+          </Chip>
+        )}
+      />
+
+      {!email.configured && (
+        <div style={{ marginBottom: 14 }}>
+          <Note T={T} tone="warn">{t('integrations.emailKeyMissingHint')}</Note>
+        </div>
+      )}
+
+      {email.configured && !email.enabled && (
+        <div style={{ marginBottom: 14 }}>
+          <Note T={T} tone="warn">{t('integrations.emailDisabledWarning')}</Note>
+        </div>
+      )}
+
+      {/* Resend's own reason — "the domain is not verified" is the usual one,
+          and it is the single thing an operator can act on from here. */}
+      {email.lastFailure && (
+        <div style={{
+          marginBottom: 14, padding: '13px 15px', borderRadius: 14,
+          background: T.dangerBg, border: `1px solid ${T.danger}55`,
+        }}>
+          <div style={{ font: `700 13px ${T.font}`, color: T.dangerFg }}>
+            {t('integrations.lastFailureTitle')}
+          </div>
+          <div style={{ marginTop: 5, font: `500 12.5px/1.55 ${T.font}`, color: T.text }}>
+            {email.lastFailure.reason}
+          </div>
+          <div style={{ marginTop: 6, font: `500 10.5px ${T.mono}`, color: T.textMute }}>
+            {email.lastFailure.statusCode != null && `HTTP ${email.lastFailure.statusCode} · `}
+            {email.lastFailure.at}
+          </div>
+        </div>
+      )}
+
+      <Card T={T} pad={0} style={{ overflow: 'hidden', marginBottom: 20 }}>
+        <div style={{ padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', font: `700 14.5px ${T.font}`, color: T.text }}>Resend</span>
+            <span style={{ display: 'block', marginTop: 3, font: `500 11.5px ${T.mono}`, color: T.textMute }}>{email.endpoint}</span>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ font: `600 12px ${T.font}`, color: email.enabled ? T.successFg : T.textMute }}>
+              {email.enabled ? t('integrations.on') : t('integrations.off')}
+            </span>
+            <Toggle
+              T={T}
+              on={!!email.enabled}
+              disabled={busy || !canWrite}
+              onClick={() => save({ enabled: !email.enabled })}
+            />
+          </span>
+        </div>
+
+        <div style={{ padding: '15px 18px', borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <span style={{ flex: '1 1 220px', minWidth: 0 }}>
+            <span style={{ display: 'block', font: `700 12.5px ${T.mono}`, color: T.text }}>APP_EMAIL_KEY</span>
+            <span style={{ display: 'block', font: `400 11.5px/1.5 ${T.font}`, color: T.textMute, marginTop: 3 }}>
+              {t('integrations.keyNote')}
+            </span>
+          </span>
+          <Chip T={T} tone={email.configured ? 'success' : 'neutral'}>
+            {email.configured ? t('integrations.keySet') : t('integrations.keyMissing')}
+          </Chip>
+        </div>
+
+        {/* The from-address: editable, because it has to sit on a domain
+            verified with Resend and that verification takes time to land. */}
+        <div style={{ padding: '15px 18px', borderTop: `1px solid ${T.border}` }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+            <span style={{ flex: '1 1 220px', minWidth: 0 }}>
+              <span style={{ display: 'block', font: `700 12.5px ${T.mono}`, color: T.text }}>app.email.from</span>
+              <span style={{ display: 'block', font: `400 11.5px/1.5 ${T.font}`, color: T.textMute, marginTop: 3 }}>
+                {t('integrations.fromNote')}
+              </span>
+            </span>
+            {!editingFrom && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 14, flex: '1 1 200px', minWidth: 0 }}>
+                <span style={{ flex: 1, minWidth: 0, font: `600 12.5px ${T.mono}`, color: T.textDim }}>{email.from}</span>
+                <Btn T={T} kind="quiet" size="sm" onClick={() => { setFrom(email.from || ''); setEditingFrom(true); }}>
+                  {t('integrations.edit')}
+                </Btn>
+              </span>
+            )}
+          </div>
+          {editingFrom && (
+            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                maxLength={200}
+                style={{
+                  height: 44, padding: '0 14px', borderRadius: 12, boxSizing: 'border-box',
+                  background: T.surface, border: `1.5px solid ${error ? T.danger : T.border}`,
+                  color: T.text, font: `600 13px ${T.mono}`, outline: 'none',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Btn T={T} size="sm" disabled={busy} onClick={() => save({ from })}>
+                  {busy ? t('ui.working') : t('integrations.save')}
+                </Btn>
+                <Btn T={T} kind="ghost" size="sm" disabled={busy} onClick={() => setEditingFrom(false)}>
+                  {t('integrations.cancel')}
+                </Btn>
+              </div>
+              {error && <span style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{error}</span>}
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <SectionTitle T={T} title={t('integrations.emailTemplatesTitle')} sub={t('integrations.emailTemplatesSub')} />
+      <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
+        {rows.map((row) => (
+          <EmailTemplateRow key={row.key} T={T} t={t} row={row} onSaved={onSaved} canWrite={canWrite} />
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+function EmailTemplateRow({ T, t, row, onSaved, canWrite }) {
+  const [editing, setEditing] = useState(false);
+  const [subject, setSubject] = useState(row.subject);
+  const [body, setBody] = useState(row.body);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const begin = () => {
+    setSubject(row.subject);
+    setBody(row.body);
+    setError('');
+    setEditing(true);
+  };
+
+  const run = async (patch) => {
+    setBusy(true);
+    setError('');
+    try {
+      await adminApi.updateIntegrations({ email: patch });
+      setEditing(false);
+      onSaved();
+    } catch (e) {
+      setError(handleApiError(e, t('integrations.saveFailed')));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field = {
+    padding: '10px 12px', borderRadius: 10, boxSizing: 'border-box', width: '100%',
+    background: T.surface, border: `1.5px solid ${error ? T.danger : T.border}`,
+    color: T.text, font: `500 12.5px ${T.font}`, outline: 'none',
+  };
+
+  return (
+    <div style={{ padding: '15px 18px', borderTop: `1px solid ${T.border}` }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
+        <span style={{ flex: '1 1 240px', minWidth: 0 }}>
+          <span style={{ display: 'block', font: `700 13px ${T.font}`, color: T.text }}>
+            {t(`integrations.emailTemplate.${row.key}`, { defaultValue: row.key })}
+          </span>
+          <span style={{ display: 'block', marginTop: 3, font: `600 11.5px ${T.mono}`, color: T.textDim }}>
+            {row.subject}
+          </span>
+          <span style={{ display: 'block', marginTop: 4, font: `400 11.5px/1.5 ${T.font}`, color: T.textMute, whiteSpace: 'pre-wrap' }}>
+            {row.body}
+          </span>
+          {/* The tokens this message may use — anything else is refused as a
+              typo rather than rendered as nothing. */}
+          <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 7 }}>
+            {(row.tokens || []).map((tok) => (
+              <span key={tok} style={{ padding: '2px 7px', borderRadius: 999, background: T.surface2, font: `600 10px ${T.mono}`, color: T.textMute }}>
+                {`{${tok}}`}
+              </span>
+            ))}
+          </span>
+        </span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <Toggle
+            T={T}
+            on={!!row.enabled}
+            disabled={busy || !canWrite}
+            onClick={() => run({ templateEnabled: { [row.key]: !row.enabled } })}
+          />
+          <Btn T={T} kind="quiet" size="sm" disabled={!canWrite} onClick={begin}>
+            {t('integrations.edit')}
+          </Btn>
+        </span>
+      </div>
+
+      {editing && (
+        <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} style={field} />
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={6}
+            maxLength={5000}
+            style={{ ...field, resize: 'vertical', lineHeight: 1.6 }}
+          />
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Btn T={T} size="sm" disabled={busy} onClick={() => run({ templates: { [row.key]: { subject, body } } })}>
+              {busy ? t('ui.working') : t('integrations.save')}
+            </Btn>
+            <Btn T={T} kind="ghost" size="sm" disabled={busy} onClick={() => setEditing(false)}>
+              {t('integrations.cancel')}
+            </Btn>
+            {!row.isDefault && (
+              <Btn
+                T={T}
+                kind="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => run({ templates: { [row.key]: { subject: row.defaultSubject, body: row.defaultBody } } })}
+              >
+                {t('integrations.reset')}
+              </Btn>
+            )}
+          </div>
+          {error && <span style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{error}</span>}
+        </div>
+      )}
+    </div>
   );
 }

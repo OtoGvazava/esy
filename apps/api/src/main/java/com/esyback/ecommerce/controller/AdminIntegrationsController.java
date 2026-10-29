@@ -1,7 +1,10 @@
 package com.esyback.ecommerce.controller;
 
+import com.esyback.ecommerce.config.EmailProperties;
 import com.esyback.ecommerce.config.SmsProperties;
 import com.esyback.ecommerce.service.ConfigStore;
+import com.esyback.ecommerce.service.EmailSender;
+import com.esyback.ecommerce.service.EmailTemplates;
 import com.esyback.ecommerce.service.SmsSender;
 import com.esyback.ecommerce.service.SmsTemplates;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +41,9 @@ public class AdminIntegrationsController {
     private final SmsProperties smsProperties;
     private final SmsTemplates templates;
     private final SmsSender smsSender;
+    private final EmailProperties emailProperties;
+    private final EmailTemplates emailTemplates;
+    private final EmailSender emailSender;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -87,8 +93,26 @@ public class AdminIntegrationsController {
         }
         sms.put("templates", rows);
 
+        Map<String, Object> email = new LinkedHashMap<>();
+        // Whether, not what — the API key is never echoed back, same as SMS.
+        email.put("configured", emailProperties.isConfigured());
+        email.put("enabled", emailProperties.isEnabled());
+        email.put("from", emailProperties.getFrom());
+        email.put("endpoint", "https://api.resend.com/emails");
+        email.put("storeReady", emailProperties.isStoreReady());
+        EmailSender.Failure ef = emailSender.getLastFailure();
+        if (ef != null) {
+            Map<String, Object> last = new LinkedHashMap<>();
+            last.put("reason", ef.reason());
+            last.put("statusCode", ef.statusCode());
+            last.put("at", ef.at());
+            email.put("lastFailure", last);
+        }
+        email.put("templates", emailTemplates.all());
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("sms", sms);
+        body.put("email", email);
         return body;
     }
 
@@ -139,6 +163,61 @@ public class AdminIntegrationsController {
                 String problem = SmsTemplates.validate(key, text);
                 if (problem != null) throw bad(problem);
                 templates.set(key, text);
+            }
+        }
+
+        // ---- Email (Resend) -------------------------------------------------
+        // Nested under "email" so the two integrations cannot collide on a key
+        // name as they grow; the SMS fields stay top-level for compatibility
+        // with the screen that already reads them.
+        if (body.get("email") instanceof Map<?, ?> em) {
+            if (em.get("from") instanceof String from) {
+                String f = from.trim();
+                if (f.isEmpty()) throw bad("The from-address cannot be empty");
+                if (f.length() > 200) throw bad("The from-address is too long");
+                // Accepts both "a@b.ge" and "Name <a@b.ge>", which is what
+                // Resend takes. The address inside is what has to be valid.
+                String bare = f.matches(".*<.+>\\s*$")
+                    ? f.substring(f.lastIndexOf('<') + 1, f.lastIndexOf('>')).trim()
+                    : f;
+                if (!EmailSender.looksLikeAddress(bare)) {
+                    throw bad("\"" + f + "\" is not an address Resend will accept");
+                }
+                emailProperties.setFrom(f);
+            }
+
+            if (em.get("enabled") instanceof Boolean on) {
+                emailProperties.setEnabled(on);
+            }
+
+            if (em.get("templateEnabled") instanceof Map<?, ?> flags) {
+                for (Map.Entry<?, ?> e : flags.entrySet()) {
+                    String key = String.valueOf(e.getKey());
+                    if (!EmailTemplates.isKnown(key)) throw bad("Unknown email template " + key);
+                    emailTemplates.setEnabled(key, Boolean.TRUE.equals(e.getValue()));
+                }
+            }
+
+            // {"templates": {"orderPlaced": {"subject": "...", "body": "..."}}}
+            // Subject and body are validated together, because a template is
+            // only usable if both are — saving one and rejecting the other
+            // would leave a half-edited message live.
+            if (em.get("templates") instanceof Map<?, ?> t) {
+                for (Map.Entry<?, ?> e : t.entrySet()) {
+                    String key = String.valueOf(e.getKey());
+                    if (!EmailTemplates.isKnown(key)) throw bad("Unknown email template " + key);
+                    if (!(e.getValue() instanceof Map<?, ?> row)) {
+                        throw bad("Each email template needs a subject and a body");
+                    }
+                    String subject = row.get("subject") == null
+                        ? emailTemplates.subject(key) : String.valueOf(row.get("subject"));
+                    String text = row.get("body") == null
+                        ? emailTemplates.body(key) : String.valueOf(row.get("body"));
+                    String problem = EmailTemplates.validate(key, subject, text);
+                    if (problem != null) throw bad(problem);
+                    emailTemplates.setSubject(key, subject);
+                    emailTemplates.setBody(key, text);
+                }
             }
         }
 

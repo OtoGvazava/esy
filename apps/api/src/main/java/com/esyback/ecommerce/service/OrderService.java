@@ -48,6 +48,8 @@ public class OrderService {
     private final PlatformProperties platformProperties;
     private final SmsSender sms;
     private final SmsTemplates smsTemplates;
+    private final EmailSender email;
+    private final EmailTemplates emailTemplates;
     // No cycle: BogPaymentService depends only on config, the cipher and an
     // HTTP client — it does not reach back into orders.
     private final BogPaymentService bogPaymentService;
@@ -223,6 +225,12 @@ public class OrderService {
             if (order.getPaymentStatus() == outcome) return order;
             order.setPaymentStatus(outcome);
             if (outcome == Order.PaymentStatus.FAILED) {
+                // Cancelled by a failed or abandoned payment, and deliberately
+                // NOT emailed. The shopper was on the bank's page a moment ago
+                // and already knows it did not go through; mailing every
+                // abandoned checkout would be noise at best and look like spam
+                // at worst. A cancellation the SHOP decides is different — that
+                // is news to the shopper, and it is emailed.
                 order.setStatus(Order.Status.CANCELLED);
             }
             return orderRepository.save(order);
@@ -264,7 +272,9 @@ public class OrderService {
                 "Paid or in-payment orders can't be self-cancelled — contact the store");
         }
         order.setStatus(Order.Status.CANCELLED);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        notifyCancelled(saved);
+        return saved;
     }
 
     /**
@@ -341,7 +351,11 @@ public class OrderService {
 
         log.info("Refund of {} requested on order {} (store {})",
             asked.toPlainString(), order.getOrderNumber(), tenant.getSubdomain());
-        return findByOrderNumber(order.getOrderNumber()).orElse(order);
+        Order fresh = findByOrderNumber(order.getOrderNumber()).orElse(order);
+        // After the claim and the bank, never before: an email saying money is
+        // coming back must not go out ahead of the instruction that sends it.
+        notifyRefunded(fresh, asked);
+        return fresh;
     }
 
     /**
@@ -371,11 +385,16 @@ public class OrderService {
      * parcel shipped must not have that fail because an SMS gateway is down.
      * The status is the fact; the message is a courtesy about it.
      *
-     * <p>CANCELLED is not messaged. A cancellation is a conversation — often
-     * about money — and a one-line text is the wrong way to open it. It is
-     * also the one transition a shop is most likely to want to explain itself.
+     * <p>CANCELLED is still not TEXTED. A cancellation is a conversation —
+     * often about money — and a one-line SMS is the wrong way to open it. It
+     * does now go by email, which is the right medium for it: a written record
+     * the shopper can keep and reply to, rather than a notification.
      */
     private void notifyShopper(Order order, Order.Status next) {
+        if (next == Order.Status.CANCELLED) {
+            notifyCancelled(order);
+            return;
+        }
         String template = switch (next) {
             case SHIPPED -> SmsTemplates.ORDER_SHIPPED;
             case OUT_FOR_DELIVERY -> SmsTemplates.ORDER_OUT;
@@ -387,6 +406,11 @@ public class OrderService {
 
     /** One path for every order message, so all of them obey the same rules. */
     private void notify(Order order, String template) {
+        notifySms(order, template);
+        notifyEmail(order, template, Map.of());
+    }
+
+    private void notifySms(Order order, String template) {
         String phone = recipientPhone(order);
         if (phone == null) return;
         // A shop watching its SMS bill can switch any of these off in admin.
@@ -396,6 +420,62 @@ public class OrderService {
         } catch (RuntimeException e) {
             log.warn("Order SMS not sent for order {}: {}", order.getId(), e.getClass().getSimpleName());
         }
+    }
+
+    /**
+     * The same notice by email, where the template keys deliberately match the
+     * SMS ones so a status change cannot reach one channel and not the other by
+     * accident.
+     *
+     * <p>Every failure is swallowed, as with SMS. An order must not fail
+     * because a courtesy message did — the status is the fact, the message is a
+     * remark about it.
+     *
+     * @param extra tokens beyond the standard order ones (the refund amount)
+     */
+    private void notifyEmail(Order order, String template, Map<String, String> extra) {
+        if (!EmailTemplates.isKnown(template)) return;
+        String to = recipientEmail(order);
+        if (to == null) return;
+        if (!emailTemplates.isEnabled(template)) return;
+        try {
+            Map<String, String> tokens = new java.util.HashMap<>(orderTokens(order));
+            tokens.putAll(extra);
+            email.send(to,
+                emailTemplates.renderSubject(template, tokens),
+                emailTemplates.renderBody(template, tokens));
+        } catch (RuntimeException e) {
+            log.warn("Order email not sent for order {}: {}", order.getId(), e.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * Sends the two notices that are email-only.
+     *
+     * <p>A cancellation and a refund both go by mail and not by text: each is
+     * usually about money, a one-line SMS is the wrong way to open that
+     * conversation, and a written record is exactly what someone wants to keep.
+     */
+    public void notifyCancelled(Order order) {
+        notifyEmail(order, EmailTemplates.ORDER_CANCELLED, Map.of());
+    }
+
+    public void notifyRefunded(Order order, BigDecimal amount) {
+        notifyEmail(order, EmailTemplates.ORDER_REFUNDED,
+            Map.of("amount", amount == null ? "" : amount.toPlainString() + " ₾"));
+    }
+
+    /**
+     * Who to email about this order.
+     *
+     * <p>Only the account's address. Unlike the phone number there is no
+     * delivery email to prefer — and the account holder is the person who paid,
+     * which is the right recipient for anything about money.
+     */
+    private static String recipientEmail(Order order) {
+        if (order.getUser() == null) return null;
+        String email = order.getUser().getEmail();
+        return email == null || email.isBlank() ? null : email;
     }
 
     /**
