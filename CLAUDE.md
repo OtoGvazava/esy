@@ -41,6 +41,30 @@ image builds the SPA itself.
   block in `docker-compose.yml`, or it silently never reaches the container
   (this is how `ADMIN_EMAILS` was dropped).
 
+### Notifications and money (both admin-configurable, both degrade quietly)
+
+- **SMS** is SMS Office; **email** is Resend. Identical shape on purpose:
+  the API key is env-only (`APP_SMS_KEY` / `APP_EMAIL_KEY`, never echoed to the
+  browser), while the sender/from-address, master switch and every message are
+  live in the `ConfigStore` and editable at `admin.esy.ge/integrations`. **No
+  key ⇒ nothing is sent and nothing fails** — an order still completes. So
+  "notifications aren't arriving" is usually an unset key, a master switch, or
+  a sender/domain the provider hasn't approved.
+- `SmsTemplates` and `EmailTemplates` share template **keys** for the four order
+  notices, so a status change cannot reach one channel and not the other by
+  accident. `orderCancelled` and `orderRefunded` are **email-only** by design.
+- **Refunds** (D2) are `POST /api/tenant/orders/{id}/refund`, **owner-only** —
+  a manager moves orders, the owner sends money back. BOG's refund API is
+  **asynchronous**: acceptance sets `PaymentStatus.REFUND_PENDING` and the
+  confirmation arrives via the existing callback/receipt path. Headroom is
+  claimed in one conditional `UPDATE` *before* the bank is called; an explicit
+  refusal rolls back, but **a bank timeout deliberately keeps the claim** so
+  nobody is invited to refund the same money twice. Untested against BOG's
+  sandbox — verify before trusting it with real money.
+- **Bulk product import** (D7) is `POST /api/products/import` (CSV, multipart),
+  `?dryRun=true` to check without writing. **All or nothing**: one bad row
+  rejects the file, because there is no bulk delete to clean up a partial run.
+
 Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
 (`AuthController` exposes `/user`, `/token`, `/logout`). ADMIN comes solely from
 `ADMIN_EMAILS`.
