@@ -2,8 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
 import { usePhoneVerify } from '../hooks/usePhoneVerify';
 
-// Send-code → enter-code → confirm. Caller renders this only when the signed-in
-// user has a phone number that is not yet verified; on success the auth context
+// Send-code → enter-code → confirm for the number already on the account.
+// Checkout and the new-store flow keep it as a safety net: the registration
+// gate (ProfileGate + PhoneStep) means a signed-in account normally has a
+// verified phone before it gets this far. On success the auth context
 // refreshes (user.phoneVerified flips) and the caller unmounts this.
 export default function PhoneVerifyBox({ compact = false }) {
   const { T } = useGlow();
@@ -21,7 +23,7 @@ export default function PhoneVerifyBox({ compact = false }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {!sent ? (
         <button
-          onClick={request}
+          onClick={() => request()}
           disabled={busy}
           style={{
             height: compact ? 40 : 44, borderRadius: 12, border: 'none',

@@ -2,6 +2,9 @@ package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.config.SmsProperties;
 import com.esyback.ecommerce.entity.User;
+import com.esyback.ecommerce.repository.UserRepository;
+import com.esyback.ecommerce.web.ApiRefusal;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,17 +35,21 @@ import static org.mockito.Mockito.when;
 class PhoneVerificationTest {
 
     private PhoneVerificationService service;
+    private UserService users;
+    private UserRepository repo;
     private User user;
 
-    /** No SMS account configured → the dev path, which returns the code. */
+    /** No SMS account, dev fallback on → the path that returns the code. */
     @BeforeEach
     void setUp() {
         SmsProperties props = mock(SmsProperties.class);
         when(props.isConfigured()).thenReturn(false);   // dev path: returns the code
+        when(props.isDevFallback()).thenReturn(true);
         SmsSender sender = new SmsSender(props);
-        UserService users = mock(UserService.class);
+        users = mock(UserService.class);
         when(users.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
-        service = new PhoneVerificationService(users, sender, mock(SmsTemplates.class));
+        repo = mock(UserRepository.class);              // no number is taken unless a test says so
+        service = new PhoneVerificationService(users, repo, sender, mock(SmsTemplates.class));
         user = new User();
         user.setId(1L);
         user.setPhoneNumber("+995 555 20 41 88");
@@ -133,7 +142,7 @@ class PhoneVerificationTest {
         when(users.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
         SmsTemplates templates = mock(SmsTemplates.class);
         when(templates.render(any(), any())).thenReturn("esy.ge — 1234");
-        return new PhoneVerificationService(users, sender, templates);
+        return new PhoneVerificationService(users, mock(UserRepository.class), sender, templates);
     }
 
     private static SmsSender sendingSender(boolean sendSucceeds) {
@@ -188,5 +197,126 @@ class PhoneVerificationTest {
         // operator can fix themselves, and it is reached without the provider
         // ever being called, so nothing else in the system reports it.
         assertTrue(e.getReason().contains("switched off"));
+    }
+
+    // ─── Registration requires a verified phone (P) ─────────────────────────
+
+    private static String codeOf(ResponseStatusException e) {
+        return e instanceof ApiRefusal r ? r.getCode() : null;
+    }
+
+    @Test
+    @DisplayName("verifying records the number in normalised form")
+    void verifyRecordsTheNormalisedNumber() {
+        service.verify(user, service.sendCode(user));
+        assertEquals("995555204188", user.getVerifiedPhone());
+        assertEquals("+995 555 20 41 88", user.getPhoneNumber());
+    }
+
+    @Test
+    @DisplayName("a number verified on another account is refused before any SMS is spent")
+    void takenNumberIsRefusedAtSend() {
+        when(repo.existsByVerifiedPhoneAndIdNot(eq("995555204188"), anyLong())).thenReturn(true);
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+            () -> service.sendCode(user));
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        assertEquals("PHONE_TAKEN", codeOf(e));
+        // No code was issued, so nothing can be verified.
+        assertEquals("CODE_EXPIRED", codeOf(assertThrows(ResponseStatusException.class,
+            () -> service.verify(user, "1234"))));
+    }
+
+    @Test
+    @DisplayName("a number taken between send and verify is refused on verify")
+    void takenNumberIsRefusedAtVerify() {
+        String code = service.sendCode(user);
+        when(repo.existsByVerifiedPhoneAndIdNot(eq("995555204188"), anyLong())).thenReturn(true);
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+            () -> service.verify(user, code));
+        assertEquals("PHONE_TAKEN", codeOf(e));
+        assertFalse(Boolean.TRUE.equals(user.getPhoneVerified()));
+    }
+
+    @Test
+    @DisplayName("losing the race on the unique index reads as taken, not a 500")
+    void uniqueIndexViolationIsTaken() {
+        String code = service.sendCode(user);
+        when(users.save(any(User.class))).thenThrow(new DataIntegrityViolationException("users_verified_phone_uk"));
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+            () -> service.verify(user, code));
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        assertEquals("PHONE_TAKEN", codeOf(e));
+    }
+
+    @Test
+    @DisplayName("changing number keeps the old one verified until the new code is confirmed")
+    void changeKeepsTheOldNumberUntilVerified() {
+        service.verify(user, service.sendCode(user));
+        ReflectionClock.skipCooldown(service, user);
+
+        String code = service.sendCode(user, "599 11 23 45");
+        // Nothing about the account moved yet.
+        assertTrue(user.getPhoneVerified());
+        assertEquals("+995 555 20 41 88", user.getPhoneNumber());
+        assertEquals("995555204188", user.getVerifiedPhone());
+
+        service.verify(user, code);
+        assertTrue(user.getPhoneVerified());
+        assertEquals("599 11 23 45", user.getPhoneNumber());
+        assertEquals("995599112345", user.getVerifiedPhone());
+    }
+
+    @Test
+    @DisplayName("one number gets at most five codes a day, across accounts")
+    void sendsPerNumberAreCapped() {
+        for (long id = 10; id < 10 + PhoneVerificationService.MAX_SENDS_PER_NUMBER_PER_DAY; id++) {
+            User other = new User();
+            other.setId(id);
+            service.sendCode(other, "555 20 41 88");
+        }
+        User next = new User();
+        next.setId(99L);
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+            () -> service.sendCode(next, "555 20 41 88"));
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, e.getStatusCode());
+        assertEquals("PHONE_CAP", codeOf(e));
+    }
+
+    @Test
+    @DisplayName("a wrong code says how many tries are left")
+    void wrongCodeCountsDown() {
+        String code = service.sendCode(user);
+        String wrong = code.equals("0000") ? "1111" : "0000";
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+            () -> service.verify(user, wrong));
+        assertEquals("CODE_WRONG", codeOf(e));
+        assertTrue(e.getReason().contains("4 tries left"));
+    }
+
+    @Test
+    @DisplayName("no key and no dev fallback: refused, and the code is never handed back")
+    void noKeyWithoutDevFallbackIsRefused() {
+        SmsProperties props = mock(SmsProperties.class);
+        when(props.isConfigured()).thenReturn(false);
+        when(props.isDevFallback()).thenReturn(false);   // a hosted deployment that lost its key
+        PhoneVerificationService hosted = new PhoneVerificationService(
+            users, repo, new SmsSender(props), mock(SmsTemplates.class));
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+            () -> hosted.sendCode(user));
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, e.getStatusCode());
+        assertEquals("SMS_UNAVAILABLE", codeOf(e));
+    }
+
+    /** Clears the per-account resend cooldown, which is wall-clock based. */
+    private static final class ReflectionClock {
+        static void skipCooldown(PhoneVerificationService s, User u) {
+            try {
+                var f = PhoneVerificationService.class.getDeclaredField("lastSentAt");
+                f.setAccessible(true);
+                ((java.util.Map<?, ?>) f.get(s)).remove(u.getId());
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException(e);
+            }
+        }
     }
 }

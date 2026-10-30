@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -19,6 +20,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     Optional<User> findByOauthProviderAndOauthProviderId(String oauthProvider, String oauthProviderId);
+
+    /** Whether another account already holds this verified number. */
+    boolean existsByVerifiedPhoneAndIdNot(String verifiedPhone, Long id);
+
+    /** Verified before verified_phone existed; PhoneBackfill fills them in. */
+    List<User> findByPhoneVerifiedTrueAndVerifiedPhoneIsNullOrderByIdAsc();
 
     @Query("SELECT u FROM User u JOIN FETCH u.roles WHERE u.username = :username")
     Optional<User> findByUsernameWithRoles(@Param("username") String username);

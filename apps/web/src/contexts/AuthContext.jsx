@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { STORAGE_KEYS } from '../constants';
-import { authApi, accountApi } from '../utils/api';
+import { authApi, accountApi, PHONE_REQUIRED_EVENT } from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -58,6 +58,18 @@ export const AuthProvider = ({ children }) => {
       console.error('Error saving user to localStorage:', error);
     }
   };
+
+  // A write was refused for want of a verified phone: re-read the user so the
+  // registration gate (keyed on phoneVerified) takes over the screen.
+  useEffect(() => {
+    const onPhoneRequired = () => {
+      authApi.me().then((res) => {
+        if (res?.authenticated && res.user) persistUser(mapBackendUser(res.user));
+      }).catch(() => {});
+    };
+    window.addEventListener(PHONE_REQUIRED_EVENT, onPhoneRequired);
+    return () => window.removeEventListener(PHONE_REQUIRED_EVENT, onPhoneRequired);
+  }, []);
 
   // Restore the session from the esy_token cookie on mount. The cookie is
   // HttpOnly (invisible to JS) and shared across esy.ge + every *.esy.ge
@@ -143,20 +155,15 @@ export const AuthProvider = ({ children }) => {
     return null;
   };
 
-  // Save the mandatory profile (name/surname/dateOfBirth; phone optional).
+  // Save the mandatory profile (name/surname/dateOfBirth). The phone is the
+  // gate's second step, through sendPhoneCode + verifyPhone.
   const saveProfile = async (body) => {
     await accountApi.updateProfile(body);
     return refreshUser();
   };
 
-  // Phone is a separate field from the profile; changing it clears
-  // verification server-side, so the new number must be re-verified.
-  const savePhone = async (phoneNumber) => {
-    await accountApi.updatePhone(phoneNumber);
-    return refreshUser();
-  };
-
-  const sendPhoneCode = () => accountApi.sendPhoneCode();
+  // The number goes with the code; verify is what writes it to the account.
+  const sendPhoneCode = (phoneNumber) => accountApi.sendPhoneCode(phoneNumber);
 
   const verifyPhone = async (code) => {
     await accountApi.verifyPhone(code);
@@ -183,7 +190,6 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     refreshUser,
     saveProfile,
-    savePhone,
     sendPhoneCode,
     verifyPhone,
     changePassword,

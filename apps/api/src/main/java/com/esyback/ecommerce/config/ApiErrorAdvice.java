@@ -1,5 +1,6 @@
 package com.esyback.ecommerce.config;
 
+import com.esyback.ecommerce.web.ApiRefusal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -54,6 +55,7 @@ public class ApiErrorAdvice {
         body.put("error", reason);
         body.put("message", reason);
         body.put("status", status.value());
+        if (e instanceof ApiRefusal refusal) body.put("code", refusal.getCode());
         // Headers the thrower attached are part of the refusal (Retry-After,
         // WWW-Authenticate) and are lost if this handler drops them.
         return ResponseEntity.status(status).headers(e.getHeaders()).body(body);

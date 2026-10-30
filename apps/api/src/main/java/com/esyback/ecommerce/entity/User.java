@@ -56,9 +56,20 @@ public class User {
     @Column(name = "phone_number")
     private String phoneNumber;
 
-    // Dev stand-in OTP verifies this; required to place an order, not to sign up.
+    // Set by the SMS code. Required to register: until it is true the account
+    // can read but not write (PhoneRequiredFilter).
     @Column(name = "phone_verified")
     private Boolean phoneVerified = false;
+
+    /**
+     * The verified number in normalised form (995XXXXXXXXX), the identity one
+     * account holds. Null until a code is confirmed. Unique — one number, one
+     * account — through an index SchemaMigrations creates rather than
+     * {@code unique = true}, so a populated Postgres gets it explicitly instead
+     * of through ddl-auto's log-and-continue DDL.
+     */
+    @Column(name = "verified_phone")
+    private String verifiedPhone;
     
     @Column(name = "oauth_provider")
     private String oauthProvider; // "google" or "apple"

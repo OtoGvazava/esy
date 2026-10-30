@@ -80,6 +80,11 @@ public class SmsSender {
         return props.isConfigured() && props.isEnabled();
     }
 
+    /** No key, and the deployment explicitly allows handing the code back. */
+    public boolean allowsDevFallback() {
+        return !props.isConfigured() && props.isDevFallback();
+    }
+
     /**
      * Sends one message. Returns false on any failure — an unconfigured
      * account, a rejected request, a network fault — so the caller can decide
@@ -171,6 +176,11 @@ public class SmsSender {
         // A number from somewhere else: we cannot know its national format, so
         // only the broad E.164 bounds apply.
         return digits.length() >= 11 && digits.length() <= 15 ? digits : null;
+    }
+
+    /** The number as a send would dial it, or null when no SMS can reach it. */
+    public static String normalisePhone(String phone) {
+        return normalise(phone);
     }
 
     /** The masked form of a stored number, as the send would have dialled it. */

@@ -128,8 +128,9 @@ app:
   admin-emails: ${ADMIN_EMAILS:}
 
   # SMS delivery for the phone one-time code (smsoffice.ge). Empty key = no
-  # account: the code is logged and returned to the browser so local work needs
-  # no messages. Set it and the code is delivered only by SMS. The sender name
+  # account: no code can be sent, unless dev-fallback is on, in which case the
+  # code is logged and returned to the browser so local work needs no
+  # messages. Set the key and the code is delivered only by SMS. The sender name
   # must be registered with SMS Office; it is read live from the config store
   # (config:app.sms.sender) so it can be changed without a redeploy.
   sms:
@@ -141,6 +142,10 @@ app:
     # Key Value service can still set it here, which is the only way to change
     # it when the admin screen cannot save.
     sender: ${APP_SMS_SENDER:}
+    # Hand the code back when there is no key. Registration requires a verified
+    # phone, so this must stay false anywhere real people sign up — otherwise
+    # every account is handed its own code. docker-compose turns it on.
+    dev-fallback: ${APP_SMS_DEV_FALLBACK:false}
 
   # Transactional email (Resend). Empty key = nothing is sent and nothing
   # fails: an order still completes, it just goes unannounced by mail. The

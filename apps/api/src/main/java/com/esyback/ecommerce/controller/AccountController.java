@@ -8,6 +8,7 @@ import com.esyback.ecommerce.service.OrderService;
 import com.esyback.ecommerce.service.PhoneVerificationService;
 import com.esyback.ecommerce.service.SmsSender;
 import com.esyback.ecommerce.service.UserService;
+import com.esyback.ecommerce.web.ApiRefusal;
 import com.esyback.ecommerce.web.TenantMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -89,7 +90,7 @@ public class AccountController {
     }
 
     /** Mandatory profile: name, surname and date of birth. Phone is handled
-     *  separately (PUT /phone) so changing it can re-trigger verification. */
+     *  separately (send-code / verify) because it needs a code. */
     @PutMapping("/profile")
     public ResponseEntity<Map<String, Object>> updateProfile(@RequestBody UpdateProfileRequest req,
                                                              Authentication authentication) {
@@ -114,8 +115,15 @@ public class AccountController {
         return ResponseEntity.ok(userMap(user));
     }
 
-    /** Phone number is its own field: changing it clears verification so the
-     *  new number must be re-verified before the next order. */
+    /**
+     * Stores a number on an account that has none verified yet.
+     *
+     * <p>A verified account is refused: changing its number here used to clear
+     * verification on the spot, and with a verified phone required to use the
+     * account that would lock its owner out until a code arrived. A verified
+     * account changes number through send-code with the new number, which
+     * keeps the old one in force until the new code is confirmed.
+     */
     @PutMapping("/phone")
     public ResponseEntity<Map<String, Object>> updatePhone(@RequestBody Map<String, String> body,
                                                            Authentication authentication) {
@@ -123,6 +131,10 @@ public class AccountController {
         String raw = body == null ? null : body.get("phoneNumber");
         String newPhone = raw == null ? "" : raw.trim();
         String current = user.getPhoneNumber() == null ? "" : user.getPhoneNumber();
+        if (Boolean.TRUE.equals(user.getPhoneVerified()) && !newPhone.equals(current)) {
+            throw new ApiRefusal(HttpStatus.CONFLICT, "PHONE_CHANGE_NEEDS_CODE",
+                "Confirm the new number with a code — the current one stays until then");
+        }
         if (!newPhone.equals(current)) {
             user.setPhoneNumber(newPhone.isEmpty() ? null : newPhone);
             user.setPhoneVerified(false);
@@ -147,14 +159,21 @@ public class AccountController {
      * gone. It is the caller's own number, which they can already read in full
      * on this same screen, so masking is convention rather than secrecy — the
      * last two digits are what makes a wrong number obvious.
+     *
+     * <p>{@code phoneNumber} in the body is the number to verify — the new one
+     * when changing numbers. It is written to the account only by a successful
+     * verify; omitted, the account's current number is used.
      */
     @PostMapping("/phone/send-code")
-    public ResponseEntity<Map<String, Object>> sendPhoneCode(Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> sendPhoneCode(@RequestBody(required = false) Map<String, String> req,
+                                                             Authentication authentication) {
         User user = requireUser(authentication);
-        String devCode = phoneVerificationService.sendCode(user);
+        String requested = req == null ? null : req.get("phoneNumber");
+        String devCode = phoneVerificationService.sendCode(user, requested);
+        String target = requested == null || requested.isBlank() ? user.getPhoneNumber() : requested;
         Map<String, Object> body = new java.util.HashMap<>();
         body.put("sent", true);
-        body.put("destination", SmsSender.maskPhone(user.getPhoneNumber()));
+        body.put("destination", SmsSender.maskPhone(target));
         if (devCode != null) body.put("devCode", devCode);
         return ResponseEntity.ok(body);
     }
@@ -207,9 +226,7 @@ public class AccountController {
         return m;
     }
 
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> handle(ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode())
-            .body(Map.of("error", ex.getReason() == null ? "Request failed" : ex.getReason()));
-    }
+    // No local @ExceptionHandler: ApiErrorAdvice carries the reason AND the
+    // stable code the gate translates. A local copy here would win over the
+    // advice and drop the code.
 }

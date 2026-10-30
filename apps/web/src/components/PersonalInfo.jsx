@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
 import { useAuth } from '../contexts/AuthContext';
-import PhoneVerifyBox from './PhoneVerifyBox';
+import PhoneStep from './PhoneStep';
 import DateOfBirthPicker from './DateOfBirthPicker';
 
 // Account-page cards. The mandatory profile (name, surname, date of birth) and
-// the phone number are edited separately: changing the phone clears its
-// verification, so it lives in its own card with its own save + verify flow.
+// the phone number are edited separately: a new number needs a code, and the
+// current one stays verified until that code is confirmed.
 export default function PersonalInfo() {
   const { T } = useGlow();
   const { t } = useTranslation('storefront');
-  const { user, saveProfile, savePhone } = useAuth();
+  const { user, saveProfile } = useAuth();
 
   // profile (name / surname / dob)
   const [editing, setEditing] = useState(false);
@@ -19,11 +19,16 @@ export default function PersonalInfo() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  // phone (separate)
+  // phone (separate) — the number on the account when the change began, so a
+  // confirmed change (the number moves) closes the card by itself.
   const [phoneEditing, setPhoneEditing] = useState(false);
-  const [phoneInput, setPhoneInput] = useState('');
-  const [phoneBusy, setPhoneBusy] = useState(false);
-  const [phoneErr, setPhoneErr] = useState('');
+  const [phoneAtStart, setPhoneAtStart] = useState(null);
+
+  useEffect(() => {
+    if (phoneEditing && user?.phoneVerified && user.phoneNumber !== phoneAtStart) {
+      setPhoneEditing(false);
+    }
+  }, [phoneEditing, phoneAtStart, user?.phoneNumber, user?.phoneVerified]);
 
   if (!user) return null;
 
@@ -59,21 +64,8 @@ export default function PersonalInfo() {
     }
   };
 
-  const startPhoneEdit = () => { setPhoneInput(user.phoneNumber || ''); setPhoneEditing(true); setPhoneErr(''); };
-  const cancelPhone = () => { setPhoneEditing(false); setPhoneErr(''); };
-
-  const savePhoneNumber = async () => {
-    setPhoneBusy(true);
-    setPhoneErr('');
-    try {
-      await savePhone(phoneInput.trim());
-      setPhoneEditing(false);
-    } catch (e) {
-      setPhoneErr(e?.message || t('account.personal.saveError'));
-    } finally {
-      setPhoneBusy(false);
-    }
-  };
+  const startPhoneEdit = () => { setPhoneAtStart(user.phoneNumber || null); setPhoneEditing(true); };
+  const cancelPhone = () => setPhoneEditing(false);
 
   const card = { padding: 16, borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 12 };
   const label = { font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.04em', textTransform: 'uppercase' };
@@ -119,7 +111,7 @@ export default function PersonalInfo() {
         </div>
       </div>
 
-      {/* phone number (separate — changing it requires re-verification) */}
+      {/* phone number (separate — a new number needs its own code) */}
       <div style={{ padding: '0 16px 14px' }}>
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -133,15 +125,19 @@ export default function PersonalInfo() {
 
           {phoneEditing ? (
             <>
-              <label style={row}>
-                <span style={label}>{t('account.personal.phone')}</span>
-                <input value={phoneInput} onChange={(e) => { setPhoneInput(e.target.value); setPhoneErr(''); }} placeholder="+995…" style={input} />
-              </label>
-              {phoneErr && <div style={{ font: `500 12px ${T.font}`, color: T.danger }}>{phoneErr}</div>}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={savePhoneNumber} disabled={phoneBusy} style={{ ...primaryBtn(phoneBusy), flex: 1 }}>{phoneBusy ? t('account.personal.saving') : t('account.personal.save')}</button>
-                <button onClick={cancelPhone} disabled={phoneBusy} style={ghostBtn}>{t('account.personal.cancel')}</button>
-              </div>
+              {user.phoneNumber && (
+                <div style={row}>
+                  <span style={label}>{t('phoneGate.current')}</span>
+                  <span style={{ ...val, display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {user.phoneNumber}
+                    {user.phoneVerified && (
+                      <span style={{ font: `700 10px ${T.font}`, color: T.success, letterSpacing: '0.04em', textTransform: 'uppercase' }}>✓ {t('phone.verified')}</span>
+                    )}
+                  </span>
+                </div>
+              )}
+              <div style={{ font: `500 12.5px/1.5 ${T.font}`, color: T.textDim }}>{t('phoneGate.changeNote')}</div>
+              <PhoneStep confirmLabel={t('phoneGate.confirmChange')} onCancel={cancelPhone} />
             </>
           ) : (
             <>
@@ -156,15 +152,9 @@ export default function PersonalInfo() {
                   ))}
                 </span>
               </div>
-              {!user.phoneNumber && (
-                <div style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('phone.addPrompt')}</div>
-              )}
-              {user.phoneNumber && !user.phoneVerified && (
-                <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ font: `500 12px ${T.font}`, color: T.textDim }}>{t('phone.reverifyNote')}</div>
-                  <PhoneVerifyBox compact />
-                </div>
-              )}
+              {/* No "verify" box here any more: an account without a verified
+                  phone never reaches this page — the registration gate covers
+                  the screen until it has one. */}
             </>
           )}
         </div>

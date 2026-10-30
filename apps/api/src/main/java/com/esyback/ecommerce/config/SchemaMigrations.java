@@ -44,6 +44,13 @@ public class SchemaMigrations implements CommandLineRunner {
             "role",
             "'OWNER','MANAGER','CUSTOMER'"
         );
+
+        // One verified number, one account (2026-10). A unique INDEX rather
+        // than @Column(unique = true): NULLs do not collide on either H2 or
+        // Postgres, so every unverified account can sit at NULL, and IF NOT
+        // EXISTS makes it a no-op on every boot after the first.
+        jdbc.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_verified_phone_uk ON users (verified_phone)");
+        log.info("SchemaMigrations: users_verified_phone_uk ensured");
     }
 
     // No catch: a failed constraint migration must FAIL THE BOOT, not log a

@@ -261,7 +261,8 @@
     "save": "Save and continue",
     "saving": "Saving…",
     "required": "Please fill in your name, surname and date of birth.",
-    "error": "Could not save. Please try again."
+    "error": "Could not save. Please try again.",
+    "next": "Next"
   },
   "phone": {
     "title": "Phone number",
@@ -311,5 +312,43 @@
     "title": "{{name}} is closed right now",
     "body": "This shop is not accepting orders at the moment. Everything else on esy is still open.",
     "browse": "Browse other shops"
+  },
+  "phoneGate": {
+    "stepChip": "Step 2 of 2 · required",
+    "title": "Your phone number",
+    "subtitle": "Your account cannot be activated without a number — the shop and the courier call it. It is verified once and works in every shop.",
+    "existingTitle": "One more step, {{name}}",
+    "existingSubtitle": "Every esy account now needs a verified phone. Your orders, addresses and shops are all still here — verify your number to carry on.",
+    "numberLabel": "Phone number",
+    "numberPlaceholder": "555 20 41 88",
+    "sendCode": "Send the code",
+    "codeLabel": "Four-digit code",
+    "noCode": "No code?",
+    "resend": "Send again",
+    "resendIn": "Send again in {{seconds}}s",
+    "newCode": "Send a new code",
+    "wrongNumber": "Wrong number?",
+    "changeNumber": "Change it",
+    "takenHelp": "One number belongs to one account. If this is your number, sign in with the Google account you verified it on — or use a different number.",
+    "otherAccount": "Different account?",
+    "signOut": "Sign out",
+    "current": "Current",
+    "changeNote": "The new number takes over only once its code is confirmed. Until then your current number keeps working.",
+    "confirmChange": "Confirm and change",
+    "cancelChange": "Cancel — keep the current number",
+    "errors": {
+      "PHONE_MISSING": "Enter your phone number.",
+      "PHONE_INVALID": "That number does not look right — 9 digits, starting with 5.",
+      "PHONE_TAKEN": "This number is already verified on another esy account.",
+      "PHONE_COOLDOWN": "Please wait a moment before asking for another code.",
+      "PHONE_CAP": "Too many codes sent to this number today. Try again tomorrow.",
+      "SMS_UNAVAILABLE": "The code could not be sent right now. Your number is kept — try again in a minute.",
+      "CODE_EXPIRED": "That code has expired. Ask for a new one.",
+      "CODE_WRONG": "Incorrect code — check it and try again.",
+      "CODE_LOCKED": "Five wrong codes — this code has been cancelled. Ask for a new one.",
+      "PHONE_REQUIRED": "Verify your phone number to continue.",
+      "PHONE_CHANGE_NEEDS_CODE": "Confirm the new number with a code — the current one stays until then.",
+      "generic": "Something went wrong. Please try again."
+    }
   }
 }

@@ -14,8 +14,9 @@ import org.springframework.stereotype.Component;
  * registered and activated on the SMS Office side and may need changing without
  * a redeploy while that is sorted out.
  *
- * <p>With no key configured the app runs exactly as before — the code is logged
- * and returned to the caller — so local development needs no account. See
+ * <p>With no key configured and {@code app.sms.dev-fallback} on, the code is
+ * logged and returned to the caller, so local development needs no account.
+ * Without the flag, no key means no codes at all. See
  * {@code PhoneVerificationService} for why that fallback is gated.
  */
 @Component
@@ -40,6 +41,21 @@ public class SmsProperties {
 
     public boolean isConfigured() {
         return !getApiKey().isEmpty();
+    }
+
+    /**
+     * Whether a deployment WITHOUT a key may hand the code back to the browser.
+     *
+     * <p>Off unless set. Registration now requires a verified phone, so a hosted
+     * deployment that lost its key would otherwise give every new account its
+     * own code and the check would mean nothing. The docker-compose stack sets
+     * it; Render must not.
+     */
+    @Value("${app.sms.dev-fallback:false}")
+    private boolean devFallback;
+
+    public boolean isDevFallback() {
+        return devFallback;
     }
 
     public String getSender() {

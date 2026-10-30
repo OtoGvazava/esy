@@ -8,12 +8,21 @@ import { isManagerHostname } from './hosts';
 
 // ---- Low-level client -------------------------------------------------------
 export class ApiError extends Error {
-  constructor(message, status) {
+  // `code` is the server's stable refusal code (PHONE_TAKEN, CODE_WRONG, …),
+  // when it sent one: the reason is English prose, the code is what a screen
+  // translates.
+  constructor(message, status, code) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.code = code;
   }
 }
+
+// The server refuses writes from an account without a verified phone. Tell
+// the auth context, which refreshes the user so the registration gate shows
+// instead of a stray error on whatever screen tried to write.
+export const PHONE_REQUIRED_EVENT = 'esy:phone-required';
 
 // Store scoping applies to the back office only. The admin host is deliberately
 // excluded: administration is cross-store and names its target explicitly in
@@ -57,13 +66,18 @@ class ApiClient {
 
     if (!response.ok) {
       let message = `Request failed (${response.status})`;
+      let code;
       try {
         const body = await response.json();
         message = body.error || body.message || message;
+        code = body.code;
       } catch {
         /* response had no JSON body */
       }
-      throw new ApiError(message, response.status);
+      if (code === 'PHONE_REQUIRED' && typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(PHONE_REQUIRED_EVENT));
+      }
+      throw new ApiError(message, response.status, code);
     }
 
     if (response.status === 204) return null;
@@ -267,14 +281,13 @@ export const accountApi = {
   updateProfile(body) {
     return api.put('/api/account/profile', body);
   },
-  // Separate from the profile: changing the number clears verification.
-  updatePhone(phoneNumber) {
-    return api.put('/api/account/phone', { phoneNumber });
-  },
-  // Dev stand-in OTP: response includes { devCode } so it can be entered
-  // without a real SMS. Swap for a provider later — contract is unchanged.
-  sendPhoneCode() {
-    return api.post('/api/account/phone/send-code', {});
+  // Sends a code for `phoneNumber` (the new one when changing numbers; omit to
+  // use the number already on the account). The number is written to the
+  // account only when verify succeeds, so the old one stays in force until
+  // then. Response: { destination } (masked), plus { devCode } on a local
+  // stack with no SMS account.
+  sendPhoneCode(phoneNumber) {
+    return api.post('/api/account/phone/send-code', phoneNumber ? { phoneNumber } : {});
   },
   verifyPhone(code) {
     return api.post('/api/account/phone/verify', { code });

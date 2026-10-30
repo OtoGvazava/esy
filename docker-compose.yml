@@ -66,10 +66,12 @@ services:
       # application.yml, which invalidates tokens whenever that default changes.
       JWT_SECRET: ${JWT_SECRET:-}
       # SMS (smsoffice.ge) — delivers the phone one-time code. Leave UNSET
-      # locally: with no key the code is logged and returned to the browser so
-      # verification works without spending messages. Set it and the code is
-      # only ever delivered by SMS.
+      # locally: with no key (and the dev fallback below) the code is logged and
+      # returned to the browser so verification works without spending
+      # messages. Set it and the code is only ever delivered by SMS.
       APP_SMS_KEY: ${APP_SMS_KEY:-}
+      # Local only: lets a keyless stack hand the code back. Never set on Render.
+      APP_SMS_DEV_FALLBACK: ${APP_SMS_DEV_FALLBACK:-true}
       # Sender name shown to the recipient. Must be registered with SMS Office
       # or every send is refused with ErrorCode 150. Blank uses "esy.ge".
       APP_SMS_SENDER: ${APP_SMS_SENDER:-}

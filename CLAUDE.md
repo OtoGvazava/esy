@@ -50,6 +50,13 @@ image builds the SPA itself.
   key ⇒ nothing is sent and nothing fails** — an order still completes. So
   "notifications aren't arriving" is usually an unset key, a master switch, or
   a sender/domain the provider hasn't approved.
+- **A verified phone is required to register** (Google sign-in, then profile,
+  then phone + SMS code; one number per account). `PhoneRequiredFilter` refuses
+  every write from an unverified account with `403 PHONE_REQUIRED`, so in prod
+  **no SMS key ⇒ nobody can finish registering**. The keyless "code returned to
+  the browser" path only runs with `APP_SMS_DEV_FALLBACK=true`, which
+  docker-compose sets and Render must never set. Plan:
+  `docs/plans/phone-mandatory-registration.md`.
 - `SmsTemplates` and `EmailTemplates` share template **keys** for the four order
   notices, so a status change cannot reach one channel and not the other by
   accident. `orderCancelled` and `orderRefunded` are **email-only** by design.

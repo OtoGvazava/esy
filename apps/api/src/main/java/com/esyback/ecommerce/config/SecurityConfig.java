@@ -4,6 +4,8 @@ import com.esyback.ecommerce.security.HttpCookieOAuth2AuthorizationRequestReposi
 import com.esyback.ecommerce.security.JwtAuthenticationFilter;
 import com.esyback.ecommerce.security.OAuth2AuthenticationSuccessHandler;
 import com.esyback.ecommerce.security.OAuthCanonicalHostRedirectFilter;
+import com.esyback.ecommerce.security.PhoneRequiredFilter;
+import com.esyback.ecommerce.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +33,7 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oauth2SuccessHandler;
     private final HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository;
     private final OAuthCanonicalHostRedirectFilter oauthCanonicalHostRedirectFilter;
+    private final UserRepository userRepository;
 
     @Value("${app.oauth2.redirect-base:}")
     private String redirectBase;
@@ -80,6 +83,9 @@ public class SecurityConfig {
                     res.sendRedirect(redirectBase + "/signin?error=oauth"))
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // After the JWT filter, so it sees who is signed in: an account
+            // without a verified phone can read but not write.
+            .addFilterAfter(new PhoneRequiredFilter(userRepository), JwtAuthenticationFilter.class)
             // Bounce OAuth starts to the canonical host before Spring builds
             // the authorization request (so redirect_uri matches Google).
             .addFilterBefore(oauthCanonicalHostRedirectFilter, OAuth2AuthorizationRequestRedirectFilter.class)
