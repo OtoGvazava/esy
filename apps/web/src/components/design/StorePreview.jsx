@@ -38,7 +38,7 @@ import { Icons } from '../../core/icons';
 import StoreHead from '../store/StoreHead';
 import StoreBanner from '../store/StoreBanner';
 import { StoreTabs } from '../store/StoreMenus';
-import { bannerShown } from '../../core/design/show';
+import { addedRecently, bannerShown } from '../../core/design/show';
 import GlowDock from '../glow/GlowDock';
 import GlowProductCard from '../glow/GlowProductCard';
 import { PoweredBy } from '../glow/GlowPrimitives';
@@ -165,6 +165,7 @@ function PreviewHome({ products, total, sample }) {
   const items = products || [];
   // The story sets Home builds, each kept only while the products fill it.
   const stories = [
+    { id: 'new', label: t('storyNew'), test: (p) => addedRecently(p.createdAt) },
     { id: 'under50', label: t('storyUnder50'), test: (p) => Number(p.price) <= 50 },
     { id: 'low', label: t('storyLow'), test: (p) => p.tag === 'low' },
   ].map((s) => ({ ...s, first: items.find(s.test) })).filter((s) => s.first);

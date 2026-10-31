@@ -16,7 +16,7 @@ import { useDesign } from '../core/design/useDesign';
 import GlowLoadMore from '../components/glow/GlowLoadMore';
 import StoreHead from '../components/store/StoreHead';
 import StoreBanner from '../components/store/StoreBanner';
-import { bannerShown } from '../core/design/show';
+import { addedRecently, bannerShown } from '../core/design/show';
 import { StoreTabs } from '../components/store/StoreMenus';
 import { useStoreBarShown } from '../components/store/storeChrome';
 import { alpha } from '../core/tokens';
@@ -133,6 +133,7 @@ function ShopHome() {
 
   // The story sets, each kept only while the loaded products fill it.
   const stories = [
+    { id: 'new', label: t('storyNew'), test: (p) => addedRecently(p.createdAt) },
     { id: 'under50', label: t('storyUnder50'), test: (p) => Number(p.price) <= 50 },
     { id: 'low', label: t('storyLow'), test: (p) => p.tag === 'low' },
   ].map((s) => ({ ...s, items: products.filter(s.test) })).filter((s) => s.items.length > 0);
@@ -196,7 +197,10 @@ function ShopHome() {
             }}>{tenant.bio}</div>
             <button
               type="button"
-              onClick={() => gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              onClick={() => gridRef.current?.scrollIntoView({
+                // Reduce motion (Display settings) jumps instead of gliding.
+                behavior: document.documentElement.dataset.motion === 'reduce' ? 'auto' : 'smooth', block: 'start',
+              })}
               style={{
                 alignSelf: 'flex-start', height: 44, padding: '0 20px', borderRadius: 'var(--k-r-btn)',
                 border: 0, background: '#fff', color: '#0b0b0f', font: `700 14px ${T.font}`, cursor: 'pointer',
@@ -207,8 +211,9 @@ function ShopHome() {
       )}
 
       {/* Stories are curated sets, never the categories again, and only the
-          sets the products really support: the list returns no creation date
-          or sale price, so "new" and "sale" would be invented. */}
+          sets the products really support: new (added in the last 14 days),
+          under 50 ₾ and running out. There is no sale price, so a "sale"
+          story would be invented. */}
       {design.show.stories && stories.length > 0 && !query && (
         <div style={{ position: 'relative', display: 'flex', gap: 14, overflowX: 'auto', padding: `${sp(14)} ${gutter}px ${sp(4)}` }}>
           {stories.map((s) => {
