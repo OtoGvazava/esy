@@ -6,14 +6,21 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+// @DynamicUpdate: a save writes only the columns that changed. The status, the
+// payment claim and the stock flag are each moved by one conditional UPDATE
+// (see OrderRepository), and a full-row save from a stale copy — a payment
+// callback that loaded the order a moment before a cancellation, say — would
+// otherwise write the old status and the old stock flag straight back.
 @Entity
 @Table(name = "orders")
+@DynamicUpdate
 @Getter
 @Setter
 @NoArgsConstructor
@@ -120,6 +127,19 @@ public class Order {
         BigDecimal left = paid.subtract(refundedOrZero());
         return left.signum() < 0 ? BigDecimal.ZERO : left;
     }
+
+    // Whether this order's goods are off the shelf right now. Set when stock is
+    // committed — at placement on the free flow, at PAID on a card order (D3) —
+    // and cleared when a cancellation puts it back. Without it a cancellation
+    // could not tell an order that took stock from one that never did: a card
+    // checkout whose bank call failed is left NONE and PLACED with nothing
+    // taken, exactly like a free order that took everything.
+    //
+    // Nullable with no DB default, so ddl-auto=update can add it to a populated
+    // table. Null means the order predates the column; the cancel path then
+    // decides from the payment status (see OrderService#releaseStock).
+    @Column(name = "stock_committed")
+    private Boolean stockCommitted;
 
     // Delivery address, frozen at checkout (decision D4). Plain columns, not a
     // FK to Address: the user's address book is mutable and deletable, but an

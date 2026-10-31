@@ -31,6 +31,7 @@ import { money, feeOf } from '../core/money';
 import { StatusPair } from '../core/domain';
 import { tenantApi, handleApiError } from '../utils/api';
 import { MTop } from './ManagerShell';
+import { NoOrders } from './FirstVisit';
 
 // The API sends status lower-cased with spaces ("out for delivery"); the tone
 // tables and the fulfilment machine both key off the enum name.
@@ -142,11 +143,20 @@ export default function ManagerOrders() {
   // line and the symbol on the next reads as two different figures.
   const tdMoney = { ...td, textAlign: 'right', whiteSpace: 'nowrap' };
 
+  // M2's empty state: no order at all yet, so no filters to offer — just where
+  // orders will appear and the store's link to share.
+  const none = !loading && !error && orders.length === 0;
+
   return (
     <div>
-      <MTop T={T} mode={mode} title={t('orders.title')} sub={sub ? `${sub}.esy.ge` : undefined} />
+      <MTop
+        T={T} mode={mode} title={t('orders.title')}
+        sub={none ? t('firstVisit.noOrdersSub') : sub ? `${sub}.esy.ge` : undefined}
+      />
 
-      <div style={{ display: 'flex', gap: 7, marginBottom: 14, flexWrap: 'wrap' }}>
+      {none && <NoOrders T={T} sub={sub} />}
+
+      {!none && <div style={{ display: 'flex', gap: 7, marginBottom: 14, flexWrap: 'wrap' }}>
         {FILTERS.map((f) => {
           const on = f === filter;
           return (
@@ -166,7 +176,7 @@ export default function ManagerOrders() {
             </button>
           );
         })}
-      </div>
+      </div>}
 
       {loading && (
         <div style={{ font: `500 13px ${T.font}`, color: T.textMute }}>{t('orders.loading')}</div>
@@ -178,7 +188,7 @@ export default function ManagerOrders() {
         </div>
       )}
 
-      {!loading && shown.length === 0 && (
+      {!loading && !none && shown.length === 0 && (
         <Card T={T} pad={40} style={{ textAlign: 'center' }}>
           <span style={{
             width: 56, height: 56, borderRadius: 16, background: T.accentBg, color: T.accentFg,

@@ -233,6 +233,17 @@ public class TenantController {
                     line.put("variantLabel", it.getVariantLabel());
                     return line;
                 }).collect(Collectors.toList()));
+                // The same two figures the refund answers with, so the screen
+                // (and the cancel dialog's "still to refund") never has to
+                // guess what is left after a partial refund. Refundable only
+                // where requestRefund would accept it: money taken by card
+                // (PAID, or mid-refund). An unpaid order has nothing to return.
+                Order.PaymentStatus ps = order.getPaymentStatus() == null
+                    ? Order.PaymentStatus.NONE : order.getPaymentStatus();
+                boolean refundableNow = ps == Order.PaymentStatus.PAID
+                    || ps == Order.PaymentStatus.REFUND_PENDING;
+                m.put("refunded", order.refundedOrZero());
+                m.put("refundable", refundableNow ? order.refundableAmount() : java.math.BigDecimal.ZERO);
                 return ResponseEntity.ok(m);
             })
             .orElseGet(() -> ResponseEntity.notFound().build());

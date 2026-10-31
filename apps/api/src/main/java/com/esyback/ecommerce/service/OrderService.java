@@ -14,6 +14,7 @@ import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.AddressRepository;
 import com.esyback.ecommerce.repository.OrderRepository;
 import com.esyback.ecommerce.repository.ProductRepository;
+import com.esyback.ecommerce.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,9 +25,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -41,6 +45,9 @@ public class OrderService {
     private final ProductService productService;
     private final ProductRepository productRepository;
     private final ProductVariantService productVariantService;
+    // Read here, not through the product services, only to put a cancelled
+    // order's goods back on the exact row they came off (see restock).
+    private final ProductVariantRepository variantRepository;
     private final AddressRepository addressRepository;
     // Platform service fee (fraction of order total). Read at call time from a
     // live config bean so the rate can change via the admin config UI
@@ -62,6 +69,10 @@ public class OrderService {
         order.setUser(user);
         order.setTenant(tenant);
         order.setStatus(Order.Status.PLACED);
+        // Nothing is off the shelf yet; commitStockOnce sets it when it is.
+        // Explicit rather than null, because null means "placed before the
+        // flag existed" and is read from the payment status instead.
+        order.setStockCommitted(false);
         order.setOrderNumber("ESY-" + ThreadLocalRandom.current().nextInt(1000, 9999)
             + "-" + ThreadLocalRandom.current().nextInt(1, 9));
 
@@ -183,8 +194,123 @@ public class OrderService {
      */
     public void commitFreeOrderStock(Order order) {
         if (order.getPaymentStatus() == Order.PaymentStatus.NONE) {
-            productService.commitStock(order);
+            commitStockOnce(order.getId());
         }
+    }
+
+    /**
+     * Takes an order's goods off the shelf, once (D3).
+     *
+     * <p>One conditional UPDATE decides, so a retried payment callback cannot
+     * take the stock twice, and a payment that lands after the store cancelled
+     * the order takes none: a cancelled order holds no stock. Each line then
+     * records what it actually took, because commitStock floors a row at zero
+     * on an oversell and a cancellation must put back only what was taken.
+     */
+    private void commitStockOnce(Long orderId) {
+        if (orderId == null || orderRepository.markStockCommitted(orderId) != 1) return;
+        orderRepository.findById(orderId).ifPresent(order -> {
+            recordStockTaken(order);
+            productService.commitStock(order);
+        });
+    }
+
+    /**
+     * What each line will take, worked out the way ProductService.commitStock
+     * takes it: from the variant row when the product has variants, from the
+     * product otherwise, floored at zero, with two lines on the same row
+     * sharing what is there.
+     */
+    private void recordStockTaken(Order order) {
+        Map<String, Integer> left = new HashMap<>();
+        for (OrderItem item : order.getItems()) {
+            if (item.getProductId() == null) continue;
+            Product p = productRepository.findById(item.getProductId()).orElse(null);
+            if (p == null) {
+                item.setStockTaken(0);
+                continue;
+            }
+            int want = item.getQuantity() == null ? 1 : item.getQuantity();
+            String key;
+            int have;
+            if (p.variantsEnabled() && item.getVariantId() != null) {
+                ProductVariant v = variantRepository.findByIdAndProduct(item.getVariantId(), p).orElse(null);
+                if (v == null) {
+                    item.setStockTaken(0);
+                    continue;
+                }
+                key = "variant:" + v.getId();
+                have = left.getOrDefault(key, v.getQuantity() == null ? 0 : v.getQuantity());
+            } else {
+                key = "product:" + p.getId();
+                have = left.getOrDefault(key, p.getQuantity() == null ? 0 : p.getQuantity());
+            }
+            item.setStockTaken(Math.max(0, Math.min(want, have)));
+            left.put(key, Math.max(0, have - want));
+        }
+    }
+
+    /**
+     * Payment statuses that prove an order from before the stock flag took its
+     * stock: stock is committed at PAID, and a refund can only follow a payment.
+     * NONE is deliberately missing. It is also what a card checkout is left at
+     * when the bank call fails before any stock moved, and putting back stock
+     * that never left would sell goods the shop does not have — the same reason
+     * a refund does not restock.
+     */
+    private static final Set<Order.PaymentStatus> STOCK_TAKEN_BEFORE_FLAG = EnumSet.of(
+        Order.PaymentStatus.PAID, Order.PaymentStatus.REFUND_PENDING, Order.PaymentStatus.REFUNDED);
+
+    /** A cancelled order's goods go back, once, if it ever took them. */
+    private void releaseStock(Long orderId) {
+        if (orderRepository.releaseStock(orderId, STOCK_TAKEN_BEFORE_FLAG) != 1) return;
+        orderRepository.findById(orderId).ifPresent(this::restock);
+    }
+
+    /**
+     * Puts a cancelled order's goods back on the shelf: the inverse of
+     * ProductService.commitStock, variants included (D11). Each line returns
+     * what it took — its quantity when it predates that record — to the row it
+     * took it from. The row is found by id, or by its combination when the
+     * merchant has re-saved the variant grid since, which recreates the rows.
+     * A product or combination that no longer exists has no shelf to go back
+     * to, and is skipped.
+     */
+    private void restock(Order order) {
+        for (OrderItem item : order.getItems()) {
+            if (item.getProductId() == null) continue;
+            int back = item.getStockTaken() != null ? item.getStockTaken()
+                : (item.getQuantity() == null ? 1 : item.getQuantity());
+            if (back <= 0) continue;
+            Product p = productRepository.findById(item.getProductId()).orElse(null);
+            if (p == null) continue;
+
+            if (p.variantsEnabled() && item.getVariantId() != null) {
+                ProductVariant v = variantRepository.findByIdAndProduct(item.getVariantId(), p)
+                    .or(() -> sameCombination(p, item.getVariantLabel()))
+                    .orElse(null);
+                if (v == null) {
+                    log.warn("Cancelled order {}: {} × \"{}\" not restocked, that combination of product {} no longer exists",
+                        order.getOrderNumber(), back, item.getVariantLabel(), p.getId());
+                } else {
+                    v.setQuantity((v.getQuantity() == null ? 0 : v.getQuantity()) + back);
+                    variantRepository.save(v);
+                }
+                // Keep the product's cached total honest against its rows.
+                productVariantService.syncStock(p);
+                continue;
+            }
+
+            p.setQuantity((p.getQuantity() == null ? 0 : p.getQuantity()) + back);
+            productRepository.save(p);
+        }
+    }
+
+    private Optional<ProductVariant> sameCombination(Product p, String label) {
+        if (label == null || label.isBlank()) return Optional.empty();
+        return variantRepository.findByProductOrderByIdAsc(p).stream()
+            .filter(v -> label.equals(v.label()))
+            .findFirst();
     }
 
     /** Mark a freshly created order as awaiting BOG payment + record BOG's id. */
@@ -214,12 +340,13 @@ public class OrderService {
             // caller sees claimed == 1 and commits stock; the loser (and any
             // BOG retry) finds nothing to claim and decrements nothing.
             int claimed = orderRepository.claimPaid(orderNumber);
-            return findByOrderNumber(orderNumber).map(order -> {
-                if (claimed == 1) {
-                    productService.commitStock(order);
-                }
-                return order;
-            });
+            if (claimed == 1) {
+                // Takes nothing if the store cancelled the order while the
+                // shopper was still on the bank's page: the money is in, the
+                // goods stay on the shelf, and the owner refunds it.
+                findByOrderNumber(orderNumber).ifPresent(order -> commitStockOnce(order.getId()));
+            }
+            return findByOrderNumber(orderNumber);
         }
         return findByOrderNumber(orderNumber).map(order -> {
             if (order.getPaymentStatus() == outcome) return order;
@@ -271,8 +398,12 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Paid or in-payment orders can't be self-cancelled — contact the store");
         }
-        order.setStatus(Order.Status.CANCELLED);
-        Order saved = orderRepository.save(order);
+        if (orderRepository.claimStatus(order.getId(), Order.Status.PLACED, Order.Status.CANCELLED) != 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Order can no longer be cancelled");
+        }
+        // A free order took its stock when it was placed; it goes back now.
+        releaseStock(order.getId());
+        Order saved = orderRepository.findById(order.getId()).orElse(order);
         notifyCancelled(saved);
         return saved;
     }
@@ -363,17 +494,29 @@ public class OrderService {
      * PLACED→SHIPPED→OUT_FOR_DELIVERY→DELIVERED, plus cancel from PLACED or
      * SHIPPED. DELIVERED and CANCELLED are terminal. Scoped to the tenant so
      * one store can never touch another store's order.
+     *
+     * <p>A cancellation puts the goods back on the shelf, variants included,
+     * if the order had taken them (see releaseStock). It does not touch the
+     * money: a paid order still has to be refunded, by the owner, as its own
+     * act (D2) — cancelling and refunding are different permissions.
      */
     public Order updateStatus(Tenant tenant, Long orderId, Order.Status next) {
-        Order order = orderRepository.findById(orderId)
-            .filter(o -> o.getTenant().getId().equals(tenant.getId()))
+        Order order = orderForTenant(tenant, orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
-        if (!isLegalTransition(order.getStatus(), next)) {
+        Order.Status from = order.getStatus();
+        if (!isLegalTransition(from, next)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "Illegal transition " + order.getStatus() + " -> " + next);
+                "Illegal transition " + from + " -> " + next);
         }
-        order.setStatus(next);
-        Order saved = orderRepository.save(order);
+        if (orderRepository.claimStatus(orderId, from, next) != 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This order changed while it was open — reload it and check before trying again");
+        }
+        if (next == Order.Status.CANCELLED) {
+            releaseStock(orderId);
+        }
+        Order saved = orderRepository.findById(orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
         notifyShopper(saved, next);
         return saved;
     }

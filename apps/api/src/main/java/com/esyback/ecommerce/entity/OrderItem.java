@@ -52,4 +52,12 @@ public class OrderItem {
     // reads. This is only used to put stock back on a cancellation.
     @Column(name = "variant_id")
     private Long variantId;
+
+    // How many units this line actually took off the shelf. Usually its
+    // quantity, but commitStock floors a row at zero on an oversell, and a
+    // cancellation must put back what was taken — not what was ordered — or it
+    // would invent stock nobody has. Nullable: lines committed before this
+    // column existed have none, and a cancellation returns their quantity.
+    @Column(name = "stock_taken")
+    private Integer stockTaken;
 }

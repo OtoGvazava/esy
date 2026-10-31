@@ -26,6 +26,7 @@ import { MTop } from './ManagerShell';
 import { StatCard } from './ManagerStats';
 import { useStoreStats } from './useStoreStats';
 import { gcols } from './nav';
+import FirstVisit from './FirstVisit';
 
 // The API sends status lower-cased with spaces ("out for delivery").
 const enumName = (s) => String(s || 'PLACED').toUpperCase().replace(/ /g, '_');
@@ -126,6 +127,15 @@ export default function ManagerOverview() {
   }, [sub]);
 
   const mode = isDesktop ? 'desktop' : isMobile ? 'mobile' : 'tablet';
+
+  // M1b: a live store that has never had an order (the count includes
+  // cancelled ones) opens on what is left to do before it can take one. Its
+  // first order brings the figures back. A paused or suspended store is not
+  // "live", so it keeps the figures.
+  const store = data?.store;
+  if (data && !loading && Number(data.orders) === 0 && store?.isActive !== false && !store?.suspended) {
+    return <FirstVisit T={T} mode={mode} sub={sub} q={q} stats={data} />;
+  }
 
   return (
     <div>

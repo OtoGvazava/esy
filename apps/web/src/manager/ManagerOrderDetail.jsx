@@ -25,6 +25,7 @@ import { money, feeOf } from '../core/money';
 import { StatusPair } from '../core/domain';
 import { tenantApi, handleApiError } from '../utils/api';
 import { MTop } from './ManagerShell';
+import CancelOrderDialog from './CancelOrderDialog';
 
 // The fulfilment chain, in order. CANCELLED is not on it: it leaves the chain
 // rather than advancing along it, so the timeline is replaced when it happens.
@@ -227,29 +228,25 @@ export default function ManagerOrderDetail() {
 
             <div style={{ marginTop: 13 }}><Note T={T}>{t('orders.buyerNotified')}</Note></div>
 
+            {/* M7: the dialog says what cancelling does — stock back, an email,
+                and whether paid money still needs a refund — before it does it. */}
             {CAN_CANCEL.has(status) && (
-              <div style={{ marginTop: 13, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {confirmCancel ? (
-                  <>
-                    <div style={{ font: `600 13px ${T.font}`, color: T.text }}>{t('detail.cancelConfirm')}</div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <Btn T={T} kind="danger" size="sm" disabled={busy} onClick={() => advance('CANCELLED')}>
-                        {t('detail.cancelYes')}
-                      </Btn>
-                      <Btn T={T} kind="ghost" size="sm" disabled={busy} onClick={() => setConfirmCancel(false)}>
-                        {t('detail.cancelNo')}
-                      </Btn>
-                    </div>
-                  </>
-                ) : (
-                  <Btn T={T} kind="danger" full={isMobile} onClick={() => setConfirmCancel(true)}>
-                    {t('detail.cancelOrder')}
-                  </Btn>
-                )}
-                <span style={{ font: `400 11.5px/1.5 ${T.font}`, color: T.textMute }}>
-                  {t('detail.cancelNote')}
-                </span>
+              <div style={{ marginTop: 13 }}>
+                <Btn T={T} kind="danger" full={isMobile} disabled={busy} onClick={() => setConfirmCancel(true)}>
+                  {t('detail.cancelOrder')}
+                </Btn>
               </div>
+            )}
+            {confirmCancel && (
+              <CancelOrderDialog
+                T={T} order={order} refundable={refundable} isOwner={isStoreOwner}
+                isMobile={isMobile} sub={sub}
+                onDone={(updated, problem) => {
+                  setOrder((prev) => ({ ...prev, ...updated, lines: prev.lines }));
+                  setError(problem || '');
+                }}
+                onClose={() => setConfirmCancel(false)}
+              />
             )}
           </Card>
 
