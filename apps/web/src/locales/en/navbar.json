@@ -17,5 +17,20 @@
     "bag": "Bag",
     "account": "Account",
     "orders": "Orders"
+  },
+  "menu": {
+    "tabs": "Bottom menu",
+    "top": "Top tabs",
+    "drawer": "Side menu",
+    "fab": "Action button",
+    "open": "Menu",
+    "openCount": "Menu, {{count}} in bag",
+    "close": "Close menu",
+    "bagCount_one": "Bag, {{count}} item",
+    "bagCount_other": "Bag, {{count}} items",
+    "language": "Language",
+    "appearance": "Appearance",
+    "light": "Light",
+    "dark": "Dark"
   }
 }

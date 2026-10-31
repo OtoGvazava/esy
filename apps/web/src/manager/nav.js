@@ -36,15 +36,17 @@ export const OWNER_ONLY = ['team', 'settings'];
 
 /**
  * Settings is the one screen too long to survive as a single page, so it is
- * five sub-screens behind a sub-nav. [key, icon, route].
+ * six sub-screens behind a sub-nav. [key, icon, route].
  *
  * Delivery and contact are sub-screens in their own right — they were briefly
  * appended as sections to one long page, which is the drift this re-sync is
- * correcting.
+ * correcting. Design (the store's look: theme, menu, layout) sits beside
+ * brand, where the design draws it.
  */
 export const SET_TABS = [
   ['shop', 'box', '/settings/shop'],
   ['brand', 'spark', '/settings/brand'],
+  ['design', 'grid', '/settings/design'],
   ['delivery', 'truck', '/settings/delivery'],
   ['contact', 'phone', '/settings/contact'],
   ['integrations', 'card', '/settings/integrations'],

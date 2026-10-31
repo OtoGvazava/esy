@@ -7,6 +7,10 @@
 //
 // Store identity sits on the left with the subdomain under it, because a
 // shopper who followed a link needs to know whose shop this is.
+//
+// While it is mounted it is the store's header: Home leaves out its own header
+// and GlowDock leaves out the top tabs and side-menu strip (storeChrome.js).
+// App.jsx decides where it is mounted.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -18,11 +22,13 @@ import { Icons } from '../../core/icons';
 import { contactApi } from '../../utils/api';
 import { CHANNELS, channelHref } from '../../core/channels';
 import ManageButton from '../ManageButton';
+import { useStoreBarMounted } from './storeChrome';
 
 /** The channels worth a one-tap button up here: the ones you can talk on. */
 const QUICK = ['phone', 'whatsapp', 'instagram', 'facebook'];
 
 export default function StoreBar({ compact }) {
+  useStoreBarMounted();
   const { T, tenant } = useGlow();
   const { t } = useTranslation('home');
   const { getTotalItems } = useCart();

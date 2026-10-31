@@ -50,6 +50,8 @@
     "shopSub": "Name, descriptions, category",
     "brand": "Brand",
     "brandSub": "Logo, colour, address",
+    "design": "Design",
+    "designSub": "Theme, menu, layout",
     "delivery": "Delivery",
     "deliverySub": "Pickup, courier, express",
     "contact": "Contact",

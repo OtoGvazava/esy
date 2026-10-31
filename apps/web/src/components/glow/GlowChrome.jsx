@@ -3,6 +3,7 @@
 // ScreenShell/TopNav/StickyCTA to a normal scrolling page above the fixed dock.
 import { Icon } from './GlowPrimitives';
 import { alpha } from '../../core/tokens';
+import { useBottomClearance } from '../../core/design/useDesign';
 
 // Platform currency is GEL (₾) for every store.
 //
@@ -50,8 +51,9 @@ export function GlowTopNav({ T, title, onBack, right }) {
 
 // Fixed action bar that sits just above the global dock.
 export function GlowStickyCTA({ T, label, sub, onClick, disabled }) {
+  const bottom = useBottomClearance();
   return (
-    <div style={{ position: 'fixed', left: 0, right: 0, bottom: 92, padding: '14px 16px', background: T.bg, borderTop: `1px solid ${T.border}`, zIndex: 1100 }}>
+    <div style={{ position: 'fixed', left: 0, right: 0, bottom, padding: '14px 16px', background: T.bg, borderTop: `1px solid ${T.border}`, zIndex: 1100 }}>
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
         <button
           onClick={onClick}

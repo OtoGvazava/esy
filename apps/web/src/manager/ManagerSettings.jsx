@@ -1,4 +1,4 @@
-// Store settings — five sub-screens behind one sub-nav (the design's
+// Store settings — six sub-screens behind one sub-nav (the design's
 // MSettings / MSetNav).
 //
 // Settings was one long page: shop fields, then branding, then payment keys,
@@ -23,6 +23,7 @@ import { Card, Note } from '../core/primitives';
 import { Icons } from '../core/icons';
 import { SET_TABS } from './nav';
 import { MTop } from './ManagerShell';
+import ManagerDesign from './ManagerDesign';
 import { ContactChannelsEditor } from '../components/store/ContactChannels';
 import DeliveryRoutes from '../components/store/DeliveryRoutes';
 import StoreSettings from '../pages/StoreSettings';
@@ -130,6 +131,11 @@ export default function ManagerSettings() {
       <Route path="/brand" element={
         <Pane T={T} mode={mode} title={t('settings.brand')} sub={t('settings.brandSub')}>
           <FormPane T={T} t={t} section="brand" />
+        </Pane>
+      } />
+      <Route path="/design" element={
+        <Pane T={T} mode={mode} title={t('settings.design')} sub={t('settings.designSub')}>
+          <ManagerDesign />
         </Pane>
       } />
       <Route path="/delivery" element={

@@ -4,9 +4,11 @@ import { useGlow } from '../styles/glow';
 import { Icon } from '../components/glow/GlowPrimitives';
 import { GlowScreen, money } from '../components/glow/GlowChrome';
 import { alpha } from '../core/tokens';
+import { useBottomClearance } from '../core/design/useDesign';
 
 export default function OrderSuccess() {
   const { T, tenant } = useGlow();
+  const bottom = useBottomClearance();
   const navigate = useNavigate();
   const { t } = useTranslation('storefront');
   const { state } = useLocation();
@@ -76,7 +78,7 @@ export default function OrderSuccess() {
         )}
       </div>
 
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 92, padding: '14px 16px', background: T.bg, borderTop: `1px solid ${T.border}`, zIndex: 1100 }}>
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom, padding: '14px 16px', background: T.bg, borderTop: `1px solid ${T.border}`, zIndex: 1100 }}>
         <div style={{ maxWidth: 560, margin: '0 auto', display: 'flex', gap: 10 }}>
           <button onClick={() => navigate('/orders')} style={{ flex: 1, height: 50, borderRadius: 14, border: `1px solid ${T.border}`, background: T.surface, color: T.text, font: `600 13.5px ${T.font}`, cursor: 'pointer' }}>{t('success.viewOrders')}</button>
           <button onClick={() => navigate('/')} style={{ flex: 1.4, height: 50, borderRadius: 14, border: 'none', background: T.grad, color: T.onAccent, font: `700 13.5px ${T.font}`, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: `0 10px 28px ${alpha(T.accent, 0.33)}` }}>{t('success.keepShopping')} <Icon.arrowR /></button>

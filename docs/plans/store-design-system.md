@@ -1,6 +1,10 @@
 # Plan — store design system (themes, quick setup, advanced editor, shopper display)
 
-Status: designed 2026-10-31, not built.
+Status: designed 2026-10-31. Built: Phase 1 without the cover photo, verified tick and
+shopper settings; the 14 looks; the look picker in registration; on the storefront the
+themes, menus, headers, product layouts and the button, corner, card, font and ground
+options; the Design tab in settings (draft, publish, discard). Not built: density and
+icon weight, the banner, `StorePreview` (previews use the Mini thumbnail), Phase 7.
 Design: artifact **esy Store Themes** — https://claude.ai/artifact/4f7uy5MUZ71XhzB2b6AMV6
 (sections 01–10: theme picker, screens, components, quick setup, looks wall,
 advanced editor, menu styles, product layouts, shopper settings, shared tokens).

@@ -6,11 +6,16 @@
 }
 
 /* Clip the decorative Glow hero gradient so it never creates a horizontal
-   scrollbar; no min-width so narrow viewports don't overflow. */
+   scrollbar; no min-width so narrow viewports don't overflow. `clip`, not
+   `hidden`: hidden made <body> a scroll container that never scrolls, so
+   every `position: sticky` in the app (the back office's phone tab bar, the
+   settings save bars) stuck to nothing. `hidden` stays first as the fallback
+   for a browser without `clip`. */
 html,
 body {
   margin: 0;
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* The theme's page ground. Liquid Glass and Neon paint gradients here, so it

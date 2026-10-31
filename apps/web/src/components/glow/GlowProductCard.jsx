@@ -93,6 +93,7 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
       style={{
         background: photoGrid ? 'transparent' : 'var(--k-pc-bg)', borderRadius: 'var(--k-r-card)',
         border: photoGrid ? 'none' : 'var(--k-pc-bd)', padding: photoGrid ? 0 : 'var(--k-pc-pad)',
+        boxShadow: photoGrid ? 'none' : 'var(--k-pc-sh, none)',
         display: 'flex', flexDirection: list ? 'row' : 'column', alignItems: list ? 'center' : 'stretch',
         gap: list ? 12 : 8, cursor: 'pointer', minWidth: 0,
       }}

@@ -1,22 +1,40 @@
-// Persistent bottom dock — Shop · Search · Bag · Saved · Account. Each item is
-// a real route; Bag shows a live cart-count badge.
+// The store's menu: one list of places (shop · search · bag · orders ·
+// account, from storeChrome.js) drawn the way the store's design object asks.
+//   tabs     the tab bar across the bottom
+//   capsule  a floating pill, with search as its own round button
+//   mini     a small centred pill of icons
+//   top      text tabs under the store header
+//   drawer   a menu button in the store header, opening a side panel
+//   fab      a round button in the store colour, opening the items above it
+// App.jsx mounts only this component and it branches here. Top tabs and the
+// side menu belong to the store header, so on the home page Home draws them
+// in its header and every other page gets them in a strip at the top.
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './GlowPrimitives';
 import { useGlow } from '../../styles/glow';
-import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDesign } from '../../core/design/useDesign';
+import { useStoreNav, useStoreBarShown } from '../store/storeChrome';
+import { ActionButton, MenuStrip } from '../store/StoreMenus';
 
 export default function GlowDock() {
   const { T } = useGlow();
   const design = useDesign();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { getTotalItems } = useCart();
   const { t } = useTranslation('navbar');
   const { isAuthenticated, user } = useAuth();
-  const cartCount = getTotalItems();
+  const { items: places } = useStoreNav();
+  const barShown = useStoreBarShown();
+
+  const menu = design.menu;
+  // The action button floats on every page the dock would.
+  if (menu === 'fab') return <ActionButton />;
+  if (menu === 'top' || menu === 'drawer') {
+    // Where StoreBar is the header it already carries search, cart and account.
+    return pathname === '/' || barShown ? null : <MenuStrip kind={menu} />;
+  }
 
   // Signed in → mirror the platform avatar: Google photo, else name initials.
   const initials = (user?.name || user?.firstName || 'You')
@@ -47,21 +65,12 @@ export default function GlowDock() {
   const firstName = (user?.firstName || user?.name || '').trim().split(/\s+/)[0];
   const accountLabel = isAuthenticated && firstName ? firstName : t('dock.account');
 
-  const items = [
-    { key: 'shop', icon: <Icon.grid />, label: t('dock.shop'), to: '/', active: pathname === '/' || pathname.startsWith('/product') },
-    { key: 'search', icon: <Icon.search />, label: t('dock.search'), to: '/search', active: pathname === '/search' },
-    { key: 'bag', icon: <Icon.bag />, label: t('dock.bag'), to: '/cart', badge: cartCount, active: ['/cart', '/checkout', '/success'].includes(pathname) },
-    // The design's fifth item. Orders is where a shopper goes back to, and
-    // burying it under Account cost a tap on the journey they repeat most.
-    { key: 'orders', icon: <Icon.check />, label: t('dock.orders'), to: '/orders', active: pathname === '/orders' },
-    { key: 'account', icon: accountIcon, label: accountLabel, to: '/account', active: pathname === '/account' },
-  ];
+  const items = places.map((it) => (it.key === 'account'
+    ? { ...it, icon: accountIcon, label: accountLabel }
+    : { ...it, icon: <it.Icon /> }));
 
-  // The store's menu style (its design object). The capsule is a floating
-  // pill with search as its own round button; the icon island is a small
-  // centred pill of icons. Top tabs, the side menu and the action button are
-  // not built yet, so those stores keep the tab bar for now.
-  const menu = design.menu;
+  // The capsule is a floating pill with search as its own round button; the
+  // icon island is a small centred pill of icons.
   if (menu === 'capsule' || menu === 'mini') {
     const capsule = menu === 'capsule';
     const glass = {
@@ -95,7 +104,7 @@ export default function GlowDock() {
     );
     return (
       <>
-        <nav aria-label={t('dock.shop')} style={{
+        <nav aria-label={t('menu.tabs')} style={{
           ...glass, height: 56, borderRadius: 999, padding: '0 6px', display: 'flex', alignItems: 'center', gap: 2,
           ...(capsule ? { left: 16, right: 84, justifyContent: 'space-between' } : { left: '50%', transform: 'translateX(-50%)' }),
         }}>
@@ -112,7 +121,7 @@ export default function GlowDock() {
   }
 
   return (
-    <div style={{
+    <nav aria-label={t('menu.tabs')} style={{
       position: 'fixed', left: 16, right: 16, bottom: 18, maxWidth: 520, margin: '0 auto',
       // The theme's floating-control recipe — glass on Liquid Glass, solid on
       // Soft, a lit edge on Neon — rather than one hard-coded frosted white.
@@ -125,15 +134,18 @@ export default function GlowDock() {
       display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 14px',
     }}>
       {items.map((it) => (
-        <div
+        <button
           key={it.key}
+          type="button"
           onClick={() => navigate(it.to)}
+          aria-current={it.active ? 'page' : undefined}
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             color: it.active ? T.accentFg : T.textDim, cursor: 'pointer',
+            background: 'none', border: 0, padding: 0, margin: 0, font: 'inherit',
           }}
         >
-          <div style={{
+          <span style={{
             width: 36, height: 36, borderRadius: 12, position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: it.active ? T.accentBg : 'transparent',
@@ -147,10 +159,10 @@ export default function GlowDock() {
                 border: `2px solid ${T.dark ? '#12121c' : '#ffffff'}`, lineHeight: 1,
               }}>{it.badge}</span>
             ) : null}
-          </div>
-          <div style={{ font: `600 11px ${T.font}`, letterSpacing: '-0.005em', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</div>
-        </div>
+          </span>
+          <span style={{ display: 'block', font: `600 11px ${T.font}`, letterSpacing: '-0.005em', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
+        </button>
       ))}
-    </div>
+    </nav>
   );
 }

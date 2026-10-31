@@ -30,8 +30,7 @@ import { useAppTheme } from './hooks/useAppTheme';
 import { usePlatformHost, isManagerHost, isAdminHost } from './hooks/usePlatformHost';
 import { ThemeModeProvider } from './contexts/ThemeModeContext';
 import { safeAccent, PLATFORM_BRAND, ADMIN_BRAND } from './core/tokens';
-
-const STORE_THEMES = ['soft', 'glow', 'neon'];
+import { normalizeDesign } from './core/design/normalize';
 
 /** Leaves the SPA for another host. react-router only moves within one. */
 function GoTo({ href }) {
@@ -44,13 +43,14 @@ function GoTo({ href }) {
 // affordance, and the old /manage + /settings/store|config routes are gone.
 function AppShell() {
   // The storefront takes two shapes, as the design specifies: a bar across the
-  // top on desktop and tablet, the dock on a phone. It had only ever had the
-  // phone shape, so a desktop shopper got a dock and no search or cart.
-  const { isMobile } = useDevice();
+  // top on desktop, and on a phone or tablet the store's own header with the
+  // store's menu (tab bar, capsule, top tabs, side menu…). It had only ever had
+  // the phone shape, so a desktop shopper got a dock and no search or cart.
+  const { isDesktop } = useDevice();
   const { tenant, loading } = useContext(TenantContext);
   // A product page carries its own buy bar where the dock would sit.
   const { pathname } = useLocation();
-  const dock = isMobile && !pathname.startsWith('/product/');
+  const dock = !isDesktop && !pathname.startsWith('/product/');
 
   // A suspended shop is closed to shoppers (D15). Nothing below this line
   // renders — not the bar, not the dock, not a single route — because a
@@ -61,7 +61,7 @@ function AppShell() {
 
   return (
     <>
-      {!isMobile && <StoreBar />}
+      {isDesktop && <StoreBar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetails />} />
@@ -93,24 +93,58 @@ function AppShell() {
   );
 }
 
+// The store style options drawn as data-* on <html> (styles/design-style.css).
+const STYLE_KEYS = ['btn', 'corner', 'card', 'font', 'bg'];
+
+// Faces a design may ask for, loaded only when a store uses them. Georgian
+// text falls back to the matching Noto face, so each brings its own.
+const FONT_FAMILIES = {
+  serif: ['Fraunces:opsz,wght@9..144,400..700', 'Noto+Serif+Georgian:wght@400..700'],
+  rounded: ['Nunito:wght@400..800'],
+  mono: ['JetBrains+Mono:wght@400;600'],
+  neon: ['Chakra+Petch:wght@500;700', 'JetBrains+Mono:wght@400;600'],
+};
+
 // Puts the active theme on <html>, where styles/themes.css keys every token:
 // data-th is `esy` on the platform, manager and admin hosts and the store's
 // theme on a storefront (Liquid Glass until a store picks another), data-md is
 // light or dark, and --k-brand is the colour the theme draws its accent from —
-// the store's own, esy blue on the platform, teal on admin.
+// the store's own, esy blue on the platform, teal on admin. A storefront also
+// carries its design's style options, each only when it differs from the theme.
 function ThemeRoot({ mode }) {
   const platform = usePlatformHost();
   const { tenant } = useContext(TenantContext);
   const admin = isAdminHost();
   const store = !admin && !isManagerHost() && !platform;
-  const th = store ? (STORE_THEMES.includes(tenant?.design?.theme) ? tenant.design.theme : 'glow') : 'esy';
+  const design = normalizeDesign(store ? tenant?.design : null);
+  const th = store ? design.theme : 'esy';
   const brand = admin ? ADMIN_BRAND : platform ? PLATFORM_BRAND : safeAccent(tenant?.primaryColor);
+  const style = STYLE_KEYS.map((k) => (store && design.style[k] !== 'theme' ? design.style[k] : '')).join('|');
   useEffect(() => {
     const el = document.documentElement;
     el.dataset.th = th;
     el.dataset.md = mode === 'dark' ? 'dark' : 'light';
     el.style.setProperty('--k-brand', brand);
-  }, [th, mode, brand]);
+    style.split('|').forEach((v, i) => {
+      if (v) el.dataset[STYLE_KEYS[i]] = v; else delete el.dataset[STYLE_KEYS[i]];
+    });
+    const families = [...new Set([
+      ...(FONT_FAMILIES[style.split('|')[3]] || []),
+      ...(th === 'neon' ? FONT_FAMILIES.neon : []),
+    ])];
+    let link = document.getElementById('esy-design-fonts');
+    if (families.length) {
+      if (!link) {
+        link = document.createElement('link');
+        link.id = 'esy-design-fonts';
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
+      link.href = `https://fonts.googleapis.com/css2?${families.map((f) => `family=${f}`).join('&')}&display=swap`;
+    } else if (link) {
+      link.remove();
+    }
+  }, [th, mode, brand, style]);
   return null;
 }
 

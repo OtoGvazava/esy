@@ -521,6 +521,32 @@ export const tenantApi = {
       : { amount: `${amount}`.trim() };
     return api.post(`/api/tenant/orders/${orderId}/refund${q}`, body);
   },
+  // The store's design (the back office's Design tab). OWNER-only server-side;
+  // a manager gets 403 on all four. `design` answers { draft, published,
+  // draftUpdatedAt, publishedAt }: draft and published are normalised design
+  // objects or null, and published has the store's colours merged in.
+  design(devTenant, opts) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/tenant/current/design${q}`, opts || {});
+  },
+  // Saves the draft and returns it as the server normalised it. Buyers see
+  // nothing until it is published; allowed even with the design switch off.
+  saveDesignDraft(design, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.put(`/api/tenant/current/design/draft${q}`, design);
+  },
+  // Draft → published; answers the same four fields as design(). Refused with
+  // 409 DESIGN_NO_DRAFT when there is no draft and 503 DESIGN_DISABLED while
+  // the platform's design switch is off.
+  publishDesign(devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.post(`/api/tenant/current/design/publish${q}`, {});
+  },
+  // Drops the draft; the published design stays live. Same four-field answer.
+  discardDesignDraft(devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.delete(`/api/tenant/current/design/draft${q}`);
+  },
   // Public store directory (active stores).
   list() {
     return api.get('/api/tenant');

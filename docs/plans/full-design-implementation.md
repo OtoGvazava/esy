@@ -194,6 +194,10 @@ What changed in the design, and what the app must copy:
   placeholder's "E"; invented English location and founding year; a keyboard hint on
   phones; a developer note on the back-office overview; role codes ("OWNER") in chips;
   route paths under admin menu items; "ჩანთა" where the design says "კალათა".
-- Not built yet: W1 (design object and editor), the storefront's six menu styles and
-  other layouts, categories and filters (A3), checkout steps (A6–A7), the back office's
+- W1 and W2: the store design object (API, validator shared with the web through
+  `core/design/schema.json`, kill switch `app.design.enabled`), the look picker when a
+  store is opened, the Design tab in settings, and a storefront that follows the design:
+  three themes, six menus, three headers, four product layouts, style options. Tablet
+  now draws the phone's header and menu, as the design does; desktop keeps the bar.
+- Not built yet: categories and filters (A3), checkout steps (A6–A7), the back office's
   M0/M1b/M7 boards, P3 import screen, the billing table (AD5), W7.

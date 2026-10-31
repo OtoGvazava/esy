@@ -3,9 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { productApi, handleApiError } from '../utils/api';
 import { useCart } from '../contexts/CartContext';
-import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useDevice } from '../contexts/DeviceContext';
-import ManageButton from '../components/ManageButton';
 import { useGlow } from '../styles/glow';
 import { Chip } from '../core/primitives';
 import { StoreContacts } from '../components/store/ContactChannels';
@@ -16,34 +14,12 @@ import { PoweredBy } from '../components/glow/GlowPrimitives';
 import GlowProductCard from '../components/glow/GlowProductCard';
 import { useDesign } from '../core/design/useDesign';
 import GlowLoadMore from '../components/glow/GlowLoadMore';
-import { ThemePill, LangPill } from '../components/glow/GlowPills';
+import StoreHead from '../components/store/StoreHead';
+import { StoreTabs } from '../components/store/StoreMenus';
+import { useStoreBarShown } from '../components/store/storeChrome';
 import { alpha } from '../core/tokens';
 
 const PAGE_SIZE = 12;
-
-
-function GlowLogo({ T, tenant, size = 20 }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.text }}>
-      {tenant.logoUrl ? (
-        <img
-          src={tenant.logoUrl} alt={tenant.name}
-          style={{ width: size * 1.1, height: size * 1.1, borderRadius: 10, objectFit: 'cover', display: 'block' }}
-        />
-      ) : (
-        <span style={{
-          width: size * 1.1, height: size * 1.1, borderRadius: 10, background: T.grad,
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          color: T.onAccent, font: `800 ${size * 0.55}px ${T.font}`, letterSpacing: '-0.02em',
-        }}>{tenant.initials.charAt(0)}</span>
-      )}
-      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-        <span style={{ font: `700 ${size * 0.82}px ${T.font}`, letterSpacing: '-0.02em' }}>{tenant.name}</span>
-        <span style={{ font: `500 12px ${T.font}`, color: T.textMute, marginTop: 4 }}>{tenant.domain}</span>
-      </div>
-    </div>
-  );
-}
 
 function useDebouncedValue(value, delayMs) {
   const [debounced, setDebounced] = useState(value);
@@ -64,7 +40,11 @@ export default function Home() {
   const { isMobile, isTablet, isDesktop } = useDevice();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { mode, toggle: toggleTheme, language } = useThemeMode();
+  // Where StoreBar is the header (tablet and desktop today) it already carries
+  // identity, search, cart and account, so this page draws its own header only
+  // where StoreBar is absent; a second header stacked under the first is what
+  // this avoids.
+  const ownHeader = !useStoreBarShown();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation('home');
 
@@ -158,6 +138,7 @@ export default function Home() {
   const gutter = isMobile ? 16 : 40;
   // The store's product layout (its design object): columns per device, as the design draws them.
   const design = useDesign();
+  const cover = ownHeader && design.header === 'cover';
   const layout = design.productLayout;
   const COLS = { grid2: [2, 3, 4], grid3: [3, 4, 6], feed: [1, 2, 3], list: [1, 2, 2] }[layout];
   const cols = COLS[isDesktop ? 2 : isTablet ? 1 : 0];
@@ -173,24 +154,21 @@ export default function Home() {
         filter: 'blur(20px)', pointerEvents: 'none',
       }} />
 
-      {/* Phone header. Above mobile the StoreBar in App.jsx carries identity,
-          search, cart and account, so repeating the logo here would be a
-          second header stacked under the first. */}
-      {isMobile && (
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `28px ${gutter}px 0` }}>
-          <GlowLogo T={T} tenant={tenant} size={20} />
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <ManageButton />
-            <ThemePill T={T} dark={mode === 'dark'} onClick={toggleTheme} />
-            <LangPill T={T} lang={language} onClick={() => navigate('/settings/language')} />
-          </div>
+      {/* The store's header in the style its design picks, with top tabs
+          under it for a store whose menu is the top tabs. */}
+      {ownHeader && <StoreHead />}
+      {ownHeader && design.menu === 'top' && (
+        <div style={{ position: 'relative', marginTop: 10 }}>
+          <StoreTabs />
         </div>
       )}
 
       {/* The hero is the store's banner in its own colour (the design's A1).
           The store's name is already in the header above, so the banner
-          carries what the store says about itself rather than its name again. */}
-      {tenant.bio && !query && (
+          carries what the store says about itself rather than its name again.
+          The cover header carries those words in its own band, so under it
+          there is no second banner. */}
+      {tenant.bio && !query && !cover && (
         <div style={{ position: 'relative', padding: `${isMobile ? 14 : 28}px ${gutter}px 4px` }}>
           <div style={{
             position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-card)',
