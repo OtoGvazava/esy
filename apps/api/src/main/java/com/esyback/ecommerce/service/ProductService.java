@@ -170,6 +170,7 @@ public class ProductService {
         );
         dto.setHasVariants(product.variantsEnabled());
         dto.setBlurb(blurbOf(product.getDescription()));
+        dto.setCreatedAt(product.getCreatedAt());
         return dto;
     }
 

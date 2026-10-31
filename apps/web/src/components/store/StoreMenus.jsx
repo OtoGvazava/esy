@@ -18,6 +18,8 @@ import { useThemeMode } from '../../contexts/ThemeModeContext';
 import { alpha } from '../../core/tokens';
 import { Icon, langInfo } from '../glow/GlowPrimitives';
 import { useStoreNav } from './storeChrome';
+import { StoreName } from './VerifiedTick';
+import StoreSocials from './StoreSocials';
 
 // Above the dock (1200) and below MUI's dialogs (1300) and the profile gate.
 const Z = { strip: 1150, scrim: 1290, layer: 1295 };
@@ -280,7 +282,7 @@ function SideMenu({ id, open, onClose, backRef }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0 14px 8px' }}>
           <StoreAvatar size={44} />
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ font: `700 16px/1.2 ${T.font}`, color: T.text, ...ellipsis }}>{tenant.name}</span>
+            <StoreName name={tenant.name} style={{ font: `700 16px/1.2 ${T.font}`, color: T.text }} />
             <span style={{ font: `500 12px ${T.font}`, color: T.textMute, ...ellipsis }}>{tenant.domain}</span>
           </div>
           <button
@@ -334,6 +336,8 @@ function SideMenu({ id, open, onClose, backRef }) {
             ><o.Glyph width={16} height={16} />{o.label}</button>
           ))}
         </div>
+        {/* The store's social buttons, as the canvas closes the menu with them. */}
+        <StoreSocials style={{ margin: '16px 8px 0' }} />
       </div>
     </>
   );
@@ -486,7 +490,7 @@ export function MenuStrip({ kind }) {
         textDecoration: 'none', color: T.text,
       }}>
         <StoreAvatar size={30} />
-        <span style={{ font: `700 15px ${T.font}`, letterSpacing: '-0.01em', ...ellipsis }}>{tenant.name}</span>
+        <StoreName name={tenant.name} size={15} style={{ font: `700 15px ${T.font}`, letterSpacing: '-0.01em' }} />
       </Link>
       <HeadButton plain to="/search" label={t('dock.search')}><Icon.search /></HeadButton>
       <HeadButton plain to="/cart" label={count ? t('menu.bagCount', { count }) : t('dock.bag')} badge={count}><Icon.bag /></HeadButton>

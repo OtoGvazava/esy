@@ -15,6 +15,8 @@ import GlowProductCard from '../components/glow/GlowProductCard';
 import { useDesign } from '../core/design/useDesign';
 import GlowLoadMore from '../components/glow/GlowLoadMore';
 import StoreHead from '../components/store/StoreHead';
+import StoreBanner from '../components/store/StoreBanner';
+import { bannerShown } from '../core/design/show';
 import { StoreTabs } from '../components/store/StoreMenus';
 import { useStoreBarShown } from '../components/store/storeChrome';
 import { alpha } from '../core/tokens';
@@ -138,7 +140,7 @@ export default function Home() {
   const gutter = isMobile ? 16 : 40;
   // The store's product layout (its design object): columns per device, as the design draws them.
   const design = useDesign();
-  const cover = ownHeader && design.header === 'cover';
+  const cover = design.header === 'cover';
   const layout = design.productLayout;
   const COLS = { grid2: [2, 3, 4], grid3: [3, 4, 6], feed: [1, 2, 3], list: [1, 2, 2] }[layout];
   const cols = COLS[isDesktop ? 2 : isTablet ? 1 : 0];
@@ -168,7 +170,8 @@ export default function Home() {
           carries what the store says about itself rather than its name again.
           The cover header carries those words in its own band, so under it
           there is no second banner. */}
-      {tenant.bio && !query && !cover && (
+      {!query && <StoreBanner />}
+      {tenant.bio && !query && !cover && !bannerShown(design) && (
         <div style={{ position: 'relative', padding: `${isMobile ? 14 : 28}px ${gutter}px 4px` }}>
           <div style={{
             position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-card)',

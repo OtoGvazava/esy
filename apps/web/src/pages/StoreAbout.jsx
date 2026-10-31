@@ -174,7 +174,7 @@ function ContactsCard({ T, t, label, pad, store }) {
     .filter(Boolean).join(', ');
   if (!hasAny && !location) {
     // Keep the component mounted so its fetch can still report back.
-    return <div style={{ display: 'none' }}><StoreContacts T={T} onLoaded={setHasAny} /></div>;
+    return <div style={{ display: 'none' }}><StoreContacts T={T} always onLoaded={setHasAny} /></div>;
   }
 
   const row = {
@@ -185,7 +185,9 @@ function ContactsCard({ T, t, label, pad, store }) {
   return (
     <Card T={T} pad={pad}>
       <div style={label}>{t('about.contact')}</div>
-      <StoreContacts T={T} onLoaded={setHasAny} />
+      {/* `always`: this is where a shopper comes to reach the shop, so the
+          design's social-buttons switch does not empty it. */}
+      <StoreContacts T={T} always onLoaded={setHasAny} />
       {location && (
         <span style={row}>
           <span style={{ color: T.accentFg, display: 'inline-flex' }}><Icon.pin /></span>

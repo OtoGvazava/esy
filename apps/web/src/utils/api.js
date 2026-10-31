@@ -119,11 +119,13 @@ const mapListItem = (dto) => ({
   hasVariants: !!dto.hasVariants,
   // The line under the title on a card.
   blurb: dto.blurb || '',
-  // The corner badge. The design also shows "hit" and "new"; both would need
-  // sales history or a creation date the list endpoint does not return, and a
-  // badge invented from nothing is a claim to a shopper about a real shop. So
-  // only the one the data actually supports is shown: stock running out.
+  // The corner badge the row's data supports: stock running out. The design
+  // also shows "hit", which would need sales history, and a badge invented
+  // from nothing is a claim to a shopper about a real shop.
   tag: dto.quantity != null && dto.quantity > 0 && dto.quantity <= 5 ? 'low' : null,
+  // When it was added (ISO, UTC). The card's "New" badge reads it, under the
+  // store design's `show.badge` (GlowProductCard).
+  createdAt: dto.createdAt || null,
 });
 
 // Backend detail: { id, title, description, imageUrl, price, quantity,
@@ -147,6 +149,8 @@ const mapDetail = (dto) => {
     imageList: gallery,
     imageUrl: dto.imageUrl || '',
     category: '',
+    // When it was added (ISO, UTC): the product page's "New" badge.
+    createdAt: dto.createdAt || null,
   };
 };
 
@@ -468,6 +472,36 @@ export const tenantApi = {
     const path = devTenant
       ? `/api/tenant/logo?tenant=${encodeURIComponent(devTenant)}`
       : '/api/tenant/logo';
+    return api.delete(path);
+  },
+  // Owner-only store cover photo, the logo's twin: multipart, answers the
+  // store with `coverUrl` pointing at the new bytes. Saved at once, not in the
+  // design draft. The refusal's status says why (413 too large, 415 not an
+  // image), so it rides on the ApiError.
+  async uploadCover(file, devTenant) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const path = devTenant
+      ? `/api/tenant/cover?tenant=${encodeURIComponent(devTenant)}`
+      : '/api/tenant/cover';
+    const res = await fetch(path, { method: 'POST', body: fd, credentials: 'include' });
+    if (!res.ok) {
+      let message = `Upload failed (${res.status})`;
+      let code;
+      try {
+        const b = await res.json();
+        message = b.error || b.message || message;
+        code = b.code;
+      } catch { /* no JSON body */ }
+      throw new ApiError(message, res.status, code);
+    }
+    return res.json();
+  },
+  // Owner-only: drop the cover photo; answers the store with coverUrl null.
+  deleteCover(devTenant) {
+    const path = devTenant
+      ? `/api/tenant/cover?tenant=${encodeURIComponent(devTenant)}`
+      : '/api/tenant/cover';
     return api.delete(path);
   },
   // Owner/admin store stats for the current store (server resolves it by

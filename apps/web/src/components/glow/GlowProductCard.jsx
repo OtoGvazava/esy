@@ -10,10 +10,18 @@
 // `look.price` puts the price on the photo; `look.addbtn` "none" drops the
 // quick add. A heart would need saved items, which the store doesn't have,
 // so "heart" keeps the add button.
+//
+// The design's switches (`show`): `price` off hides the price on the card,
+// and `badge` on marks a product added in the last 14 days "New". The New
+// badge takes the corner before the low-stock one; with it off the corner
+// shows what it showed before.
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon, Placeholder } from './GlowPrimitives';
 import { money } from './GlowChrome';
+import { useDesign } from '../../core/design/useDesign';
+import { addedRecently } from '../../core/design/show';
+import NewBadge from '../store/NewBadge';
 
 const tagBg = (tag, T) =>
   tag === 'new' ? T.accent : tag === 'sale' ? T.danger : tag === 'low' ? T.warn : T.text;
@@ -30,8 +38,10 @@ const RATIO = { square: '1 / 1', portrait: '4 / 5', landscape: '4 / 3' };
 export default function GlowProductCard({ T, p, hue = 240, compact = false, onOpen, onAdd, layout = 'grid2', look = {} }) {
   const [imgOk, setImgOk] = useState(Boolean(p.image));
   const { t } = useTranslation('product');
+  const { show } = useDesign();
   const list = layout === 'list';
   const photoGrid = layout === 'grid3';
+  const isNew = show.badge && addedRecently(p.createdAt);
   // A list row's thumbnail is too small to carry a price.
   const priceOnPhoto = !list && (photoGrid || look.price === 'photo');
   const showAdd = !photoGrid && look.addbtn !== 'none';
@@ -52,7 +62,12 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
       ) : (
         <Placeholder label={list || photoGrid ? '' : p.title} hue={hue} dark={T.dark} />
       )}
-      {p.tag && !photoGrid && !list && (
+      {/* The New tag takes the corner; a list row's thumbnail carries it
+          smaller, as the design draws it, and a photo grid tile none. */}
+      {isNew && !photoGrid && (
+        <NewBadge createdAt={p.createdAt} style={list ? { top: 5, left: 5, padding: '2px 7px' } : null} />
+      )}
+      {!isNew && p.tag && !photoGrid && !list && (
         <div style={{
           position: 'absolute', top: 10, left: 10, padding: '3px 8px', borderRadius: 999,
           background: tagBg(p.tag, T), color: p.tag === 'best' ? T.bg : '#fff',
@@ -61,7 +76,7 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
           font: `700 11px ${T.font}`,
         }}>{tagLabel(p.tag, t)}</div>
       )}
-      {priceOnPhoto && !list && (
+      {priceOnPhoto && !list && show.price && (
         // A price on a photo sits on a dark pill: glass never carries text.
         <div style={{
           position: 'absolute', left: 8, bottom: 8, padding: '3px 9px', borderRadius: 999,
@@ -105,7 +120,7 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
             {/* Two lines of room, so prices line up across a row even when one
                 Georgian name wraps and its neighbour does not. */}
             <div style={{ font: `500 ${compact ? 13 : 13.5}px/1.3 ${T.font}`, color: T.text, minHeight: list ? undefined : '2.6em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'break-word' }}>{p.title}</div>
-            {!priceOnPhoto && (
+            {!priceOnPhoto && show.price && (
               <div style={{ font: `700 ${compact ? 14 : 15}px ${T.font}`, color: T.text, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{money(p.price)}</div>
             )}
           </div>

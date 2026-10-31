@@ -17,6 +17,7 @@ import { CHANNEL_TYPES, CHANNELS, PHONE_TYPES } from '../../core/channels';
 import { ChannelBtn } from '../../core/domain';
 import { Toggle } from '../../core/primitives';
 import { alpha } from '../../core/tokens';
+import { useDesign } from '../../core/design/useDesign';
 
 function devTenantParam() {
   try {
@@ -36,12 +37,20 @@ function actionFor(t, type) {
  * The shopper-facing row. Renders nothing when a store has listed no public
  * channels — an empty "Contact" heading is worse than no heading, since it
  * implies the shop is unreachable rather than that it has not said yet.
+ *
+ * The store's design can switch its social buttons off (`show.socials`), and
+ * then this row is not drawn where it decorates a page (the home page, a
+ * product). `always` is for the About page, which is where a shopper goes to
+ * reach the shop, so its list stays whatever the switch says.
  */
-export function StoreContacts({ T, devTenant = devTenantParam(), compact, onLoaded, style = {} }) {
+export function StoreContacts({ T, devTenant = devTenantParam(), compact, onLoaded, always = false, style = {} }) {
   const { t } = useTranslation('storefront');
   const [channels, setChannels] = useState([]);
+  const { show } = useDesign();
+  const hidden = !always && !show.socials;
 
   useEffect(() => {
+    if (hidden) return undefined;
     const ac = new AbortController();
     // onLoaded lets a caller share this component's fate — a heading above an
     // empty contact list reads as "unreachable", so the wrapper hides too.
@@ -59,9 +68,9 @@ export function StoreContacts({ T, devTenant = devTenantParam(), compact, onLoad
     // onLoaded is intentionally not a dependency: callers pass an inline
     // setState, and re-running the fetch on every render would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devTenant]);
+  }, [devTenant, hidden]);
 
-  if (channels.length === 0) return null;
+  if (hidden || channels.length === 0) return null;
 
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', ...style }}>

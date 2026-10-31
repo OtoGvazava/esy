@@ -6,10 +6,12 @@ import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.TenantLogo;
+import com.esyback.ecommerce.entity.TenantCover;
 import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.service.MembershipService;
 import com.esyback.ecommerce.service.OrderService;
 import com.esyback.ecommerce.service.TenantContextService;
+import com.esyback.ecommerce.service.TenantCoverService;
 import com.esyback.ecommerce.service.TenantDesignService;
 import com.esyback.ecommerce.service.TenantLogoService;
 import com.esyback.ecommerce.service.TenantService;
@@ -48,6 +50,7 @@ public class TenantController {
     private final OrderService orderService;
     private final ProductRepository productRepository;
     private final TenantDesignService tenantDesignService;
+    private final TenantCoverService tenantCoverService;
 
     @GetMapping("/current")
     public ResponseEntity<Map<String, Object>> getCurrentTenant() {
@@ -63,6 +66,8 @@ public class TenantController {
         // secondaryColor. Null when nothing is published or the switch is off,
         // and the storefront then draws today's chrome. Never the draft.
         body.put("design", designOn ? tenantDesignService.published(tenant) : null);
+        // The cover header's photo, or null; an id-only lookup, never the bytes.
+        body.put("coverUrl", tenantCoverService.currentCoverUrl(tenant));
         return ResponseEntity.ok(body);
     }
 
@@ -179,6 +184,41 @@ public class TenantController {
             .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
             .eTag(String.valueOf(logo.getId()))
             .body(logo.getData());
+    }
+
+    // ---- Cover photo (store design plan, Phase 1) -------------------------
+    // The logo's three endpoints, for the picture the cover header draws:
+    // the same OWNER-only gate, the same validation, the same immutable,
+    // long-cached ids. Answers the store with its new `coverUrl`.
+
+    @PostMapping(value = "/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> uploadCover(@RequestParam("file") MultipartFile file) {
+        String url = tenantCoverService.setCover(file);
+        Map<String, Object> body = TenantMapper.toMap(tenantContextService.getCurrentTenant());
+        body.put("coverUrl", url);
+        return ResponseEntity.ok(body);
+    }
+
+    @DeleteMapping("/cover")
+    @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> deleteCover() {
+        tenantCoverService.clearCover();
+        Map<String, Object> body = TenantMapper.toMap(tenantContextService.getCurrentTenant());
+        body.put("coverUrl", null);
+        return ResponseEntity.ok(body);
+    }
+
+    // Public, for an <img src>. A re-upload is a new id and a new URL, so a
+    // year's cache is safe.
+    @GetMapping("/cover/{coverId}")
+    public ResponseEntity<byte[]> serveCover(@PathVariable Long coverId) {
+        TenantCover cover = tenantCoverService.getForServing(coverId);
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(cover.getContentType()))
+            .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+            .eTag(String.valueOf(cover.getId()))
+            .body(cover.getData());
     }
 
     // Owner/admin dashboard numbers for the current store (Host-resolved).

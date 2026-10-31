@@ -123,6 +123,61 @@
       "DESIGN_INVALID": "The server didn't accept this design.",
       "forbidden": "Only the store owner can change the design.",
       "network": "Couldn't reach the server. Check the connection and try again."
+    },
+    "show": {
+      "banner": "Banner",
+      "labels": "Menu labels",
+      "labelsHint": "The words beside the icons in the bottom menu.",
+      "price": "Prices",
+      "priceHint": "On product cards. The product page and the bag always show the price.",
+      "badge": "“New” badges",
+      "badgeHint": "On products added in the last 14 days.",
+      "tick": "Verified tick",
+      "tickHint": "Shows once esy verifies the store.",
+      "socials": "Social buttons",
+      "socialsHint": "The store's contact buttons. The About page always lists the contacts."
+    },
+    "banner": {
+      "title": "Banner heading",
+      "subtitle": "Subtitle",
+      "count": "{{n}} / {{max}}",
+      "product": "Product",
+      "productHint": "Optional. Its photo shows on the banner, and the button opens it.",
+      "pick": "Choose a product",
+      "change": "Change",
+      "remove": "Remove",
+      "search": "Search your products",
+      "cancel": "Cancel",
+      "loading": "Loading…",
+      "failed": "Couldn't load the products.",
+      "noResults": "No products found.",
+      "missing": "This product is no longer in the store.",
+      "needsTitle": "The banner shows once it has a heading.",
+      "row": "Banner text",
+      "quoted": "“{{title}}”",
+      "noTitle": "No heading"
+    },
+    "cover": {
+      "title": "Cover",
+      "none": "You haven't uploaded a cover yet, so a band in the store's colour shows in its place.",
+      "drop": "Drop a photo or choose one",
+      "choose": "Choose a photo",
+      "types": "JPEG, PNG, WEBP or GIF · up to 5 MB",
+      "live": "Saved straight away, not in the draft. Buyers see it when the published design has Cover as its header.",
+      "current": "The store's cover",
+      "change": "Change",
+      "remove": "Delete",
+      "uploading": "Uploading…",
+      "removing": "Deleting…",
+      "failed": "Couldn't upload the photo.",
+      "removeFailed": "Couldn't delete the photo.",
+      "tooLarge": "That photo is over 5 MB.",
+      "badType": "Only JPEG, PNG, WEBP or GIF photos."
     }
+  },
+  "store": {
+    "verified": "Verified store",
+    "bannerCta": "View item",
+    "follow": "Follow us"
   }
 }

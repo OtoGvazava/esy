@@ -11,8 +11,14 @@
 // While it is mounted it is the store's header: Home leaves out its own header
 // and GlowDock leaves out the top tabs and side-menu strip (storeChrome.js).
 // App.jsx decides where it is mounted.
+//
+// The design draws one bar for every header style on a desktop (A1Home's
+// desk frames): centred is the compact bar, and so is cover, except that the
+// home page then has no hero band. The one thing added for cover is the
+// store's cover photo, when it has one, across the top of the home page; with
+// none the page is the bar and the shop, as the design draws it.
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCart } from '../../contexts/CartContext';
 import { useGlow } from '../../styles/glow';
@@ -23,6 +29,9 @@ import { contactApi } from '../../utils/api';
 import { CHANNELS, channelHref } from '../../core/channels';
 import ManageButton from '../ManageButton';
 import { useStoreBarMounted } from './storeChrome';
+import { useTenant } from '../../contexts/TenantContext';
+import { useDesign } from '../../core/design/useDesign';
+import { StoreName } from './VerifiedTick';
 
 /** The channels worth a one-tap button up here: the ones you can talk on. */
 const QUICK = ['phone', 'whatsapp', 'instagram', 'facebook'];
@@ -34,15 +43,26 @@ export default function StoreBar({ compact }) {
   const { getTotalItems } = useCart();
   const { language } = useThemeMode();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const { tenant: store } = useTenant();
+  const design = useDesign();
+  const socials = design.show.socials;
   const [channels, setChannels] = useState([]);
+  const [coverFailed, setCoverFailed] = useState(null);
 
+  // The quick channel buttons are the store's social buttons up here, so the
+  // design's socials switch hides them; there is nothing to fetch then.
   useEffect(() => {
+    if (!socials) return undefined;
     const ac = new AbortController();
     contactApi.listPublic(undefined, { signal: ac.signal })
       .then((rows) => { if (!ac.signal.aborted) setChannels(Array.isArray(rows) ? rows : []); })
       .catch(() => {});
     return () => ac.abort();
-  }, []);
+  }, [socials]);
+
+  const cover = design.header === 'cover' && pathname === '/' && store?.coverUrl && coverFailed !== store.coverUrl
+    ? store.coverUrl : null;
 
   const count = getTotalItems();
   const pill = {
@@ -52,7 +72,7 @@ export default function StoreBar({ compact }) {
     cursor: 'pointer', textDecoration: 'none',
   };
 
-  return (
+  const bar = (
     <div style={{
       display: 'flex', alignItems: 'center', gap: compact ? 14 : 26,
       padding: compact ? '0 24px' : '0 48px', height: compact ? 64 : 76,
@@ -71,10 +91,11 @@ export default function StoreBar({ compact }) {
             font: `800 16px ${T.font}`,
           }}>{(tenant?.name || '?').charAt(0)}</span>
         )}
-        <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-          <span style={{ font: `700 ${compact ? 15 : 17}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>
-            {tenant?.name}
-          </span>
+        <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, minWidth: 0 }}>
+          <StoreName
+            name={tenant?.name} size={compact ? 15 : 16}
+            style={{ font: `700 ${compact ? 15 : 17}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}
+          />
           <span style={{ font: `500 ${compact ? 11 : 12}px ${T.mono}`, color: T.textMute }}>
             {tenant?.domain}
           </span>
@@ -103,7 +124,7 @@ export default function StoreBar({ compact }) {
 
       {/* One tap to reach the shop, in each channel's own colour. Rendered
           only where the store actually published a channel. */}
-      {channels.filter((c) => QUICK.includes(c.type)).slice(0, 2).map((c) => {
+      {socials && channels.filter((c) => QUICK.includes(c.type)).slice(0, 2).map((c) => {
         const meta = CHANNELS[c.type];
         const href = channelHref(c.type, c.value);
         const Ic = meta && Icons[meta.icon];
@@ -145,5 +166,25 @@ export default function StoreBar({ compact }) {
         <Icon.user />
       </Link>
     </div>
+  );
+
+  if (!cover) return bar;
+  // The cover header's photo, under the bar on the home page and lined up with
+  // the page's own gutter. It scrolls away; the bar stays.
+  return (
+    <>
+      {bar}
+      <div style={{ position: 'relative', padding: `${compact ? 16 : 24}px ${compact ? 24 : 40}px 0` }}>
+        <div style={{
+          position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-card)',
+          height: compact ? 180 : 240, background: T.surface2,
+        }}>
+          <img
+            src={cover} alt="" onError={() => setCoverFailed(cover)}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </div>
+      </div>
+    </>
   );
 }

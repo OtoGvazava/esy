@@ -34,6 +34,7 @@ import LookThumb from '../components/design/LookThumb';
 import { tenantApi } from '../utils/api';
 import { designChanges, designJson, liveDesign, sameDesign, savedDesign } from './designDraft';
 import { DiscardDialog, PreviewDialog, PublishDialog } from './DesignDialogs';
+import { DesignCoverSection, DesignShowRows } from './DesignSections';
 
 // The design draws Soft first; the ids themselves are the schema's.
 const THEMES = ['soft', 'glow', 'neon'].filter((id) => schema.options.theme.includes(id));
@@ -546,6 +547,7 @@ export default function ManagerDesign() {
               </Group>
             </div>
           </Card>
+          <DesignCoverSection T={T} design={edit} sub={sub} />
 
           <Card T={T} pad={18}>
             <Group T={T} label={t('editor.shows')}>
@@ -553,6 +555,7 @@ export default function ManagerDesign() {
                 T={T} label={t('editor.stories')} on={edit.show.stories}
                 onClick={() => setShow('stories', !edit.show.stories)}
               />
+              <DesignShowRows T={T} design={edit} onChange={change} />
             </Group>
           </Card>
         </div>

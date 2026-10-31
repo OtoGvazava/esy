@@ -1,6 +1,7 @@
 package com.esyback.ecommerce.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public class ProductListDto {
     
@@ -20,11 +21,19 @@ public class ProductListDto {
     // Short on purpose: the list endpoint should not ship full descriptions.
     private String blurb;
 
+    // When the product was added. The storefront's "New" badge is a product
+    // added in the last 14 days (store design plan, Phase 3); without the date
+    // a card could only invent it.
+    private LocalDateTime createdAt;
+
     // Constructors
     public ProductListDto() {}
 
     public String getBlurb() { return blurb; }
     public void setBlurb(String blurb) { this.blurb = blurb; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public Boolean getHasVariants() { return hasVariants; }
     public void setHasVariants(Boolean hasVariants) { this.hasVariants = hasVariants; }

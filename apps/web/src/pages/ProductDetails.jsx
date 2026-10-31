@@ -12,6 +12,7 @@ import { Icon, Placeholder, PoweredBy } from '../components/glow/GlowPrimitives'
 import { money } from '../components/glow/GlowChrome';
 import GlowProductCard from '../components/glow/GlowProductCard';
 import VariantPicker from '../components/store/VariantPicker';
+import NewBadge from '../components/store/NewBadge';
 import { alpha } from '../core/tokens';
 
 function iconBtn(T) {
@@ -135,6 +136,9 @@ export default function ProductDetails() {
       ) : (
         <Placeholder label={product.title} hue={tenant.hue} dark={T.dark} />
       )}
+      {/* "New" sits on the photo's lower corner, as the design's product page
+          draws it, under the same rule as the cards. */}
+      <NewBadge createdAt={product.createdAt} style={{ top: 'auto', left: 16, bottom: 16 }} />
       <div style={{ position: 'absolute', top: isMobile ? 50 : 16, left: 16, right: 16, display: 'flex', justifyContent: 'space-between' }}>
         <button onClick={() => navigate(-1)} style={iconBtn(T)} aria-label="back"><Icon.arrowR style={{ transform: 'rotate(180deg)' }} /></button>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -172,11 +176,10 @@ export default function ProductDetails() {
         <div style={{ font: `700 ${isMobile ? 23 : 30}px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.025em', flex: 1 }}>{product.title}</div>
         <div style={{ font: `800 ${isMobile ? 23 : 30}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(shownPrice)}</div>
       </div>
-      {/* The "new" star was printed on every product regardless of age — there
-          is no creation date in the payload, so it was decoration claiming to
-          be data. Same rule the product cards already follow: a badge shown to
-          a shopper has to be backed by a real signal. Stock is real, so it
-          stays. */}
+      {/* The "new" star was printed here on every product regardless of age —
+          decoration claiming to be data. A badge shown to a shopper has to be
+          backed by a real signal: stock is real, so it stays, and "New" now
+          rides on the photo, from the product's creation date. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
         {inStock ? (
           <Chip T={T} tone="success">

@@ -2,11 +2,14 @@
 // (a phone today). The store's design object picks one of three:
 //   compact  logo and name on the left, the controls on the right (unchanged)
 //   center   the name centred on the screen, the controls on the right
-//   cover    a band in the theme's hero colour carrying the store's words, the
-//            avatar over its bottom edge and the name beside it
+//   cover    the store's cover photo, or without one a band in the theme's
+//            hero colour carrying the store's words; the avatar over its
+//            bottom edge and the name beside it
+// The name carries the verified tick wherever it is drawn (VerifiedTick).
 // A store with the side menu gets the menu button at the start, and search and
 // the bag in place of language and light/dark, which move into the menu (the
 // canvas's StoreTop draws the header that way for the side menu).
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../../styles/glow';
@@ -20,12 +23,13 @@ import { Icon } from '../glow/GlowPrimitives';
 import { ThemePill, LangPill } from '../glow/GlowPills';
 import { HeadButton, MenuButton, StoreAvatar } from './StoreMenus';
 import { useStoreNav } from './storeChrome';
+import { StoreName } from './VerifiedTick';
 
 const ellipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
 function GlowLogo({ T, tenant, size = 20 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.text }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.text, minWidth: 0 }}>
       {tenant.logoUrl ? (
         <img
           src={tenant.logoUrl} alt={tenant.name}
@@ -38,8 +42,8 @@ function GlowLogo({ T, tenant, size = 20 }) {
           color: T.onAccent, font: `800 ${size * 0.55}px ${T.font}`, letterSpacing: '-0.02em',
         }}>{tenant.initials.charAt(0)}</span>
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-        <span style={{ font: `700 ${size * 0.82}px ${T.font}`, letterSpacing: '-0.02em' }}>{tenant.name}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1, minWidth: 0 }}>
+        <StoreName name={tenant.name} style={{ font: `700 ${size * 0.82}px ${T.font}`, letterSpacing: '-0.02em' }} />
         <span style={{ font: `500 12px ${T.font}`, color: T.textMute, marginTop: 4 }}>{tenant.domain}</span>
       </div>
     </div>
@@ -83,6 +87,8 @@ export default function StoreHead() {
   const canManage = !!canManageStore && !!store?.subdomain;
   const gutter = isMobile ? 16 : 40;
   const drawer = design.menu === 'drawer';
+  // A cover photo that fails to load draws the band instead.
+  const [coverFailed, setCoverFailed] = useState(null);
   const ownerRow = canManage && (
     <div style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end', padding: `14px ${gutter}px 0` }}>
       <ManageButton />
@@ -102,7 +108,7 @@ export default function StoreHead() {
         }}>
           <div style={{ justifySelf: 'start', display: 'flex' }}>{drawer && <MenuButton />}</div>
           <div style={{ minWidth: 0, overflow: 'hidden', textAlign: 'center', color: T.text }}>
-            <div style={{ font: `700 16px/1.2 ${T.font}`, letterSpacing: '-0.02em', ...ellipsis }}>{tenant.name}</div>
+            <StoreName name={tenant.name} style={{ font: `700 16px/1.2 ${T.font}`, letterSpacing: '-0.02em', justifyContent: 'center' }} />
             <div style={{ font: `500 12px ${T.font}`, color: T.textMute, marginTop: 3, ...ellipsis }}>{tenant.domain}</div>
           </div>
           <div style={{ justifySelf: 'end', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -114,36 +120,56 @@ export default function StoreHead() {
   }
 
   if (design.header === 'cover') {
-    // No cover photo exists yet, so the band is the theme's hero colour, and
-    // it carries what the store says about itself: under this header Home
-    // draws no separate hero.
+    // The store's cover photo, drawn bare as the design draws it, with the
+    // store's own line moving under its name. Without a photo the band is the
+    // theme's hero colour and carries what the store says about itself. Either
+    // way Home draws no separate hero under this header.
     const meta = [tenant.location, tenant.since ? t('established', { year: tenant.since }) : null].filter(Boolean).join(' · ');
+    const photo = store?.coverUrl && coverFailed !== store.coverUrl ? store.coverUrl : null;
+    const line = photo ? (store?.tagline || store?.description || tenant.domain) : tenant.domain;
     return (
       <>
         {ownerRow}
         <div style={{ position: 'relative', padding: `${canManage ? 10 : isMobile ? 14 : 24}px ${gutter}px 6px` }}>
-          <div style={{
-            position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-card)',
-            background: 'var(--k-hero)', color: 'var(--k-hero-fg)',
-            minHeight: isMobile ? 132 : 180, boxSizing: 'border-box',
-            // The bottom stays clear for the avatar that overlaps it.
-            padding: isMobile ? '18px 20px 52px' : '28px 32px 60px',
-            display: 'flex', flexDirection: 'column', gap: 8,
-          }}>
-            {meta && <div style={{ font: `600 12px ${T.font}`, opacity: 0.88 }}>{meta}</div>}
-            {tenant.bio && (
-              <div style={{
-                font: `700 ${isMobile ? '20px/1.15' : '28px/1.12'} ${T.font}`, letterSpacing: '-0.02em', maxWidth: 620,
-                display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-              }}>{tenant.bio}</div>
-            )}
-          </div>
+          {photo ? (
+            <div style={{
+              position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-card)',
+              height: isMobile ? 132 : 180, background: T.surface2,
+            }}>
+              <img
+                src={photo} alt="" onError={() => setCoverFailed(photo)}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
+          ) : (
+            <div style={{
+              position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-card)',
+              background: 'var(--k-hero)', color: 'var(--k-hero-fg)',
+              minHeight: isMobile ? 132 : 180, boxSizing: 'border-box',
+              // The bottom stays clear for the avatar that overlaps it.
+              padding: isMobile ? '18px 20px 52px' : '28px 32px 60px',
+              display: 'flex', flexDirection: 'column', gap: 8,
+            }}>
+              {meta && <div style={{ font: `600 12px ${T.font}`, opacity: 0.88 }}>{meta}</div>}
+              {tenant.bio && (
+                <div style={{
+                  font: `700 ${isMobile ? '20px/1.15' : '28px/1.12'} ${T.font}`, letterSpacing: '-0.02em', maxWidth: 620,
+                  display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                }}>{tenant.bio}</div>
+              )}
+            </div>
+          )}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', gap: 12, marginTop: -40 }}>
             {drawer && <MenuButton />}
             <StoreAvatar size={76} ring />
             <div style={{ flex: 1, minWidth: 0, paddingBottom: 2, color: T.text }}>
-              <div style={{ font: `700 17px/1.2 ${T.font}`, letterSpacing: '-0.02em', ...ellipsis }}>{tenant.name}</div>
-              <div style={{ font: `500 12px ${T.font}`, color: T.textMute, marginTop: 3, ...ellipsis }}>{tenant.domain}</div>
+              <StoreName name={tenant.name} style={{ font: `700 17px/1.2 ${T.font}`, letterSpacing: '-0.02em' }} />
+              <div style={{
+                font: `500 12px/1.35 ${T.font}`, color: T.textMute, marginTop: 3,
+                ...(photo
+                  ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'break-word' }
+                  : ellipsis),
+              }}>{line}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
               <Controls drawer={drawer} />

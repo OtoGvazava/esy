@@ -29,6 +29,9 @@ export default function GlowDock() {
   const barShown = useStoreBarShown();
 
   const menu = design.menu;
+  // The design's "menu labels" switch: off, the tab bar and the capsule draw
+  // icons only, and each item keeps its name for screen readers.
+  const labels = design.show.labels;
   // The action button floats on every page the dock would.
   if (menu === 'fab') return <ActionButton />;
   if (menu === 'top' || menu === 'drawer') {
@@ -84,7 +87,7 @@ export default function GlowDock() {
         key={it.key} type="button" onClick={() => navigate(it.to)} aria-label={it.label}
         aria-current={it.active ? 'page' : undefined}
         style={{
-          position: 'relative', height: 44, minWidth: 44, padding: it.active && capsule ? '0 14px' : 0,
+          position: 'relative', height: 44, minWidth: 44, padding: it.active && capsule && labels ? '0 14px' : 0,
           borderRadius: 999, border: 'none', cursor: 'pointer', display: 'inline-flex',
           alignItems: 'center', justifyContent: 'center', gap: 6,
           background: it.active ? T.accentBg : 'transparent', color: it.active ? T.accentFg : T.textDim,
@@ -92,7 +95,7 @@ export default function GlowDock() {
         }}
       >
         {it.icon}
-        {it.active && capsule && <span>{it.label}</span>}
+        {it.active && capsule && labels && <span>{it.label}</span>}
         {it.badge ? (
           <span style={{
             position: 'absolute', top: 2, right: 2, minWidth: 18, height: 18, padding: '0 5px',
@@ -139,6 +142,7 @@ export default function GlowDock() {
           type="button"
           onClick={() => navigate(it.to)}
           aria-current={it.active ? 'page' : undefined}
+          aria-label={labels ? undefined : it.label}
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             color: it.active ? T.accentFg : T.textDim, cursor: 'pointer',
@@ -146,7 +150,8 @@ export default function GlowDock() {
           }}
         >
           <span style={{
-            width: 36, height: 36, borderRadius: 12, position: 'relative',
+            // Icons alone get the whole 44 px target the label used to share.
+            width: labels ? 36 : 44, height: labels ? 36 : 44, borderRadius: 12, position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: it.active ? T.accentBg : 'transparent',
           }}>
@@ -160,7 +165,9 @@ export default function GlowDock() {
               }}>{it.badge}</span>
             ) : null}
           </span>
-          <span style={{ display: 'block', font: `600 11px ${T.font}`, letterSpacing: '-0.005em', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
+          {labels && (
+            <span style={{ display: 'block', font: `600 11px ${T.font}`, letterSpacing: '-0.005em', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
+          )}
         </button>
       ))}
     </nav>

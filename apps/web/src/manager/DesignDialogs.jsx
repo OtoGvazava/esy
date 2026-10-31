@@ -99,9 +99,22 @@ const ROW_ICON = {
   look: 'star', theme: 'spark', menu: 'menu', productLayout: 'grid', header: 'card', stories: 'eye', details: 'gear',
 };
 
+// The switches after stories are `show.<key>` rows and the banner's text is
+// `bannerText` (designDraft.designChanges); their names live with their
+// controls (DesignSections).
+const isSwitch = (key) => key.startsWith('show.');
+const rowIcon = (key) => Icons[ROW_ICON[key] || (isSwitch(key) ? 'eye' : key === 'bannerText' ? 'card' : '')];
+const rowLabel = (t, key) => {
+  if (isSwitch(key)) return t(`editor.show.${key.slice(5)}`);
+  if (key === 'bannerText') return t('editor.banner.row');
+  return t(`editor.change.${key}`);
+};
+
 /** One side of a change, as the owner reads it. */
 function valueLabel(t, key, v) {
+  if (isSwitch(key)) return t(v ? 'editor.switchOn' : 'editor.switchOff');
   switch (key) {
+    case 'bannerText': return v ? t('editor.banner.quoted', { title: v }) : t('editor.banner.noTitle');
     case 'look': return t(`names.${v}`);
     case 'theme': return t(`theme.${v}`);
     case 'menu': return t(`menu.${v}`);
@@ -119,7 +132,7 @@ function ChangeList({ T, rows }) {
     <div style={{ borderRadius: 16, border: `1px solid ${T.border}`, background: T.surface, overflow: 'hidden' }}>
       {rows.map((row, i) => {
         const colour = row.key === 'primary' || row.key === 'second';
-        const Ic = Icons[ROW_ICON[row.key]];
+        const Ic = rowIcon(row.key);
         const side = (v) => (colour
           ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: T.mono }}><Swatch hex={v} />{valueLabel(t, row.key, v)}</span>
           : <span>{valueLabel(t, row.key, v)}</span>);
@@ -136,7 +149,7 @@ function ChangeList({ T, rows }) {
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', font: `500 12px ${T.font}`, color: T.textDim }}>
-                {t(`editor.change.${row.key}`)}
+                {rowLabel(t, row.key)}
               </span>
               <span style={{
                 display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 2,

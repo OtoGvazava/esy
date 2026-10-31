@@ -39,10 +39,12 @@ const LABELLED = ['theme', 'menu', 'productLayout', 'header'];
 /**
  * What publishing `next` would change, compared with what is published.
  * Rows: { key, from, to } — `from` is null when there was no earlier value —
- * or, for the style options and switches this editor does not draw yet (a
- * look sets them), one { key: 'details', count } row, so nothing that changes
- * for buyers goes unmentioned. Colours appear only when `next` carries them,
- * because publishing leaves a colour the draft does not carry as it was.
+ * or, for the style options this editor does not draw yet (a look sets them),
+ * one { key: 'details', count } row, so nothing that changes for buyers goes
+ * unmentioned. Each switch is its own row (`stories`, and `show.<key>` for the
+ * rest), and so is the banner's text (`bannerText`, to: its heading or null).
+ * Colours appear only when `next` carries them, because publishing leaves a
+ * colour the draft does not carry as it was.
  */
 export function designChanges(next, live, liveColours = {}) {
   const a = normalizeDesign(next);
@@ -52,12 +54,13 @@ export function designChanges(next, live, liveColours = {}) {
   LABELLED.forEach((k) => {
     if (a[k] !== b[k]) rows.push({ key: k, from: b[k], to: a[k] });
   });
-  if (a.show.stories !== b.show.stories) {
-    rows.push({ key: 'stories', from: b.show.stories, to: a.show.stories });
+  Object.keys(a.show).forEach((k) => {
+    if (a.show[k] !== b.show[k]) rows.push({ key: k === 'stories' ? k : `show.${k}`, from: b.show[k], to: a.show[k] });
+  });
+  if (JSON.stringify(a.banner || null) !== JSON.stringify(b.banner || null)) {
+    rows.push({ key: 'bannerText', from: null, to: a.banner?.title || null });
   }
-  let details = Object.keys(a.style).filter((k) => a.style[k] !== b.style[k]).length
-    + Object.keys(a.show).filter((k) => k !== 'stories' && a.show[k] !== b.show[k]).length;
-  if (JSON.stringify(a.banner || null) !== JSON.stringify(b.banner || null)) details += 1;
+  const details = Object.keys(a.style).filter((k) => a.style[k] !== b.style[k]).length;
   if (details) rows.push({ key: 'details', count: details });
   ['primary', 'second'].forEach((k) => {
     const to = a.colours?.[k];
