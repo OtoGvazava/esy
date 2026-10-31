@@ -1,0 +1,40 @@
+{
+  "v": 1,
+  "maxBytes": 8192,
+  "options": {
+    "theme": ["glow", "soft", "neon"],
+    "menu": ["tabs", "capsule", "mini", "top", "drawer", "fab"],
+    "productLayout": ["grid2", "grid3", "feed", "list"],
+    "header": ["compact", "center", "cover"],
+    "style.btn": ["theme", "pill", "round", "square"],
+    "style.corner": ["theme", "round", "subtle", "sharp"],
+    "style.card": ["theme", "flat", "outline", "shadow", "glass"],
+    "style.font": ["theme", "sans", "serif", "rounded", "mono"],
+    "style.icon": ["theme", "thin", "regular", "bold"],
+    "style.density": ["normal", "compact", "airy"],
+    "style.ratio": ["theme", "square", "portrait", "landscape"],
+    "style.price": ["below", "photo"],
+    "style.addbtn": ["plus", "heart", "none"],
+    "style.bg": ["theme", "plain", "tinted", "gradient"]
+  },
+  "show": ["stories", "banner", "labels", "price", "badge", "tick", "socials"],
+  "looks": [
+    "social", "boutique", "nightdrop", "bakery", "market", "coffee", "glowup",
+    "pastel", "sneaker", "gadget", "cleantech", "studio", "gallerywall", "toybox"
+  ],
+  "defaults": {
+    "theme": "glow",
+    "menu": "tabs",
+    "productLayout": "grid2",
+    "header": "compact",
+    "style": {
+      "btn": "theme", "corner": "theme", "card": "theme", "font": "theme", "icon": "theme",
+      "density": "normal", "ratio": "theme", "price": "below", "addbtn": "plus", "bg": "theme"
+    },
+    "show": {
+      "stories": true, "banner": false, "labels": true, "price": true,
+      "badge": true, "tick": true, "socials": true
+    }
+  },
+  "limits": { "bannerTitle": 60, "bannerSubtitle": 120 }
+}

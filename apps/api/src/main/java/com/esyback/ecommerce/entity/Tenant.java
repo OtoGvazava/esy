@@ -134,6 +134,34 @@ public class Tenant {
     @Column(name = "suspend_reason", columnDefinition = "TEXT")
     private String suspendReason;
 
+    // ---- Store design (docs/plans/store-design-system.md, Phase 1) ---------
+    // One JSON settings object, normalised by DesignValidator before it is
+    // stored and again whenever it is read. JSON in TEXT rather than a column
+    // per option, so adding an option is a schema.json entry, not a migration.
+    //
+    // All four are nullable with no default and no CHECK, the only shape
+    // ddl-auto=update can add to a populated table (CLAUDE.md gotchas). A store
+    // that predates them has no design and draws the default one.
+
+    /**
+     * The live design, WITHOUT its colours. Published colours stay in
+     * primaryColor / secondaryColor, because emails, the admin and every
+     * existing screen already read those; GET /api/tenant/current merges them
+     * back in. Null until something is published.
+     */
+    @Column(name = "design_published", columnDefinition = "TEXT")
+    private String designPublished;
+
+    @Column(name = "design_published_at")
+    private Instant designPublishedAt;
+
+    /** The owner's unpublished edits, colours included. Never served to shoppers. */
+    @Column(name = "design_draft", columnDefinition = "TEXT")
+    private String designDraft;
+
+    @Column(name = "design_draft_updated_at")
+    private Instant designDraftUpdatedAt;
+
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

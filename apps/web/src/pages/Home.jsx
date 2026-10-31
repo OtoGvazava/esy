@@ -14,6 +14,7 @@ import { StoreContacts } from '../components/store/ContactChannels';
 import { Icons } from '../core/icons';
 import { PoweredBy } from '../components/glow/GlowPrimitives';
 import GlowProductCard from '../components/glow/GlowProductCard';
+import { useDesign } from '../core/design/useDesign';
 import GlowLoadMore from '../components/glow/GlowLoadMore';
 import { ThemePill, LangPill } from '../components/glow/GlowPills';
 import { alpha } from '../core/tokens';
@@ -155,7 +156,12 @@ export default function Home() {
   const openProduct = (p) => navigate(`/product/${p.id}`);
 
   const gutter = isMobile ? 16 : 40;
-  const cols = isDesktop ? 4 : isTablet ? 3 : 2;
+  // The store's product layout (its design object): columns per device, as the design draws them.
+  const design = useDesign();
+  const layout = design.productLayout;
+  const COLS = { grid2: [2, 3, 4], grid3: [3, 4, 6], feed: [1, 2, 3], list: [1, 2, 2] }[layout];
+  const cols = COLS[isDesktop ? 2 : isTablet ? 1 : 0];
+  const gridGap = layout === 'grid3' ? 3 : layout === 'feed' ? 18 : layout === 'list' ? 10 : isMobile ? 12 : 16;
   const heroName = isDesktop ? '42px/1.08' : isTablet ? '34px/1.08' : '26px/1.08';
 
   return (
@@ -216,7 +222,7 @@ export default function Home() {
       {/* Stories are curated sets, never the categories again, and only the
           sets the products really support: the list returns no creation date
           or sale price, so "new" and "sale" would be invented. */}
-      {stories.length > 0 && !query && (
+      {design.show.stories && stories.length > 0 && !query && (
         <div style={{ position: 'relative', display: 'flex', gap: 14, overflowX: 'auto', padding: `14px ${gutter}px 4px` }}>
           {stories.map((s) => {
             const on = story === s.id;
@@ -276,8 +282,8 @@ export default function Home() {
       {/* product grid */}
       <div ref={gridRef} style={{ scrollMarginTop: 80,
         position: 'relative', display: 'grid',
-        gridTemplateColumns: `repeat(${cols}, 1fr)`,
-        gap: isMobile ? 12 : 16, padding: `4px ${gutter}px 8px`,
+        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+        gap: gridGap, padding: `4px ${gutter}px 8px`,
       }}>
         {/* A first load drew nothing at all until the request came back. The
             design fills the grid with card-shaped skeletons so the page keeps
@@ -296,6 +302,7 @@ export default function Home() {
           : shown.map((p) => (
             <GlowProductCard
               key={p.id} T={T} p={p} hue={tenant.hue} compact={isMobile}
+              layout={layout} look={design.style}
               onOpen={openProduct} onAdd={handleAdd}
             />
           ))}

@@ -1,0 +1,48 @@
+{
+  "look": {
+    "title": "აირჩიე სტილი",
+    "sub": "სამი სტილი კატეგორიისთვის «{{cat}}». მენიუს, ბადესა და ფერს მოგვიანებით შეცვლი.",
+    "subAny": "სამი სტილი დასაწყისისთვის. ყველაფერს მოგვიანებით შეცვლი.",
+    "more": "მეტი სტილი · {{count}}",
+    "picked": "არჩეულია",
+    "moreTitle": "ყველა სტილი",
+    "moreSub": "ყველა სტილი შენი ფერით არის დახატული.",
+    "close": "დახურვა",
+    "review": "სტილი"
+  },
+  "names": {
+    "social": "Social shop",
+    "boutique": "Boutique",
+    "nightdrop": "Night drop",
+    "sneaker": "Sneaker drop",
+    "bakery": "Corner bakery",
+    "market": "Fresh market",
+    "coffee": "Coffee bar",
+    "glowup": "Glow up",
+    "pastel": "Pastel shelf",
+    "gadget": "Gadget lab",
+    "cleantech": "Clean tech",
+    "studio": "Studio",
+    "gallerywall": "Gallery wall",
+    "toybox": "Toy box"
+  },
+  "theme": { "glow": "Liquid Glass", "soft": "Soft", "neon": "Neon" },
+  "menu": {
+    "tabs": "ქვედა მენიუ",
+    "capsule": "კაფსულა",
+    "mini": "ხატულების კუნძული",
+    "top": "ზედა ჩანართები",
+    "drawer": "გვერდითი მენიუ",
+    "fab": "მოქმედების ღილაკი"
+  },
+  "layout": { "grid2": "ბადე", "grid3": "ფოტო ბადე", "feed": "ლენტი", "list": "სია" },
+  "group": {
+    "fashion": "ტანსაცმელი",
+    "food": "საკვები და სასმელი",
+    "beauty": "სილამაზე",
+    "tech": "ტექნიკა",
+    "home": "სახლი და ხელნაკეთი",
+    "kids": "ბავშვები",
+    "other": "სხვა"
+  }
+}

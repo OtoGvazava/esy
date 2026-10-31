@@ -5,6 +5,8 @@ import com.esyback.ecommerce.dto.UpdateStoreRequest;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.TenantRepository;
 import com.esyback.ecommerce.security.SecretCipher;
+import com.esyback.ecommerce.web.DesignValidator;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ public class TenantService {
 
     private final TenantRepository tenantRepository;
     private final SecretCipher secretCipher;
+    private final TenantDesignService tenantDesignService;
 
     private static final Pattern SUBDOMAIN = Pattern.compile("^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])$");
 
@@ -111,6 +114,12 @@ public class TenantService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "That store name is already taken");
         }
 
+        // Quick setup publishes the store's design in the same request that
+        // creates it. Null when none was sent or the design switch is off; a
+        // design that is too large or not an object is a 400, and nothing is
+        // saved.
+        ObjectNode design = tenantDesignService.forNewStore(req.getDesign());
+
         Tenant tenant = new Tenant();
         tenant.setName(name);
         tenant.setSubdomain(subdomain);
@@ -118,8 +127,13 @@ public class TenantService {
         tenant.setDescription(blankToNull(req.getDescription()));
         tenant.setTagline(clampTagline(req.getTagline()));
         tenant.setLogoUrl(blankToNull(req.getLogoUrl()));
-        tenant.setPrimaryColor(normalizeColor(req.getPrimaryColor(), DEFAULT_PRIMARY));
-        tenant.setSecondaryColor(normalizeColor(req.getSecondaryColor(), DEFAULT_SECONDARY));
+        // The request's own colour wins; the design's only fills one the
+        // request left empty (or sent unusable), and the default comes last.
+        tenant.setPrimaryColor(normalizeColor(req.getPrimaryColor(),
+            normalizeColor(DesignValidator.colour(design, "primary"), DEFAULT_PRIMARY)));
+        tenant.setSecondaryColor(normalizeColor(req.getSecondaryColor(),
+            normalizeColor(DesignValidator.colour(design, "second"), DEFAULT_SECONDARY)));
+        if (design != null) tenantDesignService.storePublished(tenant, design);
         tenant.setCategory(normalizeCategory(req.getCategory()));
         tenant.setAddressStreet(blankToNull(req.getAddressStreet()));
         tenant.setAddressCity(blankToNull(req.getAddressCity()));

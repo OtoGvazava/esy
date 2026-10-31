@@ -185,6 +185,15 @@ app:
   platform:
     service-fee-rate: ${PLATFORM_SERVICE_FEE_RATE:0.02}
 
+  # Store design system kill switch (docs/plans/store-design-system.md). Off:
+  # storefronts draw today's chrome (GET /api/tenant/current sends design:null),
+  # registration ignores a design, and nothing can be published. Read live
+  # through the config store, so admin.esy.ge/config can flip it — but set it in
+  # the environment too when it matters: the free Key Value store forgets
+  # overrides on restart and falls back to this value.
+  design:
+    enabled: ${APP_DESIGN_ENABLED:true}
+
 # Multi-tenant configuration
 tenant:
   domain: esy.ge

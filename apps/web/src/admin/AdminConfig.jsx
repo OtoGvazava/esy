@@ -30,6 +30,7 @@ import { alpha } from '../core/tokens';
 const ROWS = [
   { field: 'serviceFeeRate', store: 'app.platform.service-fee-rate', kind: 'number', placeholder: '0.02' },
   { field: 'bogEnv', store: 'app.bog.env', kind: 'enum', options: ['live', 'sandbox'] },
+  { field: 'designEnabled', store: 'app.design.enabled', kind: 'enum', options: ['true', 'false'] },
   { field: 'publicBaseUrl', store: 'app.public-base-url', kind: 'url', placeholder: 'https://www.esy.ge' },
   { field: 'bogAuthUrl', store: 'app.bog.auth-url', kind: 'url', advanced: true },
   { field: 'bogBaseUrl', store: 'app.bog.base-url', kind: 'url', advanced: true },

@@ -191,7 +191,8 @@
       "bogEnv": "Which Bank of Georgia environment card payments run against.",
       "publicBaseUrl": "The canonical public address used in links and redirects.",
       "bogAuthUrl": "Bank of Georgia auth endpoint. Blank derives it from the environment.",
-      "bogBaseUrl": "Bank of Georgia API base. Blank derives it from the environment."
+      "bogBaseUrl": "Bank of Georgia API base. Blank derives it from the environment.",
+      "designEnabled": "Store design system: looks at sign-up, and each store's published theme and layout. Off keeps every store on today's look."
     }
   },
   "integrations": {

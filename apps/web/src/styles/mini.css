@@ -1,0 +1,34 @@
+/* The store thumbnail (the design canvas's Mini): a schematic of a storefront drawn
+   with the theme's own tokens, so a look can be previewed before a store has any
+   products. Ported from the design kit; the root carries data-th, data-md and
+   --k-brand, so each thumbnail shows its own theme whatever the page around it is. */
+.mini{position:relative;overflow:hidden;width:200px;height:412px;border-radius:28px;background:var(--k-page);color:var(--k-fg);font-family:var(--k-font);box-shadow:0 0 0 5px #19191d,0 18px 40px -18px rgba(0,0,0,.45);flex:none}
+.m-top{display:flex;align-items:center;gap:7px;padding:24px 12px 8px}
+.m-av{width:24px;height:24px;border-radius:50%;background:var(--k-pri);flex:none}
+[data-th="neon"] .m-av{border-radius:6px;box-shadow:0 0 10px -2px var(--k-neon)}
+.m-l1{height:7px;width:76px;border-radius:3px;background:var(--k-fg);opacity:.85}
+.m-l2{height:5px;width:48px;border-radius:3px;background:var(--k-dim);opacity:.6;margin-top:4px}
+.m-cover{height:62px;margin:20px 10px 0;border-radius:calc(var(--k-r-card) * .55);background:var(--k-hero)}
+.m-hero{margin:4px 10px 8px;height:66px;border-radius:calc(var(--k-r-card) * .55);background:var(--k-hero)}
+.m-rings{display:flex;gap:7px;padding:0 10px 8px}.m-rings i{width:26px;height:26px;border-radius:50%;background:var(--k-ring);flex:none}
+[data-th="neon"] .m-rings i{border-radius:7px}
+.m-pills{display:flex;gap:5px;padding:0 10px 2px}.m-pills i{height:14px;width:34px;border-radius:var(--k-r-pill);background:var(--k-pill-bg);border:var(--k-pill-bd);flex:none;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--k-fg) 16%,transparent)}.m-pills i.on{background:var(--k-pill-on);border-color:transparent}
+.m-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:8px 10px}
+.m-grid .m-ph{border-radius:calc(var(--k-r-img) * .55)}
+.mini.l-grid3 .m-grid{grid-template-columns:repeat(3,1fr);gap:2px;padding:6px 0}.mini.l-grid3 .m-ph{border-radius:2px}
+.mini.l-feed .m-grid{grid-template-columns:1fr}.mini.l-feed .m-ph{aspect-ratio:4/3}
+.mini.l-list .m-grid{grid-template-columns:1fr;gap:5px}.mini.l-list .m-ph{width:36px;aspect-ratio:1}.mini.l-list .m-row{display:flex;align-items:center;gap:8px;background:var(--k-sf);border-radius:calc(var(--k-r-card) * .4);padding:4px}
+.m-row{display:block}.m-row i{display:none}
+.mini.l-list .m-row i{display:block;height:5px;width:60px;border-radius:3px;background:var(--k-fg);opacity:.6}
+.m-dock{background:var(--k-fl-bg);border:var(--k-fl-bd);box-shadow:var(--k-fl-sh);-webkit-backdrop-filter:var(--k-fl-blur);backdrop-filter:var(--k-fl-blur);position:absolute;left:10px;right:10px;bottom:12px;height:34px;border-radius:var(--k-r-dock)}
+.mini.n-capsule .m-dock{right:52px}.mini.n-capsule .m-fab{display:block;right:10px;width:34px;height:34px;border-radius:50%}
+.mini.n-mini .m-dock{left:56px;right:56px}
+.mini.n-top .m-dock,.mini.n-drawer .m-dock,.mini.n-fab .m-dock{display:none}
+.mini.n-fab .m-fab{display:block;right:12px;width:42px;height:42px;border-radius:50%;background:var(--k-pri)}
+.m-fab{display:none;position:absolute;bottom:12px;background:var(--k-fl-bg);border:var(--k-fl-bd);box-shadow:var(--k-fl-sh)}
+.m-tabs{display:none;gap:10px;padding:2px 12px 6px}.m-tabs i{height:6px;width:30px;border-radius:3px;background:var(--k-dim);opacity:.5}.m-tabs i:first-child{background:var(--k-fg);opacity:.9}
+.mini.n-top .m-tabs{display:flex}
+.m-burger{display:none;width:18px;height:12px;border-top:2px solid var(--k-fg);border-bottom:2px solid var(--k-fg);position:relative;flex:none}
+.m-burger::after{content:"";position:absolute;left:0;right:0;top:3px;border-top:2px solid var(--k-fg)}
+.mini.n-drawer .m-burger{display:block}
+.m-ph{aspect-ratio:1/1;background:var(--k-ph1);border-radius:calc(var(--k-r-img) * .55)}.m-ph.t2{background:var(--k-ph2)}.m-ph.t3{background:var(--k-ph3)}.m-ph.t4{background:var(--k-ph4)}

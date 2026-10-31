@@ -2,6 +2,7 @@ package com.esyback.ecommerce.controller;
 
 import com.esyback.ecommerce.config.AppProperties;
 import com.esyback.ecommerce.config.BogProperties;
+import com.esyback.ecommerce.config.DesignProperties;
 import com.esyback.ecommerce.config.PlatformProperties;
 import com.esyback.ecommerce.service.ConfigStore;
 import com.esyback.ecommerce.service.TenantService;
@@ -32,6 +33,7 @@ public class AdminConfigController {
     private final PlatformProperties platform;
     private final AppProperties app;
     private final ConfigStore store;
+    private final DesignProperties design;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -42,6 +44,8 @@ public class AdminConfigController {
         m.put("bogAuthUrl", bog.getAuthUrl());
         m.put("bogBaseUrl", bog.getBaseUrl());
         m.put("publicBaseUrl", app.getPublicBaseUrl());
+        // Store design kill switch (app.design.enabled), a boolean.
+        m.put("designEnabled", design.isEnabled());
         // Whether writes are possible right now (config store reachable).
         m.put("storeReady", store.ready());
         // Read-only: the names no merchant can register. The admin config screen
@@ -87,6 +91,16 @@ public class AdminConfigController {
         }
         if (body.containsKey("publicBaseUrl")) {
             store.set("app.public-base-url", validUrlOrBlank(body.get("publicBaseUrl")));
+        }
+        // Off: storefronts draw today's chrome, registration keeps today's
+        // brand step and nothing can be published (see DesignProperties).
+        // "true"/"false" only — a JSON boolean binds to the same strings.
+        if (body.containsKey("designEnabled")) {
+            String on = body.get("designEnabled") == null ? "" : body.get("designEnabled").trim().toLowerCase();
+            if (!on.equals("true") && !on.equals("false")) {
+                throw bad("designEnabled must be true or false");
+            }
+            design.setEnabled(on.equals("true"));
         }
         return ResponseEntity.ok(Map.of(
             "ok", true,

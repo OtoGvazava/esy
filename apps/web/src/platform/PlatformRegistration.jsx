@@ -8,6 +8,10 @@ import { tenantApi, handleApiError } from './../utils/api';
 import { CATEGORIES, storeUrl } from './platformData';
 import PhoneVerifyBox from '../components/PhoneVerifyBox';
 import { alpha } from '../core/tokens';
+import LookPicker from '../components/design/LookPicker';
+import LookThumb from '../components/design/LookThumb';
+import { lookById, suggestedLooks } from '../core/design/looks';
+import { useDevice } from '../contexts/DeviceContext';
 
 const REG_STEP_KEYS = ['reg.stepAccount', 'reg.stepIdentity', 'reg.stepBrand', 'reg.stepReview', 'reg.stepLive'];
 const BRAND_SWATCHES = ['#6366f1', '#c95b30', '#3f8a4a', '#0f766e', '#0891b2', '#a23b72', '#7c3aed', '#dc2626', '#f59e0b', '#65a30d', '#1e40af', '#0d0d0d'];
@@ -53,6 +57,7 @@ const SUB_META = {
 export default function PlatformRegistration() {
   const { T, dark } = usePlatform();
   const { t } = useTranslation('platform');
+  const { t: tDesign } = useTranslation('design');
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const signedIn = isAuthenticated;
@@ -65,7 +70,21 @@ export default function PlatformRegistration() {
   const [subState, setSubState] = useState('invalid');
   const [color, setColor] = useState('#6366f1');
   const [desc, setDesc] = useState('');
+  const { isMobile } = useDevice();
+  // Quick setup's look (store plan, Phase 5). Shown only when the platform has
+  // the design switch on; the API says so on every /api/tenant/current.
+  const [designOn, setDesignOn] = useState(false);
+  const [look, setLook] = useState(() => suggestedLooks('')[0].id);
   const [category, setCategory] = useState('');
+  useEffect(() => {
+    let alive = true;
+    tenantApi.current()
+      .then((cur) => { if (alive) setDesignOn(cur?.designEnabled === true); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  // A new category brings its own three looks; start on the first of them.
+  useEffect(() => { setLook(suggestedLooks(category)[0].id); }, [category]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [created, setCreated] = useState(null);
@@ -106,7 +125,9 @@ export default function PlatformRegistration() {
     setSubmitting(true);
     setError(null);
     try {
-      const t = await tenantApi.create({ name: name.trim(), subdomain, primaryColor: color, description: desc.trim() || undefined, category: category || undefined });
+      // The chosen look goes with the store, so it opens already designed.
+      const design = designOn && lookById(look) ? { ...lookById(look).design, colours: { primary: color } } : undefined;
+      const t = await tenantApi.create({ name: name.trim(), subdomain, primaryColor: color, description: desc.trim() || undefined, category: category || undefined, design });
       setCreated(t);
       setStep(4);
     } catch (e) {
@@ -269,6 +290,18 @@ export default function PlatformRegistration() {
               );
             })}
           </div>
+          {designOn && (
+            <LookPicker
+              T={T}
+              category={category}
+              categoryLabel={category ? t(`cat.${category}`, { defaultValue: (CATEGORIES.find((c) => c.id === category) || {}).label }) : ''}
+              value={look}
+              onChange={setLook}
+              brand={color}
+              mode={dark ? 'dark' : 'light'}
+              isMobile={isMobile}
+            />
+          )}
           <button onClick={() => setStep(3)} style={primaryBtn(`linear-gradient(135deg, ${color} 0%, ${shiftHue(color, 25)} 100%)`, `0 12px 28px ${color}55`)}>
             {t('reg.reviewYourStore')}
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
@@ -302,6 +335,18 @@ export default function PlatformRegistration() {
               </div>
             </div>
           </div>
+          {designOn && lookById(look) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 12, borderRadius: 18, border: `1px solid ${T.border}`, background: T.surface, marginBottom: 16 }}>
+              <LookThumb design={lookById(look).design} brand={color} mode={dark ? 'dark' : 'light'} scale={0.3} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ font: `500 12px ${T.font}`, color: T.textMute }}>{tDesign('look.review')}</div>
+                <div style={{ font: `700 15px ${T.font}`, color: T.text, marginTop: 2 }}>{tDesign(`names.${look}`)}</div>
+                <div style={{ font: `400 12px ${T.font}`, color: T.textDim, marginTop: 2 }}>
+                  {tDesign(`theme.${lookById(look).design.theme}`)} · {tDesign(`menu.${lookById(look).design.menu}`)} · {tDesign(`layout.${lookById(look).design.productLayout}`)}
+                </div>
+              </div>
+            </div>
+          )}
           {error && (
             <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 12, background: dark ? '#dc262622' : '#fee2e2', border: `1px solid ${dark ? '#dc262655' : '#fca5a5'}`, color: '#dc2626', marginBottom: 14 }}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="9" /><path d="M12 7v6m0 3v.1" /></svg>

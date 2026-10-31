@@ -28,6 +28,8 @@ import enAdmin from './locales/en/admin.json';
 import enManager from './locales/en/manager.json';
 import kaAdmin from './locales/ka/admin.json';
 import kaManager from './locales/ka/manager.json';
+import enDesign from './locales/en/design.json';
+import kaDesign from './locales/ka/design.json';
 
 const resources = {
   en: {
@@ -44,6 +46,7 @@ const resources = {
     owner: enOwner,
     admin: enAdmin,
     manager: enManager,
+    design: enDesign,
   },
   ka: {
     navbar: kaNavbar,
@@ -59,6 +62,7 @@ const resources = {
     owner: kaOwner,
     admin: kaAdmin,
     manager: kaManager,
+    design: kaDesign,
   },
 };
 
@@ -76,7 +80,7 @@ i18n
     // rather than a raw key, and English is the language every contributor reads.
     fallbackLng: LANGUAGES.EN,
     interpolation: { escapeValue: false },
-    ns: ['navbar', 'home', 'cart', 'product', 'auth', 'orders', 'account', 'common', 'platform', 'storefront', 'owner', 'manager', 'admin'],
+    ns: ['navbar', 'home', 'cart', 'product', 'auth', 'orders', 'account', 'common', 'platform', 'storefront', 'owner', 'manager', 'admin', 'design'],
     defaultNS: 'navbar',
   });
 

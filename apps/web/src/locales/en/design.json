@@ -1,0 +1,48 @@
+{
+  "look": {
+    "title": "Pick a look",
+    "sub": "Three looks for «{{cat}}». You can change the menu, layout and colour later.",
+    "subAny": "Three looks to start from. You can change all of it later.",
+    "more": "More looks · {{count}}",
+    "picked": "Selected",
+    "moreTitle": "All looks",
+    "moreSub": "Every look is drawn with your colour.",
+    "close": "Close",
+    "review": "Look"
+  },
+  "names": {
+    "social": "Social shop",
+    "boutique": "Boutique",
+    "nightdrop": "Night drop",
+    "sneaker": "Sneaker drop",
+    "bakery": "Corner bakery",
+    "market": "Fresh market",
+    "coffee": "Coffee bar",
+    "glowup": "Glow up",
+    "pastel": "Pastel shelf",
+    "gadget": "Gadget lab",
+    "cleantech": "Clean tech",
+    "studio": "Studio",
+    "gallerywall": "Gallery wall",
+    "toybox": "Toy box"
+  },
+  "theme": { "glow": "Liquid Glass", "soft": "Soft", "neon": "Neon" },
+  "menu": {
+    "tabs": "Tab bar",
+    "capsule": "Capsule",
+    "mini": "Icon island",
+    "top": "Top tabs",
+    "drawer": "Side menu",
+    "fab": "Action button"
+  },
+  "layout": { "grid2": "Grid", "grid3": "Photo grid", "feed": "Feed", "list": "List" },
+  "group": {
+    "fashion": "Fashion",
+    "food": "Food & drinks",
+    "beauty": "Beauty",
+    "tech": "Tech",
+    "home": "Home & handmade",
+    "kids": "Kids",
+    "other": "Other"
+  }
+}

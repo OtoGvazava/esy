@@ -1,5 +1,7 @@
 package com.esyback.ecommerce.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 /**
  * Self-serve store signup payload. Only name + subdomain are required; the
  * rest are optional branding overrides (TenantService applies defaults).
@@ -24,8 +26,20 @@ public class CreateTenantRequest {
     // String (not Integer) so an empty optional field doesn't fail JSON
     // binding; TenantService parses/validates it.
     private String establishedYear;
+    // Optional design object from quick setup, published with the store.
+    // Kept as a raw tree: DesignValidator decides what survives of it, so a
+    // later schema's keys reach the normaliser instead of failing binding.
+    private JsonNode design;
 
     public CreateTenantRequest() {}
+
+    public JsonNode getDesign() {
+        return design;
+    }
+
+    public void setDesign(JsonNode design) {
+        this.design = design;
+    }
 
     public String getName() {
         return name;

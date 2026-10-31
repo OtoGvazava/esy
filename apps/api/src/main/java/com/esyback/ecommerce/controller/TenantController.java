@@ -10,11 +10,13 @@ import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.service.MembershipService;
 import com.esyback.ecommerce.service.OrderService;
 import com.esyback.ecommerce.service.TenantContextService;
+import com.esyback.ecommerce.service.TenantDesignService;
 import com.esyback.ecommerce.service.TenantLogoService;
 import com.esyback.ecommerce.service.TenantService;
 import com.esyback.ecommerce.service.UserService;
 import com.esyback.ecommerce.service.BogPaymentService;
 import com.esyback.ecommerce.web.TenantMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -45,11 +47,22 @@ public class TenantController {
     private final MembershipService membershipService;
     private final OrderService orderService;
     private final ProductRepository productRepository;
+    private final TenantDesignService tenantDesignService;
 
     @GetMapping("/current")
     public ResponseEntity<Map<String, Object>> getCurrentTenant() {
-        Map<String, Object> body = TenantMapper.toMap(tenantContextService.getCurrentTenant());
+        Tenant tenant = tenantContextService.getCurrentTenant();
+        Map<String, Object> body = TenantMapper.toMap(tenant);
         body.put("isPlatform", tenantContextService.isPlatformHost());
+        // The design switch rides every response, the platform host's too:
+        // registration reads it there to choose quick setup or today's brand
+        // step. Read once, so `design` and `designEnabled` cannot disagree.
+        boolean designOn = tenantDesignService.isEnabled();
+        body.put("designEnabled", designOn);
+        // The published design, colours merged in from primaryColor /
+        // secondaryColor. Null when nothing is published or the switch is off,
+        // and the storefront then draws today's chrome. Never the draft.
+        body.put("design", designOn ? tenantDesignService.published(tenant) : null);
         return ResponseEntity.ok(body);
     }
 
@@ -82,7 +95,10 @@ public class TenantController {
             userService.findByUsername(authentication.getName())
                 .ifPresent(u -> membershipService.ensure(u, created, StoreMembership.Role.OWNER));
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(TenantMapper.toMap(created));
+        Map<String, Object> body = TenantMapper.toMap(created);
+        // What quick setup published, as GET /current will serve it.
+        body.put("design", tenantDesignService.storefrontDesign(created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
     // Edit the current store's branding. The store is resolved from the Host
@@ -95,6 +111,46 @@ public class TenantController {
     public ResponseEntity<Map<String, Object>> updateCurrentStore(@RequestBody UpdateStoreRequest request) {
         Tenant updated = tenantService.updateBranding(tenantContextService.getCurrentTenant(), request);
         return ResponseEntity.ok(TenantMapper.toMap(updated));
+    }
+
+    // ---- Store design (docs/plans/store-design-system.md, Phase 1) --------
+    // OWNER-only, the same gate as the branding edit above: the design is the
+    // store's identity, not day-to-day running, so a MANAGER gets 403 (D5).
+
+    /** The editor's view: {@code {draft, published, draftUpdatedAt, publishedAt}}. */
+    @GetMapping("/current/design")
+    @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> currentDesign() {
+        return ResponseEntity.ok(tenantDesignService.ownerView(tenantContextService.getCurrentTenant()));
+    }
+
+    /**
+     * Saves the draft and returns it normalised: unknown keys dropped, unknown
+     * values defaulted. Taken as raw text so the 8 KB cap is measured on what
+     * was actually sent; over it, or not a JSON object, is a 400.
+     */
+    @PutMapping("/current/design/draft")
+    @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
+    public ResponseEntity<JsonNode> saveDesignDraft(@RequestBody String body) {
+        return ResponseEntity.ok(tenantDesignService.saveDraft(tenantContextService.getCurrentTenant(), body));
+    }
+
+    /**
+     * Draft → published: its colours go to primaryColor / secondaryColor, the
+     * rest is stored without them, and the draft is cleared. 409 when there
+     * is no draft, 503 while the design switch is off.
+     */
+    @PostMapping("/current/design/publish")
+    @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> publishDesign() {
+        return ResponseEntity.ok(tenantDesignService.publish(tenantContextService.getCurrentTenant()));
+    }
+
+    /** Discards the draft; the published design stays live. */
+    @DeleteMapping("/current/design/draft")
+    @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> discardDesignDraft() {
+        return ResponseEntity.ok(tenantDesignService.discardDraft(tenantContextService.getCurrentTenant()));
     }
 
     // Owner/admin uploads the store logo (replaces any existing one). Stored in
@@ -258,14 +314,11 @@ public class TenantController {
         }
     }
 
-    // Surface the validation/conflict reason as { error }. Spring's default
-    // error body masks the message (server.error.include-message=never), and
-    // the SPA reads body.error.
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> handleStatus(ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode())
-            .body(Map.of("error", ex.getReason() == null ? "Request failed" : ex.getReason()));
-    }
+    // No local ResponseStatusException handler: ApiErrorAdvice writes the
+    // same {error} plus message, status and, for an ApiRefusal, its code. The
+    // copy that used to sit here won over the advice and dropped the code,
+    // which the design endpoints' refusals need so the web can show them in
+    // Georgian too.
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException ex) {

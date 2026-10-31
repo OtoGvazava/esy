@@ -93,6 +93,10 @@ services:
       # Explicit host overrides — leave blank to derive from BOG_ENV.
       BOG_BASE_URL: ${BOG_BASE_URL:-}
       BOG_AUTH_URL: ${BOG_AUTH_URL:-}
+      # Store design system kill switch (app.design.enabled). Off = today's
+      # storefront chrome and registration brand step. Also live-editable at
+      # admin.lvh.me:8092/config, which overrides this until Valkey restarts.
+      APP_DESIGN_ENABLED: ${APP_DESIGN_ENABLED:-true}
       # Live config store (Redis/Valkey). The admin UI writes overrides here.
       SPRING_DATA_REDIS_URL: redis://redis:6379
     ports:
