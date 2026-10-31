@@ -204,7 +204,7 @@
     "emptyBody": "When someone buys, the order lands here and the buyer gets an email.",
     "emptyFilter": "Nothing in this state",
     "emptyFilterBody": "No order currently sits at this step. Try another filter.",
-    "buyerNotified": "The buyer sees this status on their own order page. Email and SMS notifications are not built yet.",
+    "buyerNotified": "The buyer sees this status on their order page and is told by SMS and email.",
     "refundNotRevenue": "A refunded order is not revenue: it is excluded from your payout and from the platform fee.",
     "status": {
       "placed": "Placed",

@@ -99,9 +99,10 @@ export function LinkButton({ T, onClick, children, style }) {
 
 /**
  * The sort pill and the menu it opens. `options` is [{ id, label }]; the pill
- * reads "Sort: <current>" through `pillLabel`.
+ * reads "Sort: <current>" through `pillLabel`. `iconOnly` draws the phone's
+ * round 40 px button instead (A1's pill row), with that text as its name.
  */
-export function SortMenu({ T, value, options, pillLabel, menuLabel, onChange, align = 'left' }) {
+export function SortMenu({ T, value, options, pillLabel, menuLabel, onChange, align = 'left', iconOnly = false }) {
   const [open, setOpen] = useState(false);
   const box = useRef(null);
   const button = useRef(null);
@@ -140,10 +141,16 @@ export function SortMenu({ T, value, options, pillLabel, menuLabel, onChange, al
     <div ref={box} style={{ position: 'relative', flex: 'none' }}>
       <button
         ref={button} type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={id}
-        onClick={() => setOpen((v) => !v)} style={pillStyle(T, false)}
+        aria-label={iconOnly ? pillLabel(current.label) : undefined}
+        onClick={() => setOpen((v) => !v)}
+        style={iconOnly ? {
+          width: 40, height: 40, padding: 0, flex: 'none', cursor: 'pointer', color: T.text,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          border: 0, borderRadius: 'var(--k-r-ibtn)', background: T.surface2,
+        } : pillStyle(T, false)}
       >
-        <Glyph size={16}><path d={PATHS.sort} /></Glyph>
-        {pillLabel(current.label)}
+        <Glyph size={iconOnly ? 20 : 16}><path d={PATHS.sort} /></Glyph>
+        {!iconOnly && pillLabel(current.label)}
       </button>
       {open && (
         <div

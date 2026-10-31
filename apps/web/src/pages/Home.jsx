@@ -21,9 +21,18 @@ import { StoreTabs } from '../components/store/StoreMenus';
 import { useStoreBarShown } from '../components/store/storeChrome';
 import { alpha } from '../core/tokens';
 import CategoryPills from '../components/store/CategoryPills';
+import { SortMenu } from '../components/store/CollectionFilters';
+import { useStoreCategories } from '../hooks/useStoreCategories';
 import Collection from './Collection';
 
 const PAGE_SIZE = 12;
+// The home page's sort, the same three as a collection's (A3), kept in the URL
+// as ?sort= so back and forward and a shared link keep it. Newest is the default.
+const SORTS = {
+  new: { sortBy: 'id', sortDir: 'desc', key: 'new' },
+  'price-asc': { sortBy: 'price', sortDir: 'asc', key: 'priceAsc' },
+  'price-desc': { sortBy: 'price', sortDir: 'desc', key: 'priceDesc' },
+};
 // Vertical spacing between sections and the grid's gaps follow the store's
 // spacing option (density): --k-dn is 1 for "normal" (styles/design-style.css).
 const sp = (px) => `calc(${px}px * var(--k-dn, 1))`;
@@ -52,8 +61,13 @@ function ShopHome() {
   // where StoreBar is absent; a second header stacked under the first is what
   // this avoids.
   const ownHeader = !useStoreBarShown();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation('home');
+  const { t: ts } = useTranslation('storefront');
+  const sortId = SORTS[searchParams.get('sort')] ? searchParams.get('sort') : 'new';
+  const sortRef = useRef(sortId);
+  sortRef.current = sortId;
+  const { categories } = useStoreCategories();
 
   const [query, setQuery] = useState(searchParams.get('search') || '');
   const [products, setProducts] = useState([]);
@@ -84,8 +98,9 @@ function ShopHome() {
     setError('');
 
     try {
+      const { sortBy, sortDir } = SORTS[sortRef.current];
       const res = await productApi.list({
-        page: pageNum, size: PAGE_SIZE, q, signal: abortController.signal,
+        page: pageNum, size: PAGE_SIZE, q, sortBy, sortDir, signal: abortController.signal,
       });
       if (requestId === requestIdRef.current) {
         setProducts((prev) => (isInitial ? res.products : [...prev, ...res.products]));
@@ -106,7 +121,7 @@ function ShopHome() {
     }
   }, [t]);
 
-  // Reload from page 0 whenever the (debounced) search changes.
+  // Reload from page 0 whenever the (debounced) search or the sort changes.
   useEffect(() => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setProducts([]);
@@ -115,7 +130,7 @@ function ShopHome() {
     setError('');
     isLoadingRef.current = false;
     loadMoreProducts(0, debouncedQuery, true);
-  }, [debouncedQuery, loadMoreProducts]);
+  }, [debouncedQuery, sortId, loadMoreProducts]);
 
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
@@ -139,6 +154,23 @@ function ShopHome() {
   ].map((s) => ({ ...s, items: products.filter(s.test) })).filter((s) => s.items.length > 0);
   const picked = !query && stories.find((s) => s.id === story);
   const shown = picked ? picked.items : products;
+
+  // The sort control: on the category row's end when the store has categories
+  // (an icon on a phone, as A1 draws it), otherwise on the count row.
+  const pillsShown = !query && categories.length > 0;
+  const sortOptions = Object.entries(SORTS).map(([id, s]) => ({ id, label: ts(`collection.sort.${s.key}`) }));
+  const sortMenu = (iconOnly) => (
+    <SortMenu
+      T={T} value={sortId} options={sortOptions} align="right" iconOnly={iconOnly}
+      pillLabel={(label) => ts('collection.sortLabel', { option: label })}
+      menuLabel={ts('collection.sortMenu')}
+      onChange={(id) => {
+        const next = new URLSearchParams(searchParams);
+        if (id === 'new') next.delete('sort'); else next.set('sort', id);
+        setSearchParams(next, { replace: true });
+      }}
+    />
+  );
 
   const handleAdd = (p) => addToCart({ id: p.id, title: p.title, price: p.price, image: p.image, thumbnail: p.thumbnail });
   const openProduct = (p) => navigate(`/product/${p.id}`);
@@ -232,7 +264,7 @@ function ShopHome() {
                     display: 'block', width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden',
                     border: `2px solid ${T.page}`, background: T.surface2,
                   }}>
-                    {cover.image && <img src={cover.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+                    {cover.image && <img src={cover.image} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
                   </span>
                 </span>
                 <span style={{ font: `${on ? 600 : 500} 12px ${T.font}`, color: on ? T.text : T.textDim, whiteSpace: 'nowrap' }}>{s.label}</span>
@@ -243,10 +275,11 @@ function ShopHome() {
       )}
 
       {/* The store's categories (A1), each opening its collection. */}
-      {!query && <CategoryPills gutter={gutter} />}
+      {pillsShown && <CategoryPills gutter={gutter} categories={categories} trailing={sortMenu(isMobile)} />}
 
-      {/* result meta — the sort control sits here, on the row it describes */}
-      <div style={{
+      {/* result meta — the sort control sits here, on the row it describes,
+          unless the category row above already carries it */}
+      {!pillsShown && <div style={{
         position: 'relative', padding: `${sp(14)} ${gutter}px ${sp(6)}`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
       }}>
@@ -267,8 +300,8 @@ function ShopHome() {
             {t('productCount', { count: story ? shown.length : total })}
           </div>
         )}
-        <Chip T={T}>{t('sortNewest')} <Icons.chevD size={12} /></Chip>
-      </div>
+        {sortMenu(false)}
+      </div>}
 
       {error && (
         <div style={{ position: 'relative', padding: `0 ${gutter}px 8px`, color: T.danger, font: `500 13px ${T.font}` }}>{error}</div>

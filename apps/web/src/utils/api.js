@@ -170,8 +170,10 @@ const toBackendProduct = (form) => ({
 
 // ---- Product API ------------------------------------------------------------
 export const productApi = {
-  async list({ page = 0, size = 20, q = '', signal } = {}) {
+  async list({ page = 0, size = 20, q = '', sortBy, sortDir, signal } = {}) {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (sortBy) params.set('sortBy', sortBy);
+    if (sortDir) params.set('sortDir', sortDir);
     const path = q
       ? `/api/products/search?q=${encodeURIComponent(q)}&${params}`
       : `/api/products?${params}`;
