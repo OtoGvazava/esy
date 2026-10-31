@@ -2,8 +2,10 @@ package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.dto.CreateOrderRequest;
 import com.esyback.ecommerce.entity.Order;
+import com.esyback.ecommerce.entity.Product;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.OrderRepository;
+import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.repository.TenantRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +47,7 @@ class RefundTest {
     @Autowired OrderService orderService;
     @Autowired OrderRepository orderRepository;
     @Autowired TenantRepository tenantRepository;
+    @Autowired ProductRepository productRepository;
 
     @MockBean TenantContextService tenantContextService;
     @MockBean BogPaymentService bogPaymentService;
@@ -69,9 +72,19 @@ class RefundTest {
 
     /** A paid order of `total`, as BOG would have left it. */
     private Order paidOrder(String total) {
+        // The order is charged from the catalogue, so the store sells one
+        // product at exactly that price.
+        Product p = new Product();
+        p.setTenant(tenant);
+        p.setTitle("Thing");
+        p.setDescription("Thing");
+        p.setPrice(new BigDecimal(total));
+        p.setQuantity(100);
+        p = productRepository.save(p);
+
         CreateOrderRequest req = new CreateOrderRequest();
         CreateOrderRequest.Item item = new CreateOrderRequest.Item();
-        item.setProductId(1L);
+        item.setProductId(p.getId());
         item.setTitle("Thing");
         item.setPrice(new BigDecimal(total));
         item.setQuantity(1);

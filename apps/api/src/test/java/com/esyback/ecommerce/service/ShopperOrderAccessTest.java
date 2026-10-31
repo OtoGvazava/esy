@@ -2,9 +2,11 @@ package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.dto.CreateOrderRequest;
 import com.esyback.ecommerce.entity.Order;
+import com.esyback.ecommerce.entity.Product;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.OrderRepository;
+import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.repository.TenantRepository;
 import com.esyback.ecommerce.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +42,7 @@ class ShopperOrderAccessTest {
     @Autowired TenantRepository tenantRepository;
     @Autowired OrderRepository orderRepository;
     @Autowired UserRepository userRepository;
+    @Autowired ProductRepository productRepository;
 
     @MockBean TenantContextService tenantContextService;
 
@@ -74,9 +77,17 @@ class ShopperOrderAccessTest {
     }
 
     private Order placeOrder(User who) {
+        Product mug = new Product();
+        mug.setTenant(tenant);
+        mug.setTitle("Ceramic mug");
+        mug.setDescription("Ceramic mug");
+        mug.setPrice(new BigDecimal("24.00"));
+        mug.setQuantity(100);
+        mug = productRepository.save(mug);
+
         CreateOrderRequest req = new CreateOrderRequest();
         CreateOrderRequest.Item item = new CreateOrderRequest.Item();
-        item.setProductId(1L);
+        item.setProductId(mug.getId());
         item.setTitle("Ceramic mug");
         item.setPrice(new BigDecimal("24.00"));
         item.setQuantity(2);

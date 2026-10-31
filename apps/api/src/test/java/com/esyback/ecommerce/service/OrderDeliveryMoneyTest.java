@@ -2,9 +2,11 @@ package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.dto.CreateOrderRequest;
 import com.esyback.ecommerce.entity.Order;
+import com.esyback.ecommerce.entity.Product;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.DeliveryOptionRepository;
 import com.esyback.ecommerce.repository.OrderRepository;
+import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.repository.TenantRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,7 @@ class OrderDeliveryMoneyTest {
     @Autowired TenantRepository tenantRepository;
     @Autowired OrderRepository orderRepository;
     @Autowired DeliveryOptionRepository deliveryRepository;
+    @Autowired ProductRepository productRepository;
 
     @MockBean TenantContextService tenantContextService;
 
@@ -62,10 +65,21 @@ class OrderDeliveryMoneyTest {
         when(tenantContextService.getCurrentTenant()).thenReturn(tenant);
     }
 
+    /** One of the store's own products at `price`: an order is charged from the catalogue. */
+    private Long productAt(String price) {
+        Product p = new Product();
+        p.setTenant(tenant);
+        p.setTitle("Thing");
+        p.setDescription("Thing");
+        p.setPrice(new BigDecimal(price));
+        p.setQuantity(100);
+        return productRepository.save(p).getId();
+    }
+
     private CreateOrderRequest request(String route, String price, int qty) {
         CreateOrderRequest req = new CreateOrderRequest();
         CreateOrderRequest.Item item = new CreateOrderRequest.Item();
-        item.setProductId(1L);
+        item.setProductId(productAt(price));
         item.setTitle("Thing");
         item.setPrice(new BigDecimal(price));
         item.setQuantity(qty);

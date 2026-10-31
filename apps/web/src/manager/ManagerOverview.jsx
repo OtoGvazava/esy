@@ -34,8 +34,10 @@ const enumName = (s) => String(s || 'PLACED').toUpperCase().replace(/ /g, '_');
 /** The next move for each status that has one, as its button reads. */
 const NEXT = { PLACED: 'overview.markShipped', SHIPPED: 'overview.markOut' };
 
+// Latin letters are capitalised; Georgian stays as it is, because its
+// "capitals" are Mtavruli, which the design never uses.
 const initials = (name) => String(name || '?').trim().split(/\s+/).slice(0, 2)
-  .map((w) => w.charAt(0)).join('').toUpperCase();
+  .map((w) => Array.from(w)[0]).join('').replace(/[a-z]/g, (c) => c.toUpperCase());
 
 /** "10 min ago", in the shopper's language; the moment itself for anything older than a week. */
 function ago(iso, lang, t) {

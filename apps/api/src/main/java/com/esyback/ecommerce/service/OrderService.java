@@ -78,25 +78,34 @@ public class OrderService {
 
         BigDecimal total = BigDecimal.ZERO;
         for (CreateOrderRequest.Item i : req.getItems()) {
+            // What is sold, and for how much, is this store's catalogue — never
+            // the browser's. A line must name one of the store's own products;
+            // its title and price (or its variant's) are read from that product
+            // and frozen onto the line, for the same reason delivery is priced
+            // server-side: the shopper picks a product, not an amount. The
+            // browser's title and price are ignored.
+            Product product = i.getProductId() == null ? null
+                : productRepository.findById(i.getProductId())
+                    .filter(p -> p.getTenant() != null && tenant != null
+                        && p.getTenant().getId().equals(tenant.getId()))
+                    .orElse(null);
+            if (product == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A product in the bag is no longer sold in this store");
+            }
             OrderItem oi = new OrderItem();
-            oi.setProductId(i.getProductId());
-            oi.setTitle(i.getTitle() == null ? "Item" : i.getTitle());
-            BigDecimal price = i.getPrice() == null ? BigDecimal.ZERO : i.getPrice();
+            oi.setProductId(product.getId());
+            oi.setTitle(product.getTitle());
+            BigDecimal price = product.getPrice() == null ? BigDecimal.ZERO : product.getPrice();
             int qty = i.getQuantity() == null || i.getQuantity() < 1 ? 1 : i.getQuantity();
 
             // Variants (D11). The combination is frozen onto the line the same
-            // way the title and price are, and its price — not the browser's —
-            // decides what is charged, for the same reason delivery is priced
-            // server-side: the shopper picks a row, not an amount.
-            if (i.getProductId() != null) {
-                Product product = productRepository.findById(i.getProductId()).orElse(null);
-                if (product != null && product.variantsEnabled()) {
-                    ProductVariant variant = productVariantService.require(product, i.getVariantId());
-                    oi.setVariantId(variant.getId());
-                    oi.setVariantLabel(variant.label());
-                    price = variant.getPrice() != null ? variant.getPrice() : product.getPrice();
-                    oi.setTitle(product.getTitle());
-                }
+            // way the title and price are, and the row's own price wins.
+            if (product.variantsEnabled()) {
+                ProductVariant variant = productVariantService.require(product, i.getVariantId());
+                oi.setVariantId(variant.getId());
+                oi.setVariantLabel(variant.label());
+                price = variant.getPrice() != null ? variant.getPrice() : price;
             }
 
             oi.setPrice(price);

@@ -252,5 +252,8 @@
     "refundedSoFar": "{{amount}} refunded so far.",
     "refundedInFull": "Refunded in full ({{amount}}).",
     "refundOwnerOnly": "Only the store owner can issue a refund."
+  },
+  "ui": {
+    "working": "Working…"
   }
 }
