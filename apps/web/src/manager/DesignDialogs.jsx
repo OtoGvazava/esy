@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Btn, Note } from '../core/primitives';
 import { Icons } from '../core/icons';
 import { track } from '../core/tokens';
-import LookThumb from '../components/design/LookThumb';
+import StorePreview from '../components/design/StorePreview';
 
 function Sheet({ T, isMobile, titleId, onClose, children }) {
   const box = useRef(null);
@@ -206,19 +206,27 @@ export function DiscardDialog({ T, isMobile, count, busy, error, onDiscard, onCl
   );
 }
 
-/** A phone keeps no preview beside the options, so it opens one here. */
-export function PreviewDialog({ T, isMobile, design, brand, mode, draft, q, onClose }) {
+/**
+ * A phone keeps no preview beside the options, so it opens one here.
+ * `catalogue` is the store's first page of products ({ items, total }), or
+ * null while it loads.
+ */
+export function PreviewDialog({ T, isMobile, design, tenant, catalogue, brand, mode, draft, q, onClose }) {
   const { t } = useTranslation('design');
   const titleId = useId();
   const title = draft ? `${t('editor.livePreview')} · ${t('editor.draftTag')}` : t('editor.livePreview');
   return (
     <Sheet T={T} isMobile={isMobile} titleId={titleId} onClose={onClose}>
       <Head T={T} titleId={titleId} title={title} onClose={onClose} />
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 4px' }}>
-        <LookThumb design={design} brand={brand} mode={mode} scale={1.15} />
+      {/* The padding is the room the phone's bezel draws in. */}
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 6px' }}>
+        <StorePreview
+          design={design} tenant={tenant} brand={brand} mode={mode} width={isMobile ? 260 : 300}
+          products={catalogue ? catalogue.items : null} total={catalogue?.total}
+        />
       </div>
       <p style={{ ...lead(T), font: `400 12px/1.5 ${T.font}`, textAlign: 'center' }}>
-        {t('editor.previewCaption')}{' '}
+        {catalogue && !catalogue.items.length ? t('editor.previewSample') : t('editor.previewCaption')}{' '}
         <Link to={`/settings/brand${q}`} style={{ color: T.accentFg, fontWeight: 600, textDecoration: 'none' }}>
           {t('editor.changeColour')}
         </Link>

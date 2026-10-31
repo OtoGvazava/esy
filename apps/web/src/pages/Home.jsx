@@ -20,6 +20,9 @@ import { useStoreBarShown } from '../components/store/storeChrome';
 import { alpha } from '../core/tokens';
 
 const PAGE_SIZE = 12;
+// Vertical spacing between sections and the grid's gaps follow the store's
+// spacing option (density): --k-dn is 1 for "normal" (styles/design-style.css).
+const sp = (px) => `calc(${px}px * var(--k-dn, 1))`;
 
 function useDebouncedValue(value, delayMs) {
   const [debounced, setDebounced] = useState(value);
@@ -169,7 +172,7 @@ export default function Home() {
           The cover header carries those words in its own band, so under it
           there is no second banner. */}
       {tenant.bio && !query && !cover && (
-        <div style={{ position: 'relative', padding: `${isMobile ? 14 : 28}px ${gutter}px 4px` }}>
+        <div style={{ position: 'relative', padding: `${sp(isMobile ? 14 : 28)} ${gutter}px ${sp(4)}` }}>
           <div style={{
             position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-card)',
             background: 'var(--k-hero)', color: 'var(--k-hero-fg)',
@@ -201,7 +204,7 @@ export default function Home() {
           sets the products really support: the list returns no creation date
           or sale price, so "new" and "sale" would be invented. */}
       {design.show.stories && stories.length > 0 && !query && (
-        <div style={{ position: 'relative', display: 'flex', gap: 14, overflowX: 'auto', padding: `14px ${gutter}px 4px` }}>
+        <div style={{ position: 'relative', display: 'flex', gap: 14, overflowX: 'auto', padding: `${sp(14)} ${gutter}px ${sp(4)}` }}>
           {stories.map((s) => {
             const on = story === s.id;
             const cover = s.items[0];
@@ -230,7 +233,7 @@ export default function Home() {
 
       {/* result meta — the sort control sits here, on the row it describes */}
       <div style={{
-        position: 'relative', padding: `14px ${gutter}px 6px`,
+        position: 'relative', padding: `${sp(14)} ${gutter}px ${sp(6)}`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
       }}>
         {/* A search arrives from the search screen (the dock's ძებნა), so it
@@ -261,7 +264,7 @@ export default function Home() {
       <div ref={gridRef} style={{ scrollMarginTop: 80,
         position: 'relative', display: 'grid',
         gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-        gap: gridGap, padding: `4px ${gutter}px 8px`,
+        gap: sp(gridGap), padding: `${sp(4)} ${gutter}px ${sp(8)}`,
       }}>
         {/* A first load drew nothing at all until the request came back. The
             design fills the grid with card-shaped skeletons so the page keeps
@@ -304,7 +307,7 @@ export default function Home() {
           still outstanding. No rating chip: the design draws ★ 4.8 but there is
           no review system, and a rating is a claim made to a shopper about a
           real shop. */}
-      <div style={{ position: 'relative', padding: `0 ${gutter}px ${isMobile ? 30 : 40}px` }}>
+      <div style={{ position: 'relative', padding: `0 ${gutter}px ${sp(isMobile ? 30 : 40)}` }}>
         <div style={{ borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`, padding: isMobile ? 16 : 22 }}>
           <div style={{ font: `700 15px ${T.font}`, color: T.text, marginBottom: 8 }}>{t('aboutStore')}</div>
           {/* The design puts the SHORT description in the hero and the LONG one

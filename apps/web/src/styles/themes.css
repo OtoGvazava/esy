@@ -4,7 +4,13 @@
    <html> carries data-th (esy on the platform, manager and admin hosts; the
    store's theme — soft, glow or neon — on a storefront), data-md (light or dark)
    and --k-brand (the store colour). Every token is prefixed --k-. TK() in
-   core/tokens.js reads them through the aliases at the bottom. */
+   core/tokens.js reads them through the aliases at the bottom.
+
+   Every selector is an attribute selector, so the tokens apply to any element
+   carrying data-th and data-md — a store preview's own element, a look
+   thumbnail — as they do to <html>. One hand edit a re-port must keep: Soft's
+   and Neon's card padding (--k-pc-pad) scales with --k-dn, the store's spacing
+   option (design-style.css). */
 
 :root{--k-brand:#6366f1}
 
@@ -19,7 +25,7 @@
  --k-ph1:color-mix(in oklab,#f4b860 28%,#fff);--k-ph1f:color-mix(in oklab,#e08a1e 78%,#fff);--k-ph2:color-mix(in oklab,#8fc7f0 30%,#fff);--k-ph2f:color-mix(in oklab,#3d8fd1 78%,#fff);--k-ph3:color-mix(in oklab,#b9e0a5 34%,#fff);--k-ph3f:color-mix(in oklab,#4f9a3a 78%,#fff);--k-ph4:color-mix(in oklab,var(--k-brand) 16%,#fff);--k-ph4f:color-mix(in oklab,var(--k-brand) 72%,#fff);
  --k-r-card:26px;--k-r-img:20px;--k-r-btn:999px;--k-r-in:16px;--k-r-pill:999px;--k-r-dock:30px;--k-r-sheet:34px;--k-r-ibtn:999px;
  --k-font:'Noto Sans Georgian','Geist',system-ui,sans-serif;--k-font-d:var(--k-font);--k-font-m:var(--k-font);--k-w-t:700;--k-ic-w:2.1;
- --k-hero:var(--k-brand);--k-hero-fg:#fff;--k-hero-ink:#18181b;--k-ring:var(--k-brand);--k-pc-bg:var(--k-sf);--k-pc-pad:6px 6px 12px;--k-pc-bd:0 solid transparent}
+ --k-hero:var(--k-brand);--k-hero-fg:#fff;--k-hero-ink:#18181b;--k-ring:var(--k-brand);--k-pc-bg:var(--k-sf);--k-pc-pad:calc(6px*var(--k-dn,1)) calc(6px*var(--k-dn,1)) calc(12px*var(--k-dn,1));--k-pc-bd:0 solid transparent}
 [data-th="soft"][data-md="dark"]{--k-page:color-mix(in oklab,var(--k-brand) 10%,#101012);--k-ps:color-mix(in oklab,var(--k-brand) 10%,#101012);--k-sf:#1b1b1f;--k-sf2:color-mix(in oklab,var(--k-brand) 22%,#1b1b1f);--k-fg:#f2f2f4;--k-dim:#a6a6b0;--k-line:#2c2c33;--k-ink:#f2f2f4;--k-on-ink:#141416;--k-acc:color-mix(in oklab,var(--k-brand) 52%,#fff);
  --k-fl-bg:#202025;--k-fl-sh:0 12px 30px -12px rgba(0,0,0,.7);--k-pill-bg:#202025;--k-pill-on:#f2f2f4;--k-pill-on-fg:#141416;--k-in-bg:#1b1b1f;--k-in-bd:#35353c;
  --k-ph1:color-mix(in oklab,#f4b860 22%,#1b1b1f);--k-ph1f:#f4c27a;--k-ph2:color-mix(in oklab,#8fc7f0 22%,#1b1b1f);--k-ph2f:#9fd0f4;--k-ph3:color-mix(in oklab,#b9e0a5 20%,#1b1b1f);--k-ph3f:#bde3a9;--k-ph4:color-mix(in oklab,var(--k-brand) 30%,#1b1b1f);--k-ph4f:color-mix(in oklab,var(--k-brand) 48%,#fff);--k-hero-ink:#141416}
@@ -58,7 +64,7 @@
  --k-r-card:6px;--k-r-img:4px;--k-r-btn:4px;--k-r-in:4px;--k-r-pill:4px;--k-r-dock:12px;--k-r-sheet:14px;--k-r-ibtn:8px;
  --k-font:'Geist','Noto Sans Georgian',system-ui,sans-serif;--k-font-d:'Chakra Petch','Noto Sans Georgian',system-ui,sans-serif;--k-font-m:'JetBrains Mono','Noto Sans Georgian',ui-monospace,monospace;--k-w-t:700;--k-ic-w:1.6;
  --k-hero:linear-gradient(160deg,color-mix(in oklab,var(--k-neon2) 34%,#0a0a12) 0%,#0a0a12 55%,color-mix(in oklab,var(--k-neon) 24%,#0a0a12) 100%);--k-hero-fg:#e8efff;--k-hero-ink:var(--k-neon);--k-ring:linear-gradient(135deg,var(--k-neon),var(--k-neon2));
- --k-pc-bg:var(--k-sf);--k-pc-pad:5px 5px 10px;--k-pc-bd:1px solid color-mix(in oklab,var(--k-neon) 24%,transparent)}
+ --k-pc-bg:var(--k-sf);--k-pc-pad:calc(5px*var(--k-dn,1)) calc(5px*var(--k-dn,1)) calc(10px*var(--k-dn,1));--k-pc-bd:1px solid color-mix(in oklab,var(--k-neon) 24%,transparent)}
 [data-th="neon"][data-md="light"]{--k-neon:color-mix(in oklab,var(--k-brand) 78%,#0066ff);--k-neon2:#c0108f;--k-on-neon:#fff;--k-on-neon2:#fff;--k-grid:rgba(20,40,120,.06);
  --k-page:radial-gradient(90% 32% at 50% 0%,color-mix(in oklab,var(--k-neon) 10%,transparent),transparent 70%),linear-gradient(var(--k-grid) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,var(--k-grid) 1px,transparent 1px) 0 0/24px 24px,#f3f4f8;--k-ps:#f3f4f8;
  --k-sf:#fff;--k-sf2:#eceef5;--k-fg:#0a0b12;--k-dim:#535a78;--k-line:rgba(20,30,80,.13);--k-card-sh:0 8px 20px -14px color-mix(in oklab,var(--k-neon) 60%,transparent);

@@ -18,6 +18,10 @@ export const BREAKPOINTS = {
 
 const DeviceContext = createContext();
 
+// Exported so a store preview (components/design/StorePreview) can draw the
+// phone layout inside a wider page; the app itself uses useDevice().
+export { DeviceContext };
+
 export const useDevice = () => {
   const context = useContext(DeviceContext);
   if (!context) {

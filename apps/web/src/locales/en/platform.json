@@ -49,6 +49,8 @@
     "live": "live",
     "exampleStore": "An example esy store",
     "orderPing": "+48 ₾ order · 32s ago",
+    "looksLabel": "Three of the ready-made looks",
+    "lookOpen": "Open a store in the {{name}} look",
     "howItWorks": "How it works",
     "howTitle": "From idea to live storefront in under five minutes.",
     "h1": "Claim a subdomain",

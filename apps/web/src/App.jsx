@@ -94,7 +94,7 @@ function AppShell() {
 }
 
 // The store style options drawn as data-* on <html> (styles/design-style.css).
-const STYLE_KEYS = ['btn', 'corner', 'card', 'font', 'bg'];
+const STYLE_KEYS = ['btn', 'corner', 'card', 'font', 'bg', 'density', 'icon'];
 
 // Faces a design may ask for, loaded only when a store uses them. Georgian
 // text falls back to the matching Noto face, so each brings its own.

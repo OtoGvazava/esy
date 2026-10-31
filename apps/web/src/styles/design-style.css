@@ -1,34 +1,60 @@
 /* A store's style options (its design object's `style`), as overrides of the
    theme's own variables. ThemeRoot puts data-btn, data-corner, data-card,
-   data-font and data-bg on <html> for a storefront, and only when the option
-   is not "theme", so each option changes just its own properties and they
-   combine freely. Every component that already reads var(--k-…) follows
-   without knowing the options exist. Density and icon weight are not drawn
-   yet: components use fixed spacing and stroke widths today. */
+   data-font, data-bg, data-density and data-icon on <html> for a storefront,
+   each only when the option is not "theme", so each option changes just its
+   own properties and they combine freely. Every component that already reads
+   var(--k-…) follows without knowing the options exist.
+
+   A preview draws a design that is not the page's: it carries the same
+   attributes, with data-th and data-md, on its own element with the class
+   k-scope (core/design/scope.js), and every rule has that second selector.
+   The html prefix makes the page's rules outrank the theme's dark-mode blocks;
+   .k-scope does the same for a scope. */
 
 /* corners */
-html[data-th][data-corner="round"] { --k-r-card: 30px; --k-r-img: 24px; --k-r-in: 18px; --k-r-sheet: 36px; --k-r-dock: 999px; }
-html[data-th][data-corner="subtle"] { --k-r-card: 14px; --k-r-img: 10px; --k-r-in: 10px; --k-r-btn: 12px; --k-r-ibtn: 12px; --k-r-pill: 10px; --k-r-dock: 18px; --k-r-sheet: 18px; }
-html[data-th][data-corner="sharp"] { --k-r-card: 6px; --k-r-img: 4px; --k-r-in: 4px; --k-r-btn: 6px; --k-r-ibtn: 6px; --k-r-pill: 6px; --k-r-dock: 10px; --k-r-sheet: 10px; }
+html[data-th][data-corner="round"], .k-scope[data-th][data-corner="round"] { --k-r-card: 30px; --k-r-img: 24px; --k-r-in: 18px; --k-r-sheet: 36px; --k-r-dock: 999px; }
+html[data-th][data-corner="subtle"], .k-scope[data-th][data-corner="subtle"] { --k-r-card: 14px; --k-r-img: 10px; --k-r-in: 10px; --k-r-btn: 12px; --k-r-ibtn: 12px; --k-r-pill: 10px; --k-r-dock: 18px; --k-r-sheet: 18px; }
+html[data-th][data-corner="sharp"], .k-scope[data-th][data-corner="sharp"] { --k-r-card: 6px; --k-r-img: 4px; --k-r-in: 4px; --k-r-btn: 6px; --k-r-ibtn: 6px; --k-r-pill: 6px; --k-r-dock: 10px; --k-r-sheet: 10px; }
 
 /* buttons (after corners, so a button choice wins over the corner choice) */
-html[data-th][data-btn="pill"] { --k-r-btn: 999px; --k-r-ibtn: 999px; }
-html[data-th][data-btn="round"] { --k-r-btn: 16px; --k-r-ibtn: 14px; }
-html[data-th][data-btn="square"] { --k-r-btn: 6px; --k-r-ibtn: 6px; }
+html[data-th][data-btn="pill"], .k-scope[data-th][data-btn="pill"] { --k-r-btn: 999px; --k-r-ibtn: 999px; }
+html[data-th][data-btn="round"], .k-scope[data-th][data-btn="round"] { --k-r-btn: 16px; --k-r-ibtn: 14px; }
+html[data-th][data-btn="square"], .k-scope[data-th][data-btn="square"] { --k-r-btn: 6px; --k-r-ibtn: 6px; }
 
-/* product cards */
-html[data-th][data-card="flat"] { --k-pc-bg: transparent; --k-pc-bd: 0 solid transparent; --k-pc-pad: 0; --k-pc-sh: none; }
-html[data-th][data-card="outline"] { --k-pc-bg: transparent; --k-pc-bd: 1px solid var(--k-line); --k-pc-pad: 6px 6px 12px; --k-pc-sh: none; }
-html[data-th][data-card="shadow"] { --k-pc-bg: var(--k-sf); --k-pc-bd: 0 solid transparent; --k-pc-pad: 6px 6px 12px; --k-pc-sh: 0 14px 32px -18px rgba(0, 0, 0, 0.35); }
-html[data-th][data-card="glass"] { --k-pc-bg: color-mix(in srgb, var(--k-sf) 72%, transparent); --k-pc-bd: 1px solid color-mix(in srgb, var(--k-sf) 60%, transparent); --k-pc-pad: 6px 6px 12px; --k-pc-sh: 0 10px 28px -18px rgba(0, 0, 0, 0.3); }
+/* product cards; the padding scales with the spacing below, like the themes' own */
+[data-th] { --k-pc-sh: none; }
+html[data-th][data-card="flat"], .k-scope[data-th][data-card="flat"] { --k-pc-bg: transparent; --k-pc-bd: 0 solid transparent; --k-pc-pad: 0; --k-pc-sh: none; }
+html[data-th][data-card="outline"], .k-scope[data-th][data-card="outline"] { --k-pc-bg: transparent; --k-pc-bd: 1px solid var(--k-line); --k-pc-pad: calc(6px * var(--k-dn, 1)) calc(6px * var(--k-dn, 1)) calc(12px * var(--k-dn, 1)); --k-pc-sh: none; }
+html[data-th][data-card="shadow"], .k-scope[data-th][data-card="shadow"] { --k-pc-bg: var(--k-sf); --k-pc-bd: 0 solid transparent; --k-pc-pad: calc(6px * var(--k-dn, 1)) calc(6px * var(--k-dn, 1)) calc(12px * var(--k-dn, 1)); --k-pc-sh: 0 14px 32px -18px rgba(0, 0, 0, 0.35); }
+html[data-th][data-card="glass"], .k-scope[data-th][data-card="glass"] { --k-pc-bg: color-mix(in srgb, var(--k-sf) 72%, transparent); --k-pc-bd: 1px solid color-mix(in srgb, var(--k-sf) 60%, transparent); --k-pc-pad: calc(6px * var(--k-dn, 1)) calc(6px * var(--k-dn, 1)) calc(12px * var(--k-dn, 1)); --k-pc-sh: 0 10px 28px -18px rgba(0, 0, 0, 0.3); }
 
-/* type: Georgian falls back to the matching Noto face, which ThemeRoot loads */
-html[data-th][data-font="sans"] { --k-font: 'Geist', 'Noto Sans Georgian', system-ui, sans-serif; }
-html[data-th][data-font="serif"] { --k-font: 'Fraunces', 'Noto Serif Georgian', Georgia, serif; }
-html[data-th][data-font="rounded"] { --k-font: 'Nunito', 'Noto Sans Georgian', system-ui, sans-serif; }
-html[data-th][data-font="mono"] { --k-font: 'JetBrains Mono', 'Noto Sans Georgian', ui-monospace, monospace; }
+/* type: Georgian falls back to the matching Noto face, which ThemeRoot (or the
+   preview) loads */
+html[data-th][data-font="sans"], .k-scope[data-th][data-font="sans"] { --k-font: 'Geist', 'Noto Sans Georgian', system-ui, sans-serif; }
+html[data-th][data-font="serif"], .k-scope[data-th][data-font="serif"] { --k-font: 'Fraunces', 'Noto Serif Georgian', Georgia, serif; }
+html[data-th][data-font="rounded"], .k-scope[data-th][data-font="rounded"] { --k-font: 'Nunito', 'Noto Sans Georgian', system-ui, sans-serif; }
+html[data-th][data-font="mono"], .k-scope[data-th][data-font="mono"] { --k-font: 'JetBrains Mono', 'Noto Sans Georgian', ui-monospace, monospace; }
 
 /* page ground: solid colours only, because the page colour is also used as a
    colour (borders, rings), where a gradient would not paint */
-html[data-th][data-bg="plain"] { --k-page: var(--k-sf); }
-html[data-th][data-bg="tinted"], html[data-th][data-bg="gradient"] { --k-page: color-mix(in oklab, var(--k-brand) 9%, var(--k-sf)); }
+html[data-th][data-bg="plain"], .k-scope[data-th][data-bg="plain"] { --k-page: var(--k-sf); }
+html[data-th][data-bg="tinted"], html[data-th][data-bg="gradient"],
+.k-scope[data-th][data-bg="tinted"], .k-scope[data-th][data-bg="gradient"] { --k-page: color-mix(in oklab, var(--k-brand) 9%, var(--k-sf)); }
+
+/* spacing (density): --k-dn multiplies the storefront's vertical spacing
+   between sections, its product grid's gaps and the card padding. "normal" is
+   1, which is the spacing the storefront has always had; the prototype draws
+   compact at about .6 and airy at about 1.5 of it. Every themed element starts
+   from 1, so a scope never inherits the page's spacing. */
+[data-th] { --k-dn: 1; }
+html[data-th][data-density="compact"], .k-scope[data-th][data-density="compact"] { --k-dn: 0.6; }
+html[data-th][data-density="airy"], .k-scope[data-th][data-density="airy"] { --k-dn: 1.5; }
+
+/* icon weight: the stroke of every line icon (an <svg stroke="currentColor">)
+   in the store. Without the option each icon keeps its own stroke, as it
+   always has. Author CSS outranks the stroke-width attribute the icons set. */
+html[data-th][data-icon="thin"], .k-scope[data-th][data-icon="thin"] { --k-ic-w: 1.2; }
+html[data-th][data-icon="regular"], .k-scope[data-th][data-icon="regular"] { --k-ic-w: 1.8; }
+html[data-th][data-icon="bold"], .k-scope[data-th][data-icon="bold"] { --k-ic-w: 2.5; }
+html[data-th][data-icon] svg[stroke="currentColor"],
+.k-scope[data-th][data-icon] svg[stroke="currentColor"] { stroke-width: var(--k-ic-w); }
