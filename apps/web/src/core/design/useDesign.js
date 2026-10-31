@@ -3,12 +3,20 @@
 // resolves to the default: today's Liquid Glass storefront.
 import { useContext, useMemo } from 'react';
 import { TenantContext } from '../../contexts/TenantContext';
+import { useStoreView } from '../../contexts/DisplayPrefsContext';
 import { normalizeDesign } from './normalize';
 
 export function useDesign() {
   const { tenant } = useContext(TenantContext);
   const raw = tenant?.design;
-  return useMemo(() => normalizeDesign(raw), [raw]);
+  // The product view the shopper picked for this store (Display settings)
+  // wins over the owner's. Null off a storefront, so the back office's design
+  // preview keeps drawing the owner's layout.
+  const view = useStoreView();
+  return useMemo(() => {
+    const design = normalizeDesign(raw);
+    return view ? { ...design, productLayout: view } : design;
+  }, [raw, view]);
 }
 
 /**

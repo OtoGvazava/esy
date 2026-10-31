@@ -9,7 +9,10 @@ import com.esyback.ecommerce.service.PhoneVerificationService;
 import com.esyback.ecommerce.service.SmsSender;
 import com.esyback.ecommerce.service.UserService;
 import com.esyback.ecommerce.web.ApiRefusal;
+import com.esyback.ecommerce.web.DisplayPrefsValidator;
 import com.esyback.ecommerce.web.TenantMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -184,6 +187,42 @@ public class AccountController {
         User user = requireUser(authentication);
         phoneVerificationService.verify(user, body == null ? null : body.get("code"));
         return ResponseEntity.ok(userMap(user));
+    }
+
+    /**
+     * The shopper's display settings (store design plan, Phase 7), kept on the
+     * account so they follow it into every store. 204 when the account has
+     * none saved yet: the browser then uploads the ones it kept as a guest.
+     */
+    @GetMapping("/display-prefs")
+    public ResponseEntity<JsonNode> displayPrefs(Authentication authentication) {
+        User user = requireUser(authentication);
+        ObjectNode prefs = DisplayPrefsValidator.readStored(user.getDisplayPrefs());
+        return prefs == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(prefs);
+    }
+
+    /**
+     * Replaces the display settings and returns them as stored. Taken as raw
+     * text so the size cap is measured on what was sent; unknown keys are
+     * dropped, a bad value or an oversized body is a 400 and nothing is stored.
+     *
+     * <p>Open to an account without a verified phone, like the rest of
+     * /api/account (PhoneRequiredFilter): these are comfort and accessibility
+     * settings, and someone still finishing registration reads the gate
+     * itself in their language and text size.
+     */
+    @PutMapping("/display-prefs")
+    public ResponseEntity<JsonNode> saveDisplayPrefs(@RequestBody String body, Authentication authentication) {
+        User user = requireUser(authentication);
+        ObjectNode prefs;
+        try {
+            prefs = DisplayPrefsValidator.validate(body);
+        } catch (DisplayPrefsValidator.Rejected e) {
+            throw new ApiRefusal(HttpStatus.BAD_REQUEST, e.getCode(), e.getMessage());
+        }
+        user.setDisplayPrefs(DisplayPrefsValidator.toJson(prefs));
+        userService.save(user);
+        return ResponseEntity.ok(prefs);
     }
 
     private User requireUser(Authentication authentication) {

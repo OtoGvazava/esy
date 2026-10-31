@@ -15,8 +15,7 @@ import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import SignIn from './pages/SignIn';
 import AuthCallback from './pages/AuthCallback';
-import LanguageSettings from './pages/LanguageSettings';
-import AppearanceSettings from './pages/AppearanceSettings';
+import DisplaySettings from './pages/DisplaySettings';
 import AppProviders from './providers/AppProviders';
 import GlowDock from './components/glow/GlowDock';
 import StoreBar from './components/store/StoreBar';
@@ -29,6 +28,7 @@ import AdminShell from './admin/AdminShell';
 import { useAppTheme } from './hooks/useAppTheme';
 import { usePlatformHost, isManagerHost, isAdminHost } from './hooks/usePlatformHost';
 import { ThemeModeProvider } from './contexts/ThemeModeContext';
+import { DisplayPrefsProvider } from './contexts/DisplayPrefsContext';
 import { safeAccent, PLATFORM_BRAND, ADMIN_BRAND } from './core/tokens';
 import { normalizeDesign } from './core/design/normalize';
 
@@ -62,6 +62,8 @@ function AppShell() {
   return (
     <>
       {isDesktop && <StoreBar />}
+      {/* The page apart from the store's menu: text size zooms this (styles/display.css). */}
+      <div className="esy-content">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetails />} />
@@ -76,8 +78,10 @@ function AppShell() {
         <Route path="/orders/:orderNumber" element={<OrderDetail />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/settings/language" element={<LanguageSettings />} />
-        <Route path="/settings/appearance" element={<AppearanceSettings />} />
+        <Route path="/settings/display" element={<DisplaySettings />} />
+        {/* Language and appearance became the one display screen; old links land there. */}
+        <Route path="/settings/language" element={<Navigate to="/settings/display" replace />} />
+        <Route path="/settings/appearance" element={<Navigate to="/settings/display" replace />} />
         {/* /create-store was a real storefront route until the duplicate
             wizard was removed. Bookmarks and old links still point at it, so
             it forwards to the one flow that remains rather than dead-ending. */}
@@ -87,6 +91,7 @@ function AppShell() {
             around an empty middle. */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </div>
       {dock && <GlowDock />}
       <ProfileGate />
     </>
@@ -158,13 +163,13 @@ function Shell() {
 }
 
 function App() {
-  const { mode, theme, toggleTheme, setMode, language, setLanguage } = useAppTheme();
+  const { mode, appearance, theme, toggleTheme, setMode, language, setLanguage } = useAppTheme();
   return (
     <Router>
       <AppProviders theme={theme} mode={mode}>
-        <ThemeModeProvider value={{ mode, toggle: toggleTheme, setMode, language, setLanguage }}>
+        <ThemeModeProvider value={{ mode, appearance, toggle: toggleTheme, setMode, language, setLanguage }}>
           <ThemeRoot mode={mode} />
-          <Shell />
+          <DisplayPrefsProvider><Shell /></DisplayPrefsProvider>
         </ThemeModeProvider>
       </AppProviders>
     </Router>

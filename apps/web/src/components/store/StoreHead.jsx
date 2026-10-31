@@ -67,7 +67,7 @@ function Controls({ drawer }) {
   return (
     <>
       <HeadButton label={t('toggleTheme')} onClick={toggle}>{mode === 'dark' ? <Icon.sun /> : <Icon.moon />}</HeadButton>
-      <HeadButton to="/settings/language" label={t('menu.language')}><Icon.globe /></HeadButton>
+      <HeadButton to="/settings/display" label={t('menu.language')}><Icon.globe /></HeadButton>
     </>
   );
 }
@@ -209,7 +209,7 @@ export default function StoreHead() {
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <ManageButton />
         <ThemePill T={T} dark={mode === 'dark'} onClick={toggleTheme} />
-        <LangPill T={T} lang={language} onClick={() => navigate('/settings/language')} />
+        <LangPill T={T} lang={language} onClick={() => navigate('/settings/display')} />
       </div>
     </div>
   );

@@ -71,6 +71,18 @@ public class User {
     @Column(name = "verified_phone")
     private String verifiedPhone;
     
+    /**
+     * The shopper's display settings as JSON (store design plan, Phase 7):
+     * language, appearance, text size, reduce transparency, reduce motion,
+     * data saver and a product view per store, so they follow the account to
+     * every store. Null until the account first saves them, which is how the
+     * web tells "none yet" (upload the guest's) from "saved, all defaults".
+     * Written only through DisplayPrefsValidator. Nullable, so ddl-auto can
+     * add it to a populated table.
+     */
+    @Column(name = "display_prefs", columnDefinition = "TEXT")
+    private String displayPrefs;
+
     @Column(name = "oauth_provider")
     private String oauthProvider; // "google" or "apple"
     
