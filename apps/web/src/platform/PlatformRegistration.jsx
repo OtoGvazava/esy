@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { tenantApi, handleApiError } from './../utils/api';
 import { CATEGORIES, storeUrl } from './platformData';
 import PhoneVerifyBox from '../components/PhoneVerifyBox';
+import { alpha } from '../core/tokens';
 
 const REG_STEP_KEYS = ['reg.stepAccount', 'reg.stepIdentity', 'reg.stepBrand', 'reg.stepReview', 'reg.stepLive'];
 const BRAND_SWATCHES = ['#6366f1', '#c95b30', '#3f8a4a', '#0f766e', '#0891b2', '#a23b72', '#7c3aed', '#dc2626', '#f59e0b', '#65a30d', '#1e40af', '#0d0d0d'];
@@ -26,7 +27,7 @@ function Stepper({ T, t, current, signedIn }) {
               width: 20, height: 20, borderRadius: '50%',
               background: done || auto ? T.accent : (active ? 'transparent' : T.surface2),
               border: active ? `1.5px solid ${T.accent}` : 'none', color: '#fff',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `700 10px ${T.font}`, flexShrink: 0,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `700 11px ${T.font}`, flexShrink: 0,
             }}>
               {done || auto
                 ? <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="m5 12 5 5L20 7" /></svg>
@@ -128,7 +129,7 @@ export default function PlatformRegistration() {
         <button onClick={() => (step <= (signedIn ? 1 : 0) ? navigate('/') : setStep(step - 1))} style={{ width: 38, height: 38, borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, cursor: 'pointer' }}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M19 12H5m6-6-6 6 6 6" /></svg>
         </button>
-        <span style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t('reg.stepOf', { n: Math.min(step + 1, 4) })}</span>
+        <span style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.1em' }}>{t('reg.stepOf', { n: Math.min(step + 1, 4) })}</span>
         <span style={{ width: 38 }} />
       </div>
       <div style={{ ...screen, padding: '16px 22px 18px', position: 'relative' }}><Stepper T={T} t={t} current={step} signedIn={signedIn} /></div>
@@ -137,7 +138,7 @@ export default function PlatformRegistration() {
       {step === 0 && (
         <div style={{ ...screen, position: 'relative' }}>
           <div style={{ textAlign: 'center', padding: '8px 0 18px' }}>
-            <div style={{ width: 58, height: 58, borderRadius: 18, background: T.grad, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', font: `800 26px ${T.font}`, boxShadow: `0 14px 32px ${T.accent}55` }}>e</div>
+            <div style={{ width: 58, height: 58, borderRadius: 18, background: T.grad, color: T.onAccent, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', font: `800 26px ${T.font}`, boxShadow: `0 14px 32px ${alpha(T.accent, 0.33)}` }}>e</div>
             <h1 style={{ font: `700 24px/1.2 ${T.font}`, color: T.text, letterSpacing: '-0.03em', margin: '0 0 8px' }}>{t('reg.createAccount')}</h1>
             <div style={{ font: `400 13.5px/1.5 ${T.font}`, color: T.textDim, maxWidth: 320, margin: '0 auto' }}>{t('reg.createAccountBody')}</div>
           </div>
@@ -148,7 +149,7 @@ export default function PlatformRegistration() {
               </span>
               {t('reg.continueGmail')}
             </button>
-            <div style={{ font: `400 10.5px/1.5 ${T.font}`, color: T.textMute, textAlign: 'center', marginTop: 6 }}>
+            <div style={{ font: `400 11px/1.5 ${T.font}`, color: T.textMute, textAlign: 'center', marginTop: 6 }}>
               {t('reg.accountNote')}
             </div>
           </div>
@@ -163,7 +164,7 @@ export default function PlatformRegistration() {
       {step === 1 && signedIn && !phoneVerified && (
         <div style={{ ...screen, position: 'relative' }}>
           <div style={{ padding: '0 0 18px' }}>
-            <div style={{ font: `600 10.5px ${T.font}`, color: T.accentFg, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 8 }}>{t('reg.phoneGateEyebrow')}</div>
+            <div style={{ font: `600 11px ${T.font}`, color: T.accentFg, letterSpacing: '0.14em', marginBottom: 8 }}>{t('reg.phoneGateEyebrow')}</div>
             <h1 style={{ font: `700 24px/1.2 ${T.font}`, color: T.text, letterSpacing: '-0.03em', margin: '0 0 8px' }}>{t('reg.phoneGateTitle')}</h1>
             <div style={{ font: `400 13.5px/1.5 ${T.font}`, color: T.textDim }}>{t('reg.phoneGateBody')}</div>
           </div>
@@ -180,17 +181,17 @@ export default function PlatformRegistration() {
       {step === 1 && (!signedIn || phoneVerified) && (
         <div style={{ ...screen, position: 'relative' }}>
           <div style={{ padding: '0 0 18px' }}>
-            <div style={{ font: `600 10.5px ${T.font}`, color: T.accentFg, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 8 }}>{t('reg.yourStore')}</div>
+            <div style={{ font: `600 11px ${T.font}`, color: T.accentFg, letterSpacing: '0.14em', marginBottom: 8 }}>{t('reg.yourStore')}</div>
             <h1 style={{ font: `700 26px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.035em', margin: '0 0 8px' }}>{t('reg.identityTitle')}</h1>
             <div style={{ font: `400 13.5px/1.5 ${T.font}`, color: T.textDim }}>{t('reg.identityBody')}</div>
           </div>
-          <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('reg.storeName')}</div>
+          <div style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', marginBottom: 6 }}>{t('reg.storeName')}</div>
           <div style={{ ...field, marginBottom: 18 }}>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('reg.storeNamePlaceholder')} style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', color: T.text, font: `600 15.5px ${T.font}`, letterSpacing: '-0.02em' }} />
-            <span style={{ font: `500 10.5px ${T.font}`, color: T.textMute }}>{name.length} / 60</span>
+            <span style={{ font: `500 11px ${T.font}`, color: T.textMute }}>{name.length} / 60</span>
           </div>
-          <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('reg.subdomain')}</div>
-          <div style={{ display: 'flex', alignItems: 'center', height: 56, padding: '0 12px 0 16px', borderRadius: 14, background: T.surface, border: `1.5px solid ${subState === 'available' ? T.accent : T.border}`, boxShadow: subState === 'available' ? `0 0 0 4px ${T.accent}1a` : 'none' }}>
+          <div style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', marginBottom: 6 }}>{t('reg.subdomain')}</div>
+          <div style={{ display: 'flex', alignItems: 'center', height: 56, padding: '0 12px 0 16px', borderRadius: 14, background: T.surface, border: `1.5px solid ${subState === 'available' ? T.accent : T.border}`, boxShadow: subState === 'available' ? `0 0 0 4px ${alpha(T.accent, 0.1)}` : 'none' }}>
             <span style={{ font: `500 11.5px ${T.mono}`, color: T.textMute }}>https://</span>
             <input value={subdomain} onChange={(e) => { setSubTouched(true); setSub(slugify(e.target.value)); }} style={{ flex: 1, marginLeft: 2, border: 'none', outline: 'none', background: 'transparent', color: T.text, font: `600 15.5px ${T.mono}`, minWidth: 0 }} />
             <span style={{ font: `500 13px ${T.mono}`, color: T.textDim }}>.esy.ge</span>
@@ -203,7 +204,7 @@ export default function PlatformRegistration() {
             <style>{'@keyframes pfspin{to{transform:rotate(360deg)}}'}</style>
           </div>
           <div style={{ marginTop: 24 }}>
-            <button disabled={subState !== 'available' || !name.trim()} onClick={() => setStep(2)} style={{ ...primaryBtn(subState === 'available' && name.trim() ? T.grad : T.surface2, subState === 'available' ? `0 12px 28px ${T.accent}55` : 'none'), color: subState === 'available' && name.trim() ? '#fff' : T.textMute, cursor: subState === 'available' && name.trim() ? 'pointer' : 'not-allowed' }}>
+            <button disabled={subState !== 'available' || !name.trim()} onClick={() => setStep(2)} style={{ ...primaryBtn(subState === 'available' && name.trim() ? T.grad : T.surface2, subState === 'available' ? `0 12px 28px ${alpha(T.accent, 0.33)}` : 'none'), color: subState === 'available' && name.trim() ? '#fff' : T.textMute, cursor: subState === 'available' && name.trim() ? 'pointer' : 'not-allowed' }}>
               {t('reg.continue')}
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
             </button>
@@ -215,7 +216,7 @@ export default function PlatformRegistration() {
       {step === 2 && (
         <div style={{ ...screen, position: 'relative' }}>
           <div style={{ padding: '0 0 14px' }}>
-            <div style={{ font: `600 10.5px ${T.font}`, color, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 8 }}>{t('reg.branding')}</div>
+            <div style={{ font: `600 11px ${T.font}`, color, letterSpacing: '0.14em', marginBottom: 8 }}>{t('reg.branding')}</div>
             <h1 style={{ font: `700 26px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.035em', margin: '0 0 8px' }}>{t('reg.brandingTitle')}</h1>
             <div style={{ font: `400 13.5px/1.5 ${T.font}`, color: T.textDim }}>{t('reg.brandingBodyPre')}<span style={{ color: T.text, fontFamily: T.mono }}>{subdomain}.esy.ge</span>.</div>
           </div>
@@ -229,16 +230,16 @@ export default function PlatformRegistration() {
               );
             })}
           </div>
-          <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>{t('reg.livePreview')}</div>
+          <div style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', marginBottom: 8 }}>{t('reg.livePreview')}</div>
           <div style={{ background: previewT.surface, borderRadius: 16, border: `1px solid ${previewT.border}`, padding: 14, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <div style={{ width: 54, height: 54, borderRadius: 12, background: `linear-gradient(135deg, ${color}30 0%, ${shiftHue(color, 25)}20 100%)`, flexShrink: 0 }} />
+            <div style={{ width: 54, height: 54, borderRadius: 12, background: `linear-gradient(135deg, ${color}30 0%, ${alpha(shiftHue(color, 25), 0.13)} 100%)`, flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ font: `700 13px ${T.font}`, color: previewT.text }}>{name || t('reg.yourStore')}</div>
               <div style={{ font: `400 11.5px ${T.font}`, color: previewT.textMute }}>{subdomain}.esy.ge</div>
             </div>
-            <button style={{ height: 36, padding: '0 14px', borderRadius: 999, border: 'none', background: previewT.grad, color: '#fff', font: `700 12px ${T.font}`, boxShadow: `0 8px 20px ${color}55` }}>+</button>
+            <button style={{ height: 36, padding: '0 14px', borderRadius: 999, border: 'none', background: previewT.grad, color: previewT.onAccent, font: `700 12px ${T.font}`, boxShadow: `0 8px 20px ${color}55` }}>+</button>
           </div>
-          <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{t('reg.shortDescription')}</div>
+          <div style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', marginBottom: 6 }}>{t('reg.shortDescription')}</div>
           <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={t('reg.descPlaceholder')} style={{ width: '100%', height: 76, resize: 'none', padding: '10px 12px', borderRadius: 12, background: T.surface, border: `1.5px solid ${T.border}`, color: T.text, font: `400 13px/1.4 ${T.font}`, outline: 'none', marginBottom: 18 }} />
 
           {/* Category (D14). The wizard never asked, so every store opened
@@ -246,7 +247,7 @@ export default function PlatformRegistration() {
               directory — the owner had to discover the field later in settings.
               The taxonomy is the union the decision fixes; `all` is a filter
               value, not something a store can be. */}
-          <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>{t('reg.category')}</div>
+          <div style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', marginBottom: 8 }}>{t('reg.category')}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 18 }}>
             {CATEGORIES.filter((c) => c.id !== 'all').map((c) => {
               const on = category === c.id;
@@ -279,7 +280,7 @@ export default function PlatformRegistration() {
       {step === 3 && (
         <div style={{ ...screen, position: 'relative' }}>
           <div style={{ padding: '0 0 14px' }}>
-            <div style={{ font: `600 10.5px ${T.font}`, color, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 8 }}>{t('reg.review')}</div>
+            <div style={{ font: `600 11px ${T.font}`, color, letterSpacing: '0.14em', marginBottom: 8 }}>{t('reg.review')}</div>
             <h1 style={{ font: `700 26px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.035em', margin: '0 0 8px' }}>{t('reg.reviewTitle')}</h1>
             <div style={{ font: `400 13px/1.5 ${T.font}`, color: T.textDim }}>{t('reg.reviewBody')}</div>
           </div>
@@ -294,7 +295,7 @@ export default function PlatformRegistration() {
               <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, padding: '12px 0', borderTop: `1px solid ${previewT.border}` }}>
                 {[[t('reg.fieldBrand'), color.toUpperCase(), true], [t('reg.fieldPlan'), t('reg.fieldPlanValue'), false], [t('reg.fieldRegion'), t('reg.fieldRegionValue'), false]].map(([k, v, mono]) => (
                   <div key={k}>
-                    <div style={{ font: `500 9.5px ${T.font}`, color: previewT.textMute, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{k}</div>
+                    <div style={{ font: `500 11px ${T.font}`, color: previewT.textMute, letterSpacing: '0.08em' }}>{k}</div>
                     <div style={{ font: `700 11.5px ${mono ? T.mono : T.font}`, color: previewT.text, marginTop: 2 }}>{v}</div>
                   </div>
                 ))}

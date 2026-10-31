@@ -13,10 +13,10 @@ import { StoreContacts } from '../components/store/ContactChannels';
 // Glow set has no chevron-down, and this is the set the design itself draws.
 import { Icons } from '../core/icons';
 import { PoweredBy } from '../components/glow/GlowPrimitives';
-import GlowSearchBar from '../components/glow/GlowSearchBar';
 import GlowProductCard from '../components/glow/GlowProductCard';
 import GlowLoadMore from '../components/glow/GlowLoadMore';
 import { ThemePill, LangPill } from '../components/glow/GlowPills';
+import { alpha } from '../core/tokens';
 
 const PAGE_SIZE = 12;
 
@@ -33,12 +33,12 @@ function GlowLogo({ T, tenant, size = 20 }) {
         <span style={{
           width: size * 1.1, height: size * 1.1, borderRadius: 10, background: T.grad,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', font: `800 ${size * 0.55}px ${T.font}`, letterSpacing: '-0.02em',
+          color: T.onAccent, font: `800 ${size * 0.55}px ${T.font}`, letterSpacing: '-0.02em',
         }}>{tenant.initials.charAt(0)}</span>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
         <span style={{ font: `700 ${size * 0.82}px ${T.font}`, letterSpacing: '-0.02em' }}>{tenant.name}</span>
-        <span style={{ font: `500 ${size * 0.46}px ${T.font}`, color: T.textMute, marginTop: 3 }}>{tenant.domain}</span>
+        <span style={{ font: `500 12px ${T.font}`, color: T.textMute, marginTop: 4 }}>{tenant.domain}</span>
       </div>
     </div>
   );
@@ -76,7 +76,8 @@ export default function Home() {
   const [error, setError] = useState('');
 
   const loadMoreRef = useRef(null);
-  const searchRef = useRef(null);
+  const gridRef = useRef(null);
+  const [story, setStory] = useState(null);
   const abortControllerRef = useRef(null);
   const requestIdRef = useRef(0);
   const isLoadingRef = useRef(false);
@@ -142,6 +143,14 @@ export default function Home() {
     return () => observer.disconnect();
   }, [currentPage, debouncedQuery, hasMore, loadMoreProducts]);
 
+  // The story sets, each kept only while the loaded products fill it.
+  const stories = [
+    { id: 'under50', label: t('storyUnder50'), test: (p) => Number(p.price) <= 50 },
+    { id: 'low', label: t('storyLow'), test: (p) => p.tag === 'low' },
+  ].map((s) => ({ ...s, items: products.filter(s.test) })).filter((s) => s.items.length > 0);
+  const picked = !query && stories.find((s) => s.id === story);
+  const shown = picked ? picked.items : products;
+
   const handleAdd = (p) => addToCart({ id: p.id, title: p.title, price: p.price, image: p.image, thumbnail: p.thumbnail });
   const openProduct = (p) => navigate(`/product/${p.id}`);
 
@@ -150,11 +159,11 @@ export default function Home() {
   const heroName = isDesktop ? '42px/1.08' : isTablet ? '34px/1.08' : '26px/1.08';
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}`, paddingBottom: 120 }}>
+    <div style={{ position: 'relative', minHeight: '100vh', background: T.page, color: T.text, font: `400 14px ${T.font}`, paddingBottom: 120 }}>
       {/* hero glow */}
       <div style={{
         position: 'absolute', top: -120, left: -80, right: -80, height: 340,
-        background: `radial-gradient(60% 80% at 30% 40%, ${T.accent}50, transparent 70%), radial-gradient(50% 70% at 80% 30%, ${T.accent}33, transparent 70%)`,
+        background: `radial-gradient(60% 80% at 30% 40%, ${alpha(T.accent, 0.31)}, transparent 70%), radial-gradient(50% 70% at 80% 30%, ${alpha(T.accent, 0.2)}, transparent 70%)`,
         filter: 'blur(20px)', pointerEvents: 'none',
       }} />
 
@@ -172,38 +181,91 @@ export default function Home() {
         </div>
       )}
 
-      {/* hero */}
-      <div style={{
-        position: 'relative', padding: `${isMobile ? 18 : 32}px ${gutter}px 14px`,
-      }}>
-        <div>
-          <div style={{ marginBottom: 12 }}>
-            <Chip T={T} tone="accent">
-              <Icons.pin size={12} /> {tenant.location} · {t('established', { year: tenant.since })}
-            </Chip>
+      {/* The hero is the store's banner in its own colour (the design's A1).
+          The store's name is already in the header above, so the banner
+          carries what the store says about itself rather than its name again. */}
+      {tenant.bio && !query && (
+        <div style={{ position: 'relative', padding: `${isMobile ? 14 : 28}px ${gutter}px 4px` }}>
+          <div style={{
+            position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-card)',
+            background: 'var(--k-hero)', color: 'var(--k-hero-fg)',
+            padding: isMobile ? '22px 20px' : '36px 40px', minHeight: isMobile ? 150 : 220,
+            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 14,
+          }}>
+            {(tenant.location || tenant.since) && (
+              <div style={{ font: `600 12px ${T.font}`, opacity: 0.88 }}>
+                {[tenant.location, tenant.since ? t('established', { year: tenant.since }) : null].filter(Boolean).join(' · ')}
+              </div>
+            )}
+            <div style={{
+              font: `700 ${heroName} ${T.font}`, letterSpacing: '-0.02em', maxWidth: 620,
+              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>{tenant.bio}</div>
+            <button
+              type="button"
+              onClick={() => gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              style={{
+                alignSelf: 'flex-start', height: 44, padding: '0 20px', borderRadius: 'var(--k-r-btn)',
+                border: 0, background: '#fff', color: '#0b0b0f', font: `700 14px ${T.font}`, cursor: 'pointer',
+              }}
+            >{t('heroCta')}</button>
           </div>
-          <div style={{ font: `700 ${heroName} ${T.font}`, color: T.text, letterSpacing: '-0.035em', marginBottom: 8 }}>{tenant.name}</div>
-          <div style={{ font: `400 ${isMobile ? 13 : 14.5}px/1.6 ${T.font}`, color: T.textDim, maxWidth: 560 }}>{tenant.bio}</div>
         </div>
+      )}
 
-        {/* Search belongs in the hero on a phone only. Above mobile the StoreBar
-            carries it, and rendering both put two search fields on one desktop
-            screen. */}
-        {isMobile && (
-          <div ref={searchRef} style={{ marginTop: 20 }}>
-            <GlowSearchBar T={T} value={query} onChange={setQuery} compact />
-          </div>
-        )}
-      </div>
+      {/* Stories are curated sets, never the categories again, and only the
+          sets the products really support: the list returns no creation date
+          or sale price, so "new" and "sale" would be invented. */}
+      {stories.length > 0 && !query && (
+        <div style={{ position: 'relative', display: 'flex', gap: 14, overflowX: 'auto', padding: `14px ${gutter}px 4px` }}>
+          {stories.map((s) => {
+            const on = story === s.id;
+            const cover = s.items[0];
+            return (
+              <button
+                key={s.id} type="button" aria-pressed={on} onClick={() => setStory(on ? null : s.id)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: 74,
+                  flex: 'none', background: 'none', border: 0, padding: 0, cursor: 'pointer',
+                }}
+              >
+                <span style={{ width: 66, height: 66, borderRadius: '50%', padding: 3, background: on ? T.text : 'var(--k-ring)' }}>
+                  <span style={{
+                    display: 'block', width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden',
+                    border: `2px solid ${T.page}`, background: T.surface2,
+                  }}>
+                    {cover.image && <img src={cover.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+                  </span>
+                </span>
+                <span style={{ font: `${on ? 600 : 500} 12px ${T.font}`, color: on ? T.text : T.textDim, whiteSpace: 'nowrap' }}>{s.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* result meta — the sort control sits here, on the row it describes */}
       <div style={{
         position: 'relative', padding: `14px ${gutter}px 6px`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
       }}>
-        <div style={{ font: `600 11px ${T.font}`, color: T.textDim, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          {t('productCount', { count: total })} · {t('shown', { count: products.length })}
-        </div>
+        {/* A search arrives from the search screen (the dock's ძებნა), so it
+            shows here as a chip the shopper can clear, not as a second field. */}
+        {query ? (
+          <button
+            type="button" aria-label={t('clearSearch')}
+            onClick={() => { setQuery(''); navigate('/', { replace: true }); }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, height: 36, padding: '0 12px',
+              borderRadius: 999, border: `1px solid ${T.border}`, background: T.surface,
+              color: T.text, font: `600 13px ${T.font}`, cursor: 'pointer',
+            }}
+          >«{query}» <Icons.x size={12} /></button>
+        ) : (
+          <div style={{ font: `500 13px ${T.font}`, color: T.textDim }}>
+            {t('productCount', { count: story ? shown.length : total })}
+          </div>
+        )}
         <Chip T={T}>{t('sortNewest')} <Icons.chevD size={12} /></Chip>
       </div>
 
@@ -212,7 +274,7 @@ export default function Home() {
       )}
 
       {/* product grid */}
-      <div style={{
+      <div ref={gridRef} style={{ scrollMarginTop: 80,
         position: 'relative', display: 'grid',
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
         gap: isMobile ? 12 : 16, padding: `4px ${gutter}px 8px`,
@@ -231,7 +293,7 @@ export default function Home() {
               </div>
             </div>
           ))
-          : products.map((p) => (
+          : shown.map((p) => (
             <GlowProductCard
               key={p.id} T={T} p={p} hue={tenant.hue} compact={isMobile}
               onOpen={openProduct} onAdd={handleAdd}

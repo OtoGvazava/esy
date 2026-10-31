@@ -15,6 +15,7 @@ import { useAdminTokens } from './adminTokens';
 import { Btn, Card, Chip, Field, Note, SectionTitle } from '../core/primitives';
 import { Mark } from '../core/domain';
 import { Icons } from '../core/icons';
+import { useDevice } from '../contexts/DeviceContext';
 import {
   Empty, Failed, Loading, Stat, StoreStatus, SuspendDialog,
   count, dateTime, isSuspended, lari,
@@ -97,10 +98,85 @@ function StoreRow({ T, store, lang, t, onSuspend, onReactivate, busy, error }) {
   );
 }
 
+/** A desktop reads the stores as a table (the design's AD1); a phone keeps the cards. */
+function StoreTable({ T, t, lang, stores, busy, rowError, onSuspend, onReactivate }) {
+  const th = {
+    textAlign: 'left', padding: '10px 14px', font: `500 12px ${T.font}`, color: T.textMute,
+    borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap',
+  };
+  const td = {
+    padding: '12px 14px', borderBottom: `1px solid ${T.border}`, font: `500 13px ${T.font}`,
+    color: T.text, verticalAlign: 'middle',
+  };
+  const num = { ...td, textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' };
+  return (
+    <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            <th style={th}>{t('stores.colStore')}</th>
+            <th style={th}>{t('stores.colOwner')}</th>
+            <th style={{ ...th, textAlign: 'right' }}>{t('stores.colOrders')}</th>
+            <th style={{ ...th, textAlign: 'right' }}>{t('stores.colRevenue')}</th>
+            <th style={{ ...th, textAlign: 'right' }}>{t('stores.colFees')}</th>
+            <th style={th}>{t('stores.colStatus')}</th>
+            <th style={th} aria-label={t('stores.colAction')} />
+          </tr>
+        </thead>
+        <tbody>
+          {stores.map((store) => {
+            const off = isSuspended(store);
+            const name = store.displayName || store.name || store.subdomain;
+            const isBusy = busy === store.subdomain;
+            return (
+              <tr key={store.subdomain}>
+                <td style={td}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                    <Mark T={T} store={{ name }} size={34} />
+                    <div style={{ minWidth: 0 }}>
+                      <Link
+                        to={`/stores/${encodeURIComponent(store.subdomain)}`}
+                        style={{ font: `700 14px ${T.font}`, color: T.text, textDecoration: 'none' }}
+                      >{name}</Link>
+                      <div style={{ font: `500 12px ${T.mono}`, color: T.textMute }}>{store.subdomain}</div>
+                      {rowError[store.subdomain] && (
+                        <div style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{rowError[store.subdomain]}</div>
+                      )}
+                    </div>
+                  </div>
+                </td>
+                <td style={{ ...td, color: T.textDim }} title={store.ownerEmail ? undefined : t('stores.noOwner')}>
+                  {store.ownerEmail || '—'}
+                </td>
+                <td style={num}>{count(store.orderCount, lang) ?? '—'}</td>
+                <td style={num}>{lari(store.revenue, lang) ?? '—'}</td>
+                <td style={{ ...num, color: T.accentFg }}>{lari(store.feesOwed, lang) ?? '—'}</td>
+                <td style={td}><StoreStatus T={T} store={store} /></td>
+                <td style={{ ...td, textAlign: 'right' }}>
+                  {off ? (
+                    <Btn T={T} kind="quiet" size="sm" disabled={isBusy} onClick={() => onReactivate(store)}>
+                      {isBusy ? t('ui.working') : t('stores.reactivate')}
+                    </Btn>
+                  ) : (
+                    <Btn T={T} kind="danger" size="sm" disabled={isBusy} onClick={() => onSuspend(store)}>
+                      {t('stores.suspend')}
+                    </Btn>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </Card>
+  );
+}
+
 export default function AdminStores() {
   const T = useAdminTokens();
   const { t, i18n } = useTranslation('admin');
   const lang = i18n.language;
+  const { isDesktop } = useDevice();
 
   const [query, setQuery] = useState('');
   const debounced = useDebounce(query, 300);
@@ -204,7 +280,25 @@ export default function AdminStores() {
         style={{ marginBottom: 14 }}
       />
 
-      <Note T={T} tone="admin" style={{ marginBottom: 16 }}>{t('money.excludesRefunds')}</Note>
+      {/* The platform's figures across the top, before a search narrows the list. */}
+      {stores && stores.length > 0 && !searching && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: `repeat(${isDesktop ? 4 : 2}, minmax(0, 1fr))`,
+          gap: 12, marginBottom: 14,
+        }}>
+          {[
+            [t('stores.kpiStores'), count(stores.length, lang)],
+            [t('stores.active'), count(stores.filter((x) => !isSuspended(x)).length, lang)],
+            [t('stores.suspended'), count(stores.filter(isSuspended).length, lang)],
+            [t('stores.colRevenue'), lari(stores.reduce((n, x) => n + (Number(x.revenue) || 0), 0), lang)],
+          ].map(([label, value]) => (
+            <Card key={label} T={T} pad={16}>
+              <div style={{ font: `500 13px ${T.font}`, color: T.textDim }}>{label}</div>
+              <div style={{ marginTop: 6, font: `800 24px ${T.font}`, color: T.text, whiteSpace: 'nowrap' }}>{value}</div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {loading && !stores && <Loading T={T} />}
 
@@ -220,7 +314,16 @@ export default function AdminStores() {
         />
       )}
 
-      {stores && stores.length > 0 && (
+      {stores && stores.length > 0 && isDesktop && (
+        <div style={{ opacity: loading ? 0.55 : 1 }}>
+          <StoreTable
+            T={T} t={t} lang={lang} stores={stores} busy={busy} rowError={rowError}
+            onSuspend={setSuspending} onReactivate={reactivate}
+          />
+        </div>
+      )}
+
+      {stores && stores.length > 0 && !isDesktop && (
         <div style={{
           display: 'flex', flexDirection: 'column', gap: 12,
           opacity: loading ? 0.55 : 1,
@@ -238,6 +341,13 @@ export default function AdminStores() {
               onReactivate={reactivate}
             />
           ))}
+        </div>
+      )}
+
+      {/* What the revenue leaves out reads as a footnote to the figures, not a banner. */}
+      {stores && stores.length > 0 && (
+        <div style={{ marginTop: 12, font: `400 12px/1.5 ${T.font}`, color: T.textMute }}>
+          {t('money.excludesRefunds')}
         </div>
       )}
 

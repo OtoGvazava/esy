@@ -73,7 +73,12 @@
     "suspended": "შეჩერებული",
     "suspend": "შეჩერება",
     "reactivate": "აღდგენა",
-    "reactivateFailed": "მაღაზიის აღდგენა ვერ მოხერხდა."
+    "reactivateFailed": "მაღაზიის აღდგენა ვერ მოხერხდა.",
+    "colStore": "მაღაზია",
+    "colOwner": "მფლობელი",
+    "colStatus": "სტატუსი",
+    "colAction": "მოქმედება",
+    "kpiStores": "მაღაზიები"
   },
   "suspend": {
     "title": "{{store}} — შეჩერება",

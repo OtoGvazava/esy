@@ -74,8 +74,10 @@ export function shiftHue(hex) {
  * positionally and would otherwise yield `rgb(NaN, NaN, NaN)` for an
  * owner-supplied colour that is not `#rrggbb`.
  */
-export function glowTokens(dark, accent = TENANT.accent) {
-  return TK(dark, safeAccent(accent, TENANT.accent));
+export function glowTokens(dark, accent) {
+  // No accent: the page's own (live) colour. An accent: that colour drawn
+  // concretely — the registration preview shows the one being picked.
+  return accent === undefined ? TK(dark) : TK(dark, safeAccent(accent, TENANT.accent));
 }
 
 // Tokens bound to the app's current MUI palette mode (light/dark toggle) and
@@ -88,10 +90,15 @@ export function useGlow() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { tenant } = useContext(TenantContext);
   const accent = tenant?.primaryColor || TENANT.accent;
+  // A resolved store never inherits the placeholder brand's facts: its
+  // initial comes from its own name, and a location or founding year it has
+  // not filled in stays empty (the defaults were English and invented).
+  const name = tenant ? (tenant.displayName || tenant.name || TENANT.name) : TENANT.name;
   const brand = tenant
     ? {
         ...TENANT,
-        name: tenant.displayName || tenant.name || TENANT.name,
+        name,
+        initials: name.trim().charAt(0).toUpperCase() || TENANT.initials,
         // The short/long pair the design draws. `bio` is the one-liner in the
         // hero; `about` is the paragraph. bio falls back to the long form so a
         // store that has not written a tagline looks exactly as it did before
@@ -99,14 +106,12 @@ export function useGlow() {
         // is how the About strip avoids printing the same sentence twice.
         bio: tenant.tagline || tenant.description || TENANT.bio,
         about: tenant.description || '',
-        location:
-          [tenant.addressCity, tenant.addressCountry].filter(Boolean).join(' · ') ||
-          TENANT.location,
-        since: tenant.establishedYear || TENANT.since,
+        location: [tenant.addressCity, tenant.addressCountry].filter(Boolean).join(' · '),
+        since: tenant.establishedYear || '',
         domain: tenant.subdomain ? `${tenant.subdomain}.esy.ge` : TENANT.domain,
         logoUrl: tenant.logoUrl || null,
         accent,
       }
     : TENANT;
-  return { T: glowTokens(dark, accent), dark, isDesktop, tenant: brand };
+  return { T: glowTokens(dark), dark, isDesktop, tenant: brand };
 }

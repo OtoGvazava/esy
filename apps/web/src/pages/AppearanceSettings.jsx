@@ -63,7 +63,7 @@ export default function AppearanceSettings() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, font: `600 11.5px ${T.font}`, color: T.text }}>{opt.icon} {opt.label}</span>
                   {active ? (
-                    <span style={{ width: 18, height: 18, borderRadius: '50%', background: T.accent, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.check /></span>
+                    <span style={{ width: 18, height: 18, borderRadius: '50%', background: T.accent, color: T.onAccent, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.check /></span>
                   ) : (
                     <span style={{ width: 16, height: 16, borderRadius: '50%', border: `1.5px solid ${T.borderStr}` }} />
                   )}

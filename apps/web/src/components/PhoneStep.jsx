@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
 import { usePhoneVerify } from '../hooks/usePhoneVerify';
+import { alpha } from '../core/tokens';
 
 // Georgian numbers only for now; the server also accepts a full +<country>
 // number typed with its own prefix.
@@ -37,7 +38,7 @@ export default function PhoneStep({ initialNumber = '', confirmLabel, onCancel }
     height: 50, borderRadius: 14, border: 'none', width: '100%',
     background: off ? T.surface2 : T.grad, color: off ? T.textMute : '#fff',
     font: `700 14px ${T.font}`, cursor: off ? 'not-allowed' : 'pointer',
-    boxShadow: off ? 'none' : `0 10px 28px ${T.accent}55`,
+    boxShadow: off ? 'none' : `0 10px 28px ${alpha(T.accent, 0.33)}`,
   });
   const link = {
     background: 'none', border: 'none', padding: 0, cursor: 'pointer',
@@ -55,7 +56,7 @@ export default function PhoneStep({ initialNumber = '', confirmLabel, onCancel }
         onSubmit={(e) => { e.preventDefault(); if (!off) request(full); }}
         style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
       >
-        <label htmlFor="phone-step-number" style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+        <label htmlFor="phone-step-number" style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em' }}>
           {t('phoneGate.numberLabel')}
         </label>
         <div style={{ display: 'flex', gap: 10 }}>

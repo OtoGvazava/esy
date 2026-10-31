@@ -4,6 +4,7 @@ import { useOrders } from '../contexts/OrdersContext';
 import { useGlow } from '../styles/glow';
 import { Icon, PoweredBy } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, money } from '../components/glow/GlowChrome';
+import { alpha } from '../core/tokens';
 
 export default function Orders() {
   const { T, tenant } = useGlow();
@@ -14,7 +15,7 @@ export default function Orders() {
   if (!orders || orders.length === 0) {
     return (
       <GlowScreen T={T}>
-        <GlowTopNav T={T} title={t('orders.title')} onBack={() => navigate(-1)} />
+        <GlowTopNav T={T} title={t('orders.title')} />
         <div style={{ padding: '64px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
           <div style={{ width: 88, height: 88, borderRadius: 24, background: T.surface, border: `1px solid ${T.border}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.accentFg }}>
             <Icon.bag width="34" height="34" />
@@ -23,7 +24,7 @@ export default function Orders() {
           <div style={{ font: `400 13px/1.5 ${T.font}`, color: T.textDim, maxWidth: 260 }}>
             {t('orders.emptyBody')}
           </div>
-          <button onClick={() => navigate('/')} style={{ marginTop: 8, height: 48, padding: '0 22px', borderRadius: 14, border: 'none', background: T.grad, color: '#fff', font: `700 13.5px ${T.font}`, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: `0 10px 24px ${T.accent}55` }}>
+          <button onClick={() => navigate('/')} style={{ marginTop: 8, height: 48, padding: '0 22px', borderRadius: 14, border: 'none', background: T.grad, color: T.onAccent, font: `700 13.5px ${T.font}`, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: `0 10px 24px ${alpha(T.accent, 0.33)}` }}>
             {t('orders.browse', { name: tenant.name })} <Icon.arrowR />
           </button>
         </div>
@@ -33,7 +34,7 @@ export default function Orders() {
 
   return (
     <GlowScreen T={T}>
-      <GlowTopNav T={T} title={t('orders.title')} onBack={() => navigate(-1)} />
+      <GlowTopNav T={T} title={t('orders.title')} />
       <div style={{ maxWidth: 620, margin: '0 auto' }}>
         <div style={{ padding: '6px 22px 14px' }}>
           <div style={{ font: `700 24px ${T.font}`, color: T.text, letterSpacing: '-0.03em' }}>{t('orders.heading')}</div>
@@ -73,7 +74,7 @@ export default function Orders() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                   <span style={{ font: `800 14px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(o.total)}</span>
-                  <span style={{ font: `600 9.5px ${T.font}`, color: tone, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t(`orders.status.${statusKey}`, { defaultValue: status })}</span>
+                  <span style={{ font: `600 12px ${T.font}`, color: tone }}>{t(`orders.status.${statusKey}`, { defaultValue: status })}</span>
                 </div>
               </div>
             );

@@ -73,7 +73,12 @@
     "suspended": "Suspended",
     "suspend": "Suspend",
     "reactivate": "Reactivate",
-    "reactivateFailed": "Could not reactivate this store."
+    "reactivateFailed": "Could not reactivate this store.",
+    "colStore": "Store",
+    "colOwner": "Owner",
+    "colStatus": "Status",
+    "colAction": "Action",
+    "kpiStores": "Stores"
   },
   "suspend": {
     "title": "Suspend {{store}}",

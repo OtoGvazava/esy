@@ -4,6 +4,7 @@ import { useGlow } from '../styles/glow';
 import { useAuth } from '../contexts/AuthContext';
 import DateOfBirthPicker from './DateOfBirthPicker';
 import PhoneStep from './PhoneStep';
+import { alpha } from '../core/tokens';
 
 // The registration gate: a blocking, full-screen prompt shown after sign-in
 // until the account has BOTH the mandatory profile (name, surname, date of
@@ -61,7 +62,7 @@ export default function ProfileGate() {
     }
   };
 
-  const label = { font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em', textTransform: 'uppercase' };
+  const label = { font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em' };
   const input = {
     padding: '12px 14px', borderRadius: 12, border: `1px solid ${T.border}`,
     background: T.dark ? T.surface2 : '#fff', color: T.text,
@@ -143,7 +144,7 @@ export default function ProfileGate() {
             height: 50, borderRadius: 14, border: 'none',
             background: busy ? T.surface2 : T.grad, color: busy ? T.textMute : '#fff',
             font: `700 14px ${T.font}`, cursor: busy ? 'not-allowed' : 'pointer',
-            boxShadow: busy ? 'none' : `0 10px 28px ${T.accent}55`,
+            boxShadow: busy ? 'none' : `0 10px 28px ${alpha(T.accent, 0.33)}`,
           }}>
             {busy ? t('profileGate.saving') : t('profileGate.next')}
           </button>

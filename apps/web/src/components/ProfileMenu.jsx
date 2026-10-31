@@ -266,9 +266,8 @@ const ProfileMenu = ({
               variant="caption"
               sx={{
                 color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(99, 102, 241, 0.8)',
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 500,
-                textTransform: 'uppercase',
                 letterSpacing: 0.8,
                 lineHeight: 1,
                 mb: 1,

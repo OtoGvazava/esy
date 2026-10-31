@@ -56,7 +56,7 @@ export default function LanguageSettings() {
                   <div style={{ font: `600 14px ${T.font}`, color: T.text, letterSpacing: '-0.01em' }}>{l.native}</div>
                 </div>
                 {active ? (
-                  <span style={{ width: 24, height: 24, borderRadius: '50%', background: T.accent, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.check /></span>
+                  <span style={{ width: 24, height: 24, borderRadius: '50%', background: T.accent, color: T.onAccent, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.check /></span>
                 ) : (
                   <span style={{ width: 22, height: 22, borderRadius: '50%', border: `1.5px solid ${T.borderStr}` }} />
                 )}

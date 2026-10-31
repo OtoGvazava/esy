@@ -99,7 +99,7 @@ export const ROLE_TONE = {
 // The design draws the raw code next to the translated name (`OWNER · Owner`)
 // so the value in the database is always visible next to its reading. Pass
 // `showCode={false}` where the audience only needs the reading.
-export function RoleChip({ T, role, label, showCode = true, style = {} }) {
+export function RoleChip({ T, role, label, showCode = false, style = {} }) {
   const parts = [showCode ? role : null, label].filter(Boolean);
   return (
     <Chip T={T} tone={ROLE_TONE[role] || 'neutral'} style={style}>
@@ -139,18 +139,20 @@ export function Mark({ T, store, size = 40, radius = 12, label, style = {} }) {
 }
 
 // ─── esy wordmark ───────────────────────────────────────────────────────────
-// The platform brand — glyph tile on the platform gradient plus the wordmark.
-// `wordmark` and `glyph` are props with the brand as their default: the name is
-// a proper noun, identical in EN and KA, so it does not belong in the i18n
-// bundles, but keeping it a prop means it is never a JSX text literal and a
-// caller can still relabel the lockup. `sub` is the small monospace qualifier
-// beside it (host, scope) and must already be translated by the caller.
+// The platform brand — the design's bag mark (a bag with a smile) in the
+// context's colour, plus the wordmark. `wordmark` and `glyph` are props with
+// the brand as their default: the name is a proper noun, identical in EN and
+// KA, so it does not belong in the i18n bundles, but keeping it a prop means it
+// is never a JSX text literal and a caller can still relabel the lockup. A
+// caller that passes its own `glyph` gets the old letter tile. `sub` is the
+// small monospace qualifier beside it (host, scope) and must already be
+// translated by the caller.
 export function EsyMark({
   T,
   size = 22,
   sub,
-  wordmark = 'esy.ge',
-  glyph = 'e',
+  wordmark = 'esy',
+  glyph,
   style = {},
 }) {
   return (
@@ -163,22 +165,30 @@ export function EsyMark({
         ...style,
       }}
     >
-      <span
-        style={{
-          width: size * 1.18,
-          height: size * 1.18,
-          borderRadius: size * 0.32,
-          background: T.grad,
-          color: ON_ACCENT,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          font: `800 ${size * 0.62}px ${WORDMARK_FONT}`,
-          letterSpacing: '-0.04em',
-        }}
-      >
-        {glyph}
-      </span>
+      {glyph ? (
+        <span
+          style={{
+            width: size * 1.18,
+            height: size * 1.18,
+            borderRadius: size * 0.32,
+            background: T.grad,
+            color: ON_ACCENT,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            font: `800 ${size * 0.62}px ${WORDMARK_FONT}`,
+            letterSpacing: '-0.04em',
+          }}
+        >
+          {glyph}
+        </span>
+      ) : (
+        <svg viewBox="0 0 48 48" aria-hidden="true" style={{ width: size * 1.25, height: size * 1.25, color: T.accent, flex: 'none' }}>
+          <rect x="4" y="10" width="40" height="34" rx="13" fill="currentColor" />
+          <path d="M17 12V9.5a7 7 0 0 1 14 0V12" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          <path d="M15.5 27.5c4.5 5.5 12.5 5.5 17 0" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+        </svg>
+      )}
       <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
         <span
           style={{
@@ -237,7 +247,7 @@ export function ChannelBtn({ T, channel, label, action, compact, style = {} }) {
         >
           {label || channel.value}
         </span>
-        <span style={{ font: `600 10.5px ${T.font}`, color: T.textDim, letterSpacing: '0.01em' }}>
+        <span style={{ font: `600 11px ${T.font}`, color: T.textDim, letterSpacing: '0.01em' }}>
           {action}
         </span>
       </span>

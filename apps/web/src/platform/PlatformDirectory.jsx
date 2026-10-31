@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePlatform, useStores, PTopBar, PFooter, StoreMark, StoreArtStrip, StatusPill } from './PlatformShared';
 import { CATEGORIES, storeInitials, storeUrl } from './platformData';
+import { alpha } from '../core/tokens';
 
 function StoreCard({ T, t, store, onOpen, layout = 'tall' }) {
   return (
@@ -26,7 +27,7 @@ function StoreCard({ T, t, store, onOpen, layout = 'tall' }) {
         {store.tagline || store.description || t('directory.anIndependentShop')}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
-        <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{store.category ? t(`directory.cat.${store.category}`) : t('directory.shop')}</div>
+        <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.06em' }}>{store.category ? t(`directory.cat.${store.category}`) : t('directory.shop')}</div>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, font: `700 11.5px ${T.font}`, color: store.primaryColor }}>
           {t('directory.visit')}
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
@@ -127,17 +128,17 @@ export default function PlatformDirectory() {
       <PTopBar current="browse" />
 
       <div style={{ position: 'relative', padding: isDesktop ? '52px 56px 28px' : '20px 22px 8px', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -120, left: '40%', right: '20%', height: 320, background: `radial-gradient(60% 80% at 50% 30%, ${T.accent}28, transparent 70%)`, filter: 'blur(40px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: -120, left: '40%', right: '20%', height: 320, background: `radial-gradient(60% 80% at 50% 30%, ${alpha(T.accent, 0.16)}, transparent 70%)`, filter: 'blur(40px)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 11px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `600 10.5px ${T.font}`, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 16 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 11px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `600 11px ${T.font}`, letterSpacing: '0.14em', marginBottom: 16 }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#3f8a4a' }} />
               {t('directory.storeCount', { n: list.length })}
             </div>
             <h1 style={{ font: `700 ${isDesktop ? 52 : 30}px/1 ${T.font}`, color: T.text, letterSpacing: '-0.04em', margin: 0 }}>{t('directory.everyStore')}.</h1>
           </div>
           {isDesktop && (
-            <button onClick={() => navigate('/sell')} style={{ height: 44, padding: '0 18px', borderRadius: 14, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55`, whiteSpace: 'nowrap' }}>+ {t('directory.openStore')}</button>
+            <button onClick={() => navigate('/sell')} style={{ height: 44, padding: '0 18px', borderRadius: 14, border: 'none', background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${alpha(T.accent, 0.33)}`, whiteSpace: 'nowrap' }}>+ {t('directory.openStore')}</button>
           )}
         </div>
 
@@ -194,7 +195,7 @@ export default function PlatformDirectory() {
             <div style={{ font: `400 14px/1.55 ${T.font}`, color: T.textDim, maxWidth: 380, margin: '0 auto 24px' }}>{t('directory.noMatchBody')}</div>
             <div style={{ display: 'inline-flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
               <button onClick={() => { setQ(''); setCat('all'); }} style={{ height: 42, padding: '0 18px', borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, font: `600 13px ${T.font}`, cursor: 'pointer' }}>{t('directory.clearSearch')}</button>
-              <button onClick={() => navigate('/sell')} style={{ height: 42, padding: '0 18px', borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55` }}>{t('directory.openAStore')}</button>
+              <button onClick={() => navigate('/sell')} style={{ height: 42, padding: '0 18px', borderRadius: 12, border: 'none', background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${alpha(T.accent, 0.33)}` }}>{t('directory.openAStore')}</button>
             </div>
           </div>
         )}

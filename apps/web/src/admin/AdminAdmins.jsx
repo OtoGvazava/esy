@@ -14,6 +14,7 @@ import { useAdminTokens } from './adminTokens';
 import { Btn, Card, Chip, Field, Note, SectionTitle } from '../core/primitives';
 import { Icons } from '../core/icons';
 import { Empty, Failed, Loading, dateTime } from './AdminUI';
+import { alpha } from '../core/tokens';
 
 // Deliberately loose: the server is the authority on what it accepts. This only
 // catches the typo that would otherwise cost a round-trip.
@@ -70,7 +71,7 @@ function AdminRow({ T, t, lang, row, isSelf, busy, error, confirming, onConfirm,
       {confirming && (
         <div style={{
           marginTop: 12, padding: '12px 14px', borderRadius: 14,
-          background: T.dangerBg, border: `1px solid ${T.danger}33`,
+          background: T.dangerBg, border: `1px solid ${alpha(T.danger, 0.2)}`,
         }}>
           <div style={{ font: `600 12.5px/1.55 ${T.font}`, color: T.text }}>
             {t('admins.removeConfirm', { email: row.email })}
@@ -222,8 +223,8 @@ export default function AdminAdmins() {
         <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
           <div style={{
             padding: '12px 16px', background: T.surface2,
-            font: `600 10.5px ${T.font}`, color: T.textMute,
-            letterSpacing: '0.07em', textTransform: 'uppercase',
+            font: `600 11px ${T.font}`, color: T.textMute,
+            letterSpacing: '0.07em',
           }}>
             {t('admins.listHead')}
           </div>

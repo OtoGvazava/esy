@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePlatform, useStores, PTopBar, PFooter, StoreMark, StoreArtStrip, shiftHue } from './PlatformShared';
-import { FEATURED_SUBDOMAINS, storeInitials, storeUrl } from './platformData';
+import { FEATURED_SUBDOMAINS, storeUrl } from './platformData';
+import { alpha } from '../core/tokens';
+import { Icons } from '../core/icons';
 
 function HowStep({ T, n, title, body }) {
   return (
@@ -9,7 +11,7 @@ function HowStep({ T, n, title, body }) {
       <div style={{
         width: 44, height: 44, borderRadius: 14, background: T.accentBg, color: T.accentFg,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        font: `800 18px ${T.font}`, letterSpacing: '-0.04em', border: `1px solid ${T.accent}22`,
+        font: `800 18px ${T.font}`, letterSpacing: '-0.04em', border: `1px solid ${alpha(T.accent, 0.13)}`,
       }}>{n}</div>
       <div>
         <div style={{ font: `700 17px/1.25 ${T.font}`, color: T.text, letterSpacing: '-0.02em', marginBottom: 6 }}>{title}</div>
@@ -59,12 +61,12 @@ export default function PlatformLanding() {
         <div style={{
           position: 'absolute', top: isDesktop ? -180 : -100, left: isDesktop ? '20%' : -60, right: isDesktop ? '20%' : -60,
           height: isDesktop ? 480 : 300,
-          background: `radial-gradient(50% 70% at 50% 30%, ${T.accent}38, transparent 70%), radial-gradient(40% 60% at 80% 40%, ${shiftHue(T.accent, 25)}30, transparent 70%)`,
+          background: `radial-gradient(50% 70% at 50% 30%, ${alpha(T.accent, 0.22)}, transparent 70%), radial-gradient(40% 60% at 80% 40%, ${alpha(shiftHue(T.accent, 25), 0.19)}, transparent 70%)`,
           filter: 'blur(40px)', pointerEvents: 'none',
         }} />
         <div style={{ position: 'relative', display: isDesktop ? 'grid' : 'block', gridTemplateColumns: '1.2fr 1fr', gap: 48, alignItems: 'center' }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `600 11px ${T.font}`, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 22 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `600 11px ${T.font}`, letterSpacing: '0.1em', marginBottom: 22 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.accent }} />
               {t('landing.heroEyebrow')}
             </div>
@@ -76,9 +78,9 @@ export default function PlatformLanding() {
             </div>
             <div style={{ display: 'flex', flexDirection: isDesktop ? 'row' : 'column', alignItems: isDesktop ? 'center' : 'stretch', gap: 12 }}>
               <button onClick={() => navigate('/sell')} style={{
-                height: 52, padding: '0 22px', borderRadius: 16, border: 'none', background: T.grad, color: '#fff',
+                height: 52, padding: '0 22px', borderRadius: 16, border: 'none', background: T.grad, color: T.onAccent,
                 font: `700 14.5px ${T.font}`, letterSpacing: '-0.01em', cursor: 'pointer',
-                boxShadow: `0 14px 36px ${T.accent}55`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                boxShadow: `0 14px 36px ${alpha(T.accent, 0.33)}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}>
                 {t('nav.openStore')}
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
@@ -92,21 +94,16 @@ export default function PlatformLanding() {
                 <span style={{ font: `500 11px ${T.mono}`, color: T.textMute }}>· {list.length}+ {t('landing.live')}</span>
               </button>
             </div>
-            <div style={{ marginTop: 28, display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                {featured.slice(0, 4).map((s, i) => (
-                  <span key={s.subdomain} style={{
-                    width: 26, height: 26, borderRadius: '50%',
-                    background: `linear-gradient(135deg, ${s.primaryColor}, ${s.secondaryColor || s.primaryColor})`,
-                    border: `2px solid ${T.bg}`, marginLeft: i === 0 ? 0 : -8,
-                    font: `800 9px ${T.font}`, color: '#fff',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{storeInitials(s)[0]}</span>
-                ))}
-              </div>
-              <span style={{ font: `500 12px ${T.font}`, color: T.textMute }}>
-                {t('landing.social', { makers: '1,240+', paid: '2.1M ₾' })}
-              </span>
+            {/* Three facts the platform can stand behind, as the design has
+                them. This row used to claim "1,240+ makers · 2.1M ₾ paid",
+                numbers typed into the code rather than counted anywhere. */}
+            <div style={{ marginTop: 24, display: 'flex', flexWrap: 'wrap', gap: '8px 18px' }}>
+              {[t('landing.factFree'), t('landing.factFee'), t('landing.factCards')].map((fact) => (
+                <span key={fact} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: `500 13px ${T.font}`, color: T.textDim }}>
+                  <span style={{ color: T.success, display: 'inline-flex' }}><Icons.check width="14" height="14" /></span>
+                  {fact}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -150,7 +147,7 @@ export default function PlatformLanding() {
 
       {/* HOW IT WORKS */}
       <div style={{ padding: isDesktop ? '80px 56px 56px' : '36px 22px 24px', borderTop: `1px solid ${T.border}` }}>
-        <div style={{ font: `600 ${isDesktop ? 11 : 10}px ${T.font}`, color: T.accentFg, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 14 }}>{t('landing.howItWorks')}</div>
+        <div style={{ font: `600 ${isDesktop ? 11 : 10}px ${T.font}`, color: T.accentFg, letterSpacing: '0.16em', marginBottom: 14 }}>{t('landing.howItWorks')}</div>
         <h2 style={{ font: `700 ${isDesktop ? 38 : 24}px/1.06 ${T.font}`, color: T.text, letterSpacing: '-0.035em', margin: '0 0 28px', maxWidth: 540 }}>
           {t('landing.howTitle')}
         </h2>
@@ -169,7 +166,7 @@ export default function PlatformLanding() {
       <div style={{ padding: isDesktop ? '64px 0 56px' : '24px 0 12px', borderTop: `1px solid ${T.border}` }}>
         <div style={{ padding: pad, marginBottom: 24, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ font: `600 ${isDesktop ? 11 : 10}px ${T.font}`, color: T.accentFg, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 12 }}>{t('landing.featuredEyebrow')}</div>
+            <div style={{ font: `600 ${isDesktop ? 11 : 10}px ${T.font}`, color: T.accentFg, letterSpacing: '0.16em', marginBottom: 12 }}>{t('landing.featuredEyebrow')}</div>
             <h2 style={{ font: `700 ${isDesktop ? 38 : 22}px/1.05 ${T.font}`, color: T.text, letterSpacing: '-0.035em', margin: 0 }}>{t('landing.discover')}.</h2>
           </div>
           <span onClick={() => navigate('/stores')} style={{ font: `600 13px ${T.font}`, color: T.accentFg, cursor: 'pointer', whiteSpace: 'nowrap' }}>{t('landing.seeAll')}</span>
@@ -185,10 +182,10 @@ export default function PlatformLanding() {
       <div style={{ padding: isDesktop ? '56px 56px 80px' : '20px 22px 32px', borderTop: `1px solid ${T.border}` }}>
         <div style={{
           padding: isDesktop ? '32px' : '20px',
-          background: `linear-gradient(135deg, ${T.accent}10 0%, ${shiftHue(T.accent, 25)}10 100%)`,
-          border: `1px solid ${T.accent}30`, borderRadius: 22, maxWidth: isDesktop ? 760 : '100%',
+          background: `linear-gradient(135deg, ${alpha(T.accent, 0.06)} 0%, ${alpha(shiftHue(T.accent, 25), 0.06)} 100%)`,
+          border: `1px solid ${alpha(T.accent, 0.19)}`, borderRadius: 22, maxWidth: isDesktop ? 760 : '100%',
         }}>
-          <div style={{ font: `600 ${isDesktop ? 11 : 10}px ${T.font}`, color: T.accentFg, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 12 }}>{t('landing.fee')}</div>
+          <div style={{ font: `600 ${isDesktop ? 11 : 10}px ${T.font}`, color: T.accentFg, letterSpacing: '0.16em', marginBottom: 12 }}>{t('landing.fee')}</div>
           <div style={{ font: `700 ${isDesktop ? 28 : 18}px/1.25 ${T.font}`, color: T.text, letterSpacing: '-0.03em', marginBottom: 18, maxWidth: 540 }}>
             {t('landing.feeBody')}
           </div>
@@ -196,7 +193,7 @@ export default function PlatformLanding() {
             {[[t('landing.feeListing'), '0 ₾'], [t('landing.feeMonthly'), '0 ₾'], [t('landing.feeCommission'), '2%']].map(([k, v]) => (
               <div key={k}>
                 <div style={{ font: `700 ${isDesktop ? 28 : 22}px ${T.font}`, color: T.text, letterSpacing: '-0.04em' }}>{v}</div>
-                <div style={{ font: `500 ${isDesktop ? 11 : 9.5}px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 4 }}>{k}</div>
+                <div style={{ font: `500 ${isDesktop ? 11 : 9.5}px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', marginTop: 4 }}>{k}</div>
               </div>
             ))}
           </div>

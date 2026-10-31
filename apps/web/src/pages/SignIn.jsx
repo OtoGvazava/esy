@@ -5,6 +5,7 @@ import { useGlow } from '../styles/glow';
 import { Icon } from '../components/glow/GlowPrimitives';
 import { GlowScreen } from '../components/glow/GlowChrome';
 import { platformUrl } from '../utils/hosts';
+import { alpha } from '../core/tokens';
 
 const GmailGlyph = (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
@@ -20,14 +21,14 @@ export default function SignIn() {
 
   return (
     <GlowScreen T={T} padBottom={40}>
-      <div style={{ position: 'absolute', top: -160, left: -80, right: -80, height: 360, background: `radial-gradient(60% 80% at 50% 30%, ${T.accent}48, transparent 70%)`, filter: 'blur(20px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: -160, left: -80, right: -80, height: 360, background: `radial-gradient(60% 80% at 50% 30%, ${alpha(T.accent, 0.28)}, transparent 70%)`, filter: 'blur(20px)', pointerEvents: 'none' }} />
       <div style={{ maxWidth: 460, margin: '0 auto', position: 'relative' }}>
         <div style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'flex-end' }}>
           <button onClick={() => navigate('/')} aria-label="close" style={{ width: 38, height: 38, borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Icon.close /></button>
         </div>
 
         <div style={{ padding: '24px 24px', textAlign: 'center' }}>
-          <div style={{ width: 62, height: 62, borderRadius: 18, background: T.grad, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', font: `800 30px ${T.font}`, letterSpacing: '-0.04em', boxShadow: `0 16px 36px ${T.accent}55` }}>e</div>
+          <div style={{ width: 62, height: 62, borderRadius: 18, background: T.grad, color: T.onAccent, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', font: `800 30px ${T.font}`, letterSpacing: '-0.04em', boxShadow: `0 16px 36px ${alpha(T.accent, 0.33)}` }}>e</div>
           <div style={{ font: `700 26px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.03em', marginBottom: 8 }}>
             {t('signin.title')} <span style={{ color: T.textDim, fontWeight: 600 }}>· {tenant.name}</span>
           </div>
@@ -46,7 +47,7 @@ export default function SignIn() {
           <div style={{ padding: '0 20px 4px' }}>
             <div style={{
               padding: '13px 15px', borderRadius: 14,
-              background: T.dangerBg, border: `1px solid ${T.danger}55`,
+              background: T.dangerBg, border: `1px solid ${alpha(T.danger, 0.33)}`,
             }}>
               <div style={{ font: `700 13px ${T.font}`, color: T.dangerFg }}>{t('signin.errorTitle')}</div>
               <div style={{ marginTop: 5, font: `400 12.5px/1.5 ${T.font}`, color: T.textDim }}>
@@ -90,7 +91,7 @@ export default function SignIn() {
               {t('signin.encrypted')}
             </div>
           </div>
-          <div style={{ marginTop: 10, font: `400 10.5px ${T.font}`, color: T.textMute, textAlign: 'center' }}>
+          <div style={{ marginTop: 10, font: `400 11px ${T.font}`, color: T.textMute, textAlign: 'center' }}>
             {t('signin.terms')}
           </div>
         </div>

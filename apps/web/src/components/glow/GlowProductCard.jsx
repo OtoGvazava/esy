@@ -19,15 +19,19 @@ const tagLabel = (tag, t) =>
 export default function GlowProductCard({ T, p, hue = 240, compact = false, onOpen, onAdd }) {
   const [imgOk, setImgOk] = useState(Boolean(p.image));
   const { t } = useTranslation('product');
+  // The design's card: the theme decides its ground, padding and corners
+  // (Liquid Glass draws a bare photo, Soft a white tile), the photo carries
+  // the colour, and the quick add is one round button.
   return (
     <div
       onClick={() => onOpen?.(p)}
       style={{
-        background: T.surface, borderRadius: 16, border: `1px solid ${T.border}`,
-        overflow: 'hidden', display: 'flex', flexDirection: 'column', cursor: 'pointer',
+        background: 'var(--k-pc-bg)', borderRadius: 'var(--k-r-card)', border: 'var(--k-pc-bd)',
+        padding: 'var(--k-pc-pad)', display: 'flex', flexDirection: 'column', gap: 8,
+        cursor: 'pointer', minWidth: 0,
       }}
     >
-      <div style={{ position: 'relative', aspectRatio: '1 / 1' }}>
+      <div style={{ position: 'relative', aspectRatio: '1 / 1', borderRadius: 'var(--k-r-img)', overflow: 'hidden' }}>
         {imgOk ? (
           <img
             src={p.image}
@@ -42,26 +46,28 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
           <div style={{
             position: 'absolute', top: 10, left: 10, padding: '3px 8px', borderRadius: 999,
             background: tagBg(p.tag, T), color: p.tag === 'best' ? T.bg : '#fff',
-            font: `700 9.5px ${T.font}`, letterSpacing: '0.06em', textTransform: 'uppercase',
+            // 9.5px capitals turned Georgian into tiny Mtavruli; the design's
+            // tag is 11px in sentence case.
+            font: `700 11px ${T.font}`,
           }}>{tagLabel(p.tag, t)}</div>
         )}
       </div>
-      <div style={{ padding: compact ? '10px 12px 12px' : '14px 14px 14px' }}>
-        <div style={{ font: `600 ${compact ? 13 : 14}px ${T.font}`, color: T.text, letterSpacing: '-0.01em', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
-        {p.blurb && (
-          <div style={{ font: `400 ${compact ? 11 : 12}px ${T.font}`, color: T.textMute, marginBottom: 10, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.blurb}</div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: p.blurb ? 0 : 10 }}>
-          <div style={{ font: `700 ${compact ? 15 : 17}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{money(p.price)}</div>
-          <button
-            onClick={(e) => { e.stopPropagation(); onAdd?.(p); }}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4, padding: compact ? '6px 10px' : '7px 12px',
-              borderRadius: 999, border: 'none', background: T.grad, color: '#fff',
-              font: `600 ${compact ? 11 : 12}px ${T.font}`, cursor: 'pointer',
-            }}
-          ><Icon.plus /> {t('add')}</button>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, padding: '0 4px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          {/* Two lines of room, so prices line up across a row even when one
+              Georgian name wraps and its neighbour does not. */}
+          <div style={{ font: `500 ${compact ? 13 : 13.5}px/1.3 ${T.font}`, color: T.text, minHeight: '2.6em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'break-word' }}>{p.title}</div>
+          <div style={{ font: `700 ${compact ? 14 : 15}px ${T.font}`, color: T.text, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{money(p.price)}</div>
         </div>
+        <button
+          aria-label={t('add')}
+          onClick={(e) => { e.stopPropagation(); onAdd?.(p); }}
+          style={{
+            width: 40, height: 40, flex: 'none', borderRadius: 'var(--k-r-ibtn)', border: 'none',
+            background: 'var(--k-ink)', color: 'var(--k-on-ink)',
+            display: 'grid', placeItems: 'center', cursor: 'pointer',
+          }}
+        ><Icon.plus width="18" height="18" /></button>
       </div>
     </div>
   );

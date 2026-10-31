@@ -13,5 +13,9 @@
   "loadingMoreN": "loading {{count}} more…",
   "aboutStore": "About this shop",
   "searchPlaceholder": "Search products…",
-  "account": "Account"
+  "account": "Account",
+  "heroCta": "Shop all",
+  "storyUnder50": "Under 50 ₾",
+  "storyLow": "Running out",
+  "clearSearch": "Clear search"
 }

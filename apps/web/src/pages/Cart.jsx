@@ -5,6 +5,7 @@ import { useCart, lineKey } from '../contexts/CartContext';
 import { useGlow } from '../styles/glow';
 import { Icon, Placeholder } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
+import { alpha } from '../core/tokens';
 
 // No free-shipping threshold and no flat rate live here any more.
 //
@@ -44,7 +45,7 @@ export default function Cart() {
   if (items.length === 0) {
     return (
       <GlowScreen T={T}>
-        <GlowTopNav T={T} title={t('bag')} onBack={() => navigate(-1)} />
+        <GlowTopNav T={T} title={t('bag')} />
         <div style={{ minHeight: 'calc(100vh - 186px)', padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 14 }}>
           <div style={{ width: 88, height: 88, borderRadius: 24, background: T.surface, border: `1px solid ${T.border}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.accentFg }}>
             <Icon.bag width="36" height="36" />
@@ -53,7 +54,7 @@ export default function Cart() {
           <div style={{ font: `400 13px/1.5 ${T.font}`, color: T.textDim, maxWidth: 260 }}>
             {t('emptyBody')}
           </div>
-          <button onClick={() => navigate('/')} style={{ marginTop: 8, height: 48, padding: '0 22px', borderRadius: 14, border: 'none', background: T.grad, color: '#fff', font: `700 13.5px ${T.font}`, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: `0 10px 24px ${T.accent}55` }}>
+          <button onClick={() => navigate('/')} style={{ marginTop: 8, height: 48, padding: '0 22px', borderRadius: 14, border: 'none', background: T.grad, color: T.onAccent, font: `700 13.5px ${T.font}`, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: `0 10px 24px ${alpha(T.accent, 0.33)}` }}>
             {t('browse', { name: tenant.name })} <Icon.arrowR />
           </button>
         </div>
@@ -63,7 +64,7 @@ export default function Cart() {
 
   return (
     <GlowScreen T={T} padBottom={180}>
-      <GlowTopNav T={T} title={t('bagCount', { count: items.length })} onBack={() => navigate(-1)} />
+      <GlowTopNav T={T} title={t('bagCount', { count: items.length })} />
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
         {/* line items */}
         <div style={{ padding: '0 16px 8px', display: 'flex', flexDirection: 'column', gap: 10 }}>

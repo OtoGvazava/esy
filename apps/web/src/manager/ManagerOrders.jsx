@@ -86,8 +86,8 @@ function OrderCard({ T, t, lang, order, onOpen }) {
         </span>
         <span style={{ textAlign: 'right', flexShrink: 0 }}>
           <span style={{
-            display: 'block', font: `500 10px ${T.font}`, color: T.textMute,
-            letterSpacing: '0.05em', textTransform: 'uppercase',
+            display: 'block', font: `500 11px ${T.font}`, color: T.textMute,
+            letterSpacing: '0.05em',
           }}>{t('orders.youReceive')}</span>
           <Payout T={T} order={order} dead={dead} />
         </span>
@@ -132,8 +132,7 @@ export default function ManagerOrders() {
   );
 
   const th = {
-    font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.07em',
-    textTransform: 'uppercase', textAlign: 'left', padding: '12px 14px',
+    font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.07em', textAlign: 'left', padding: '12px 14px',
   };
   const td = {
     padding: '13px 14px', font: `500 13px ${T.font}`, color: T.text,

@@ -2,7 +2,7 @@
   "noMore": "სხვა პროდუქტები აღარ არის",
   "failedToLoad": "პროდუქტების ჩატვირთვა ვერ მოხერხდა",
   "established": "დაარსდა {{year}}",
-  "sortNewest": "დალაგება: უახლესი",
+  "sortNewest": "დალაგება: ახალი",
   "productCount_one": "{{count}} პროდუქტი",
   "productCount_other": "{{count}} პროდუქტი",
   "shown": "{{count}} ნაჩვენები",
@@ -13,5 +13,9 @@
   "loadingMoreN": "იტვირთება კიდევ {{count}}…",
   "aboutStore": "მაღაზიის შესახებ",
   "searchPlaceholder": "მოძებნე პროდუქტი…",
-  "account": "ანგარიში"
+  "account": "ანგარიში",
+  "heroCta": "ყველა ნივთი",
+  "storyUnder50": "50 ₾-მდე",
+  "storyLow": "იწურება",
+  "clearSearch": "ძებნის გასუფთავება"
 }

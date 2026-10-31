@@ -12,9 +12,9 @@
 //
 // The chrome takes the same three shapes as the back office — 252px sidebar,
 // 76px icon rail, mobile dock — so the two surfaces feel like one product
-// while staying unmistakably different colours. Each nav entry shows its route
-// underneath, which the merchant sidebar does not: an admin reading a support
-// ticket needs to know which URL they are being asked about.
+// while staying unmistakably different colours. The current URL is in the
+// band across the top, which is where an admin reading a support ticket looks
+// for it; the sidebar itself carries only the labels, as the design draws it.
 import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +29,7 @@ import AdminStores from './AdminStores';
 import AdminStoreDetail from './AdminStoreDetail';
 import AdminBilling from './AdminBilling';
 import AdminAdmins from './AdminAdmins';
+import { alpha } from '../core/tokens';
 
 const AdminConfig = lazy(() => import('./AdminConfig'));
 const AdminIntegrations = lazy(() => import('./AdminIntegrations'));
@@ -74,7 +75,7 @@ function Side({ T, t, active, email }) {
 
       <div style={{
         margin: '14px 0', padding: '11px 12px', borderRadius: 13,
-        background: T.adminBg, border: `1px solid ${T.admin}55`,
+        background: T.adminBg, border: `1px solid ${alpha(T.admin, 0.33)}`,
         display: 'flex', gap: 10, alignItems: 'center',
       }}>
         <span style={{
@@ -87,7 +88,7 @@ function Side({ T, t, active, email }) {
             {t('role.ADMIN')}
           </span>
           <span style={{
-            display: 'block', font: `500 10px ${T.font}`, color: T.textMute,
+            display: 'block', font: `500 11px ${T.font}`, color: T.textMute,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{email}</span>
         </span>
@@ -106,10 +107,6 @@ function Side({ T, t, active, email }) {
             }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 11, font: `${on ? 700 : 500} 13.5px ${T.font}` }}>
                 {Ic && <Ic width="16" height="16" />} {t(`nav.${k}`)}
-              </span>
-              {/* The URL, because a support conversation is usually about one. */}
-              <span style={{ font: `500 9.5px ${T.mono}`, color: T.textMute, paddingLeft: 27 }}>
-                {route}
               </span>
             </Link>
           );
@@ -153,7 +150,7 @@ function Rail({ T, t, active }) {
             color: on ? T.adminFg : T.textDim,
           }}>
             {Ic && <Ic width="17" height="17" />}
-            <span style={{ font: `600 7.5px ${T.font}`, whiteSpace: 'nowrap' }}>
+            <span style={{ font: `600 11px ${T.font}`, whiteSpace: 'nowrap' }}>
               {t(`nav.${k}`).split(' ')[0]}
             </span>
           </Link>
@@ -186,7 +183,7 @@ function Dock({ T, t, active }) {
               alignItems: 'center', justifyContent: 'center',
               background: on ? T.adminBg : 'transparent',
             }}>{Ic && <Ic width="17" height="17" />}</span>
-            <span style={{ font: `600 9px ${T.font}` }}>{t(`nav.${k}`).split(' ')[0]}</span>
+            <span style={{ font: `600 11px ${T.font}` }}>{t(`nav.${k}`).split(' ')[0]}</span>
           </Link>
         );
       })}
@@ -204,7 +201,7 @@ function ScopeBand({ T, pad }) {
   const { pathname } = useLocation();
   return (
     <div style={{
-      height: 36, background: T.adminBg, borderBottom: `1px solid ${T.admin}33`,
+      height: 36, background: T.adminBg, borderBottom: `1px solid ${alpha(T.admin, 0.2)}`,
       display: 'flex', alignItems: 'center', gap: 10, padding: `0 ${pad}px`, flexShrink: 0,
     }}>
       <span style={{ width: 7, height: 7, borderRadius: '50%', background: T.admin, flexShrink: 0 }} />

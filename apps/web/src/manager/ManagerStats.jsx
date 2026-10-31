@@ -20,14 +20,15 @@ import { gcols } from './nav';
 export function StatCard({ T, label, value, tone, hint }) {
   return (
     <Card T={T} pad={16}>
-      <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+      {/* Sentence case at 13px: 10.5px capitals turned Georgian into tiny Mtavruli. */}
+      <div style={{ font: `500 13px ${T.font}`, color: T.textDim }}>
         {label}
       </div>
       <div style={{ marginTop: 8, font: `800 24px ${T.font}`, color: tone || T.text, letterSpacing: '-0.02em' }}>
         {value}
       </div>
       {hint && (
-        <div style={{ marginTop: 4, font: `500 11px ${T.font}`, color: T.textMute }}>{hint}</div>
+        <div style={{ marginTop: 4, font: `500 12px ${T.font}`, color: T.textMute }}>{hint}</div>
       )}
     </Card>
   );

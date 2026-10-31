@@ -22,6 +22,7 @@ import { useAdminTokens } from './adminTokens';
 import { Btn, Card, Chip, Field, Note, SectionTitle } from '../core/primitives';
 import { Icons } from '../core/icons';
 import { Failed, Loading } from './AdminUI';
+import { alpha } from '../core/tokens';
 
 // The editable keys, in the order an admin is most likely to want them. `store`
 // is the key as it exists in the config store — shown verbatim because that is
@@ -232,7 +233,7 @@ export default function AdminConfig() {
                   background: own ? T.adminBg : T.surface2,
                   color: own ? T.adminFg : T.textDim,
                   font: `600 12px ${T.mono}`,
-                  border: `1px solid ${own ? `${T.admin}55` : 'transparent'}`,
+                  border: `1px solid ${own ? `${alpha(T.admin, 0.33)}` : 'transparent'}`,
                 }}
               >
                 {s}

@@ -11,6 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { Btn, Card, Chip, Field, Note } from '../core/primitives';
 import { Icons } from '../core/icons';
 import { adminApi, handleApiError } from '../utils/api';
+import { alpha } from '../core/tokens';
+import { money } from '../core/money';
 
 // ─── Formatting ─────────────────────────────────────────────────────────────
 const localeFor = (lang) => (String(lang || '').toLowerCase().startsWith('ka') ? 'ka-GE' : 'en-GB');
@@ -21,21 +23,15 @@ const localeFor = (lang) => (String(lang || '').toLowerCase().startsWith('ka') ?
  * BigDecimal reaches us as a JSON number or a string depending on Jackson's
  * configuration; both parse.
  */
-export function lari(value, lang) {
+export function lari(value) {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
-  const num = new Intl.NumberFormat(localeFor(lang), {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
-  // The symbol always follows the amount, in both languages. This used to put it
-  // before the number in English, which made the same figure read two ways
-  // depending on the active language and disagreed with every other surface
-  // (core/money, the manager screens, the storefront). Grouping and the fixed
-  // two decimals stay — an admin reads these as a ledger, where aligned columns
-  // and a visible trailing 00 are worth more than the design's shorter form.
-  return `${num} ₾`;
+  // The platform's one format (core/money): "184 200 ₾", "97,20 ₾" in either
+  // language. The admin used to keep a ledger-style ",00" on every figure; the
+  // design review settled on one format for every surface, so an amount reads
+  // the same here as in the store's own back office.
+  return money(n);
 }
 
 /** A whole number (counts). Null for anything unparseable. */
@@ -75,7 +71,7 @@ export function Loading({ T }) {
 export function Failed({ T, message, onRetry }) {
   const { t } = useTranslation('admin');
   return (
-    <Card T={T} pad={20} style={{ borderColor: `${T.danger}55`, background: T.dangerBg }}>
+    <Card T={T} pad={20} style={{ borderColor: `${alpha(T.danger, 0.33)}`, background: T.dangerBg }}>
       <div style={{ font: `700 14px ${T.font}`, color: T.dangerFg, marginBottom: 6 }}>
         {t('ui.failedTitle')}
       </div>
@@ -119,8 +115,8 @@ export function Stat({ T, label, value, tone }) {
   return (
     <div style={{ minWidth: 96 }}>
       <div style={{
-        font: `600 10.5px ${T.font}`, color: T.textMute,
-        letterSpacing: '0.07em', textTransform: 'uppercase',
+        font: `600 11px ${T.font}`, color: T.textMute,
+        letterSpacing: '0.07em',
       }}>
         {label}
       </div>
@@ -218,8 +214,8 @@ export function SuspendDialog({ T, store, onCancel, onSuspended }) {
             background: T.surface2, border: `1px solid ${T.border}`,
           }}>
             <div style={{
-              font: `600 10.5px ${T.font}`, color: T.textMute,
-              letterSpacing: '0.07em', textTransform: 'uppercase',
+              font: `600 11px ${T.font}`, color: T.textMute,
+              letterSpacing: '0.07em',
             }}>
               {t('suspend.reasonLabel')}
             </div>

@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { deliveryApi, handleApiError } from '../../utils/api';
+import { alpha } from '../../core/tokens';
 
 // Express sits last and is styled as what it is: an upgrade a shopper adds to
 // a courier route, not a fourth way to receive an order.
@@ -81,7 +82,7 @@ export default function DeliveryRoutes({ T, devTenant = devTenantParam() }) {
       {error && (
         <div style={{
           padding: '10px 12px', borderRadius: 12, marginBottom: 12,
-          border: `1px solid ${T.danger}44`, color: T.dangerFg,
+          border: `1px solid ${alpha(T.danger, 0.27)}`, color: T.dangerFg,
           font: `500 12.5px ${T.font}`,
         }}>{error}</div>
       )}
@@ -99,7 +100,7 @@ export default function DeliveryRoutes({ T, devTenant = devTenantParam() }) {
               <div key={route} style={{
                 padding: '12px 14px', borderRadius: 14,
                 border: `1px solid ${on ? T.accent : T.border}`,
-                background: on ? `${T.accent}0d` : 'transparent',
+                background: on ? `${alpha(T.accent, 0.05)}` : 'transparent',
                 opacity: working ? 0.7 : 1,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>

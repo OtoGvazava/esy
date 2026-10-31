@@ -18,8 +18,9 @@
     "signOut": "Sign out",
     "overview": "Overview",
     "stats": "Analytics",
-    "money": "Money and fees",
-    "team": "Team and roles"
+    "money": "Finances",
+    "team": "Team and roles",
+    "more": "More"
   },
   "products": {
     "title": "Products",
@@ -112,11 +113,18 @@
     "loadFailed": "Could not load this store’s figures.",
     "revenue": "Revenue",
     "orders": "Orders",
-    "feesOwed": "Platform fees owed",
+    "feesOwed": "Platform fee",
     "products": "Products",
     "excludes": "Revenue excludes refunded and cancelled orders, and excludes delivery — a courier charge passes through you, not to you.",
-    "chartsPending": "The sales-by-day chart and the best-sellers list are designed but not built: both need per-day and per-product totals this endpoint does not return. An empty chart frame would read as “no sales”, which is a different and wrong message.",
-    "seeStats": "See statistics"
+    "seeStats": "See statistics",
+    "todo": "Waiting for you",
+    "todoAll": "All",
+    "markShipped": "Mark as shipped",
+    "markOut": "Mark out for delivery",
+    "allDone": "Nothing is waiting — every order is moving.",
+    "feeHint": "{{percent}}% · billed separately",
+    "items": "{{count}} items",
+    "justNow": "just now"
   },
   "orders": {
     "title": "Orders",

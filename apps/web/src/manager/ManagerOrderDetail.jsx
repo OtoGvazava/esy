@@ -327,7 +327,7 @@ export default function ManagerOrderDetail() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Card T={T} pad={pad}>
-            <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 11 }}>
+            <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', marginBottom: 11 }}>
               {t('orders.colBuyer')}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 11 }}>
@@ -358,7 +358,7 @@ export default function ManagerOrderDetail() {
               </div>
             )}
             <div style={{ marginTop: 13, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
-              <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+              <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', marginBottom: 6 }}>
                 {t('detail.deliveryAddress')}
               </div>
               <div style={{ font: `500 12.5px/1.55 ${T.font}`, color: T.text }}>

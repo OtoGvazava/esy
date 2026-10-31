@@ -13,8 +13,16 @@ body {
   overflow-x: hidden;
 }
 
+/* The theme's page ground. Liquid Glass and Neon paint gradients here, so it
+   sits on <html>; MUI's CssBaseline is told to leave <body> transparent. */
+html {
+  background: var(--k-bg) fixed;
+  color: var(--k-text);
+}
+
 body {
   min-height: 100vh;
+  font-family: var(--k-font);
 }
 
 /* Glow components are inline-styled; keep global element styles out of the way

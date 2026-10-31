@@ -37,7 +37,7 @@ function AxisRow({ T, t, axis, index, busy, onChange, onRemove }) {
     <div style={{ padding: 15, borderRadius: 14, border: `1px solid ${T.border}` }}>
       <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 11 }}>
         <div>
-          <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6 }}>
+          <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.07em', marginBottom: 6 }}>
             {t('variants.axisName')}
           </div>
           <input
@@ -52,13 +52,13 @@ function AxisRow({ T, t, axis, index, busy, onChange, onRemove }) {
         <div>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            font: `600 10.5px ${T.font}`, color: T.textMute,
-            letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 6,
+            font: `600 11px ${T.font}`, color: T.textMute,
+            letterSpacing: '0.07em', marginBottom: 6,
           }}>
             <span>{t('variants.axisValues')}</span>
             <button type="button" disabled={busy} onClick={onRemove}
                     style={{ border: 'none', background: 'transparent', cursor: 'pointer',
-                      color: T.dangerFg, font: `600 10.5px ${T.font}`, textTransform: 'none', letterSpacing: 0 }}>
+                      color: T.dangerFg, font: `600 11px ${T.font}`, textTransform: 'none', letterSpacing: 0 }}>
               {t('variants.removeAxis')}
             </button>
           </div>
@@ -101,8 +101,7 @@ function AxisRow({ T, t, axis, index, busy, onChange, onRemove }) {
 /** The combination table — where stock actually lives (the design's VarTable). */
 function Grid({ T, t, doc, basePrice, busy, onRow }) {
   const th = {
-    font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.07em',
-    textTransform: 'uppercase', textAlign: 'left', padding: '11px 14px',
+    font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.07em', textAlign: 'left', padding: '11px 14px',
   };
   const td = { padding: '9px 14px', font: `500 13px ${T.font}`, color: T.text, borderTop: `1px solid ${T.border}` };
   const cell = {

@@ -42,11 +42,14 @@ export default function GlowSearchBar({
           }}
         />
       </div>
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 6px',
-        borderRadius: 6, font: `500 10px ${GLOW_MONO}`,
-        background: T.surface2, color: T.textMute, letterSpacing: '0.04em',
-      }}>⌘ K</span>
+      {/* A keyboard shortcut means nothing on a touch screen. */}
+      {!compact && (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 6px',
+          borderRadius: 6, font: `500 10px ${GLOW_MONO}`,
+          background: T.surface2, color: T.textMute, letterSpacing: '0.04em',
+        }}>⌘ K</span>
+      )}
     </div>
   );
 }

@@ -20,14 +20,15 @@
   "rowAvailability": "ხელმისაწვდომობა",
   "availabilityInStock": "მარაგშია {{count}}",
   "shipsFrom": "იგზავნება",
-  "addToBag": "ჩანთაში დამატება · {{price}}",
+  "addToBag": "კალათაში დამატება · {{price}}",
   "youMayAlsoLike": "შესაძლოა ესეც მოგეწონოს",
-  "add": "ჩანთაში",
+  "add": "კალათაში",
   "tagBest": "საუკეთესო",
   "tagLow": "მცირე მარაგი",
   "tagNew": "ახალი",
   "tagSale": "ფასდაკლება",
   "soldOutTitle": "ეს პროდუქტი ამოიწურა.",
   "soldOutBody": "ჰკითხე მაღაზიას, როდის დაბრუნდება — ხშირად ერთ კვირაში ბრუნდება.",
-  "browseStore": "მაღაზიის დათვალიერება"
+  "browseStore": "მაღაზიის დათვალიერება",
+  "addToBagShort": "კალათაში დამატება"
 }

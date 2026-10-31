@@ -202,6 +202,11 @@ export const IconMenu = icon('IconMenu', 18, strokeCap('1.8'), (
   <path d="M4 7h16M4 12h16M4 17h16" />
 ));
 
+// The phone tab bar's last slot, for the destinations that do not fit it.
+export const IconMore = icon('IconMore', 18, strokeCap('2.6'), (
+  <path d="M5.5 12h.01M12 12h.01M18.5 12h.01" />
+));
+
 export const IconBell = icon('IconBell', 18, stroke('1.8'), (
   <>
     <path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8" />
@@ -279,6 +284,7 @@ export const Icons = {
   sun: IconSun,
   moon: IconMoon,
   menu: IconMenu,
+  more: IconMore,
   bell: IconBell,
   eye: IconEye,
   whatsapp: IconWhatsapp,

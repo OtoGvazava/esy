@@ -16,6 +16,7 @@ import { contactApi, handleApiError } from '../../utils/api';
 import { CHANNEL_TYPES, CHANNELS, PHONE_TYPES } from '../../core/channels';
 import { ChannelBtn } from '../../core/domain';
 import { Toggle } from '../../core/primitives';
+import { alpha } from '../../core/tokens';
 
 function devTenantParam() {
   try {
@@ -158,7 +159,7 @@ export function ContactChannelsEditor({ T, devTenant = devTenantParam() }) {
       {error && (
         <div style={{
           padding: '10px 12px', borderRadius: 12, marginBottom: 12,
-          border: `1px solid ${T.danger}44`, color: T.dangerFg,
+          border: `1px solid ${alpha(T.danger, 0.27)}`, color: T.dangerFg,
           font: `500 12.5px ${T.font}`,
         }}>{error}</div>
       )}
@@ -190,7 +191,7 @@ export function ContactChannelsEditor({ T, devTenant = devTenantParam() }) {
                 {c.isPrimary && (
                   <span style={{
                     padding: '3px 9px', borderRadius: 999, background: T.accentBg,
-                    color: T.accentFg, font: `700 10.5px ${T.font}`,
+                    color: T.accentFg, font: `700 11px ${T.font}`,
                   }}>{t('contacts.primary')}</span>
                 )}
                 {PHONE_TYPES.includes(c.type) && !c.isPrimary && (
@@ -213,7 +214,7 @@ export function ContactChannelsEditor({ T, devTenant = devTenantParam() }) {
                   />
                 </span>
                 <button type="button" disabled={busy}
-                        style={{ ...chipBtn(false, T.danger), color: T.dangerFg, borderColor: `${T.danger}44` }}
+                        style={{ ...chipBtn(false, T.danger), color: T.dangerFg, borderColor: `${alpha(T.danger, 0.27)}` }}
                         onClick={() => {
                           if (window.confirm(t('contacts.deleteConfirm', { value: c.value }))) {
                             run(() => contactApi.remove(c.id, devTenant), 'contacts.deleteFailed');

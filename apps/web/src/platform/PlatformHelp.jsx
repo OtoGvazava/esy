@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlatform, PTopBar, PFooter } from './PlatformShared';
 import { Icons } from '../core/icons';
+import { alpha } from '../core/tokens';
 
 const CATS = [
   ['orders', 'truck'],
@@ -121,8 +122,8 @@ export default function PlatformHelp() {
             href="tel:+995322401200"
             style={{
               height: 46, padding: '0 20px', borderRadius: 14, textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', background: T.grad, color: '#fff',
-              font: `700 13.5px ${T.font}`, boxShadow: `0 10px 24px ${T.accent}55`,
+              display: 'inline-flex', alignItems: 'center', background: T.grad, color: T.onAccent,
+              font: `700 13.5px ${T.font}`, boxShadow: `0 10px 24px ${alpha(T.accent, 0.33)}`,
             }}
           >{t('help.call')}</a>
         </div>

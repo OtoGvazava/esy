@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 // Platform-site shared primitives. Reuses the Glow design tokens with the
-// platform indigo as the default accent; tenant brand colors only ever appear
-// on store cards (the "wall of brands against calm indigo chrome" rule).
+// platform blue as the default accent; tenant brand colors only ever appear
+// on store cards (the "wall of brands against calm esy chrome" rule).
 // (Shared module: intentionally exports hooks + components together.)
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -11,6 +11,7 @@ import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { tenantApi } from '../utils/api';
 import { PLATFORM_ACCENT, storeInitials } from './platformData';
+import { alpha } from '../core/tokens';
 
 export { shiftHue };
 
@@ -43,18 +44,18 @@ export function useStores() {
   return { stores, loading: stores === null, error };
 }
 
-// "esy" wordmark — gradient e-tile + lowercase wordmark + ".ge" suffix.
-export function EsyMark({ T, size = 26, suffix = '.ge', onClick }) {
+// "esy" wordmark — the design's bag mark (a bag with a smile) in the platform
+// colour, then the lowercase wordmark. The design writes plain "esy"; a caller
+// can still pass a suffix such as ".ge".
+export function EsyMark({ T, size = 26, suffix = '', onClick }) {
   const px = size;
   return (
     <div onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: T.text, cursor: onClick ? 'pointer' : 'default' }}>
-      <span style={{
-        width: px * 0.95, height: px * 0.95, borderRadius: px * 0.32,
-        background: T.grad, color: '#fff',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        font: `800 ${px * 0.6}px ${T.font}`, letterSpacing: '-0.04em',
-        boxShadow: `0 8px 22px ${T.accent}40`,
-      }}>e</span>
+      <svg viewBox="0 0 48 48" aria-hidden="true" style={{ width: px * 1.1, height: px * 1.1, color: T.accent, flex: 'none' }}>
+        <rect x="4" y="10" width="40" height="34" rx="13" fill="currentColor" />
+        <path d="M17 12V9.5a7 7 0 0 1 14 0V12" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+        <path d="M15.5 27.5c4.5 5.5 12.5 5.5 17 0" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+      </svg>
       <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 1 }}>
         <span style={{ font: `700 ${px * 0.78}px ${T.font}`, letterSpacing: '-0.035em', color: T.text }}>esy</span>
         {suffix && <span style={{ font: `500 ${px * 0.5}px ${T.font}`, letterSpacing: '-0.02em', color: T.textDim }}>{suffix}</span>}
@@ -106,7 +107,7 @@ export function StatusPill({ T, kind, children }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px',
       borderRadius: 999, background: v.bg, color: v.fg,
-      font: '700 10px Inter, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase',
+      font: '700 10px Inter, sans-serif', letterSpacing: '0.06em',
     }}>
       <span style={{ width: 5, height: 5, borderRadius: '50%', background: v.fg }} />
       {children}
@@ -159,9 +160,9 @@ export function PTopBar({ current = 'home' }) {
           <IconBtn T={T} onClick={toggleTheme}><ThemeIcon dark={dark} /></IconBtn>
           {signedIn ? (
             <span onClick={() => navigate('/account')} style={{
-              width: 36, height: 36, borderRadius: 999, background: T.grad, color: '#fff',
+              width: 36, height: 36, borderRadius: 999, background: T.grad, color: T.onAccent,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              font: `700 12px ${T.font}`, cursor: 'pointer', boxShadow: `0 8px 22px ${T.accent}40`,
+              font: `700 12px ${T.font}`, cursor: 'pointer', boxShadow: `0 8px 22px ${alpha(T.accent, 0.25)}`,
             }}>{initials}</span>
           ) : (
             <button onClick={() => navigate('/signin')} style={{
@@ -208,8 +209,8 @@ export function PTopBar({ current = 'home' }) {
             display: 'inline-flex', alignItems: 'center', gap: 8, font: `600 12.5px ${T.font}`,
           }}>
             <span style={{
-              width: 26, height: 26, borderRadius: '50%', background: T.grad, color: '#fff',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `700 10.5px ${T.font}`,
+              width: 26, height: 26, borderRadius: '50%', background: T.grad, color: T.onAccent,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `700 11px ${T.font}`,
             }}>{initials}</span>
             {(user?.name || 'Account').split(' ')[0]}
           </button>
@@ -221,8 +222,8 @@ export function PTopBar({ current = 'home' }) {
             }}>{t('nav.signIn')}</button>
             <button onClick={() => navigate('/sell')} style={{
               height: 34, padding: '0 14px', borderRadius: 999, border: 'none',
-              background: T.grad, color: '#fff', font: `700 12.5px ${T.font}`, cursor: 'pointer',
-              boxShadow: `0 10px 28px ${T.accent}55`, display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: T.grad, color: T.onAccent, font: `700 12.5px ${T.font}`, cursor: 'pointer',
+              boxShadow: `0 10px 28px ${alpha(T.accent, 0.33)}`, display: 'inline-flex', alignItems: 'center', gap: 6,
             }}>{t('nav.openStore')}
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
             </button>
@@ -274,7 +275,7 @@ export function PFooter({ compact = false }) {
             ? <Link key={it.label} to={it.to} style={{ color: '#cfd0d8', textDecoration: 'none' }}>{it.label}</Link>
             : <span key={it.label} style={{ color: 'rgba(242,242,247,0.45)' }}>{it.label}</span>))}
         </div>
-        <div style={{ marginTop: 22, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', font: `400 10.5px ${T.font}`, color: 'rgba(242,242,247,0.4)' }}>
+        <div style={{ marginTop: 22, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', font: `400 11px ${T.font}`, color: 'rgba(242,242,247,0.4)' }}>
           <span>{t('footer.rightsShort')}</span><span>{t('footer.langs')}</span>
         </div>
       </div>
@@ -288,13 +289,13 @@ export function PFooter({ compact = false }) {
           <div style={{ marginTop: 16, color: 'rgba(242,242,247,0.6)', font: `400 13px/1.55 ${T.font}`, maxWidth: 280 }}>
             {t('footer.tagline')}
           </div>
-          <div style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', font: `600 10.5px ${T.mono}`, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(242,242,247,0.7)' }}>
+          <div style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', font: `600 10.5px ${T.mono}`, letterSpacing: '0.08em', color: 'rgba(242,242,247,0.7)' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3f8a4a' }} />{t('footer.status')}
           </div>
         </div>
         {cols.map((col) => (
           <div key={col.title}>
-            <div style={{ font: `700 10.5px ${T.font}`, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(242,242,247,0.7)', marginBottom: 14 }}>{col.title}</div>
+            <div style={{ font: `700 11px ${T.font}`, letterSpacing: '0.12em', color: 'rgba(242,242,247,0.7)', marginBottom: 14 }}>{col.title}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
               {col.items.map((it) => (it.to
                 ? <Link key={it.label} to={it.to} style={{ color: '#cfd0d8', textDecoration: 'none' }}>{it.label}</Link>

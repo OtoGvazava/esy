@@ -9,6 +9,7 @@ import { Icon, PoweredBy, langInfo } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, money } from '../components/glow/GlowChrome';
 import PersonalInfo from '../components/PersonalInfo';
 import SignIn from './SignIn';
+import { alpha } from '../core/tokens';
 
 export default function Account() {
   const { T } = useGlow();
@@ -37,12 +38,12 @@ export default function Account() {
 
   return (
     <GlowScreen T={T}>
-      <GlowTopNav T={T} title={t('account.title')} onBack={() => navigate(-1)} />
+      <GlowTopNav T={T} title={t('account.title')} />
       <div style={{ maxWidth: 620, margin: '0 auto' }}>
         {/* profile */}
         <div style={{ padding: '6px 16px 16px' }}>
-          <div style={{ padding: '18px 16px', borderRadius: 18, background: `linear-gradient(135deg, ${T.accent}1c, transparent 70%), ${T.surface}`, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', position: 'relative', overflow: 'hidden', background: T.grad, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `800 22px ${T.font}`, flexShrink: 0 }}>
+          <div style={{ padding: '18px 16px', borderRadius: 18, background: `linear-gradient(135deg, ${alpha(T.accent, 0.11)}, transparent 70%), ${T.surface}`, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', position: 'relative', overflow: 'hidden', background: T.grad, color: T.onAccent, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `800 22px ${T.font}`, flexShrink: 0 }}>
               {initial}
               {user?.avatar && (
                 <img
@@ -58,7 +59,7 @@ export default function Account() {
               <div style={{ font: `700 17px ${T.font}`, color: T.text, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
               <div style={{ font: `400 12px ${T.font}`, color: T.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
               <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `600 10.5px ${T.font}`, letterSpacing: '0.04em', textTransform: 'uppercase' }}><Icon.star width="10" height="10" /> {isAdmin ? t('account.roleOwner') : t('account.roleMember')}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `600 11px ${T.font}`, letterSpacing: '0.04em' }}><Icon.star width="10" height="10" /> {isAdmin ? t('account.roleOwner') : t('account.roleMember')}</span>
               </div>
             </div>
           </div>
@@ -72,7 +73,7 @@ export default function Account() {
           ].map(({ id, v, k }) => (
             <div key={id} style={{ padding: '12px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ font: `800 18px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{v}</span>
-              <span style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{k}</span>
+              <span style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em' }}>{k}</span>
             </div>
           ))}
         </div>
@@ -84,7 +85,7 @@ export default function Account() {
         {recent.length > 0 && (
           <>
             <div style={{ padding: '4px 22px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ font: `600 11.5px ${T.font}`, color: T.textDim, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('account.recentOrders')}</div>
+              <div style={{ font: `600 11.5px ${T.font}`, color: T.textDim, letterSpacing: '0.08em' }}>{t('account.recentOrders')}</div>
               <span onClick={() => navigate('/orders')} style={{ font: `600 12px ${T.font}`, color: T.accentFg, cursor: 'pointer' }}>{t('account.seeAll')}</span>
             </div>
             <div style={{ padding: '0 16px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -102,7 +103,7 @@ export default function Account() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
                       <span style={{ font: `700 13.5px ${T.font}`, color: T.text }}>{money(o.total)}</span>
-                      <span style={{ font: `600 9.5px ${T.font}`, color: delivered ? T.success : T.accentFg, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t(`orders.status.${o.statusKey || 'placed'}`, { defaultValue: o.status || 'placed' })}</span>
+                      <span style={{ font: `600 11px ${T.font}`, color: delivered ? T.success : T.accentFg, letterSpacing: '0.06em' }}>{t(`orders.status.${o.statusKey || 'placed'}`, { defaultValue: o.status || 'placed' })}</span>
                     </div>
                   </div>
                 );

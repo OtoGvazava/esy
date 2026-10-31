@@ -17,6 +17,8 @@ import { Card, Chip, Note } from '../core/primitives';
 import { Mark } from '../core/domain';
 import { StoreContacts } from '../components/store/ContactChannels';
 import { deliveryApi, productApi } from '../utils/api';
+import { money } from '../core/money';
+import { alpha } from '../core/tokens';
 
 export default function StoreAbout() {
   const { T, tenant } = useGlow();
@@ -58,7 +60,7 @@ export default function StoreAbout() {
           pad={24}
           style={{
             textAlign: 'center',
-            background: `linear-gradient(135deg, ${T.accent}1c, transparent 65%), ${T.surface}`,
+            background: `linear-gradient(135deg, ${alpha(T.accent, 0.11)}, transparent 65%), ${T.surface}`,
           }}
         >
           <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
@@ -133,7 +135,7 @@ export default function StoreAbout() {
                       color: free ? T.success : T.text,
                       flexShrink: 0,
                     }}>
-                      {free ? t('checkout.free') : `${r.price} ₾`}
+                      {free ? t('checkout.free') : money(r.price)}
                     </span>
                   </div>
                 );

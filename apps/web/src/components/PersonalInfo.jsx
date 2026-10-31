@@ -68,7 +68,7 @@ export default function PersonalInfo() {
   const cancelPhone = () => setPhoneEditing(false);
 
   const card = { padding: 16, borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 12 };
-  const label = { font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.04em', textTransform: 'uppercase' };
+  const label = { font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em' };
   const input = { padding: '11px 12px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.dark ? T.surface2 : '#fff', color: T.text, font: `500 13px ${T.font}`, outline: 'none', width: '100%' };
   const row = { display: 'flex', flexDirection: 'column', gap: 5 };
   const val = { font: `600 14px ${T.font}`, color: T.text };
@@ -131,7 +131,7 @@ export default function PersonalInfo() {
                   <span style={{ ...val, display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     {user.phoneNumber}
                     {user.phoneVerified && (
-                      <span style={{ font: `700 10px ${T.font}`, color: T.success, letterSpacing: '0.04em', textTransform: 'uppercase' }}>✓ {t('phone.verified')}</span>
+                      <span style={{ font: `700 11px ${T.font}`, color: T.success, letterSpacing: '0.04em' }}>✓ {t('phone.verified')}</span>
                     )}
                   </span>
                 </div>
@@ -146,9 +146,9 @@ export default function PersonalInfo() {
                 <span style={{ ...val, display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   {user.phoneNumber || '—'}
                   {user.phoneNumber && (user.phoneVerified ? (
-                    <span style={{ font: `700 10px ${T.font}`, color: T.success, letterSpacing: '0.04em', textTransform: 'uppercase' }}>✓ {t('phone.verified')}</span>
+                    <span style={{ font: `700 11px ${T.font}`, color: T.success, letterSpacing: '0.04em' }}>✓ {t('phone.verified')}</span>
                   ) : (
-                    <span style={{ font: `700 10px ${T.font}`, color: T.danger, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{t('phone.unverified')}</span>
+                    <span style={{ font: `700 11px ${T.font}`, color: T.danger, letterSpacing: '0.04em' }}>{t('phone.unverified')}</span>
                   ))}
                 </span>
               </div>

@@ -7,6 +7,7 @@ import { tenantApi, handleApiError } from '../utils/api';
 import { useGlow } from '../styles/glow';
 import { Icon } from '../components/glow/GlowPrimitives';
 import { GlowScreen } from '../components/glow/GlowChrome';
+import { alpha } from '../core/tokens';
 
 // Mirrors TenantService.TAGLINE_MAX — the server collapses whitespace and
 // cuts at this length, so the field stops the owner before it is trimmed
@@ -192,10 +193,9 @@ export default function StoreSettings({ embedded = false, section = 'all' }) {
   };
 
   const label = {
-    font: `500 10.5px ${T.font}`,
+    font: `500 11px ${T.font}`,
     color: T.textMute,
     letterSpacing: '0.06em',
-    textTransform: 'uppercase',
     marginBottom: 6,
   };
 
@@ -397,11 +397,11 @@ export default function StoreSettings({ embedded = false, section = 'all' }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <div style={{ font: `700 14px ${T.font}`, color: T.text }}>{t('bog.title')}</div>
               <span style={{
-                font: `700 10.5px ${T.font}`, letterSpacing: '0.04em', textTransform: 'uppercase',
+                font: `700 11px ${T.font}`, letterSpacing: '0.04em',
                 padding: '5px 10px', borderRadius: 999,
-                background: tenant?.bogConfigured ? `${T.success}1f` : T.surface2,
+                background: tenant?.bogConfigured ? `${alpha(T.success, 0.12)}` : T.surface2,
                 color: tenant?.bogConfigured ? T.success : T.textMute,
-                border: `1px solid ${tenant?.bogConfigured ? `${T.success}55` : T.border}`,
+                border: `1px solid ${tenant?.bogConfigured ? `${alpha(T.success, 0.33)}` : T.border}`,
               }}>
                 {tenant?.bogConfigured ? t('bog.connected') : t('bog.notConnected')}
               </span>
@@ -431,7 +431,7 @@ export default function StoreSettings({ embedded = false, section = 'all' }) {
             {tenant?.bogConfigured && (
               <button
                 type="button" onClick={() => save(true)} disabled={saving}
-                style={{ alignSelf: 'flex-start', height: 38, padding: '0 16px', borderRadius: 12, border: `1px solid ${T.danger}55`, background: 'transparent', color: T.danger, font: `600 12.5px ${T.font}`, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}
+                style={{ alignSelf: 'flex-start', height: 38, padding: '0 16px', borderRadius: 12, border: `1px solid ${alpha(T.danger, 0.33)}`, background: 'transparent', color: T.danger, font: `600 12.5px ${T.font}`, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}
               >
                 {t('bog.disconnect')}
               </button>
@@ -445,12 +445,12 @@ export default function StoreSettings({ embedded = false, section = 'all' }) {
               long scroll that split was meant to prevent. */}
 
           {apiError && (
-            <div style={{ padding: '12px 14px', borderRadius: 12, background: `${T.danger}14`, border: `1px solid ${T.danger}40`, color: T.danger, font: `500 12.5px ${T.font}` }}>
+            <div style={{ padding: '12px 14px', borderRadius: 12, background: `${alpha(T.danger, 0.08)}`, border: `1px solid ${alpha(T.danger, 0.25)}`, color: T.danger, font: `500 12.5px ${T.font}` }}>
               {apiError}
             </div>
           )}
 
-          <button onClick={submit} disabled={saving} style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', background: T.grad, color: '#fff', font: `700 14.5px ${T.font}`, cursor: saving ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1 }}>
+          <button onClick={submit} disabled={saving} style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', background: T.grad, color: T.onAccent, font: `700 14.5px ${T.font}`, cursor: saving ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: saving ? 0.7 : 1 }}>
             {saving ? t('saving') : <>{t('save')} <Icon.check /></>}
           </button>
 

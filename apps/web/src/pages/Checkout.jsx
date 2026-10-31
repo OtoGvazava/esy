@@ -9,6 +9,7 @@ import { useGlow } from '../styles/glow';
 import { paymentApi, addressApi, deliveryApi, handleApiError } from '../utils/api';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
 import PhoneVerifyBox from '../components/PhoneVerifyBox';
+import { alpha } from '../core/tokens';
 
 const devTenant = () => {
   try { return new URLSearchParams(window.location.search).get('tenant') || undefined; }
@@ -18,7 +19,7 @@ const devTenant = () => {
 function Field({ T, label, value, onChange, span }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: span ? 'span 2' : undefined }}>
-      <span style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</span>
+      <span style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em' }}>{label}</span>
       <input value={value} onChange={(e) => onChange(e.target.value)} style={{ padding: '10px 12px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.dark ? T.surface2 : '#fff', color: T.text, font: `500 13px ${T.font}`, outline: 'none' }} />
     </div>
   );
@@ -178,7 +179,7 @@ export default function Checkout() {
         <div style={{ padding: '60px 24px', textAlign: 'center', color: T.textDim, font: `500 14px ${T.font}` }}>
           {t('checkout.emptyBag')}
           <div style={{ marginTop: 16 }}>
-            <button onClick={() => navigate('/')} style={{ height: 44, padding: '0 20px', borderRadius: 999, border: 'none', background: T.grad, color: '#fff', font: `600 13px ${T.font}`, cursor: 'pointer' }}>{t('checkout.browse', { name: tenant.name })}</button>
+            <button onClick={() => navigate('/')} style={{ height: 44, padding: '0 20px', borderRadius: 999, border: 'none', background: T.grad, color: T.onAccent, font: `600 13px ${T.font}`, cursor: 'pointer' }}>{t('checkout.browse', { name: tenant.name })}</button>
           </div>
         </div>
       </GlowScreen>
@@ -249,7 +250,7 @@ export default function Checkout() {
           <div style={{ padding: '12px 14px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ width: 26, height: 26, borderRadius: '50%', background: T.accentBg, color: T.accentFg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `700 11px ${T.font}` }}>✓</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('checkout.contact')}</div>
+              <div style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.08em' }}>{t('checkout.contact')}</div>
               <div style={{ font: `600 13px ${T.font}`, color: T.text }}>{email}</div>
             </div>
             <span style={{ font: `600 12.5px ${T.font}`, color: T.accentFg, cursor: 'pointer' }}>{t('checkout.edit')}</span>
@@ -260,7 +261,7 @@ export default function Checkout() {
         {(routes.length > 1 || canExpress) && (
           <div style={{ padding: '0 16px 14px' }}>
             <div style={{ padding: '14px', borderRadius: 16, background: T.surface, border: `1.5px solid ${T.border}` }}>
-              <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>
+              <div style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', marginBottom: 12 }}>
                 {t('checkout.deliveryMethod')}
               </div>
               <div style={{ display: 'grid', gap: 8 }}>
@@ -337,7 +338,7 @@ export default function Checkout() {
         {needsAddress && (
         <div style={{ padding: '0 16px 14px' }}>
           <div style={{ padding: '14px 14px 16px', borderRadius: 16, background: T.surface, border: `1.5px solid ${T.accent}` }}>
-            <div style={{ font: `500 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>{t('checkout.shippingAddress')}</div>
+            <div style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.08em', marginBottom: 12 }}>{t('checkout.shippingAddress')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Field T={T} label={t('checkout.recipient')} value={recipient} onChange={setRecipient} />
               <Field T={T} label={t('checkout.phone')} value={phone} onChange={setPhone} />
@@ -352,19 +353,19 @@ export default function Checkout() {
         {/* order eligibility: complete profile + verified phone */}
         {!eligible && (
           <div style={{ padding: '0 16px 14px' }}>
-            <div style={{ padding: 14, borderRadius: 16, background: T.surface, border: `1px solid ${T.danger}55`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ padding: 14, borderRadius: 16, background: T.surface, border: `1px solid ${alpha(T.danger, 0.33)}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ font: `700 13px ${T.font}`, color: T.text }}>{t('checkout.verifyTitle')}</div>
               {!user ? (
                 <>
                   <div style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('checkout.needSignIn')}</div>
-                  <button onClick={() => navigate('/signin')} style={{ height: 42, borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer' }}>{t('checkout.signIn')}</button>
+                  <button onClick={() => navigate('/signin')} style={{ height: 42, borderRadius: 12, border: 'none', background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`, cursor: 'pointer' }}>{t('checkout.signIn')}</button>
                 </>
               ) : !user.profileComplete ? (
                 <div style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('checkout.completeProfileHint')}</div>
               ) : !user.phoneNumber ? (
                 <>
                   <div style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('checkout.needPhone')}</div>
-                  <button onClick={() => navigate('/account')} style={{ height: 42, borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer' }}>{t('checkout.addPhone')}</button>
+                  <button onClick={() => navigate('/account')} style={{ height: 42, borderRadius: 12, border: 'none', background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`, cursor: 'pointer' }}>{t('checkout.addPhone')}</button>
                 </>
               ) : (
                 <>
@@ -399,7 +400,7 @@ export default function Checkout() {
         )}
         {payError && (
           <div style={{ padding: '0 16px 14px' }}>
-            <div style={{ padding: '11px 14px', borderRadius: 12, background: `${T.danger}14`, border: `1px solid ${T.danger}55`, color: T.danger, font: `600 12.5px ${T.font}` }}>
+            <div style={{ padding: '11px 14px', borderRadius: 12, background: `${alpha(T.danger, 0.08)}`, border: `1px solid ${alpha(T.danger, 0.33)}`, color: T.danger, font: `600 12.5px ${T.font}` }}>
               {payError}
             </div>
           </div>

@@ -90,7 +90,7 @@ export default function OrderDetail() {
           </div>
           <button
             onClick={() => navigate('/orders')}
-            style={{ marginTop: 6, height: 44, padding: '0 20px', borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer' }}
+            style={{ marginTop: 6, height: 44, padding: '0 20px', borderRadius: 12, border: 'none', background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`, cursor: 'pointer' }}
           >
             {t('orderDetail.backToOrders')}
           </button>
@@ -124,11 +124,11 @@ export default function OrderDetail() {
             {t('orderDetail.placedOn', { date: placed })}
           </div>
           <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ padding: '5px 11px', borderRadius: 999, background: T.surface2, color: tone, font: `700 10px ${T.font}`, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+            <span style={{ padding: '5px 11px', borderRadius: 999, background: T.surface2, color: tone, font: `700 12px ${T.font}` }}>
               {t(`orders.status.${statusKey}`, { defaultValue: status })}
             </span>
             {paid !== 'none' && (
-              <span style={{ padding: '5px 11px', borderRadius: 999, background: T.surface2, color: T.textDim, font: `600 10px ${T.font}`, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+              <span style={{ padding: '5px 11px', borderRadius: 999, background: T.surface2, color: T.textDim, font: `600 12px ${T.font}` }}>
                 {t(`orderDetail.payment.${paid}`, { defaultValue: paid })}
               </span>
             )}

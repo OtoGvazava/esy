@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePlatform, EsyMark } from './PlatformShared';
+import { alpha } from '../core/tokens';
 
 export default function PlatformAuth() {
   const { T, dark } = usePlatform();
@@ -15,7 +16,7 @@ export default function PlatformAuth() {
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}`, position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: -160, left: -80, right: -80, height: 380, background: `radial-gradient(60% 80% at 50% 30%, ${T.accent}40, transparent 70%)`, filter: 'blur(22px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: -160, left: -80, right: -80, height: 380, background: `radial-gradient(60% 80% at 50% 30%, ${alpha(T.accent, 0.25)}, transparent 70%)`, filter: 'blur(22px)', pointerEvents: 'none' }} />
       <div style={{ position: 'relative', maxWidth: 460, margin: '0 auto', padding: '0 22px' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '16px 0 0' }}>
           <button onClick={() => navigate('/')} style={{ width: 38, height: 38, borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, cursor: 'pointer' }}>
@@ -43,7 +44,7 @@ export default function PlatformAuth() {
             </span>
             <div style={{ flex: 1, font: `500 11.5px/1.4 ${T.font}`, color: T.textDim }}>{t('auth.encrypted')}</div>
           </div>
-          <div style={{ marginTop: 10, font: `400 10.5px ${T.font}`, color: T.textMute, textAlign: 'center' }}>{t('auth.newNote')}</div>
+          <div style={{ marginTop: 10, font: `400 11px ${T.font}`, color: T.textMute, textAlign: 'center' }}>{t('auth.newNote')}</div>
         </div>
       </div>
     </div>

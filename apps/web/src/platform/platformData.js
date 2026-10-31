@@ -2,7 +2,7 @@
 // account-hub mock. Store data itself comes from the real backend
 // (GET /api/tenant) — see PlatformShared useStores().
 
-export const PLATFORM_ACCENT = '#6366f1'; // indigo · hue 250 · platform default
+export { PLATFORM_BRAND as PLATFORM_ACCENT } from '../core/tokens'; // esy blue · the platform default
 
 export const CATEGORIES = [
   { id: 'all', label: 'All stores' },

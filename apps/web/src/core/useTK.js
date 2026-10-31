@@ -29,7 +29,10 @@ export function useTK() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { tenant } = useContext(TenantContext);
   const accent = safeAccent(tenant?.primaryColor);
-  return { T: TK(dark, accent), dark, isDesktop, accent };
+  // The live tokens: the accent is the brand ThemeRoot put on <html>, drawn the
+  // way the active theme draws it. `accent` stays a concrete hex for callers
+  // that need the store colour itself.
+  return { T: TK(dark), dark, isDesktop, accent };
 }
 
 export default useTK;

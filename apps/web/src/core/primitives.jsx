@@ -11,7 +11,7 @@
 // parity gate keeps working.
 
 import { IconSpark } from './icons';
-import { track } from './tokens';
+import { track, alpha } from './tokens';
 
 // Action button. `kind` picks the colour rule, `size` the height/padding/type
 // scale (sm 36 · md 46 · lg 54), `full` stretches to the container width.
@@ -48,14 +48,14 @@ export function Btn({
     primary: {
       border: 'none',
       background: T.grad,
-      color: '#fff',
-      boxShadow: `0 10px 26px ${T.accent}45`,
+      color: T.onAccent,
+      boxShadow: `0 10px 26px ${alpha(T.accent, 0.27)}`,
     },
     ghost: { border: `1.5px solid ${T.border}`, background: 'transparent', color: T.text },
     quiet: { border: 'none', background: T.surface2, color: T.text },
     dark: { border: 'none', background: T.text, color: T.bg },
     danger: {
-      border: `1.5px solid ${T.danger}44`,
+      border: `1.5px solid ${alpha(T.danger, 0.27)}`,
       background: 'transparent',
       color: T.dangerFg,
     },
@@ -172,10 +172,9 @@ export function Field({
         <LabelTag
           htmlFor={editable ? id : undefined}
           style={{
-            font: `600 10.5px ${T.font}`,
+            font: `600 11px ${T.font}`,
             color: T.textMute,
             letterSpacing: '0.07em',
-            textTransform: 'uppercase',
           }}
         >
           {label}

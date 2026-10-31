@@ -22,9 +22,9 @@ export default function GlowDock() {
   const accountIcon = isAuthenticated ? (
     <span style={{
       width: 26, height: 26, borderRadius: '50%', position: 'relative', overflow: 'hidden',
-      background: T.grad, color: '#fff', flexShrink: 0,
+      background: T.grad, color: T.onAccent, flexShrink: 0,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      font: `700 10.5px ${T.font}`,
+      font: `700 11px ${T.font}`,
     }}>
       {initials}
       {user?.avatar && (
@@ -58,12 +58,14 @@ export default function GlowDock() {
   return (
     <div style={{
       position: 'fixed', left: 16, right: 16, bottom: 18, maxWidth: 520, margin: '0 auto',
-      height: 64, borderRadius: 22, zIndex: 1200,
-      background: T.dark ? 'rgba(18,18,28,0.78)' : 'rgba(255,255,255,0.78)',
-      backdropFilter: 'saturate(180%) blur(22px)',
-      WebkitBackdropFilter: 'saturate(180%) blur(22px)',
-      border: `1px solid ${T.border}`,
-      boxShadow: T.dark ? '0 12px 40px rgba(0,0,0,0.45)' : '0 12px 40px rgba(20,20,60,0.10)',
+      // The theme's floating-control recipe — glass on Liquid Glass, solid on
+      // Soft, a lit edge on Neon — rather than one hard-coded frosted white.
+      height: 66, borderRadius: 'var(--k-r-dock)', zIndex: 1200,
+      background: 'var(--k-fl-bg)',
+      backdropFilter: 'var(--k-fl-blur)',
+      WebkitBackdropFilter: 'var(--k-fl-blur)',
+      border: 'var(--k-fl-bd)',
+      boxShadow: 'var(--k-fl-sh)',
       display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 14px',
     }}>
       {items.map((it) => (
@@ -83,14 +85,14 @@ export default function GlowDock() {
             {it.icon}
             {it.badge ? (
               <span style={{
-                position: 'absolute', top: -2, right: -4, minWidth: 16, height: 16, padding: '0 4px',
-                borderRadius: 999, background: T.accent, color: '#fff',
-                font: `700 9.5px ${T.font}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'absolute', top: -3, right: -5, minWidth: 18, height: 18, padding: '0 5px',
+                borderRadius: 999, background: T.accent, color: T.onAccent,
+                font: `700 11px ${T.font}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: `2px solid ${T.dark ? '#12121c' : '#ffffff'}`, lineHeight: 1,
               }}>{it.badge}</span>
             ) : null}
           </div>
-          <div style={{ font: `600 9.5px ${T.font}`, letterSpacing: '-0.005em', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</div>
+          <div style={{ font: `600 11px ${T.font}`, letterSpacing: '-0.005em', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</div>
         </div>
       ))}
     </div>

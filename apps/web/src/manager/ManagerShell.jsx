@@ -27,7 +27,7 @@ import { useTK } from '../core/useTK';
 import { Btn, Chip } from '../core/primitives';
 import { EsyMark, Mark, RoleChip } from '../core/domain';
 import { Icons } from '../core/icons';
-import { MNAV, MDOCK, OWNER_ONLY } from './nav';
+import { MNAV, MDOCK, MMORE, OWNER_ONLY } from './nav';
 import ManagerHome from './ManagerHome';
 import ManagerOverview from './ManagerOverview';
 import ManagerProducts from './ManagerProducts';
@@ -56,13 +56,14 @@ function activeKey(pathname) {
 }
 
 function NavItem({ T, to, label, icon, on, locked, badge, style = {} }) {
+  const { t } = useTranslation('manager');
   const Ic = Icons[icon];
   const body = (
     <>
       {Ic && <Ic width="16" height="16" />}
       <span style={{ flex: 1 }}>{label}</span>
-      {badge ? <Chip T={T} tone="accent" style={{ padding: '2px 8px', font: `700 10px ${T.font}` }}>{badge}</Chip> : null}
-      {locked && <span style={{ font: `600 9px ${T.mono}` }}>OWNER</span>}
+      {badge ? <Chip T={T} tone="accent" style={{ padding: '2px 8px', font: `700 11px ${T.font}` }}>{badge}</Chip> : null}
+      {locked && <span style={{ font: `600 11px ${T.font}` }}>{t('role.OWNER')}</span>}
     </>
   );
   const css = {
@@ -90,7 +91,7 @@ function Side({ T, t, store, sub, active, role, q, isOwner, newOrders }) {
     }}>
       <div style={{ padding: '0 8px' }}><EsyMark T={T} size={17} /></div>
       <div style={{
-        padding: '0 8px', marginTop: 2, font: `600 9.5px ${T.mono}`,
+        padding: '0 8px', marginTop: 2, font: `500 12px ${T.font}`,
         color: T.textMute, letterSpacing: '0.06em',
       }}>manager.esy.ge</div>
 
@@ -107,7 +108,7 @@ function Side({ T, t, store, sub, active, role, q, isOwner, newOrders }) {
             display: 'block', font: `700 12.5px ${T.font}`, color: T.text,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{store.name}</span>
-          <span style={{ display: 'block', font: `500 10px ${T.mono}`, color: T.textMute }}>
+          <span style={{ display: 'block', font: `500 12px ${T.font}`, color: T.textMute }}>
             {sub}.esy.ge
           </span>
         </span>
@@ -146,74 +147,122 @@ function Rail({ T, t, store, sub, active, q, isOwner }) {
       background: T.surface, display: 'flex', flexDirection: 'column',
       alignItems: 'center', padding: '18px 0 16px', gap: 5, minHeight: '100vh',
     }}>
-      <Mark T={T} store={store} size={40} radius={13} />
-      <span style={{ font: `600 8.5px ${T.mono}`, color: T.textMute, marginBottom: 8 }}>{sub}</span>
+      <span title={sub} style={{ marginBottom: 10, display: 'inline-flex' }}>
+        <Mark T={T} store={store} size={40} radius={13} />
+      </span>
+      {/* Icons only, named for assistive tech and on hover: the labels that
+          used to sit under them were 7.5px, unreadable in Georgian. */}
       {MNAV.map(([k, icon, route]) => {
         const Ic = Icons[icon];
         const locked = OWNER_ONLY.includes(k) && !isOwner;
         const on = k === active;
+        const label = t(`nav.${k}`);
         const css = {
-          width: 56, height: 48, borderRadius: 14, textDecoration: 'none',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          justifyContent: 'center', gap: 3,
+          width: 56, height: 52, borderRadius: 14, textDecoration: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: on ? T.accentBg : 'transparent',
           color: on ? T.accentFg : T.textDim,
           opacity: locked ? 0.45 : 1,
         };
-        const inner = (
-          <>
-            {Ic && <Ic width="17" height="17" />}
-            <span style={{ font: `600 7.5px ${T.font}`, whiteSpace: 'nowrap' }}>
-              {t(`nav.${k}`).split(' ')[0]}
-            </span>
-          </>
-        );
+        const inner = Ic && <Ic width="20" height="20" />;
         return locked
-          ? <div key={k} style={css} aria-disabled="true">{inner}</div>
-          : <Link key={k} to={`${route}${q}`} style={css}>{inner}</Link>;
+          ? <div key={k} style={css} aria-disabled="true" aria-label={label} title={label}>{inner}</div>
+          : <Link key={k} to={`${route}${q}`} style={css} aria-label={label} title={label} aria-current={on ? 'page' : undefined}>{inner}</Link>;
       })}
       <span style={{ flex: 1 }} />
     </div>
   );
 }
 
-function Dock({ T, t, active, q, isOwner }) {
+/** Behind the tab bar's "More" slot: the destinations a phone has no room for. */
+function MoreSheet({ T, t, active, q, isOwner, onClose }) {
   return (
-    <div style={{
-      position: 'sticky', bottom: 0, zIndex: 40, margin: '0 12px 12px',
-      height: 64, borderRadius: 20, display: 'flex', alignItems: 'center',
-      justifyContent: 'space-around',
-      background: T.dark ? 'rgba(18,18,28,0.88)' : 'rgba(255,255,255,0.92)',
-      backdropFilter: 'blur(20px)', border: `1px solid ${T.border}`,
-      boxShadow: T.shadow,
-    }}>
-      {MDOCK.map((k) => {
-        const entry = MNAV.find((n) => n[0] === k);
-        if (!entry) return null;
-        const [, icon, route] = entry;
-        const Ic = Icons[icon];
-        const locked = OWNER_ONLY.includes(k) && !isOwner;
-        const on = k === active;
-        const css = {
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-          textDecoration: 'none', color: on ? T.accentFg : T.textDim,
-          opacity: locked ? 0.45 : 1,
-        };
-        const inner = (
-          <>
-            <span style={{
-              width: 36, height: 32, borderRadius: 11, display: 'inline-flex',
-              alignItems: 'center', justifyContent: 'center',
-              background: on ? T.accentBg : 'transparent',
-            }}>{Ic && <Ic width="17" height="17" />}</span>
-            <span style={{ font: `600 9px ${T.font}` }}>{t(`nav.${k}`).split(' ')[0]}</span>
-          </>
-        );
-        return locked
-          ? <div key={k} style={css} aria-disabled="true">{inner}</div>
-          : <Link key={k} to={`${route}${q}`} style={css}>{inner}</Link>;
-      })}
+    <div role="dialog" aria-modal="true" aria-label={t('nav.more')} style={{ position: 'fixed', inset: 0, zIndex: 60 }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.42)' }} />
+      <div style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, background: T.surface,
+        borderRadius: '24px 24px 0 0', padding: '10px 16px 24px', boxShadow: T.shadow,
+      }}>
+        <div style={{ width: 36, height: 5, borderRadius: 3, background: T.border, margin: '0 auto 8px' }} />
+        {MMORE.map((k) => {
+          const entry = MNAV.find((n) => n[0] === k);
+          if (!entry) return null;
+          const [, icon, route] = entry;
+          const Ic = Icons[icon];
+          const locked = OWNER_ONLY.includes(k) && !isOwner;
+          const on = k === active;
+          const css = {
+            display: 'flex', alignItems: 'center', gap: 12, minHeight: 52, padding: '0 6px',
+            textDecoration: 'none', color: on ? T.accentFg : T.text,
+            borderBottom: `1px solid ${T.border}`, opacity: locked ? 0.5 : 1,
+            font: `${on ? 600 : 500} 15px ${T.font}`,
+          };
+          const inner = (
+            <>
+              {Ic && <Ic width="20" height="20" />}
+              <span style={{ flex: 1 }}>{t(`nav.${k}`)}</span>
+              {locked
+                ? <span style={{ font: `500 12px ${T.font}`, color: T.textMute }}>{t('role.OWNER')}</span>
+                : <Icons.arrowR width="16" height="16" />}
+            </>
+          );
+          return locked
+            ? <div key={k} style={css} aria-disabled="true">{inner}</div>
+            : <Link key={k} to={`${route}${q}`} style={css} onClick={onClose} aria-current={on ? 'page' : undefined}>{inner}</Link>;
+        })}
+      </div>
     </div>
+  );
+}
+
+function Dock({ T, t, active, q, isOwner, newOrders }) {
+  const [more, setMore] = useState(false);
+  // Four equal slots with a label under every icon; the active one is told
+  // apart by its tint alone, as the design draws it.
+  const slot = (on) => ({
+    position: 'relative', minWidth: 0, display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center', gap: 3, padding: 0,
+    textDecoration: 'none', background: 'none', border: 0, cursor: 'pointer',
+    color: on ? T.accentFg : T.textDim, font: `${on ? 600 : 500} 11px/13px ${T.font}`,
+    whiteSpace: 'nowrap',
+  });
+  return (
+    <>
+      {more && <MoreSheet T={T} t={t} active={active} q={q} isOwner={isOwner} onClose={() => setMore(false)} />}
+      <nav aria-label={t('title')} style={{
+        position: 'sticky', bottom: 0, zIndex: 40, margin: '0 12px 12px',
+        height: 66, borderRadius: 22, display: 'grid',
+        gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', padding: '0 4px',
+        background: T.dark ? 'rgba(18,18,28,0.88)' : 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(20px)', border: `1px solid ${T.border}`,
+        boxShadow: T.shadow,
+      }}>
+        {MDOCK.map((k) => {
+          const entry = MNAV.find((n) => n[0] === k);
+          if (!entry) return null;
+          const [, icon, route] = entry;
+          const Ic = Icons[icon];
+          const on = k === active;
+          return (
+            <Link key={k} to={`${route}${q}`} style={slot(on)} aria-current={on ? 'page' : undefined}>
+              {Ic && <Ic width="22" height="22" />}
+              {t(`nav.${k}`)}
+              {k === 'orders' && newOrders > 0 && (
+                <span style={{
+                  position: 'absolute', top: 6, left: 'calc(50% + 6px)', minWidth: 18, height: 18,
+                  padding: '0 5px', borderRadius: 9, background: T.accent, color: T.onAccent,
+                  font: `700 11px/18px ${T.font}`, textAlign: 'center',
+                }}>{newOrders}</span>
+              )}
+            </Link>
+          );
+        })}
+        <button type="button" onClick={() => setMore((v) => !v)} aria-expanded={more} style={slot(more || MMORE.includes(active))}>
+          <Icons.more width="22" height="22" />
+          {t('nav.more')}
+        </button>
+      </nav>
+    </>
   );
 }
 
@@ -330,8 +379,8 @@ export default function ManagerShell() {
             display: 'block', font: `700 14px ${T.font}`, color: T.text,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{store.name}</span>
-          <span style={{ display: 'block', font: `500 9.5px ${T.mono}`, color: T.textMute }}>
-            manager.esy.ge · {sub}
+          <span style={{ display: 'block', font: `500 12px ${T.font}`, color: T.textMute }}>
+            {sub}.esy.ge
           </span>
         </span>
         {user?.email && (
@@ -341,7 +390,7 @@ export default function ManagerShell() {
         )}
       </div>
       <div style={{ flex: 1, padding: '0 16px 20px' }}>{pages}</div>
-      <Dock T={T} t={t} active={active} q={q} isOwner={isStoreOwner} />
+      <Dock T={T} t={t} active={active} q={q} isOwner={isStoreOwner} newOrders={newOrders} />
     </div>
   );
 }

@@ -56,12 +56,15 @@ export const useAppTheme = () => {
   // Button/TextField/Dialog label rendered Mkhedruli in a substituted system
   // face while the inline-styled markup around it used the design stack. Same
   // constant as the design tokens (core/tokens.js) so the two cannot drift.
+  // background.default is transparent so CssBaseline leaves <body> clear and
+  // the theme's own page ground on <html> shows (index.css); paper stays
+  // concrete because MUI surfaces read it directly.
   const theme = useMemo(() => createTheme({
     palette: {
       mode,
       background: {
-        default: mode === 'dark' ? '#0b0b0c' : '#ffffff',
-        paper: mode === 'dark' ? '#121214' : '#ffffff',
+        default: 'transparent',
+        paper: mode === 'dark' ? '#17171a' : '#ffffff',
       },
     },
     typography: { fontFamily: FONT },

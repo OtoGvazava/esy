@@ -70,7 +70,7 @@ export default function ManagerHome() {
         <div style={{ font: `700 18px ${T.font}`, color: T.text }}>{t('signInRequired')}</div>
         <button onClick={signInWithGoogle} style={{
           padding: '12px 22px', borderRadius: 999, border: 'none', cursor: 'pointer',
-          background: T.grad, color: '#fff', font: `700 14px ${T.font}`,
+          background: T.grad, color: T.onAccent, font: `700 14px ${T.font}`,
         }}>{t('signIn')}</button>
       </div>
     );

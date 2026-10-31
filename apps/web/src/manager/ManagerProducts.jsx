@@ -53,7 +53,7 @@ export default function ManagerProducts() {
 
   const btn = {
     padding: '10px 18px', borderRadius: 999, border: 'none', cursor: 'pointer',
-    background: T.grad, color: '#fff', font: `700 13px ${T.font}`,
+    background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`,
   };
 
   // Import sits beside Add as the secondary of the pair: adding one product is

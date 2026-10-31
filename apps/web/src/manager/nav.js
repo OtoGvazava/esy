@@ -17,11 +17,14 @@ export const MNAV = [
 ];
 
 /**
- * The five that fit a phone dock. Stats and team are the ones dropped: both
- * are reading tasks rather than doing tasks, and a merchant on a phone is
- * usually mid-task.
+ * The three a phone's tab bar shows, before its "More" slot. Georgian labels
+ * are wide ("პროდუქტები" alone is ~80px at 11px), so five labelled slots
+ * collided on a 390px phone; four fit. The doing tasks stay on the bar.
  */
-export const MDOCK = ['overview', 'orders', 'products', 'money', 'settings'];
+export const MDOCK = ['overview', 'orders', 'products'];
+
+/** Behind the phone's "More" slot, in sidebar order. */
+export const MMORE = ['stats', 'money', 'team', 'settings'];
 
 /**
  * Reachable by the OWNER alone (D5). A MANAGER runs the shop day to day;

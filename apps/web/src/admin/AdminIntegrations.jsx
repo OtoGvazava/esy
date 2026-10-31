@@ -23,6 +23,7 @@ import { adminApi, handleApiError } from '../utils/api';
 import { useAdminTokens } from './adminTokens';
 import { Btn, Card, Chip, Note, SectionTitle, Toggle } from '../core/primitives';
 import { Failed, Loading } from './AdminUI';
+import { alpha } from '../core/tokens';
 
 function TemplateRow({ T, t, row, onSaved, canWrite }) {
   const [editing, setEditing] = useState(false);
@@ -256,7 +257,7 @@ export default function AdminIntegrations() {
       {sms.lastFailure && (
         <div style={{
           marginBottom: 14, padding: '13px 15px', borderRadius: 14,
-          background: T.dangerBg, border: `1px solid ${T.danger}55`,
+          background: T.dangerBg, border: `1px solid ${alpha(T.danger, 0.33)}`,
         }}>
           <div style={{ font: `700 13px ${T.font}`, color: T.dangerFg }}>
             {t('integrations.lastFailureTitle')}
@@ -431,7 +432,7 @@ function EmailSection({ T, t, email, onSaved }) {
       {email.lastFailure && (
         <div style={{
           marginBottom: 14, padding: '13px 15px', borderRadius: 14,
-          background: T.dangerBg, border: `1px solid ${T.danger}55`,
+          background: T.dangerBg, border: `1px solid ${alpha(T.danger, 0.33)}`,
         }}>
           <div style={{ font: `700 13px ${T.font}`, color: T.dangerFg }}>
             {t('integrations.lastFailureTitle')}

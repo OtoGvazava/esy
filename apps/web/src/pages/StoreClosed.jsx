@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
 import { Icons } from '../core/icons';
 import { platformUrl } from '../utils/hosts';
+import { alpha } from '../core/tokens';
 
 export default function StoreClosed() {
   const { T, tenant } = useGlow();
@@ -22,7 +23,7 @@ export default function StoreClosed() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}`,
+      minHeight: '100vh', background: T.page, color: T.text, font: `400 14px ${T.font}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 26px',
     }}>
       <div style={{ textAlign: 'center', maxWidth: 380 }}>
@@ -43,8 +44,8 @@ export default function StoreClosed() {
           style={{
             marginTop: 20, display: 'inline-flex', alignItems: 'center', gap: 8,
             height: 46, padding: '0 20px', borderRadius: 14, textDecoration: 'none',
-            background: T.grad, color: '#fff', font: `700 13.5px ${T.font}`,
-            boxShadow: `0 10px 24px ${T.accent}55`,
+            background: T.grad, color: T.onAccent, font: `700 13.5px ${T.font}`,
+            boxShadow: `0 10px 24px ${alpha(T.accent, 0.33)}`,
           }}
         >
           {t('closed.browse')} <Icons.arrowR size={14} />

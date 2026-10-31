@@ -8,27 +8,122 @@
 // Figures come from /api/tenant/stats, the same call Statistics and Money use
 // and the same one the platform bills against, so nothing here can disagree
 // with what a merchant is charged.
+//
+// Under the figures sits the design's "waiting for you": the orders a merchant
+// has to move next — placed ones to ship, shipped ones to hand to the courier,
+// oldest first. A row leads into its order, where the transition is made with
+// the order's details in view; the list itself changes nothing.
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useDevice } from '../contexts/DeviceContext';
 import { useTK } from '../core/useTK';
 import { Btn, Card, Note } from '../core/primitives';
 import { Icons } from '../core/icons';
-import { money } from '../core/money';
-import { handleApiError } from '../utils/api';
+import { money, FEE_PERCENT } from '../core/money';
+import { handleApiError, tenantApi } from '../utils/api';
 import { MTop } from './ManagerShell';
 import { StatCard } from './ManagerStats';
 import { useStoreStats } from './useStoreStats';
 import { gcols } from './nav';
 
+// The API sends status lower-cased with spaces ("out for delivery").
+const enumName = (s) => String(s || 'PLACED').toUpperCase().replace(/ /g, '_');
+
+/** The next move for each status that has one, as its button reads. */
+const NEXT = { PLACED: 'overview.markShipped', SHIPPED: 'overview.markOut' };
+
+const initials = (name) => String(name || '?').trim().split(/\s+/).slice(0, 2)
+  .map((w) => w.charAt(0)).join('').toUpperCase();
+
+/** "10 min ago", in the shopper's language; the moment itself for anything older than a week. */
+function ago(iso, lang, t) {
+  const at = iso ? new Date(iso) : null;
+  if (!at || Number.isNaN(at.getTime())) return '';
+  const min = Math.round((Date.now() - at.getTime()) / 60000);
+  if (min < 1) return t('overview.justNow');
+  const rtf = new Intl.RelativeTimeFormat(lang === 'ka' ? 'ka' : 'en', { numeric: 'auto', style: 'short' });
+  if (min < 60) return rtf.format(-min, 'minute');
+  if (min < 24 * 60) return rtf.format(-Math.round(min / 60), 'hour');
+  if (min < 7 * 24 * 60) return rtf.format(-Math.round(min / 1440), 'day');
+  return at.toLocaleDateString(lang === 'ka' ? 'ka-GE' : 'en-US', { month: 'short', day: 'numeric' });
+}
+
+/** What was ordered, as short as it can be said. */
+function itemsOf(o, t) {
+  const lines = Array.isArray(o.lines) ? o.lines : [];
+  if (lines.length === 1) return `${lines[0].title} ×${lines[0].quantity}`;
+  if (lines.length > 1) return t('overview.items', { count: lines.reduce((n, l) => n + (Number(l.quantity) || 0), 0) });
+  return '';
+}
+
+function Waiting({ T, t, lang, orders, q, isMobile }) {
+  const waiting = orders
+    .filter((o) => NEXT[enumName(o.status)])
+    .sort((a, b) => new Date(a.placed || 0) - new Date(b.placed || 0));
+  return (
+    <Card T={T} pad={isMobile ? 16 : 18} style={{ marginTop: isMobile ? 14 : 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: waiting.length ? 4 : 8 }}>
+        <span style={{ flex: 1, font: `700 16px ${T.font}`, color: T.text }}>
+          {t('overview.todo')}{waiting.length > 0 && ` · ${waiting.length}`}
+        </span>
+        <Link to={`/orders${q}`} style={{ font: `600 13px ${T.font}`, color: T.accentFg, textDecoration: 'none' }}>
+          {t('overview.todoAll')}
+        </Link>
+      </div>
+      {waiting.length === 0 && (
+        <div style={{ font: `400 13px/1.5 ${T.font}`, color: T.textDim }}>{t('overview.allDone')}</div>
+      )}
+      {waiting.slice(0, 3).map((o, i) => {
+        const name = o.delivery?.recipient || t('orders.noBuyer');
+        const meta = [itemsOf(o, t), ago(o.placed, lang, t)].filter(Boolean).join(' · ');
+        return (
+          <div key={o.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12, flexWrap: isMobile ? 'wrap' : 'nowrap',
+            padding: '14px 0', borderTop: i ? `1px solid ${T.border}` : 'none',
+          }}>
+            <span style={{
+              width: 36, height: 36, flex: 'none', borderRadius: '50%', background: T.text, color: T.bg,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `700 13px ${T.font}`,
+            }}>{initials(name)}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ font: `600 14px ${T.font}`, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                #{o.orderNumber || o.id} · {name}
+              </div>
+              {meta && <div style={{ marginTop: 2, font: `400 12px ${T.font}`, color: T.textMute }}>{meta}</div>}
+            </div>
+            <span style={{ font: `700 14px ${T.font}`, color: T.text, whiteSpace: 'nowrap' }}>{money(o.total)}</span>
+            {/* On a phone the button takes its own line, so the row's text keeps its width. */}
+            <Link to={`/orders/${o.id}${q}`} style={{ textDecoration: 'none', flex: isMobile ? '1 0 100%' : 'none' }}>
+              <Btn T={T} kind="quiet" size="sm" style={isMobile ? { width: '100%' } : undefined}>
+                {t(NEXT[enumName(o.status)])}
+              </Btn>
+            </Link>
+          </div>
+        );
+      })}
+    </Card>
+  );
+}
+
 export default function ManagerOverview() {
   const { T } = useTK();
-  const { t } = useTranslation('manager');
+  const { t, i18n } = useTranslation('manager');
   const { isDesktop, isMobile } = useDevice();
   const [params] = useSearchParams();
   const sub = params.get('tenant');
   const q = sub ? `?tenant=${encodeURIComponent(sub)}` : '';
   const { data, loading, error } = useStoreStats(sub || undefined);
+  const [orders, setOrders] = useState(null);
+
+  // The to-do list is a convenience: if it cannot load, the figures still show.
+  useEffect(() => {
+    let alive = true;
+    tenantApi.orders(sub || undefined)
+      .then((o) => { if (alive) setOrders(Array.isArray(o) ? o : []); })
+      .catch(() => { if (alive) setOrders([]); });
+    return () => { alive = false; };
+  }, [sub]);
 
   const mode = isDesktop ? 'desktop' : isMobile ? 'mobile' : 'tablet';
 
@@ -55,43 +150,18 @@ export default function ManagerOverview() {
             <StatCard T={T} label={t('overview.orders')} value={String(data.orders ?? 0)} />
             <StatCard
               T={T} label={t('overview.feesOwed')} value={money(data.serviceFeesOwed)}
-              tone={T.warnFg}
+              hint={t('overview.feeHint', { percent: FEE_PERCENT })}
             />
             <StatCard T={T} label={t('overview.products')} value={String(data.products ?? 0)} />
           </div>
 
-          <Note T={T} style={{ marginTop: 14 }}>{t('overview.excludes')}</Note>
-
-          {/* The design puts a sales-by-day chart and a top-products list
-              here. Both need per-day and per-product aggregates the stats
-              endpoint does not return, so the space says what is missing
-              rather than showing an empty chart frame that reads as "no
-              sales". */}
-          <Note T={T} tone="warn" style={{ marginTop: 10 }}>{t('overview.chartsPending')}</Note>
-
-          <div style={{
-            display: 'grid', gap: 10, marginTop: 18,
-            gridTemplateColumns: gcols(mode, 3, 2, 1),
-          }}>
-            {[
-              ['products', 'box', t('nav.products')],
-              ['orders', 'bag', t('nav.orders')],
-              ['settings', 'gear', t('nav.settings')],
-            ].map(([key, icon, label]) => {
-              const Ic = Icons[icon];
-              return (
-                <Link key={key} to={`/${key}${q}`} style={{ textDecoration: 'none' }}>
-                  <Card T={T} pad={16} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ color: T.accentFg, display: 'inline-flex' }}>
-                      {Ic && <Ic width="17" height="17" />}
-                    </span>
-                    <span style={{ flex: 1, font: `600 13.5px ${T.font}`, color: T.text }}>{label}</span>
-                    <Icons.arrowR width="14" height="14" />
-                  </Card>
-                </Link>
-              );
-            })}
+          <div style={{ marginTop: 10, font: `400 12px/1.5 ${T.font}`, color: T.textMute }}>
+            {t('overview.excludes')}
           </div>
+
+          {orders && (
+            <Waiting T={T} t={t} lang={i18n.language} orders={orders} q={q} isMobile={isMobile} />
+          )}
 
           <div style={{ marginTop: 18 }}>
             <Link to={`/stats${q}`} style={{ textDecoration: 'none' }}>

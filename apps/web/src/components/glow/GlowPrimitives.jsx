@@ -64,7 +64,7 @@ export function PoweredBy({ T, align = 'center', size = 10 }) {
       display: 'flex', alignItems: 'center',
       justifyContent: align === 'center' ? 'center' : 'flex-start', gap: 6,
       color: T.textMute, font: `500 ${size}px ${GLOW_MONO}`,
-      letterSpacing: '0.12em', textTransform: 'uppercase',
+      letterSpacing: '0.12em',
     }}>
       <span style={{ opacity: 0.7 }}>{t('poweredBy')}</span>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: T.text, opacity: 0.85 }}>

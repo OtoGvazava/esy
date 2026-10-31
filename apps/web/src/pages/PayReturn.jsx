@@ -5,6 +5,7 @@ import { useCart } from '../contexts/CartContext';
 import { useGlow } from '../styles/glow';
 import { paymentApi } from '../utils/api';
 import { GlowScreen } from '../components/glow/GlowChrome';
+import { alpha } from '../core/tokens';
 
 // Landing page for the BOG hosted-checkout return (redirect_urls.success/fail).
 // The ?status hint is advisory; the server status is authoritative — it also
@@ -101,7 +102,7 @@ export default function PayReturn() {
             <div
               style={{
                 width: 72, height: 72, borderRadius: '50%', margin: '0 auto',
-                background: `${T.danger}1a`, color: T.danger,
+                background: `${alpha(T.danger, 0.1)}`, color: T.danger,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 font: `700 32px ${T.font}`,
               }}
@@ -123,7 +124,7 @@ export default function PayReturn() {
               </button>
               <button
                 onClick={() => navigate('/orders')}
-                style={{ height: 46, padding: '0 20px', borderRadius: 12, border: 'none', background: T.grad, color: '#fff', font: `700 13px ${T.font}`, cursor: 'pointer' }}
+                style={{ height: 46, padding: '0 20px', borderRadius: 12, border: 'none', background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`, cursor: 'pointer' }}
               >
                 {t('payReturn.viewOrders')}
               </button>

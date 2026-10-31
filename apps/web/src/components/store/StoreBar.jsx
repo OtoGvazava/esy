@@ -49,8 +49,10 @@ export default function StoreBar({ compact }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: compact ? 14 : 26,
-      padding: compact ? '0 24px' : '0 40px', height: compact ? 64 : 74,
-      borderBottom: `1px solid ${T.border}`, background: T.surface,
+      padding: compact ? '0 24px' : '0 48px', height: compact ? 64 : 76,
+      // The theme's header ground: frosted on Liquid Glass and Neon, clear on Soft.
+      borderBottom: `1px solid ${T.border}`, background: 'var(--k-hd-bg)',
+      backdropFilter: 'var(--k-hd-blur, none)', WebkitBackdropFilter: 'var(--k-hd-blur, none)',
       position: 'sticky', top: 0, zIndex: 50,
     }}>
       <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
@@ -58,7 +60,7 @@ export default function StoreBar({ compact }) {
           <img src={tenant.logoUrl} alt="" style={{ width: 38, height: 38, borderRadius: 11, objectFit: 'cover' }} />
         ) : (
           <span style={{
-            width: 38, height: 38, borderRadius: 11, background: T.grad, color: '#fff',
+            width: 38, height: 38, borderRadius: 11, background: T.grad, color: T.onAccent,
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             font: `800 16px ${T.font}`,
           }}>{(tenant?.name || '?').charAt(0)}</span>
@@ -67,7 +69,7 @@ export default function StoreBar({ compact }) {
           <span style={{ font: `700 ${compact ? 15 : 17}px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>
             {tenant?.name}
           </span>
-          <span style={{ font: `500 ${compact ? 9.5 : 10.5}px ${T.mono}`, color: T.textMute }}>
+          <span style={{ font: `500 ${compact ? 11 : 12}px ${T.mono}`, color: T.textMute }}>
             {tenant?.domain}
           </span>
         </span>
@@ -115,8 +117,9 @@ export default function StoreBar({ compact }) {
         );
       })}
 
+      {/* Both languages named, the current one first, as on every esy header. */}
       <span style={{ ...pill }}>
-        <Icon.globe /> {language === 'ka' ? 'ქარ' : 'ENG'}
+        <Icon.globe /> {language === 'ka' ? 'ქა · EN' : 'EN · ქა'}
       </span>
 
       <Link to="/cart" style={{

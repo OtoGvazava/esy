@@ -6,8 +6,9 @@
 // single store — borrowing a store's brand here would be a lie about whose
 // data is on screen.
 import { useTK } from '../core/useTK';
+import { ADMIN_BRAND, onColor } from '../core/tokens';
 
-export const ADMIN_ACCENT = '#0f766e';
+export const ADMIN_ACCENT = ADMIN_BRAND;
 
 /**
  * The ported TK palette with the accent pinned to administration teal.
@@ -15,7 +16,7 @@ export const ADMIN_ACCENT = '#0f766e';
  */
 export function useAdminTokens() {
   const { T, dark } = useTK();
-  return { ...T, accent: ADMIN_ACCENT, accentFg: T.adminFg, accentBg: T.adminBg, dark };
+  return { ...T, accent: ADMIN_ACCENT, onAccent: onColor(ADMIN_ACCENT), accentFg: T.adminFg, accentBg: T.adminBg, dark };
 }
 
 export default useAdminTokens;

@@ -19,8 +19,8 @@ const COLS = 'minmax(180px, 1fr) 90px 130px 130px';
 
 function HeadRow({ T, t }) {
   const cell = {
-    font: `600 10.5px ${T.font}`, color: T.textMute,
-    letterSpacing: '0.07em', textTransform: 'uppercase',
+    font: `600 11px ${T.font}`, color: T.textMute,
+    letterSpacing: '0.07em',
   };
   return (
     <div style={{
@@ -130,8 +130,8 @@ export default function AdminBilling() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ color: T.accentFg, display: 'flex' }}><Icons.chart size={16} /></span>
           <span style={{
-            font: `600 10.5px ${T.font}`, color: T.textMute,
-            letterSpacing: '0.07em', textTransform: 'uppercase',
+            font: `600 11px ${T.font}`, color: T.textMute,
+            letterSpacing: '0.07em',
           }}>
             {t('billing.totalAccrued')}
           </span>

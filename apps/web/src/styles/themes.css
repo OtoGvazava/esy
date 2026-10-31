@@ -1,0 +1,101 @@
+/* Theme tokens, ported from the design kit (esy-kit.css on the "esy Full Design"
+   canvas) by a script — edit the kit and re-port rather than hand-editing here.
+
+   <html> carries data-th (esy on the platform, manager and admin hosts; the
+   store's theme — soft, glow or neon — on a storefront), data-md (light or dark)
+   and --k-brand (the store colour). Every token is prefixed --k-. TK() in
+   core/tokens.js reads them through the aliases at the bottom. */
+
+:root{--k-brand:#6366f1}
+
+/* ---------- shared status colours ---------- */
+[data-th]{--k-ok:#0e7340;--k-ok-bg:#e2f4e9;--k-warn:#985800;--k-warn-bg:#fcefd7;--k-info:#1f5fd0;--k-info-bg:#e4ecfc;--k-bad:#c02f2f;--k-bad-bg:#fbe6e6;--k-mute:#5d5d66;--k-mute-bg:#ededf0}
+[data-th][data-md="dark"]{--k-ok:#5fd394;--k-ok-bg:#15301f;--k-warn:#f0b24a;--k-warn-bg:#382810;--k-info:#8fb4ff;--k-info-bg:#17264a;--k-bad:#ff8c8c;--k-bad-bg:#3c1717;--k-mute:#a1a1aa;--k-mute-bg:#26262b}
+
+/* ---------- theme: SOFT ---------- */
+[data-th="soft"]{--k-page:color-mix(in oklab,var(--k-brand) 6%,#fbfbfa);--k-ps:color-mix(in oklab,var(--k-brand) 6%,#fbfbfa);--k-sf:#fff;--k-sf2:color-mix(in oklab,var(--k-brand) 11%,#fff);--k-fg:#18181b;--k-dim:#5d5d67;--k-line:#e7e7eb;--k-ink:#18181b;--k-on-ink:#fff;--k-pri:var(--k-brand);--k-on-pri:#fff;--k-acc:color-mix(in oklab,var(--k-brand) 82%,#000);
+ --k-card-bd:1px solid transparent;--k-card-sh:none;--k-fl-bg:#fff;--k-fl-bd:1px solid transparent;--k-fl-sh:0 12px 30px -14px rgba(20,20,30,.24);--k-fl-blur:none;--k-hd-bg:transparent;
+ --k-pill-bg:#fff;--k-pill-bd:1px solid transparent;--k-pill-on:#18181b;--k-pill-on-fg:#fff;--k-in-bg:#fff;--k-in-bd:#dfdfe5;
+ --k-ph1:color-mix(in oklab,#f4b860 28%,#fff);--k-ph1f:color-mix(in oklab,#e08a1e 78%,#fff);--k-ph2:color-mix(in oklab,#8fc7f0 30%,#fff);--k-ph2f:color-mix(in oklab,#3d8fd1 78%,#fff);--k-ph3:color-mix(in oklab,#b9e0a5 34%,#fff);--k-ph3f:color-mix(in oklab,#4f9a3a 78%,#fff);--k-ph4:color-mix(in oklab,var(--k-brand) 16%,#fff);--k-ph4f:color-mix(in oklab,var(--k-brand) 72%,#fff);
+ --k-r-card:26px;--k-r-img:20px;--k-r-btn:999px;--k-r-in:16px;--k-r-pill:999px;--k-r-dock:30px;--k-r-sheet:34px;--k-r-ibtn:999px;
+ --k-font:'Noto Sans Georgian','Geist',system-ui,sans-serif;--k-font-d:var(--k-font);--k-font-m:var(--k-font);--k-w-t:700;--k-ic-w:2.1;
+ --k-hero:var(--k-brand);--k-hero-fg:#fff;--k-hero-ink:#18181b;--k-ring:var(--k-brand);--k-pc-bg:var(--k-sf);--k-pc-pad:6px 6px 12px;--k-pc-bd:0 solid transparent}
+[data-th="soft"][data-md="dark"]{--k-page:color-mix(in oklab,var(--k-brand) 10%,#101012);--k-ps:color-mix(in oklab,var(--k-brand) 10%,#101012);--k-sf:#1b1b1f;--k-sf2:color-mix(in oklab,var(--k-brand) 22%,#1b1b1f);--k-fg:#f2f2f4;--k-dim:#a6a6b0;--k-line:#2c2c33;--k-ink:#f2f2f4;--k-on-ink:#141416;--k-acc:color-mix(in oklab,var(--k-brand) 52%,#fff);
+ --k-fl-bg:#202025;--k-fl-sh:0 12px 30px -12px rgba(0,0,0,.7);--k-pill-bg:#202025;--k-pill-on:#f2f2f4;--k-pill-on-fg:#141416;--k-in-bg:#1b1b1f;--k-in-bd:#35353c;
+ --k-ph1:color-mix(in oklab,#f4b860 22%,#1b1b1f);--k-ph1f:#f4c27a;--k-ph2:color-mix(in oklab,#8fc7f0 22%,#1b1b1f);--k-ph2f:#9fd0f4;--k-ph3:color-mix(in oklab,#b9e0a5 20%,#1b1b1f);--k-ph3f:#bde3a9;--k-ph4:color-mix(in oklab,var(--k-brand) 30%,#1b1b1f);--k-ph4f:color-mix(in oklab,var(--k-brand) 48%,#fff);--k-hero-ink:#141416}
+
+/* ---------- theme: LIQUID GLASS ---------- */
+[data-th="glow"]{--k-page:radial-gradient(70% 30% at 10% 0%,color-mix(in oklab,var(--k-brand) 17%,transparent),transparent 70%),radial-gradient(60% 30% at 95% 55%,color-mix(in oklab,#7c3aed 10%,transparent),transparent 70%),#f2f2f7;--k-ps:#f2f2f7;
+ --k-sf:#fff;--k-sf2:rgba(120,120,128,.12);--k-fg:#0b0b0f;--k-dim:#5b5b64;--k-line:rgba(60,60,67,.15);--k-ink:#0b0b0f;--k-on-ink:#fff;--k-pri:var(--k-brand);--k-on-pri:#fff;--k-acc:color-mix(in oklab,var(--k-brand) 80%,#000);
+ --k-card-bd:1px solid transparent;--k-card-sh:none;
+ --k-fl-bg:linear-gradient(155deg,rgba(255,255,255,.55),rgba(255,255,255,0) 36%,rgba(255,255,255,0) 70%,rgba(255,255,255,.22)),rgba(255,255,255,.34);--k-fl-bd:1px solid rgba(255,255,255,.8);
+ --k-fl-sh:inset 0 1px 1px rgba(255,255,255,.95),inset 0 -1px 1px rgba(255,255,255,.35),0 14px 34px -12px rgba(0,0,0,.28);--k-fl-blur:blur(22px) saturate(200%);
+ --k-hd-bg:rgba(255,255,255,.55);--k-hd-blur:blur(20px) saturate(180%);
+ --k-pill-bg:rgba(255,255,255,.55);--k-pill-bd:1px solid rgba(255,255,255,.85);--k-pill-on:rgba(10,10,14,.86);--k-pill-on-fg:#fff;--k-in-bg:#fff;--k-in-bd:rgba(60,60,67,.2);
+ --k-g1:linear-gradient(155deg,color-mix(in oklab,var(--k-brand) 55%,#fff) 0%,var(--k-brand) 55%,color-mix(in oklab,var(--k-brand) 50%,#7c3aed) 100%);
+ --k-ph1:var(--k-g1);--k-ph1f:rgba(255,255,255,.94);--k-ph2:linear-gradient(200deg,color-mix(in oklab,var(--k-brand) 35%,#f59e0b),color-mix(in oklab,var(--k-brand) 50%,#ec4899));--k-ph2f:rgba(255,255,255,.94);
+ --k-ph3:linear-gradient(170deg,color-mix(in oklab,var(--k-brand) 40%,#22d3ee),color-mix(in oklab,var(--k-brand) 60%,#1e3a8a));--k-ph3f:rgba(255,255,255,.94);--k-ph4:linear-gradient(140deg,color-mix(in oklab,var(--k-brand) 30%,#fde68a),color-mix(in oklab,var(--k-brand) 72%,#000));--k-ph4f:rgba(255,255,255,.94);
+ --k-r-card:24px;--k-r-img:22px;--k-r-btn:999px;--k-r-in:14px;--k-r-pill:999px;--k-r-dock:999px;--k-r-sheet:38px;--k-r-ibtn:999px;
+ --k-font:'Geist','Noto Sans Georgian',system-ui,sans-serif;--k-font-d:var(--k-font);--k-font-m:var(--k-font);--k-w-t:700;--k-ic-w:1.9;
+ --k-hero:var(--k-g1);--k-hero-fg:#fff;--k-hero-ink:#0b0b0f;--k-ring:conic-gradient(from 210deg,var(--k-brand),#7c3aed,color-mix(in oklab,var(--k-brand) 40%,#ec4899),var(--k-brand));--k-pc-bg:transparent;--k-pc-pad:0;--k-pc-bd:0 solid transparent}
+[data-th="glow"][data-md="dark"]{--k-page:radial-gradient(70% 30% at 10% 0%,color-mix(in oklab,var(--k-brand) 26%,transparent),transparent 70%),radial-gradient(60% 30% at 95% 55%,color-mix(in oklab,#7c3aed 18%,transparent),transparent 70%),#000;--k-ps:#000;
+ --k-sf:#1c1c1e;--k-sf2:rgba(118,118,128,.24);--k-fg:#fff;--k-dim:#a9a9b3;--k-line:rgba(84,84,88,.62);--k-ink:#fff;--k-on-ink:#000;--k-acc:color-mix(in oklab,var(--k-brand) 50%,#fff);
+ --k-fl-bg:linear-gradient(155deg,rgba(255,255,255,.18),rgba(255,255,255,0) 36%,rgba(255,255,255,0) 70%,rgba(255,255,255,.08)),rgba(44,44,48,.4);--k-fl-bd:1px solid rgba(255,255,255,.18);
+ --k-fl-sh:inset 0 1px 1px rgba(255,255,255,.35),inset 0 -1px 1px rgba(255,255,255,.08),0 14px 34px -12px rgba(0,0,0,.85);--k-hd-bg:rgba(20,20,22,.55);
+ --k-pill-bg:rgba(60,60,66,.55);--k-pill-bd:1px solid rgba(255,255,255,.14);--k-pill-on:rgba(255,255,255,.94);--k-pill-on-fg:#000;--k-in-bg:#1c1c1e;--k-in-bd:rgba(84,84,88,.8)}
+
+/* ---------- theme: NEON ---------- */
+[data-th="neon"]{--k-neon:color-mix(in oklab,var(--k-brand) 55%,#7dffe0);--k-neon2:#ff3df2;--k-on-neon:#05050a;--k-on-neon2:#05050a;--k-grid:rgba(120,140,255,.075);
+ --k-page:radial-gradient(90% 32% at 50% 0%,color-mix(in oklab,var(--k-neon) 16%,transparent),transparent 70%),linear-gradient(var(--k-grid) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,var(--k-grid) 1px,transparent 1px) 0 0/24px 24px,#07070b;--k-ps:#07070b;
+ --k-sf:#0d0d15;--k-sf2:#151520;--k-fg:#e8efff;--k-dim:#8f98b3;--k-line:rgba(150,170,255,.15);--k-ink:var(--k-neon);--k-on-ink:var(--k-on-neon);--k-pri:var(--k-neon);--k-on-pri:var(--k-on-neon);--k-acc:var(--k-neon);
+ --k-card-bd:1px solid color-mix(in oklab,var(--k-neon) 26%,transparent);--k-card-sh:0 0 22px -12px color-mix(in oklab,var(--k-neon) 70%,transparent);
+ --k-fl-bg:rgba(8,8,14,.9);--k-fl-bd:1px solid color-mix(in oklab,var(--k-neon) 38%,transparent);--k-fl-sh:0 0 24px -8px color-mix(in oklab,var(--k-neon) 55%,transparent);--k-fl-blur:blur(10px);--k-hd-bg:rgba(8,8,14,.86);--k-hd-blur:blur(10px);
+ --k-pill-bg:transparent;--k-pill-bd:1px solid color-mix(in oklab,var(--k-neon) 34%,transparent);--k-pill-on:var(--k-neon);--k-pill-on-fg:var(--k-on-neon);--k-in-bg:#0b0b12;--k-in-bd:color-mix(in oklab,var(--k-neon) 34%,transparent);
+ --k-scan:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px);
+ --k-ph1:var(--k-scan),radial-gradient(circle at 50% 62%,color-mix(in oklab,var(--k-neon) 30%,transparent),transparent 62%),#12121c;--k-ph1f:var(--k-neon);
+ --k-ph2:var(--k-scan),radial-gradient(circle at 50% 62%,color-mix(in oklab,var(--k-neon2) 30%,transparent),transparent 62%),#12121c;--k-ph2f:var(--k-neon2);
+ --k-ph3:var(--k-ph1);--k-ph3f:var(--k-neon);--k-ph4:var(--k-ph2);--k-ph4f:var(--k-neon2);
+ --k-r-card:6px;--k-r-img:4px;--k-r-btn:4px;--k-r-in:4px;--k-r-pill:4px;--k-r-dock:12px;--k-r-sheet:14px;--k-r-ibtn:8px;
+ --k-font:'Geist','Noto Sans Georgian',system-ui,sans-serif;--k-font-d:'Chakra Petch','Noto Sans Georgian',system-ui,sans-serif;--k-font-m:'JetBrains Mono','Noto Sans Georgian',ui-monospace,monospace;--k-w-t:700;--k-ic-w:1.6;
+ --k-hero:linear-gradient(160deg,color-mix(in oklab,var(--k-neon2) 34%,#0a0a12) 0%,#0a0a12 55%,color-mix(in oklab,var(--k-neon) 24%,#0a0a12) 100%);--k-hero-fg:#e8efff;--k-hero-ink:var(--k-neon);--k-ring:linear-gradient(135deg,var(--k-neon),var(--k-neon2));
+ --k-pc-bg:var(--k-sf);--k-pc-pad:5px 5px 10px;--k-pc-bd:1px solid color-mix(in oklab,var(--k-neon) 24%,transparent)}
+[data-th="neon"][data-md="light"]{--k-neon:color-mix(in oklab,var(--k-brand) 78%,#0066ff);--k-neon2:#c0108f;--k-on-neon:#fff;--k-on-neon2:#fff;--k-grid:rgba(20,40,120,.06);
+ --k-page:radial-gradient(90% 32% at 50% 0%,color-mix(in oklab,var(--k-neon) 10%,transparent),transparent 70%),linear-gradient(var(--k-grid) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,var(--k-grid) 1px,transparent 1px) 0 0/24px 24px,#f3f4f8;--k-ps:#f3f4f8;
+ --k-sf:#fff;--k-sf2:#eceef5;--k-fg:#0a0b12;--k-dim:#535a78;--k-line:rgba(20,30,80,.13);--k-card-sh:0 8px 20px -14px color-mix(in oklab,var(--k-neon) 60%,transparent);
+ --k-fl-bg:rgba(255,255,255,.92);--k-fl-sh:0 10px 26px -14px rgba(20,30,80,.35);--k-hd-bg:rgba(255,255,255,.9);--k-in-bg:#fff;
+ --k-ph1:radial-gradient(circle at 50% 62%,color-mix(in oklab,var(--k-neon) 18%,transparent),transparent 62%),#eceef5;--k-ph2:radial-gradient(circle at 50% 62%,color-mix(in oklab,var(--k-neon2) 18%,transparent),transparent 62%),#eceef5;--k-ph3:var(--k-ph1);--k-ph4:var(--k-ph2);
+ --k-hero:linear-gradient(160deg,color-mix(in oklab,var(--k-neon2) 14%,#fff) 0%,#fff 55%,color-mix(in oklab,var(--k-neon) 14%,#fff) 100%);--k-hero-fg:#0a0b12}
+
+/* ---------- theme: ESY (platform, back office, admin) ---------- */
+[data-th="esy"]{--k-page:#f6f6f5;--k-ps:#f6f6f5;--k-sf:#fff;--k-sf2:#f1f1ef;--k-fg:#17171a;--k-dim:#5c5c65;--k-line:#e6e6e9;--k-ink:#17171a;--k-on-ink:#fff;--k-pri:var(--k-brand);--k-on-pri:#fff;--k-acc:color-mix(in oklab,var(--k-brand) 84%,#000);
+ --k-card-bd:1px solid #e8e8eb;--k-card-sh:0 1px 2px rgba(16,16,24,.04);--k-fl-bg:#fff;--k-fl-bd:1px solid #e6e6e9;--k-fl-sh:0 12px 30px -16px rgba(16,16,24,.25);--k-fl-blur:none;--k-hd-bg:#fff;
+ --k-pill-bg:#fff;--k-pill-bd:1px solid #e1e1e6;--k-pill-on:#17171a;--k-pill-on-fg:#fff;--k-in-bg:#fff;--k-in-bd:#d9d9df;
+ --k-ph1:#efece6;--k-ph1f:#b3a089;--k-ph2:#e6ece5;--k-ph2f:#8a9d87;--k-ph3:#ebeaef;--k-ph3f:#9b98a8;--k-ph4:#f2e9e2;--k-ph4f:#c2977d;
+ --k-r-card:16px;--k-r-img:12px;--k-r-btn:12px;--k-r-in:12px;--k-r-pill:999px;--k-r-dock:22px;--k-r-sheet:24px;--k-r-ibtn:12px;
+ --k-font:'Geist','Noto Sans Georgian',system-ui,sans-serif;--k-font-d:var(--k-font);--k-font-m:'JetBrains Mono','Noto Sans Georgian',ui-monospace,monospace;--k-w-t:700;--k-ic-w:1.8;
+ --k-hero:var(--k-brand);--k-hero-fg:#fff;--k-hero-ink:#17171a;--k-ring:var(--k-brand);--k-pc-bg:var(--k-sf);--k-pc-pad:8px 8px 12px;--k-pc-bd:1px solid var(--k-line)}
+[data-th="esy"][data-md="dark"]{--k-page:#0e0e10;--k-ps:#0e0e10;--k-sf:#17171a;--k-sf2:#1f1f23;--k-fg:#ececef;--k-dim:#a2a2ab;--k-line:#2a2a2f;--k-ink:#ececef;--k-on-ink:#111113;--k-acc:color-mix(in oklab,var(--k-brand) 55%,#fff);
+ --k-card-bd:1px solid #26262b;--k-card-sh:none;--k-fl-bg:#1c1c20;--k-fl-bd:1px solid #2c2c32;--k-hd-bg:#141417;--k-pill-bg:#1c1c20;--k-pill-bd:1px solid #2c2c32;--k-pill-on:#ececef;--k-pill-on-fg:#111113;--k-in-bg:#17171a;--k-in-bd:#35353b;
+ --k-ph1:#25221e;--k-ph1f:#9d8d78;--k-ph2:#1f2420;--k-ph2f:#879884;--k-ph3:#222127;--k-ph3f:#8e8b9b;--k-ph4:#271f19;--k-ph4f:#b08b72}
+
+@supports (color:oklch(from red l c h)){
+ [data-th="neon"]{--k-neon:oklch(from var(--k-brand) .86 .19 h);--k-neon2:oklch(from var(--k-brand) .72 .27 calc(h + 130))}
+ [data-th="neon"][data-md="light"]{--k-neon:oklch(from var(--k-brand) .46 .2 h);--k-neon2:oklch(from var(--k-brand) .47 .24 calc(h + 130))}
+ /* White text on light brands (orange, light green, yellow) fails 4.5:1, so the on-colour flips to black past L .596. */
+ [data-th="soft"],[data-th="glow"],[data-th="esy"]{--k-on-pri:oklch(from var(--k-brand) clamp(0,(.596 - l) * 1000,1) 0 0)}
+ /* Heroes carry white text on the brand, so their ground is the brand capped at L .5. */
+ [data-th="soft"],[data-th="esy"]{--k-hero:oklch(from var(--k-brand) min(l,.5) c h)}
+}
+
+/* ---------- the keys TK() returns ---------- */
+[data-th]{
+ --k-bg:var(--k-page);--k-bg2:var(--k-ps);--k-surface:var(--k-sf);--k-surface2:var(--k-sf2);
+ --k-border:var(--k-line);--k-border-str:color-mix(in oklab,var(--k-fg) 18%,transparent);
+ --k-text:var(--k-fg);--k-text-dim:var(--k-dim);--k-text-mute:var(--k-dim);
+ --k-accent:var(--k-pri);--k-accent-fg:var(--k-acc);--k-accent-bg:color-mix(in oklab,var(--k-pri) 14%,transparent);
+ --k-grad:var(--k-pri);
+ --k-success:var(--k-ok);--k-success-fg:var(--k-ok);--k-success-bg:var(--k-ok-bg);
+ --k-warn-fg:var(--k-warn);--k-danger:var(--k-bad);--k-danger-fg:var(--k-bad);--k-danger-bg:var(--k-bad-bg);
+ --k-admin:#0f766e;--k-admin-fg:#0b5d57;--k-admin-bg:color-mix(in oklab,#0f766e 9%,transparent);
+ --k-shadow:0 12px 40px rgba(20,20,60,.10)}
+[data-th][data-md="dark"]{--k-admin-fg:#3fa89f;--k-admin-bg:color-mix(in oklab,#0f766e 22%,transparent);--k-shadow:0 20px 50px rgba(0,0,0,.5)}

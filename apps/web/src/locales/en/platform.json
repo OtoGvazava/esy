@@ -47,7 +47,6 @@
     "heroBodyPost": " — from the first sale to the millionth.",
     "browseStores": "Browse stores",
     "live": "live",
-    "social": "{{makers}} makers · {{paid}} paid out last quarter",
     "exampleStore": "An example esy store",
     "orderPing": "+48 ₾ order · 32s ago",
     "howItWorks": "How it works",
@@ -67,7 +66,10 @@
     "feeMonthly": "Monthly fee",
     "feeCommission": "Commission",
     "h4": "Get paid",
-    "h4d": "Money goes straight to your bank account. esy takes 2% of a sale and never holds the rest."
+    "h4d": "Money goes straight to your bank account. esy takes 2% of a sale and never holds the rest.",
+    "factFree": "Free to open",
+    "factFee": "2% of each sale",
+    "factCards": "Card payments"
   },
   "directory": {
     "storeCount": "{{n}} shops · live",

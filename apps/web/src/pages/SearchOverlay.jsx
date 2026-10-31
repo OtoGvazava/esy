@@ -67,7 +67,7 @@ export default function SearchOverlay() {
         </div>
 
         <div style={{ padding: '14px 18px 0' }}>
-          <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>{t('search.quickFilters')}</div>
+          <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.12em', marginBottom: 10 }}>{t('search.quickFilters')}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {QUICK.map((s) => (
               <span key={s.id} onClick={() => run(s.label)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 999, background: T.surface, border: `1px solid ${T.border}`, font: `500 12.5px ${T.font}`, color: T.text, cursor: 'pointer' }}>
@@ -80,13 +80,13 @@ export default function SearchOverlay() {
 
         {recent.length > 0 && (
           <div style={{ padding: '20px 18px 0' }}>
-            <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>{t('search.recent')}</div>
+            <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.12em', marginBottom: 10 }}>{t('search.recent')}</div>
             {recent.map((r) => <Row key={r} T={T} icon={<Icon.search />} primary={r} meta={t('search.recentMeta')} onClick={() => run(r)} />)}
           </div>
         )}
 
         <div style={{ padding: '20px 18px 0' }}>
-          <div style={{ font: `600 10.5px ${T.font}`, color: T.textMute, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>{t('search.trending', { name: tenant.name })}</div>
+          <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.12em', marginBottom: 10 }}>{t('search.trending', { name: tenant.name })}</div>
           {TRENDING.map((r) => <Row key={r.id} T={T} icon={<Icon.spark />} primary={r.label} meta={t('search.popularMeta')} onClick={() => run(r.label)} />)}
         </div>
       </div>

@@ -130,7 +130,7 @@ export default function ManagerTeam() {
                 }}>
                   {m.email}
                   {isSelf && (
-                    <span style={{ marginLeft: 7, font: `600 10.5px ${T.font}`, color: T.textMute }}>
+                    <span style={{ marginLeft: 7, font: `600 11px ${T.font}`, color: T.textMute }}>
                       · {t('team.you')}
                     </span>
                   )}

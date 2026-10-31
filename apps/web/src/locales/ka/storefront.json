@@ -38,7 +38,7 @@
   },
   "checkout": {
     "title": "გადახდა",
-    "emptyBag": "შენი ჩანთა ცარიელია.",
+    "emptyBag": "შენი კალათა ცარიელია.",
     "browse": "დაათვალიერე {{name}}",
     "stepContact": "კონტაქტი",
     "stepShipping": "მიწოდება",

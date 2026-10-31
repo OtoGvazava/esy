@@ -2,6 +2,7 @@
 // Shared Glow page chrome — adapts the prototype's absolute-positioned
 // ScreenShell/TopNav/StickyCTA to a normal scrolling page above the fixed dock.
 import { Icon } from './GlowPrimitives';
+import { alpha } from '../../core/tokens';
 
 // Platform currency is GEL (₾) for every store.
 //
@@ -15,13 +16,23 @@ export { money } from '../../core/money';
 
 export function GlowScreen({ T, children, padBottom = 120 }) {
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}`, paddingBottom: padBottom }}>
+    <div style={{ position: 'relative', minHeight: '100vh', background: T.page, color: T.text, font: `400 14px ${T.font}`, paddingBottom: padBottom }}>
       {children}
     </div>
   );
 }
 
 export function GlowTopNav({ T, title, onBack, right }) {
+  // A tab's own screen (bag, orders, account) has no back button: the tab bar
+  // is the way back, so it takes the design's large title instead (E3, C1).
+  if (!onBack) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '28px 16px 8px', maxWidth: 1100, margin: '0 auto' }}>
+        <h1 style={{ flex: 1, minWidth: 0, margin: 0, font: `700 28px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{title}</h1>
+        {right}
+      </div>
+    );
+  }
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 16px 8px', maxWidth: 1100, margin: '0 auto' }}>
       <button
@@ -47,11 +58,11 @@ export function GlowStickyCTA({ T, label, sub, onClick, disabled }) {
           disabled={disabled}
           style={{
             width: '100%', height: 54, borderRadius: 16, border: 'none',
-            background: disabled ? T.surface2 : T.grad, color: disabled ? T.textMute : '#fff',
+            background: disabled ? T.surface2 : T.grad, color: disabled ? T.textMute : T.onAccent,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             font: `700 14.5px ${T.font}`, letterSpacing: '-0.01em',
             cursor: disabled ? 'not-allowed' : 'pointer',
-            boxShadow: disabled ? 'none' : `0 10px 28px ${T.accent}55`,
+            boxShadow: disabled ? 'none' : `0 10px 28px ${alpha(T.accent, 0.33)}`,
           }}
         >
           <span>{label}</span>

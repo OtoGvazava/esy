@@ -29,5 +29,6 @@
   "tagSale": "sale",
   "soldOutTitle": "This item is sold out.",
   "soldOutBody": "Ask the shop when it comes back — most items return within a week.",
-  "browseStore": "Browse the shop"
+  "browseStore": "Browse the shop",
+  "addToBagShort": "Add to bag"
 }

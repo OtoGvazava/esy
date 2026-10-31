@@ -1,5 +1,5 @@
 import { useContext, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { platformUrl } from './utils/hosts';
 import Home from './pages/Home';
 import ProductDetails from './pages/ProductDetails';
@@ -29,6 +29,9 @@ import AdminShell from './admin/AdminShell';
 import { useAppTheme } from './hooks/useAppTheme';
 import { usePlatformHost, isManagerHost, isAdminHost } from './hooks/usePlatformHost';
 import { ThemeModeProvider } from './contexts/ThemeModeContext';
+import { safeAccent, PLATFORM_BRAND, ADMIN_BRAND } from './core/tokens';
+
+const STORE_THEMES = ['soft', 'glow', 'neon'];
 
 /** Leaves the SPA for another host. react-router only moves within one. */
 function GoTo({ href }) {
@@ -45,6 +48,9 @@ function AppShell() {
   // phone shape, so a desktop shopper got a dock and no search or cart.
   const { isMobile } = useDevice();
   const { tenant, loading } = useContext(TenantContext);
+  // A product page carries its own buy bar where the dock would sit.
+  const { pathname } = useLocation();
+  const dock = isMobile && !pathname.startsWith('/product/');
 
   // A suspended shop is closed to shoppers (D15). Nothing below this line
   // renders — not the bar, not the dock, not a single route — because a
@@ -81,10 +87,31 @@ function AppShell() {
             around an empty middle. */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      {isMobile && <GlowDock />}
+      {dock && <GlowDock />}
       <ProfileGate />
     </>
   );
+}
+
+// Puts the active theme on <html>, where styles/themes.css keys every token:
+// data-th is `esy` on the platform, manager and admin hosts and the store's
+// theme on a storefront (Liquid Glass until a store picks another), data-md is
+// light or dark, and --k-brand is the colour the theme draws its accent from —
+// the store's own, esy blue on the platform, teal on admin.
+function ThemeRoot({ mode }) {
+  const platform = usePlatformHost();
+  const { tenant } = useContext(TenantContext);
+  const admin = isAdminHost();
+  const store = !admin && !isManagerHost() && !platform;
+  const th = store ? (STORE_THEMES.includes(tenant?.design?.theme) ? tenant.design.theme : 'glow') : 'esy';
+  const brand = admin ? ADMIN_BRAND : platform ? PLATFORM_BRAND : safeAccent(tenant?.primaryColor);
+  useEffect(() => {
+    const el = document.documentElement;
+    el.dataset.th = th;
+    el.dataset.md = mode === 'dark' ? 'dark' : 'light';
+    el.style.setProperty('--k-brand', brand);
+  }, [th, mode, brand]);
+  return null;
 }
 
 // esy.ge → platform front door; manager.esy.ge → back office;
@@ -102,6 +129,7 @@ function App() {
     <Router>
       <AppProviders theme={theme} mode={mode}>
         <ThemeModeProvider value={{ mode, toggle: toggleTheme, setMode, language, setLanguage }}>
+          <ThemeRoot mode={mode} />
           <Shell />
         </ThemeModeProvider>
       </AppProviders>

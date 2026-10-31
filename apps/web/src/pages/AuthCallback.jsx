@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
+import { alpha } from '../core/tokens';
 
 // Landing point after Google OAuth. The backend has already set the HttpOnly
 // esy_token cookie (Domain=esy.ge) before redirecting here; we only reach this
@@ -34,15 +35,15 @@ export default function AuthCallback() {
       <div style={{
         position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)',
         width: 320, height: 320, borderRadius: '50%',
-        background: `radial-gradient(circle, ${T.accent}40, transparent 60%)`,
+        background: `radial-gradient(circle, ${alpha(T.accent, 0.25)}, transparent 60%)`,
         filter: 'blur(40px)', pointerEvents: 'none',
       }} />
       <div style={{
         position: 'relative', width: 64, height: 64, borderRadius: 20,
-        background: T.grad, color: '#fff',
+        background: T.grad, color: T.onAccent,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         font: `800 28px ${T.font}`, letterSpacing: '-0.04em',
-        boxShadow: `0 16px 36px ${T.accent}55`,
+        boxShadow: `0 16px 36px ${alpha(T.accent, 0.33)}`,
       }}>e</div>
       <div style={{ position: 'relative', font: `700 18px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>
         {t('authCallback.signingIn')}

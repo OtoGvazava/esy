@@ -12,10 +12,11 @@ import { Icon, Placeholder, PoweredBy } from '../components/glow/GlowPrimitives'
 import { money } from '../components/glow/GlowChrome';
 import GlowProductCard from '../components/glow/GlowProductCard';
 import VariantPicker from '../components/store/VariantPicker';
+import { alpha } from '../core/tokens';
 
 function iconBtn(T) {
   return {
-    width: 38, height: 38, borderRadius: 12, border: 'none',
+    width: 44, height: 44, borderRadius: 'var(--k-r-ibtn)', border: 'none',
     background: T.dark ? 'rgba(10,10,18,0.55)' : 'rgba(255,255,255,0.78)',
     backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
     color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -107,7 +108,7 @@ export default function ProductDetails() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: T.page, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${T.accent}`, borderTopColor: 'transparent', animation: 'glow-spin 1s linear infinite' }} />
         <style>{'@keyframes glow-spin{to{transform:rotate(360deg)}}'}</style>
       </div>
@@ -116,9 +117,9 @@ export default function ProductDetails() {
 
   if (error || !product) {
     return (
-      <div style={{ minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
+      <div style={{ minHeight: '100vh', background: T.page, color: T.text, font: `400 14px ${T.font}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
         <div style={{ font: `700 18px ${T.font}` }}>{error || t('productNotFound')}</div>
-        <button onClick={() => navigate('/')} style={{ height: 44, padding: '0 20px', borderRadius: 999, border: 'none', background: T.grad, color: '#fff', font: `600 13px ${T.font}`, cursor: 'pointer' }}>{t('backToShop')}</button>
+        <button onClick={() => navigate('/')} style={{ height: 44, padding: '0 20px', borderRadius: 999, border: 'none', background: T.grad, color: T.onAccent, font: `600 13px ${T.font}`, cursor: 'pointer' }}>{t('backToShop')}</button>
       </div>
     );
   }
@@ -128,7 +129,7 @@ export default function ProductDetails() {
   const inStock = pickedStock > 0;
   const imageBlock = (
     <div>
-    <div style={{ position: 'relative', height: isMobile ? 460 : 520, borderRadius: isMobile ? 0 : 20, overflow: 'hidden' }}>
+    <div style={{ position: 'relative', height: isMobile ? 460 : 520, borderRadius: isMobile ? '0 0 28px 28px' : 20, overflow: 'hidden' }}>
       {imgOk ? (
         <img src={heroImg} alt={product.title} onError={() => setImgOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
@@ -164,7 +165,7 @@ export default function ProductDetails() {
 
   const info = (
     <div style={{ padding: isMobile ? '18px 20px 0' : 0 }}>
-      <div style={{ font: `500 11px ${T.font}`, color: T.accentFg, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 8, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ font: `500 11px ${T.font}`, color: T.accentFg, letterSpacing: '0.14em', marginBottom: 8, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
         <Icon.pin /> {tenant.name}
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, marginBottom: 8 }}>
@@ -253,7 +254,7 @@ export default function ProductDetails() {
           above — a tablet showed neither before this. */}
       {!isMobile && inStock && (
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={addAndOpenCart} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: T.grad, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55` }}>
+          <button onClick={addAndOpenCart} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: T.grad, color: T.onAccent, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${alpha(T.accent, 0.33)}` }}>
             <Icon.bag /> {t('addToBag', { price: money(shownPrice) })}
           </button>
         </div>
@@ -262,7 +263,7 @@ export default function ProductDetails() {
   );
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}`, paddingBottom: isMobile ? 200 : 120 }}>
+    <div style={{ position: 'relative', minHeight: '100vh', background: T.page, color: T.text, font: `400 14px ${T.font}`, paddingBottom: isMobile ? 200 : 120 }}>
       <div style={{ maxWidth: isMobile ? '100%' : 1100, margin: '0 auto', padding: isMobile ? 0 : '28px 40px 0' }}>
         <div style={{ display: isMobile ? 'block' : 'grid', gridTemplateColumns: isMobile ? undefined : isDesktop ? '1.05fr 1fr' : '1fr 1fr', gap: isDesktop ? 44 : 26 }}>
           {imageBlock}
@@ -284,11 +285,20 @@ export default function ProductDetails() {
         <div style={{ padding: isMobile ? '24px 20px 0' : '28px 0 0' }}><PoweredBy T={T} /></div>
       </div>
 
-      {/* mobile sticky CTA — sits above the global dock */}
+      {/* The phone's buy bar takes the tab bar's place on this screen (the
+          design's A4): a floating bar with the price on the left and the one
+          action on the right. App.jsx hides the dock on product pages. */}
       {isMobile && inStock && (
-        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 92, padding: '14px 16px', background: T.bg, borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 10, zIndex: 1100 }}>
-          <button onClick={addAndOpenCart} style={{ flex: 1, height: 54, borderRadius: 16, border: 'none', background: T.grad, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, font: `700 14.5px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${T.accent}55` }}>
-            <Icon.bag /> {t('addToBag', { price: money(shownPrice) })}
+        <div style={{
+          position: 'fixed', left: 12, right: 12, bottom: 12, zIndex: 1100,
+          display: 'flex', alignItems: 'center', gap: 12, padding: '8px 8px 8px 18px',
+          borderRadius: 'var(--k-r-dock)', background: 'var(--k-fl-bg)', border: 'var(--k-fl-bd)',
+          backdropFilter: 'var(--k-fl-blur, none)', WebkitBackdropFilter: 'var(--k-fl-blur, none)',
+          boxShadow: 'var(--k-fl-sh)',
+        }}>
+          <span style={{ flex: 1, minWidth: 0, font: `700 17px ${T.font}`, color: T.text, whiteSpace: 'nowrap' }}>{money(shownPrice)}</span>
+          <button onClick={addAndOpenCart} style={{ height: 50, padding: '0 22px', borderRadius: 'var(--k-r-btn)', border: 'none', background: T.grad, color: T.onAccent, display: 'flex', alignItems: 'center', gap: 8, font: `700 14.5px ${T.font}`, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <Icon.bag /> {t('addToBagShort')}
           </button>
         </div>
       )}

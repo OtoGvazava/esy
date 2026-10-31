@@ -1,6 +1,7 @@
 // Design tokens and pure style helpers, ported from the Claude Design project's
 // esy-core.jsx (its TK token factory, mixHex, track, and the canvas size
-// constants). Colour values are reproduced verbatim; only the module shape is
+// constants). Colour values now live in styles/themes.css, ported from the
+// "esy Full Design" kit; only the module shape is
 // adapted — ESM named exports, no canvas harness, no design-local string table,
 // no fixtures. This sits BESIDE the existing glowTokens() in ../styles/glow.js
 // and does not replace it; see the port notes for where the two disagree.
@@ -37,10 +38,38 @@ export const DEFAULT_ACCENT = '#6366f1';
 // The design's type stacks, named so they can be applied outside a TK() call —
 // MUI's createTheme needs the same family, or every Button, TextField and
 // Dialog falls back to MUI's default Roboto while the surrounding inline-styled
-// markup uses this. Noto Sans Georgian leads because Georgian is the default
-// language; both faces are loaded in index.html.
-export const FONT = "'Noto Sans Georgian', 'Inter', -apple-system, system-ui, sans-serif";
+// markup uses this. Geist draws Latin and Noto Sans Georgian draws Mkhedruli
+// (Geist has no Georgian glyphs, so each letter falls through to the face that
+// has it); both are loaded in index.html. Inline styles read the theme's own
+// stack through T.font, because Soft leads with Noto for Latin too.
+export const FONT = "'Geist', 'Noto Sans Georgian', -apple-system, system-ui, sans-serif";
 export const MONO = "ui-monospace, 'SF Mono', Menlo, monospace";
+
+// The platform's own colour (esy.ge), and administration teal (admin.esy.ge).
+export const PLATFORM_BRAND = '#2b59ff';
+export const ADMIN_BRAND = '#0f766e';
+
+// A token colour at `a` opacity (0–1). Tokens are CSS custom properties, so the
+// old `${T.accent}` + hex-alpha suffix produced `var(--k-accent)55`, which is
+// not a colour; color-mix works for a var() and a hex alike.
+export function alpha(color, a) {
+  return `color-mix(in srgb, ${color} ${Math.round(a * 100)}%, transparent)`;
+}
+
+// WCAG relative luminance of a `#rrggbb` colour.
+function luminance(hex) {
+  const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const [r, g, b] = [1, 3, 5].map((i) => lin(parseInt(hex.slice(i, i + 2), 16) / 255));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+// Text colour for a label sitting on `hex`: white while white reaches 4.5:1,
+// otherwise near-black. Orange, light green and yellow brands fail with white,
+// which is why the design's buttons flip their text instead of always being white.
+export function onColor(hex) {
+  const l = luminance(hex);
+  return 1.05 / (l + 0.05) >= 4.5 ? '#ffffff' : '#111113';
+}
 
 // mixHex parses hex pairs positionally, so a malformed accent silently produces
 // `rgb(NaN, NaN, NaN)` for accentFg and a broken gradient. tenant.primaryColor is
@@ -60,39 +89,53 @@ export function safeAccent(value, fallback = DEFAULT_ACCENT) {
   return fallback;
 }
 
-// The design's token factory. `dark` selects the theme, `accent` is the tenant
-// brand colour and must be a 6-digit `#rrggbb` (accentFg and grad run it through
-// mixHex, which parses hex pairs positionally) — pass it through safeAccent first.
-export function TK(dark, accent = DEFAULT_ACCENT) {
+// The design's token factory. Every colour is a CSS custom property that
+// styles/themes.css defines per theme and mode on <html> (data-th, data-md,
+// --k-brand — see ThemeRoot in App.jsx), so a screen follows the active theme
+// without knowing which one it is. `dark` still selects light/dark for the few
+// call sites that branch on it.
+//
+// With no `accent`, the accent keys are the live store colour as the theme draws
+// it (Neon, for one, lights its own neon from the brand). Pass an `accent` only
+// to draw a colour that is NOT the page's own — a colour being picked in a form,
+// or administration teal — and it must be a 6-digit `#rrggbb` (accentFg runs it
+// through mixHex, which parses hex pairs positionally): pass it through
+// safeAccent first.
+export function TK(dark, accent) {
+  const live = accent === undefined;
   return {
-    bg: dark ? '#0a0a12' : '#fafafe',
-    bg2: dark ? '#07070d' : '#f2f2f7',
-    surface: dark ? '#13131e' : '#ffffff',
-    surface2: dark ? '#1a1a28' : '#f3f3fa',
-    border: dark ? 'rgba(255,255,255,0.08)' : 'rgba(15,15,35,0.09)',
-    borderStr: dark ? 'rgba(255,255,255,0.16)' : 'rgba(15,15,35,0.14)',
-    text: dark ? '#f2f2f7' : '#0b0b14',
-    textDim: dark ? 'rgba(242,242,247,0.78)' : 'rgba(11,11,20,0.70)',
-    textMute: dark ? 'rgba(242,242,247,0.58)' : 'rgba(11,11,20,0.60)',
-    accent,
-    accentBg: dark ? `${accent}26` : `${accent}16`,
-    accentFg: dark ? mixHex(accent, '#ffffff', 0.48) : mixHex(accent, '#000000', 0.24),
-    grad: `linear-gradient(135deg, ${accent} 0%, ${mixHex(accent, '#8b5cf6', 0.4)} 100%)`,
-    success: '#3f8a4a',
-    successFg: dark ? '#63b06f' : '#2d6835',
-    successBg: dark ? '#3f8a4a2e' : '#3f8a4a16',
-    warn: '#b45309',
-    warnFg: dark ? '#e0a14f' : '#8a3f06',
-    warnBg: dark ? '#f59e0b2e' : '#f59e0b1f',
-    danger: '#dc2626',
-    dangerFg: dark ? '#f07a7a' : '#b91c1c',
-    dangerBg: dark ? '#dc26262e' : '#dc262614',
-    admin: '#0f766e',
-    adminFg: dark ? '#3fa89f' : '#0b5d57',
-    adminBg: dark ? '#0f766e33' : '#0f766e14',
-    font: FONT,
+    bg: 'var(--k-bg2)',
+    page: 'var(--k-bg)',
+    bg2: 'var(--k-bg2)',
+    surface: 'var(--k-surface)',
+    surface2: 'var(--k-surface2)',
+    border: 'var(--k-border)',
+    borderStr: 'var(--k-border-str)',
+    text: 'var(--k-text)',
+    textDim: 'var(--k-text-dim)',
+    textMute: 'var(--k-text-mute)',
+    accent: live ? 'var(--k-accent)' : accent,
+    onAccent: live ? 'var(--k-on-pri)' : onColor(accent),
+    accentBg: live ? 'var(--k-accent-bg)' : alpha(accent, dark ? 0.15 : 0.09),
+    accentFg: live ? 'var(--k-accent-fg)' : (dark ? mixHex(accent, '#ffffff', 0.48) : mixHex(accent, '#000000', 0.24)),
+    // The design draws primary actions in the solid store colour; the old
+    // brand-to-violet gradient is gone, but the key stays for its call sites.
+    grad: live ? 'var(--k-grad)' : accent,
+    success: 'var(--k-success)',
+    successFg: 'var(--k-success-fg)',
+    successBg: 'var(--k-success-bg)',
+    warn: 'var(--k-warn)',
+    warnFg: 'var(--k-warn-fg)',
+    warnBg: 'var(--k-warn-bg)',
+    danger: 'var(--k-danger)',
+    dangerFg: 'var(--k-danger-fg)',
+    dangerBg: 'var(--k-danger-bg)',
+    admin: ADMIN_BRAND,
+    adminFg: 'var(--k-admin-fg)',
+    adminBg: 'var(--k-admin-bg)',
+    font: 'var(--k-font)',
     mono: MONO,
-    shadow: dark ? '0 20px 50px rgba(0,0,0,0.5)' : '0 12px 40px rgba(20,20,60,0.10)',
+    shadow: 'var(--k-shadow)',
     dark,
   };
 }
