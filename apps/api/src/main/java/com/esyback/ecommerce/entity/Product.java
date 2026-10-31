@@ -66,6 +66,33 @@ public class Product {
         return Boolean.TRUE.equals(hasVariants);
     }
 
+    /** The longest category name a product may carry. */
+    public static final int CATEGORY_MAX = 60;
+
+    /**
+     * The merchant's own grouping, in whatever words and language they type
+     * ("ლარნაკები", "Mugs"): the storefront's category pills and collection
+     * pages are built from these values, so there is no separate category
+     * table to keep in step with the products.
+     *
+     * <p>Nullable, so it can be added to a populated products table, and
+     * because an uncategorised product is a normal product. Stored trimmed and
+     * never blank — see {@link #cleanCategory}.
+     */
+    @Column(name = "category", length = CATEGORY_MAX)
+    private String category;
+
+    /**
+     * A category as typed, made storable: trimmed, and blank read as none.
+     * Length is not checked here — the caller decides whether an overlong
+     * name is a 400 (the editor) or a line in the import report.
+     */
+    public static String cleanCategory(String raw) {
+        if (raw == null) return null;
+        String trimmed = raw.strip();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

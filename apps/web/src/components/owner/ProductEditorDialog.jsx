@@ -6,9 +6,10 @@ import { productApi, handleApiError } from '../../utils/api';
 import VariantEditor from './VariantEditor';
 import GlowModal from './GlowModal';
 import MarkdownField from './MarkdownField';
+import CategoryField from './CategoryField';
 import { glowField, glowLabel, glowPrimaryBtn, glowGhostBtn, glowError } from './glowForm';
 
-const EMPTY = { title: '', description: '', price: '', quantity: '' };
+const EMPTY = { title: '', description: '', price: '', quantity: '', category: '' };
 
 // Glow-styled product add/edit form (matches the store's CreateStore look) +
 // a DB-backed photo gallery. No external image URL — photos are uploaded.
@@ -40,6 +41,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
         description: product.description || '',
         price: product.price?.toString() || '',
         quantity: (product.quantity ?? product.stock ?? '').toString(),
+        category: product.category || '',
       });
       setExisting(product.imageList || []);
     } else {
@@ -109,6 +111,8 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
       description: form.description.trim(),
       price: parseFloat(form.price),
       quantity: parseInt(form.quantity, 10),
+      // Always sent: '' is how the merchant takes a product out of its category.
+      category: form.category.trim(),
     };
     try {
       const saved = isEdit
@@ -181,6 +185,15 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
             if (errors.description) setErrors((p) => ({ ...p, description: '' }));
           }}
           rows={5}
+        />
+      ))}
+
+      {/* The design puts the category with the name and the description:
+          what the product is, before what it costs. */}
+      {fieldWrap('category', t('category.label'), (
+        <CategoryField
+          T={T} value={form.category} disabled={busy} refresh={open}
+          onChange={(v) => setForm((p) => ({ ...p, category: v }))}
         />
       ))}
 

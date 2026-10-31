@@ -25,6 +25,8 @@ public class ProductListDto {
     // added in the last 14 days (store design plan, Phase 3); without the date
     // a card could only invent it.
     private LocalDateTime createdAt;
+    // The merchant's grouping, so a list row can say where a product sits.
+    private String category;
 
     // Constructors
     public ProductListDto() {}
@@ -34,6 +36,8 @@ public class ProductListDto {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 
     public Boolean getHasVariants() { return hasVariants; }
     public void setHasVariants(Boolean hasVariants) { this.hasVariants = hasVariants; }
