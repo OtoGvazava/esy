@@ -1,9 +1,41 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from '@mui/material';
 import { usePlatform, useStores, PTopBar, PFooter, StoreMark, StoreArtStrip, shiftHue } from './PlatformShared';
 import { FEATURED_SUBDOMAINS, storeUrl } from './platformData';
 import { alpha } from '../core/tokens';
 import { Icons } from '../core/icons';
+import { useDevice } from '../contexts/DeviceContext';
+import { lookById } from '../core/design/looks';
+import LookThumb from '../components/design/LookThumb';
+
+// The hero's three looks (the design's O1), one per theme, each in the colour
+// the board draws it with. A tap opens quick setup on that look.
+const HERO_LOOKS = [
+  { id: 'studio', brand: '#d9480f', mode: 'light' },
+  { id: 'social', brand: '#db2777', mode: 'light' },
+  { id: 'sneaker', brand: '#00b3ff', mode: 'dark' },
+];
+
+function HeroLooks({ t, scale, count, onPick }) {
+  const { t: td } = useTranslation('design');
+  return (
+    <div role="group" aria-label={t('landing.looksLabel')} style={{ display: 'flex', justifyContent: 'center', gap: scale < 1 ? 16 : 24 }}>
+      {HERO_LOOKS.slice(0, count).map(({ id, brand, mode }) => {
+        const name = td(`names.${id}`);
+        return (
+          <button
+            key={id} type="button" onClick={() => onPick(id)}
+            aria-label={t('landing.lookOpen', { name })} title={name}
+            style={{ display: 'block', padding: 0, border: 0, background: 'none', cursor: 'pointer', borderRadius: 28 * scale }}
+          >
+            <LookThumb design={lookById(id).design} brand={brand} mode={mode} scale={scale} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function HowStep({ T, n, title, body }) {
   return (
@@ -41,14 +73,17 @@ function FeaturedChip({ T, store, onClick }) {
 }
 
 export default function PlatformLanding() {
-  const { T, dark, isDesktop } = usePlatform();
+  const { T, isDesktop } = usePlatform();
   const { t } = useTranslation('platform');
   const navigate = useNavigate();
   const { stores } = useStores();
   const list = stores || [];
   const bySub = Object.fromEntries(list.map((s) => [s.subdomain, s]));
   const featured = FEATURED_SUBDOMAINS.map((s) => bySub[s]).filter(Boolean).concat(list).slice(0, 8);
-  const f0 = featured[0];
+  // The looks sit beside the hero's words where three full-size thumbnails
+  // leave the words room, and under them otherwise; a phone shows two, smaller.
+  const { isMobile } = useDevice();
+  const side = useMediaQuery('(min-width:1280px)') && isDesktop;
 
   const pad = isDesktop ? '0 56px' : '0 22px';
 
@@ -64,7 +99,7 @@ export default function PlatformLanding() {
           background: `radial-gradient(50% 70% at 50% 30%, ${alpha(T.accent, 0.22)}, transparent 70%), radial-gradient(40% 60% at 80% 40%, ${alpha(shiftHue(T.accent, 25), 0.19)}, transparent 70%)`,
           filter: 'blur(40px)', pointerEvents: 'none',
         }} />
-        <div style={{ position: 'relative', display: isDesktop ? 'grid' : 'block', gridTemplateColumns: '1.2fr 1fr', gap: 48, alignItems: 'center' }}>
+        <div style={{ position: 'relative', display: side ? 'grid' : 'block', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 48, alignItems: 'center' }}>
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `600 11px ${T.font}`, letterSpacing: '0.1em', marginBottom: 22 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.accent }} />
@@ -107,41 +142,14 @@ export default function PlatformLanding() {
             </div>
           </div>
 
-          {isDesktop && f0 && (
-            <div style={{ position: 'relative' }}>
-              <div style={{ background: T.surface, borderRadius: 22, border: `1px solid ${T.border}`, padding: '18px 18px 20px', boxShadow: dark ? '0 24px 60px rgba(0,0,0,0.45)' : '0 24px 60px rgba(20,20,60,0.10)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f57' }} />
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#febc2e' }} />
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840' }} />
-                  <div style={{ flex: 1, marginLeft: 12, height: 30, borderRadius: 8, background: T.surface2, display: 'flex', alignItems: 'center', padding: '0 12px', font: `500 12px ${T.mono}`, color: T.textDim }}>
-                    <span style={{ color: T.text }}>{f0.subdomain}</span><span>.esy.ge</span>
-                  </div>
-                </div>
-                <div style={{ borderRadius: 16, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.bg }}>
-                  <div style={{ height: 96, position: 'relative', background: `linear-gradient(135deg, ${f0.primaryColor}30 0%, ${(f0.secondaryColor || f0.primaryColor)}20 100%)` }}>
-                    <div style={{ position: 'absolute', inset: 0, background: `repeating-linear-gradient(135deg, ${f0.primaryColor}18 0 14px, transparent 14px 28px)` }} />
-                    <div style={{ position: 'absolute', left: 14, bottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <StoreMark store={f0} size={28} radius={8} />
-                      <div>
-                        <div style={{ font: `700 13px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{f0.name}</div>
-                        <div style={{ font: `500 9.5px ${T.mono}`, color: T.textMute }}>{t('landing.exampleStore')}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ padding: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                    {[0, 1, 2].map((i) => (
-                      <div key={i} style={{ aspectRatio: '1 / 1', borderRadius: 8, background: `repeating-linear-gradient(135deg, ${T.surface2} 0 6px, ${T.bg} 6px 12px)` }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div style={{ position: 'absolute', right: -14, top: -22, padding: '8px 12px', background: T.surface, borderRadius: 12, border: `1px solid ${T.border}`, boxShadow: dark ? '0 8px 24px rgba(0,0,0,0.45)' : '0 8px 24px rgba(20,20,60,0.10)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3f8a4a' }} />
-                <span style={{ font: `700 11px ${T.font}`, color: T.text }}>{t('landing.orderPing')}</span>
-              </div>
-            </div>
-          )}
+          {/* The design's three looks, where an example-store mock used to
+              stand: each opens quick setup with that look picked. */}
+          <div style={side ? undefined : { marginTop: isMobile ? 28 : 40 }}>
+            <HeroLooks
+              t={t} scale={isMobile ? 0.66 : 1} count={isMobile ? 2 : 3}
+              onPick={(id) => navigate(`/sell?look=${encodeURIComponent(id)}`)}
+            />
+          </div>
         </div>
       </div>
 

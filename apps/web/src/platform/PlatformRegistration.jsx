@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { glowTokens, shiftHue } from '../styles/glow';
 import { usePlatform } from './PlatformShared';
@@ -74,7 +74,11 @@ export default function PlatformRegistration() {
   // Quick setup's look (store plan, Phase 5). Shown only when the platform has
   // the design switch on; the API says so on every /api/tenant/current.
   const [designOn, setDesignOn] = useState(false);
-  const [look, setLook] = useState(() => suggestedLooks('')[0].id);
+  // A look picked on the landing page (/sell?look=<id>) is the one the look
+  // step starts on, when the id is one of the looks.
+  const [params] = useSearchParams();
+  const presetLook = lookById(params.get('look'))?.id;
+  const [look, setLook] = useState(() => presetLook || suggestedLooks('')[0].id);
   const [category, setCategory] = useState('');
   useEffect(() => {
     let alive = true;
@@ -84,7 +88,13 @@ export default function PlatformRegistration() {
     return () => { alive = false; };
   }, []);
   // A new category brings its own three looks; start on the first of them.
-  useEffect(() => { setLook(suggestedLooks(category)[0].id); }, [category]);
+  // Only a change counts: the first run keeps the look the step started on.
+  const lookCategory = useRef(category);
+  useEffect(() => {
+    if (lookCategory.current === category) return;
+    lookCategory.current = category;
+    setLook(suggestedLooks(category)[0].id);
+  }, [category]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [created, setCreated] = useState(null);

@@ -3,6 +3,10 @@ import { createContext, useContext, useReducer } from 'react';
 
 const CartContext = createContext();
 
+// Exported so a store preview (components/design/StorePreview) can give the
+// store's menus an empty bag that nothing writes to; the app uses useCart().
+export { CartContext };
+
 /**
  * A cart line is identified by the product AND the chosen variant (D11), not
  * by the product alone. Two sizes of one shirt are two lines: merging them

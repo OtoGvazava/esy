@@ -30,8 +30,8 @@ import schema from '../core/design/schema.json';
 import { normalizeDesign } from '../core/design/normalize';
 import { lookById } from '../core/design/looks';
 import LookPicker from '../components/design/LookPicker';
-import LookThumb from '../components/design/LookThumb';
-import { tenantApi } from '../utils/api';
+import StorePreview from '../components/design/StorePreview';
+import { productApi, tenantApi } from '../utils/api';
 import { designChanges, designJson, liveDesign, sameDesign, savedDesign } from './designDraft';
 import { DiscardDialog, PreviewDialog, PublishDialog } from './DesignDialogs';
 import { DesignCoverSection, DesignShowRows } from './DesignSections';
@@ -268,6 +268,18 @@ export default function ManagerDesign() {
     return () => ac.abort();
   }, [authLoading, isStoreOwner, sub, cacheKey, reloadKey]);
 
+  // The preview draws the store's own products: the first page buyers see.
+  // A store without any, or a list that fails to load, gets example products.
+  const [catalogue, setCatalogue] = useState(null); // { items, total }; null while loading
+  useEffect(() => {
+    const ac = new AbortController();
+    setCatalogue(null);
+    productApi.list({ page: 0, size: 12, signal: ac.signal })
+      .then((r) => { if (!ac.signal.aborted) setCatalogue({ items: r.products, total: r.totalElements }); })
+      .catch((e) => { if (!ac.signal.aborted && e?.name !== 'AbortError') setCatalogue({ items: [], total: 0 }); });
+    return () => ac.abort();
+  }, [sub]);
+
   const saved = useMemo(() => (view ? savedDesign(view) : null), [view]);
   const live = useMemo(() => (view ? liveDesign(view) : null), [view]);
   const dirty = !!(edit && saved && !sameDesign(edit, saved));
@@ -282,7 +294,7 @@ export default function ManagerDesign() {
   const brand = edit?.colours?.primary ? safeAccent(edit.colours.primary, accent) : accent;
   const mode = dark ? 'dark' : 'light';
   const side = !isMobile && width >= 640;
-  const scale = width >= 860 ? 1.4 : 1.1;
+  const previewW = width >= 860 ? 300 : 240;
   const host = `${sub || tenant?.subdomain || ''}.esy.ge`;
 
   // Keep unsaved edits across a settings-tab switch; drop them once saved.
@@ -539,6 +551,20 @@ export default function ManagerDesign() {
                   label={(id) => t(`layout.${id}`)} onChange={(id) => setKey('productLayout', id)}
                 />
               </Group>
+              <Group T={T} label={t('editor.density.title')}>
+                <Seg
+                  T={T} options={schema.options['style.density']} value={edit.style.density}
+                  label={(id) => t(`editor.density.${id}`)}
+                  onChange={(id) => change({ ...edit, style: { ...edit.style, density: id } })}
+                />
+              </Group>
+              <Group T={T} label={t('editor.icon.title')}>
+                <Seg
+                  T={T} options={schema.options['style.icon']} value={edit.style.icon}
+                  label={(id) => t(`editor.icon.${id}`)}
+                  onChange={(id) => change({ ...edit, style: { ...edit.style, icon: id } })}
+                />
+              </Group>
               <Group T={T} label={t('editor.header')}>
                 <Seg
                   T={T} options={HEADERS} value={edit.header}
@@ -561,13 +587,17 @@ export default function ManagerDesign() {
         </div>
 
         {side && (
-          <div style={{ width: 200 * scale + 10, flex: 'none', position: 'sticky', top: 16 }}>
+          <div style={{ width: previewW + 16, flex: 'none', position: 'sticky', top: 16 }}>
             <div style={{ ...labelStyle(T), marginBottom: 12 }}>{previewLabel}</div>
-            <div style={{ padding: 5 }}>
-              <LookThumb design={edit} brand={brand} mode={mode} scale={scale} />
+            {/* The padding is the room the phone's bezel draws in. */}
+            <div style={{ padding: 8 }}>
+              <StorePreview
+                design={edit} tenant={tenant} brand={brand} mode={mode} width={previewW}
+                products={catalogue ? catalogue.items : null} total={catalogue?.total}
+              />
             </div>
             <div style={{ marginTop: 12, font: `400 12px/1.5 ${T.font}`, color: T.textMute }}>
-              {t('editor.previewCaption')}{' '}
+              {catalogue && !catalogue.items.length ? t('editor.previewSample') : t('editor.previewCaption')}{' '}
               <Link to={`/settings/brand${q}`} style={{ color: T.accentFg, fontWeight: 600, textDecoration: 'none' }}>
                 {t('editor.changeColour')}
               </Link>
@@ -663,6 +693,7 @@ export default function ManagerDesign() {
       {dialog === 'preview' && (
         <PreviewDialog
           T={T} isMobile={isMobile} design={edit} brand={brand} mode={mode}
+          tenant={tenant} catalogue={catalogue}
           draft={dirty || hasDraft} q={q} onClose={closeDialog}
         />
       )}

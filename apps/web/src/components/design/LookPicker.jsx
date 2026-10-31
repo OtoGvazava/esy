@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LookThumb from './LookThumb';
-import { LOOKS, groupOf, suggestedLooks } from '../../core/design/looks';
+import { LOOKS, groupOf, lookById, suggestedLooks } from '../../core/design/looks';
 
 function LookCard({ T, t, look, on, brand, mode, scale, onPick, showGroup, flex }) {
   const d = look.design;
@@ -47,7 +47,12 @@ function LookCard({ T, t, look, on, brand, mode, scale, onPick, showGroup, flex 
 export default function LookPicker({ T, category, categoryLabel, value, onChange, brand, mode, isMobile }) {
   const { t } = useTranslation('design');
   const [more, setMore] = useState(false);
-  const three = suggestedLooks(category);
+  // A look picked from the sheet, on the landing page or by the store before
+  // leads the row, so the choice is always in view (the editor's Z3 row
+  // starts with it too).
+  const suggested = suggestedLooks(category);
+  const picked = lookById(value);
+  const three = picked && !suggested.includes(picked) ? [picked, ...suggested.slice(0, 2)] : suggested;
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ font: `700 16px ${T.font}`, color: T.text, marginBottom: 4 }}>{t('look.title')}</div>

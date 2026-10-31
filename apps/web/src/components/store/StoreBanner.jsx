@@ -30,7 +30,10 @@ const CTA = {
   soft: { background: 'var(--k-hero-fg)', color: 'var(--k-hero-ink)' },
 };
 
-export default function StoreBanner() {
+// `products`, when given, is where the banner's product is looked up instead
+// of being loaded: the design editor's preview passes the products it already
+// has, because a preview never fetches.
+export default function StoreBanner({ products } = {}) {
   const design = useDesign();
   const { isMobile, isTablet } = useDevice();
   const { t } = useTranslation('design');
@@ -43,21 +46,23 @@ export default function StoreBanner() {
   const [photoFailed, setPhotoFailed] = useState(null);
 
   useEffect(() => {
-    if (!productId) return undefined;
+    if (!productId || products) return undefined;
     const ac = new AbortController();
     productApi.get(productId, { signal: ac.signal })
       .then((p) => { if (!ac.signal.aborted) setLoaded({ id: productId, product: p }); })
       .catch(() => { if (!ac.signal.aborted) setLoaded({ id: productId, product: null }); });
     return () => ac.abort();
-  }, [productId]);
+  }, [productId, products]);
 
   if (!banner) return null;
 
   const dev = isMobile ? 'ph' : isTablet ? 'tab' : 'desk';
   const size = SIZE[dev];
   const gutter = isMobile ? 16 : 40;
-  const product = productId && loaded?.id === productId ? loaded.product : null;
-  const src = product ? product.thumbnail || product.images?.[0] || null : null;
+  const product = !productId ? null
+    : products ? products.find((p) => String(p.id) === String(productId)) || null
+      : loaded?.id === productId ? loaded.product : null;
+  const src = product ? product.thumbnail || product.image || product.images?.[0] || null : null;
   const photo = src && photoFailed !== src ? src : null;
   const fg = { position: 'relative', maxWidth: '66%', textWrap: 'pretty' };
 
