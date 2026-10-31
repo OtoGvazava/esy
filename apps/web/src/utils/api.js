@@ -119,6 +119,8 @@ const mapListItem = (dto) => ({
   hasVariants: !!dto.hasVariants,
   // The line under the title on a card.
   blurb: dto.blurb || '',
+  // The merchant's own grouping ('' for none): the collection pages and pills.
+  category: dto.category || '',
   // The corner badge. The design also shows "hit" and "new"; both would need
   // sales history or a creation date the list endpoint does not return, and a
   // badge invented from nothing is a claim to a shopper about a real shop. So
@@ -146,7 +148,7 @@ const mapDetail = (dto) => {
     // to delete; empty for legacy URL-only products.
     imageList: gallery,
     imageUrl: dto.imageUrl || '',
-    category: '',
+    category: dto.category || '',
   };
 };
 
@@ -157,6 +159,9 @@ const toBackendProduct = (form) => ({
   imageUrl: Array.isArray(form.images) ? form.images[0] || '' : form.imageUrl || '',
   price: Number(form.price),
   quantity: Number(form.stock ?? form.quantity ?? 0),
+  // Left out when the form has none, which the server reads as "unchanged";
+  // '' clears it.
+  category: form.category,
 });
 
 // ---- Product API ------------------------------------------------------------
@@ -244,6 +249,43 @@ export const productApi = {
 
   importTemplateUrl() {
     return withManagerTenant('/api/products/import/template');
+  },
+
+  // A collection page (A3): one category, narrowed by price, stock and
+  // variant options. `options` is { axisName: [values] }: values on one axis
+  // are alternatives, separate axes must all hold on one combination, and with
+  // inStock that combination must have stock. Same page shape as list().
+  async collection({
+    page = 0, size = 24, category, minPrice, maxPrice, inStock = false,
+    options = {}, sortBy = 'id', sortDir = 'desc', signal,
+  } = {}) {
+    const params = new URLSearchParams({ page: String(page), size: String(size), sortBy, sortDir });
+    if (category) params.set('category', category);
+    if (minPrice != null && minPrice !== '') params.set('minPrice', String(minPrice));
+    if (maxPrice != null && maxPrice !== '') params.set('maxPrice', String(maxPrice));
+    if (inStock) params.set('inStock', 'true');
+    Object.entries(options).forEach(([axis, values]) => {
+      values.forEach((v) => params.append('option', `${axis}:${v}`));
+    });
+    const data = await api.get(`/api/products?${params}`, { signal });
+    const content = data?.content || [];
+    return {
+      products: content.map(mapListItem),
+      hasMore: data ? data.hasNext === true || (data.last === false) : false,
+      totalElements: data?.totalElements ?? content.length,
+    };
+  },
+
+  // The store's categories, most products first: [{ name, count }].
+  categories({ signal } = {}) {
+    return api.get('/api/products/categories', { signal });
+  },
+
+  // The variant axes a category's products offer, as filters:
+  // [{ name, values: [] }]. The whole store's when no category is given.
+  optionFacets(category, { signal } = {}) {
+    const q = category ? `?category=${encodeURIComponent(category)}` : '';
+    return api.get(`/api/products/options${q}`, { signal });
   },
 
   // Variants (D11). The read is public — a shopper must see the sizes before

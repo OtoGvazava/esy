@@ -18,6 +18,8 @@ import StoreHead from '../components/store/StoreHead';
 import { StoreTabs } from '../components/store/StoreMenus';
 import { useStoreBarShown } from '../components/store/storeChrome';
 import { alpha } from '../core/tokens';
+import CategoryPills from '../components/store/CategoryPills';
+import Collection from './Collection';
 
 const PAGE_SIZE = 12;
 
@@ -35,7 +37,7 @@ function useDebouncedValue(value, delayMs) {
 // phone's two-column grid and the phone's type sizes. DeviceContext carries the
 // design's own breakpoints (mobile ≤768 · tablet 769–1024 · desktop ≥1025), so
 // the three-way split comes from there.
-export default function Home() {
+function ShopHome() {
   const { T, tenant } = useGlow();
   const { isMobile, isTablet, isDesktop } = useDevice();
   const navigate = useNavigate();
@@ -228,6 +230,9 @@ export default function Home() {
         </div>
       )}
 
+      {/* The store's categories (A1), each opening its collection. */}
+      {!query && <CategoryPills gutter={gutter} />}
+
       {/* result meta — the sort control sits here, on the row it describes */}
       <div style={{
         position: 'relative', padding: `14px ${gutter}px 6px`,
@@ -352,4 +357,12 @@ export default function Home() {
       </div>
     </div>
   );
+}
+
+// /?category=<name> is that category's collection (A3). It keeps the shop's
+// address, so the menu still marks the shop as the current place, and a link
+// to a filtered collection opens with the same filters.
+export default function Home() {
+  const [params] = useSearchParams();
+  return params.get('category') ? <Collection /> : <ShopHome />;
 }

@@ -33,6 +33,10 @@ public class ProductDto {
 
     private LocalDateTime updatedAt;
 
+    // The merchant's grouping. On update, null (or absent) leaves the stored
+    // category as it is and a blank string clears it — see ProductService.
+    private String category;
+
     // Uploaded gallery (our DB-backed images). `imageUrl` stays the primary
     // thumbnail used everywhere; this is the additive multi-image list.
     private List<ProductImageDto> images;
@@ -49,6 +53,15 @@ public class ProductDto {
         this.quantity = product.getQuantity();
         this.createdAt = product.getCreatedAt();
         this.updatedAt = product.getUpdatedAt();
+        this.category = product.getCategory();
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
     
     // Getters and Setters

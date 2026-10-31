@@ -1,7 +1,10 @@
 package com.esyback.ecommerce.controller;
 
+import com.esyback.ecommerce.dto.CategoryCount;
+import com.esyback.ecommerce.dto.OptionFacet;
 import com.esyback.ecommerce.dto.PagedResponse;
 import com.esyback.ecommerce.dto.ProductDto;
+import com.esyback.ecommerce.dto.ProductFilter;
 import com.esyback.ecommerce.dto.ProductListDto;
 import com.esyback.ecommerce.entity.ProductImage;
 import com.esyback.ecommerce.service.ProductImageService;
@@ -22,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +49,17 @@ public class ProductController {
     @Autowired
     private com.esyback.ecommerce.service.ProductVariantService productVariantService;
     
+    /**
+     * The store's products, a page at a time.
+     *
+     * @param category exactly this category, ignoring case
+     * @param inStock  only products with stock — with {@code option}, stock on
+     *                 the matching combination itself
+     * @param option   {@code <axis>:<value>}, repeatable: values on one axis are
+     *                 alternatives, separate axes must all hold on one
+     *                 combination. Split at the first colon, so a value may
+     *                 contain one.
+     */
     @GetMapping
     public ResponseEntity<PagedResponse<ProductListDto>> getProducts(
             @RequestParam(defaultValue = "0") int page,
@@ -54,14 +69,21 @@ public class ProductController {
             @RequestParam(required = false) String title,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
-            @RequestParam(required = false) Integer quantity) {
-        
-        PagedResponse<ProductListDto> response = productService.getProducts(
-            page, size, sortBy, sortDir, title, minPrice, maxPrice, quantity);
-        
+            @RequestParam(required = false) Integer quantity,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "false") boolean inStock,
+            @RequestParam(name = "option", required = false) List<String> option) {
+
+        ProductFilter filter = new ProductFilter(
+            title == null || title.isBlank() ? null : title.trim(),
+            minPrice, maxPrice, quantity,
+            com.esyback.ecommerce.entity.Product.cleanCategory(category),
+            inStock, options(option));
+        PagedResponse<ProductListDto> response = productService.getProducts(page, size, sortBy, sortDir, filter);
+
         return ResponseEntity.ok(response);
     }
-    
+
     @GetMapping("/search")
     public ResponseEntity<PagedResponse<ProductListDto>> searchProducts(
             @RequestParam(name = "q", defaultValue = "") String q,
@@ -72,9 +94,62 @@ public class ProductController {
 
         String title = q.isBlank() ? null : q.trim();
         PagedResponse<ProductListDto> response = productService.getProducts(
-            page, size, sortBy, sortDir, title, null, null, null);
+            page, size, sortBy, sortDir, ProductFilter.byTitle(title));
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * The store's categories as {@code [{name, count}]}, most products first —
+     * the pills on the storefront's home page. Public, like the list itself.
+     */
+    @GetMapping("/categories")
+    public ResponseEntity<List<CategoryCount>> getCategories() {
+        return ResponseEntity.ok(productService.getCategories());
+    }
+
+    /**
+     * The variant axes the store's products offer, as {@code [{name, values}]}
+     * — the option filters of a collection page. Named for one category when
+     * {@code category} is given, otherwise for the whole store.
+     */
+    @GetMapping("/options")
+    public ResponseEntity<List<OptionFacet>> getOptionFacets(@RequestParam(required = false) String category) {
+        return ResponseEntity.ok(productService.getOptionFacets(category));
+    }
+
+    /** A narrowed axis is one extra join, and a product has at most two axes. */
+    private static final int MAX_OPTION_AXES = 4;
+    private static final int MAX_OPTION_VALUES = 20;
+
+    /**
+     * {@code ["Size:M", "Size:L", "Glaze:Sand"]} as {Size → [M, L], Glaze →
+     * [Sand]}. Malformed entries are skipped rather than refused: a filter link
+     * is something a shopper shares and edits, and the list it opens is still
+     * worth showing.
+     */
+    static Map<String, List<String>> options(List<String> raw) {
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        if (raw == null) return out;
+        for (String entry : raw) {
+            if (entry == null) continue;
+            int colon = entry.indexOf(':');
+            if (colon <= 0) continue;
+            String axis = entry.substring(0, colon).strip();
+            String value = entry.substring(colon + 1).strip();
+            if (axis.isEmpty() || value.isEmpty()) continue;
+            String key = out.keySet().stream().filter(k -> k.equalsIgnoreCase(axis)).findFirst().orElse(null);
+            if (key == null) {
+                if (out.size() >= MAX_OPTION_AXES) continue;
+                key = axis;
+                out.put(key, new ArrayList<>());
+            }
+            List<String> values = out.get(key);
+            if (values.size() < MAX_OPTION_VALUES && values.stream().noneMatch(value::equalsIgnoreCase)) {
+                values.add(value);
+            }
+        }
+        return out;
     }
 
     @GetMapping("/{id}")
@@ -139,9 +214,28 @@ public class ProductController {
         body.put("imported", report.imported());
         body.put("dryRun", report.dryRun());
         body.put("ok", report.ok());
-        body.put("errors", report.errors().stream()
-            .map(e -> Map.<String, Object>of("line", e.line(), "message", e.message()))
-            .toList());
+        // `code` and `value` are what a screen translates; `message` is the
+        // same problem in English, for anything that only prints it.
+        body.put("errors", report.errors().stream().map(e -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("line", e.line());
+            m.put("column", e.column());
+            m.put("code", e.code());
+            m.put("value", e.value());
+            m.put("message", e.message());
+            return m;
+        }).toList());
+        // The first rows as read, so the screen can show what the file holds
+        // before anything is written. LinkedHashMap: a blank category is null.
+        body.put("rows", report.rows().stream().map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("line", r.line());
+            m.put("title", r.title());
+            m.put("category", r.category());
+            m.put("price", r.price());
+            m.put("quantity", r.quantity());
+            return m;
+        }).toList());
         return ResponseEntity.ok(body);
     }
 

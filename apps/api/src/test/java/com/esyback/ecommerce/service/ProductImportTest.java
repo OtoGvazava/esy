@@ -125,6 +125,97 @@ class ProductImportTest {
 
     @Test
     @Transactional
+    @DisplayName("each problem names its column, a code a screen can translate, and the cell")
+    void errorsAreStructured() {
+        var report = importService.importCsv("""
+            title,price,quantity
+            ,24.00,12
+            Mug,fifteen,4
+            Plate,24.999,-1
+            """, true);
+
+        assertThat(report.errors()).extracting(
+                ProductImportService.RowError::line, ProductImportService.RowError::column,
+                ProductImportService.RowError::code, ProductImportService.RowError::value)
+            .containsExactly(
+                org.assertj.core.groups.Tuple.tuple(2, "title", "required", null),
+                org.assertj.core.groups.Tuple.tuple(3, "price", "notNumber", "fifteen"),
+                org.assertj.core.groups.Tuple.tuple(4, "price", "tooPrecise", "24.999"),
+                org.assertj.core.groups.Tuple.tuple(4, "quantity", "negative", "-1"));
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("an optional category column is imported trimmed, a blank cell as none")
+    void importsCategory() {
+        var report = importService.importCsv("""
+            title,price,quantity,category
+            Tall vase,120.00,2,"  Vases  "
+            Mug,38.00,5,
+            """, false);
+
+        assertThat(report.ok()).isTrue();
+        assertThat(stored()).extracting(Product::getTitle, Product::getCategory)
+            .containsExactlyInAnyOrder(
+                org.assertj.core.groups.Tuple.tuple("Tall vase", "Vases"),
+                org.assertj.core.groups.Tuple.tuple("Mug", null));
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("a category longer than the column rejects the file, at its line")
+    void overlongCategory() {
+        var report = importService.importCsv(
+            "title,price,quantity,category\nVase,10.00,1," + "x".repeat(Product.CATEGORY_MAX + 1) + "\n", false);
+
+        assertThat(report.ok()).isFalse();
+        assertThat(report.errors()).singleElement().satisfies(e -> {
+            assertThat(e.line()).isEqualTo(2);
+            assertThat(e.column()).isEqualTo("category");
+            assertThat(e.code()).isEqualTo("tooLong");
+        });
+        assertThat(stored()).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("a dry run hands back the rows as read, so the screen can show them")
+    void dryRunPreview() {
+        var report = importService.importCsv("""
+            title,price,quantity,category
+            Black mug,"40,00",20,Mugs
+            Tea cup,28,35,Mugs
+            Honey jar,32.00,12,
+            """, true);
+
+        assertThat(report.ok()).isTrue();
+        assertThat(report.rows()).extracting(
+                ProductImportService.Row::line, ProductImportService.Row::title,
+                ProductImportService.Row::category, ProductImportService.Row::quantity)
+            .containsExactly(
+                org.assertj.core.groups.Tuple.tuple(2, "Black mug", "Mugs", 20),
+                org.assertj.core.groups.Tuple.tuple(3, "Tea cup", "Mugs", 35),
+                org.assertj.core.groups.Tuple.tuple(4, "Honey jar", null, 12));
+        assertThat(report.rows().get(0).price()).isEqualByComparingTo("40.00");
+        assertThat(stored()).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("the preview stops at fifty rows; the count covers the whole file")
+    void previewIsCapped() {
+        StringBuilder csv = new StringBuilder("title,price,quantity\n");
+        for (int i = 0; i < 60; i++) csv.append("Thing ").append(i).append(",1.00,1\n");
+
+        var report = importService.importCsv(csv.toString(), true);
+        assertThat(report.parsed()).isEqualTo(60);
+        assertThat(report.rows()).hasSize(ProductImportService.PREVIEW_ROWS);
+        assertThat(report.rows().get(ProductImportService.PREVIEW_ROWS - 1).line())
+            .isEqualTo(ProductImportService.PREVIEW_ROWS + 1);
+    }
+
+    @Test
+    @Transactional
     @DisplayName("a dry run reports the outcome and creates nothing")
     void dryRunWritesNothing() {
         var report = importService.importCsv("""
@@ -227,5 +318,8 @@ class ProductImportTest {
         var report = importService.importCsv(ProductImportService.template(), true);
         assertThat(report.ok()).isTrue();
         assertThat(report.parsed()).isEqualTo(2);
+        // And it teaches the category column.
+        assertThat(ProductImportService.template()).startsWith("title,description,price,quantity,category\n");
+        assertThat(report.rows().get(0).category()).isEqualTo("Mugs");
     }
 }

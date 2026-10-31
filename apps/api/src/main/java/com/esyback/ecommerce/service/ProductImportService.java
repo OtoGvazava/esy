@@ -53,16 +53,37 @@ public class ProductImportService {
     private static final String DESCRIPTION = "description";
     private static final String PRICE = "price";
     private static final String QUANTITY = "quantity";
+    private static final String CATEGORY = "category";
 
-    /** Order is the template's column order. */
-    public static final List<String> COLUMNS = List.of(TITLE, DESCRIPTION, PRICE, QUANTITY);
+    /** Order is the template's column order. Category last: it is optional, and newest. */
+    public static final List<String> COLUMNS = List.of(TITLE, DESCRIPTION, PRICE, QUANTITY, CATEGORY);
     private static final List<String> REQUIRED = List.of(TITLE, PRICE, QUANTITY);
+
+    /** How many rows the report carries back for the screen to show. */
+    public static final int PREVIEW_ROWS = 50;
+
+    private static final int TITLE_MAX = 255;
 
     private final ProductRepository productRepository;
     private final TenantContextService tenantContextService;
 
-    /** One problem, named with the file line a spreadsheet would show. */
-    public record RowError(int line, String message) {}
+    /**
+     * One problem, named with the file line a spreadsheet would show.
+     *
+     * @param column  the header name of the offending cell
+     * @param code    what is wrong, as a stable word a screen can translate:
+     *                required · tooLong · notNumber · notPositive · tooPrecise ·
+     *                notWhole · negative
+     * @param value   the cell as written, or null when it was empty
+     * @param message the same problem in English
+     */
+    public record RowError(int line, String column, String code, String value, String message) {}
+
+    /**
+     * One row as read from the file — what the screen shows before anything is
+     * written. A value that did not parse is null; its problem is in the errors.
+     */
+    public record Row(int line, String title, String category, BigDecimal price, Integer quantity) {}
 
     /**
      * What the upload would do, or did.
@@ -71,8 +92,9 @@ public class ProductImportService {
      * @param imported how many were written (0 on a dry run or a rejection)
      * @param errors every problem found, not just the first — a merchant
      *               fixing a file wants the whole list in one pass
+     * @param rows the first {@value #PREVIEW_ROWS} rows as read, in file order
      */
-    public record Report(int parsed, int imported, boolean dryRun, List<RowError> errors) {
+    public record Report(int parsed, int imported, boolean dryRun, List<RowError> errors, List<Row> rows) {
         public boolean ok() {
             return errors.isEmpty();
         }
@@ -81,8 +103,8 @@ public class ProductImportService {
     /** The file to hand someone who asks what the columns are. */
     public static String template() {
         return Csv.line(COLUMNS) + "\n"
-            + Csv.line(List.of("Ceramic mug", "Small, hand-thrown", "24.00", "12")) + "\n"
-            + Csv.line(List.of("Linen apron", "", "48.50", "4")) + "\n";
+            + Csv.line(List.of("Ceramic mug", "Small, hand-thrown", "24.00", "12", "Mugs")) + "\n"
+            + Csv.line(List.of("Linen apron", "", "48.50", "4", "")) + "\n";
     }
 
     /**
@@ -125,6 +147,7 @@ public class ProductImportService {
 
         List<RowError> errors = new ArrayList<>();
         List<Product> staged = new ArrayList<>();
+        List<Row> preview = new ArrayList<>();
 
         for (int i = 0; i < body.size(); i++) {
             // +2: the header is line 1, and a spreadsheet counts from 1. The
@@ -136,15 +159,16 @@ public class ProductImportService {
 
             String title = cell(row, columns, TITLE);
             if (title.isBlank()) {
-                errors.add(new RowError(line, "title is required"));
-            } else if (title.length() > 255) {
-                errors.add(new RowError(line, "title is longer than 255 characters"));
+                errors.add(new RowError(line, TITLE, "required", null, "title is required"));
+            } else if (title.length() > TITLE_MAX) {
+                errors.add(new RowError(line, TITLE, "tooLong", title,
+                    "title is longer than " + TITLE_MAX + " characters"));
             }
 
             BigDecimal price = null;
             String rawPrice = cell(row, columns, PRICE);
             if (rawPrice.isBlank()) {
-                errors.add(new RowError(line, "price is required"));
+                errors.add(new RowError(line, PRICE, "required", null, "price is required"));
             } else {
                 try {
                     // Spreadsheets in Georgia and much of Europe write 24,50.
@@ -153,35 +177,52 @@ public class ProductImportService {
                     // field was already split.
                     BigDecimal parsed = new BigDecimal(rawPrice.replace(",", ".").replace(" ", ""));
                     if (parsed.signum() <= 0) {
-                        errors.add(new RowError(line, "price must be greater than 0"));
+                        errors.add(new RowError(line, PRICE, "notPositive", rawPrice,
+                            "price must be greater than 0"));
                     } else if (parsed.stripTrailingZeros().scale() > 2) {
                         // Only real precision counts: the column holds two
                         // decimals, so 24.999 would be rounded to something the
                         // merchant did not type and would never see. 24.500 is
                         // the same number as 24.50 and is left alone.
-                        errors.add(new RowError(line,
+                        errors.add(new RowError(line, PRICE, "tooPrecise", rawPrice,
                             "price \"" + rawPrice + "\" has more than 2 decimal places"));
                     } else {
                         price = parsed.setScale(2, java.math.RoundingMode.UNNECESSARY);
                     }
                 } catch (NumberFormatException e) {
-                    errors.add(new RowError(line, "price \"" + rawPrice + "\" is not a number"));
+                    errors.add(new RowError(line, PRICE, "notNumber", rawPrice,
+                        "price \"" + rawPrice + "\" is not a number"));
                 }
             }
 
             Integer quantity = null;
             String rawQty = cell(row, columns, QUANTITY);
             if (rawQty.isBlank()) {
-                errors.add(new RowError(line, "quantity is required"));
+                errors.add(new RowError(line, QUANTITY, "required", null, "quantity is required"));
             } else {
                 try {
                     quantity = Integer.valueOf(rawQty.trim());
                     if (quantity < 0) {
-                        errors.add(new RowError(line, "quantity cannot be negative"));
+                        errors.add(new RowError(line, QUANTITY, "negative", rawQty,
+                            "quantity cannot be negative"));
+                        quantity = null;
                     }
                 } catch (NumberFormatException e) {
-                    errors.add(new RowError(line, "quantity \"" + rawQty + "\" is not a whole number"));
+                    errors.add(new RowError(line, QUANTITY, "notWhole", rawQty,
+                        "quantity \"" + rawQty + "\" is not a whole number"));
                 }
+            }
+
+            // Optional, and a blank cell is no category — the same rule the
+            // product editor applies, so a file and a form cannot disagree.
+            String category = Product.cleanCategory(cell(row, columns, CATEGORY));
+            if (category != null && category.length() > Product.CATEGORY_MAX) {
+                errors.add(new RowError(line, CATEGORY, "tooLong", category,
+                    "category is longer than " + Product.CATEGORY_MAX + " characters"));
+            }
+
+            if (preview.size() < PREVIEW_ROWS) {
+                preview.add(new Row(line, title, category, price, quantity));
             }
 
             // THIS row's validity, not the file's. Staging is skipped when an
@@ -195,24 +236,26 @@ public class ProductImportService {
                 p.setDescription(description.isBlank() ? null : description);
                 p.setPrice(price);
                 p.setQuantity(quantity);
+                p.setCategory(category);
                 p.setTenant(tenant);
                 staged.add(p);
             }
         }
 
+        List<Row> shown = List.copyOf(preview);
         if (!errors.isEmpty()) {
             // Nothing was written. Reported as a 200 with the problems rather
             // than an error status: the upload was understood, it is the file
             // that needs work, and the screen has a list to render.
-            return new Report(body.size(), 0, dryRun, List.copyOf(errors));
+            return new Report(body.size(), 0, dryRun, List.copyOf(errors), shown);
         }
         if (dryRun) {
-            return new Report(body.size(), 0, true, List.of());
+            return new Report(body.size(), 0, true, List.of(), shown);
         }
 
         productRepository.saveAll(staged);
         log.info("Imported {} products into store {}", staged.size(), tenant.getSubdomain());
-        return new Report(body.size(), staged.size(), false, List.of());
+        return new Report(body.size(), staged.size(), false, List.of(), shown);
     }
 
     /** Header names, lower-cased and trimmed, mapped to their position. */

@@ -20,11 +20,17 @@ public class ProductListDto {
     // Short on purpose: the list endpoint should not ship full descriptions.
     private String blurb;
 
+    // The merchant's grouping, so a list row can say where a product sits.
+    private String category;
+
     // Constructors
     public ProductListDto() {}
 
     public String getBlurb() { return blurb; }
     public void setBlurb(String blurb) { this.blurb = blurb; }
+
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 
     public Boolean getHasVariants() { return hasVariants; }
     public void setHasVariants(Boolean hasVariants) { this.hasVariants = hasVariants; }

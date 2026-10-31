@@ -1,24 +1,38 @@
 package com.esyback.ecommerce.service;
 
+import com.esyback.ecommerce.dto.CategoryCount;
+import com.esyback.ecommerce.dto.OptionFacet;
 import com.esyback.ecommerce.dto.PagedResponse;
 import com.esyback.ecommerce.dto.ProductDto;
+import com.esyback.ecommerce.dto.ProductFilter;
 import com.esyback.ecommerce.dto.ProductImageDto;
 import com.esyback.ecommerce.dto.ProductListDto;
 import com.esyback.ecommerce.entity.Product;
+import com.esyback.ecommerce.entity.ProductOption;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.ProductImageRepository;
+import com.esyback.ecommerce.repository.ProductOptionRepository;
 import com.esyback.ecommerce.repository.ProductRepository;
+import com.esyback.ecommerce.repository.ProductSpecs;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +45,7 @@ public class ProductService {
     private final TenantContextService tenantContextService;
     private final com.esyback.ecommerce.repository.ProductVariantRepository variantRepository;
     private final ProductVariantService productVariantService;
+    private final ProductOptionRepository optionRepository;
     
     /**
      * Commit stock for a paid order (decision D3): quantities decrement at PAID,
@@ -91,23 +106,84 @@ public class ProductService {
     }
 
     public PagedResponse<ProductListDto> getProducts(int page, int size, String sortBy, String sortDir,
-                                                     String title, BigDecimal minPrice, BigDecimal maxPrice, Integer quantity) {
-        
+                                                     ProductFilter filter) {
+
         Tenant currentTenant = tenantContextService.getCurrentTenant();
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        
+        Sort.Direction direction = sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Sort sort = Sort.by(direction, sortBy);
+        // Ties broken by id, so products of one price keep one order from page
+        // to page; without it the database may shuffle them between requests
+        // and a shopper scrolling sees one twice and another never.
+        if (!"id".equals(sortBy)) sort = sort.and(Sort.by(direction, "id"));
+
         Pageable pageable = PageRequest.of(page, size, sort);
-        
-        Page<Product> productPage;
-        
-        if (title != null || minPrice != null || maxPrice != null || quantity != null) {
-            productPage = productRepository.findProductsWithFilters(currentTenant, title, minPrice, maxPrice, quantity, pageable);
-        } else {
-            productPage = productRepository.findByTenant(currentTenant, pageable);
-        }
-        
+        Page<Product> productPage = productRepository.findAll(ProductSpecs.matching(currentTenant, filter), pageable);
         return new PagedResponse<>(productPage.map(this::convertToProductListDto));
+    }
+
+    /** The store's categories, most products first — the storefront's pills. */
+    @Transactional(readOnly = true)
+    public List<CategoryCount> getCategories() {
+        return productRepository.countCategories(tenantContextService.getCurrentTenant());
+    }
+
+    /**
+     * The variant axes the store's products offer — of one category when one is
+     * named — as filters: one facet per axis name, with every value any product
+     * offers on it.
+     *
+     * <p>Names are compared ignoring case and the first spelling met is the one
+     * shown, as are values. Facets that more products carry come first; ties
+     * keep the order the products were created in, and values keep each
+     * merchant's own order, with values first met on later products appended.
+     */
+    @Transactional(readOnly = true)
+    public List<OptionFacet> getOptionFacets(String category) {
+        Tenant tenant = tenantContextService.getCurrentTenant();
+        String cat = Product.cleanCategory(category);
+        List<ProductOption> axes = cat == null
+            ? optionRepository.findAxesInStore(tenant)
+            : optionRepository.findAxesInCategory(tenant, cat);
+
+        Map<String, String> names = new LinkedHashMap<>();
+        Map<String, Map<String, String>> values = new LinkedHashMap<>();
+        Map<String, Set<Long>> products = new LinkedHashMap<>();
+        for (ProductOption axis : axes) {
+            String name = axis.getName() == null ? "" : axis.getName().strip();
+            if (name.isEmpty()) continue;
+            String key = name.toLowerCase(Locale.ROOT);
+            names.putIfAbsent(key, name);
+            products.computeIfAbsent(key, k -> new HashSet<>()).add(axis.getProduct().getId());
+            Map<String, String> seen = values.computeIfAbsent(key, k -> new LinkedHashMap<>());
+            for (String v : ProductVariantService.splitValues(axis.getValuesText())) {
+                if (seen.size() >= MAX_FACET_VALUES) break;
+                seen.putIfAbsent(v.toLowerCase(Locale.ROOT), v);
+            }
+        }
+
+        List<String> order = new ArrayList<>(names.keySet());
+        // A stable sort, so equal counts keep first-seen order.
+        order.sort(Comparator.comparingInt((String k) -> products.get(k).size()).reversed());
+        return order.stream()
+            .map(k -> new OptionFacet(names.get(k), List.copyOf(values.get(k).values())))
+            .toList();
+    }
+
+    /** A filter row nobody can scan is no filter; real axes hold at most 40. */
+    private static final int MAX_FACET_VALUES = 60;
+
+    /**
+     * A category from the editor, made storable — or refused, when it is longer
+     * than the column. Refused rather than cut: a silently shortened name would
+     * open a collection the merchant never named.
+     */
+    private static String category(String raw) {
+        String clean = Product.cleanCategory(raw);
+        if (clean != null && clean.length() > Product.CATEGORY_MAX) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Category is longer than " + Product.CATEGORY_MAX + " characters");
+        }
+        return clean;
     }
     
     public Optional<ProductDto> getProductById(Long id) {
@@ -127,8 +203,9 @@ public class ProductService {
         // delete). Legacy seeded products keep their existing imageUrl.
         product.setPrice(productDto.getPrice());
         product.setQuantity(productDto.getQuantity());
+        product.setCategory(category(productDto.getCategory()));
         product.setTenant(currentTenant);
-        
+
         Product savedProduct = productRepository.save(product);
         return convertToProductDto(savedProduct);
     }
@@ -143,7 +220,13 @@ public class ProductService {
                 // imageUrl intentionally untouched — managed by image upload/delete.
                 existingProduct.setPrice(productDto.getPrice());
                 existingProduct.setQuantity(productDto.getQuantity());
-                
+                // Absent means untouched and blank means cleared. A client that
+                // predates categories sends no field at all, and a save from it
+                // must not quietly take every product out of its collection.
+                if (productDto.getCategory() != null) {
+                    existingProduct.setCategory(category(productDto.getCategory()));
+                }
+
                 Product updatedProduct = productRepository.save(existingProduct);
                 return convertToProductDto(updatedProduct);
             });
@@ -170,6 +253,7 @@ public class ProductService {
         );
         dto.setHasVariants(product.variantsEnabled());
         dto.setBlurb(blurbOf(product.getDescription()));
+        dto.setCategory(product.getCategory());
         return dto;
     }
 
