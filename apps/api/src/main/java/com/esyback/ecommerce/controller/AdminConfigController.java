@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -35,6 +36,17 @@ public class AdminConfigController {
     private final ConfigStore store;
     private final DesignProperties design;
 
+    /** The JSON field each editable value travels under, and its config-store key. */
+    private static final Map<String, String> FIELD_KEYS = new LinkedHashMap<>();
+    static {
+        FIELD_KEYS.put("serviceFeeRate", "app.platform.service-fee-rate");
+        FIELD_KEYS.put("bogEnv", "app.bog.env");
+        FIELD_KEYS.put("bogAuthUrl", "app.bog.auth-url");
+        FIELD_KEYS.put("bogBaseUrl", "app.bog.base-url");
+        FIELD_KEYS.put("publicBaseUrl", "app.public-base-url");
+        FIELD_KEYS.put("designEnabled", DesignProperties.ENABLED_KEY);
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public Map<String, Object> current() {
@@ -48,6 +60,19 @@ public class AdminConfigController {
         m.put("designEnabled", design.isEnabled());
         // Whether writes are possible right now (config store reachable).
         m.put("storeReady", store.ready());
+        // Per field: is the value in effect an override written from this
+        // screen ("override") or the environment's ("env"), and what the
+        // environment says underneath — the value an override falls back to
+        // when it is cleared or lost with the Key Value instance. None of
+        // these keys is a secret.
+        Map<String, String> sources = new LinkedHashMap<>();
+        Map<String, String> envValues = new LinkedHashMap<>();
+        FIELD_KEYS.forEach((field, key) -> {
+            sources.put(field, store.source(key));
+            envValues.put(field, store.envValue(key));
+        });
+        m.put("sources", sources);
+        m.put("envValues", envValues);
         // Read-only: the names no merchant can register. The admin config screen
         // shows these beside the editable values because they are the other half
         // of "what is fixed about this platform", and sorted so the list reads

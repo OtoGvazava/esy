@@ -54,6 +54,11 @@ public class EmailProperties {
         config.set(FROM_KEY, value == null ? "" : value.trim());
     }
 
+    /** "override" when set from the admin screen, "env" otherwise — see SmsProperties. */
+    public String getFromSource() {
+        return config.source(FROM_KEY);
+    }
+
     /**
      * Master switch, on unless explicitly turned off.
      *

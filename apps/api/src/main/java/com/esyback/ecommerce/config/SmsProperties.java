@@ -69,6 +69,16 @@ public class SmsProperties {
     }
 
     /**
+     * "override" when the sender was set from the admin screen, "env" when it
+     * is APP_SMS_SENDER (or the built-in default). An override is lost if the
+     * free Key Value store restarts, which has already sent every code out
+     * under the wrong sender once — so the screen shows which one is live.
+     */
+    public String getSenderSource() {
+        return config.source(SENDER_KEY);
+    }
+
+    /**
      * Master switch, on unless explicitly turned off.
      *
      * <p>Off means NO message leaves the platform, including the verification

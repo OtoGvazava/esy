@@ -20,11 +20,12 @@ import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
-import { Btn, Card, Note } from '../core/primitives';
+import { Btn } from '../core/primitives';
 import { Icons } from '../core/icons';
 import SignIn from '../pages/SignIn';
 import AuthCallback from '../pages/AuthCallback';
 import { useAdminTokens } from './adminTokens';
+import AdminGate from './AdminGate';
 import AdminStores from './AdminStores';
 import AdminStoreDetail from './AdminStoreDetail';
 import AdminBilling from './AdminBilling';
@@ -225,50 +226,6 @@ function managerUrl() {
   return `${protocol}//manager.${base}${p}/`;
 }
 
-/**
- * The two states a non-admin can be in on this host. Both are designed rather
- * than left to a redirect, because the likely visitor is a merchant who
- * followed a link and needs to be told plainly that their account manages
- * shops, not the platform.
- */
-function Gate({ T, kind }) {
-  const { t } = useTranslation('admin');
-  const { user } = useAuth();
-  return (
-    <div style={{
-      minHeight: '100vh', background: T.bg, color: T.text,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-      font: `400 14px ${T.font}`,
-    }}>
-      <Card T={T} pad={28} style={{ maxWidth: 420, width: '100%', textAlign: 'center' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-          <AdminMark T={T} size={19} />
-        </div>
-        <div style={{ font: `700 18px ${T.font}`, marginBottom: 6, letterSpacing: '-0.01em' }}>
-          {kind === 'denied' ? t('gate.deniedTitle') : t('gate.signInTitle')}
-        </div>
-        <div style={{ color: T.textDim, marginBottom: 18, lineHeight: 1.55 }}>
-          {kind === 'denied' ? t('gate.deniedBody') : t('gate.signInBody')}
-        </div>
-        {kind === 'denied' && user?.email && (
-          <Note T={T} tone="admin" style={{ marginBottom: 18, textAlign: 'left' }}>
-            {t('gate.signedInAs', { email: user.email })}
-          </Note>
-        )}
-        <Btn
-          T={T}
-          kind={kind === 'denied' ? 'ghost' : 'primary'}
-          size="md"
-          full
-          onClick={() => { window.location.href = kind === 'denied' ? managerUrl() : '/signin'; }}
-        >
-          {kind === 'denied' ? t('gate.backToManager') : t('gate.signIn')}
-        </Btn>
-      </Card>
-    </div>
-  );
-}
-
 export default function AdminShell() {
   const T = useAdminTokens();
   const { t } = useTranslation('admin');
@@ -290,8 +247,9 @@ export default function AdminShell() {
   if (loading) {
     return <div style={{ minHeight: '100vh', background: T.bg }} />;
   }
-  if (!isAuthenticated) return <Gate T={T} kind="signin" />;
-  if (user?.role !== 'admin') return <Gate T={T} kind="denied" />;
+  // The design's AD0: sign in, or "this account is not an administrator".
+  if (!isAuthenticated) return <AdminGate T={T} kind="signin" />;
+  if (user?.role !== 'admin') return <AdminGate T={T} kind="denied" />;
 
   const active = activeKey(pathname);
   const pages = (

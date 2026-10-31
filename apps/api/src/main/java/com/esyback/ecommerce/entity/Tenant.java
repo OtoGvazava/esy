@@ -134,6 +134,13 @@ public class Tenant {
     @Column(name = "suspend_reason", columnDefinition = "TEXT")
     private String suspendReason;
 
+    // Platform verification: an admin has vouched for this store, and the
+    // storefront draws a tick beside its name. verifiedAt != null IS the
+    // verified state, the same shape as suspendedAt, and for the same reason
+    // nullable with no default: existing stores read back as "not verified".
+    @Column(name = "verified_at")
+    private Instant verifiedAt;
+
     // ---- Store design (docs/plans/store-design-system.md, Phase 1) ---------
     // One JSON settings object, normalised by DesignValidator before it is
     // stored and again whenever it is read. JSON in TEXT rather than a column

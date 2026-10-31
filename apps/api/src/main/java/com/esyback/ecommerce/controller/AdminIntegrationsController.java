@@ -53,6 +53,8 @@ public class AdminIntegrationsController {
         sms.put("configured", smsProperties.isConfigured());
         sms.put("enabled", smsProperties.isEnabled());
         sms.put("sender", smsProperties.getSender());
+        // "override" (set on this screen) or "env" (APP_SMS_SENDER / default).
+        sms.put("senderSource", smsProperties.getSenderSource());
         sms.put("endpoint", "https://smsoffice.ge/api/v2/send/");
         // Every switch and text on this screen is written to the config store.
         // If that store is down the screen still renders current values but no
@@ -98,6 +100,7 @@ public class AdminIntegrationsController {
         email.put("configured", emailProperties.isConfigured());
         email.put("enabled", emailProperties.isEnabled());
         email.put("from", emailProperties.getFrom());
+        email.put("fromSource", emailProperties.getFromSource());
         email.put("endpoint", "https://api.resend.com/emails");
         email.put("storeReady", emailProperties.isStoreReady());
         EmailSender.Failure ef = emailSender.getLastFailure();

@@ -1,214 +1,307 @@
-// /integrations — the channels the platform speaks through.
+// /integrations — SMS and email, the channels the platform speaks through
+// (the design's AD7).
 //
-// Today that is SMS Office (smsoffice.ge) for text and Resend for mail. Two
-// kinds of thing live here and
-// they behave differently on purpose:
+// Two channel cards (SMS Office, Resend): the master switch, whether an API
+// key is set, the sender and where it comes from. Then the message matrix —
+// one row per notice, a switch per channel — and the editor for the selected
+// message. On a phone the editor opens as a sheet from the row.
 //
-//   The API key is a SECRET and is not shown or editable. The screen reports
-//   only whether one is set, because a credential echoed back into a browser
-//   to fill a "current value" box is a credential in screenshots and bug
-//   reports. Rotating it is a deployment action.
+// Two kinds of thing live here and behave differently on purpose:
 //
-//   The sender name and the message texts are OPERATIONAL. They are the things
-//   that change after the first week of real deliveries, so they are editable
-//   here and take effect within seconds, no redeploy.
+//   The API keys are SECRETS. The screen reports only whether one is set; a
+//   credential echoed into a browser is a credential in screenshots and bug
+//   reports. Rotating one is a deployment action.
 //
-// Each template shows its character count and billed units. That is not
-// decoration: Georgian is Unicode, so 70 characters is one unit and 71 is two,
-// and an admin editing copy has no other way to see they just doubled the
-// platform's SMS bill.
-import { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+//   The senders, the switches and the message texts are OPERATIONAL. They
+//   change after the first week of real deliveries, so they are editable here
+//   and take effect within seconds.
+//
+// The SMS editor counts characters and billed units as the message will be
+// sent: {order} is counted at the longest number (#99999) and {code} at four
+// digits. Georgian is Unicode, so 70 characters is one unit and 71 is two —
+// an admin editing copy has no other way to see they just doubled the bill.
+//
+// The verification code has no switch (checkout needs it), and cancellations
+// and refunds go by email only: the matrix draws both rules.
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { adminApi, handleApiError } from '../utils/api';
 import { useAdminTokens } from './adminTokens';
-import { Btn, Card, Chip, Note, SectionTitle, Toggle } from '../core/primitives';
-import { Failed, Loading } from './AdminUI';
-import { alpha } from '../core/tokens';
+import { SectionTitle } from '../core/primitives';
+import { useDevice } from '../contexts/DeviceContext';
+import { Failed, Loading, dateTime } from './AdminUI';
+import {
+  Alert, Dialog, DialogPoint, Glyph, KitBtn, KitChip, List, Mono, Progress, RowIcon, Seg, SourceChip,
+  Switch, SwitchMark,
+} from './AdminKit';
 
-function TemplateRow({ T, t, row, onSaved, canWrite }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(row.text);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+/** Matrix rows, top to bottom: the code, the four order notices, then email-only. */
+const ROWS = ['otp', 'orderPlaced', 'orderShipped', 'orderOut', 'orderDelivered', 'orderCancelled', 'orderRefunded'];
 
-  const begin = () => { setDraft(row.text); setError(''); setEditing(true); };
+// What a token is counted as: its longest real value.
+const COUNT_AS = { order: '#99999', code: '1234' };
+const smsLength = (text) => [...String(text || '').replace(/\{(order|code)\}/g, (_, k) => COUNT_AS[k])].length;
+const smsUnits = (len) => (len === 0 ? 0 : len <= 70 ? 1 : Math.ceil(len / 67));
 
-  const toggle = async (on) => {
-    setBusy(true);
-    setError('');
-    try {
-      await adminApi.updateIntegrations({ templateEnabled: { [row.key]: on } });
-      onSaved();
-    } catch (e) {
-      setError(handleApiError(e, t('integrations.saveFailed')));
-    } finally {
-      setBusy(false);
+const fieldStyle = (T, bad) => ({
+  width: '100%', boxSizing: 'border-box', borderRadius: 12, background: T.surface, color: T.text,
+  border: `1.5px solid ${bad ? T.danger : T.border}`, outline: 'none',
+});
+
+/** The editor for one message on one channel. Remounted (by key) when the selection changes. */
+function Editor({ T, t, phone, kind, row, name, channels, onChannel, canWrite, busy, error, onSave, showTitle = true }) {
+  const isSms = kind === 'sms';
+  const [text, setText] = useState(row.text ?? '');
+  const [subject, setSubject] = useState(row.subject ?? '');
+  const [body, setBody] = useState(row.body ?? '');
+  const mono = <Mono T={T} />;
+
+  const changed = isSms ? text !== row.text : (subject !== row.subject || body !== row.body);
+  const len = smsLength(text);
+  const units = smsUnits(len);
+  const tokens = (row.tokens || []).map((k) => `{${k}}`).join(', ');
+  const extra = isSms && /\{(store|url)\}/.test(text);
+
+  const save = () => onSave(isSms ? { templates: { [row.key]: text } }
+    : { email: { templates: { [row.key]: { subject, body } } } });
+  const reset = () => {
+    if (isSms) {
+      setText(row.defaultText);
+      onSave({ templates: { [row.key]: row.defaultText } });
+    } else {
+      setSubject(row.defaultSubject);
+      setBody(row.defaultBody);
+      onSave({ email: { templates: { [row.key]: { subject: row.defaultSubject, body: row.defaultBody } } } });
     }
   };
-
-  const save = async (text) => {
-    setBusy(true);
-    setError('');
-    try {
-      await adminApi.updateIntegrations({ templates: { [row.key]: text } });
-      setEditing(false);
-      onSaved();
-    } catch (e) {
-      setError(handleApiError(e, t('integrations.saveFailed')));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Live counts while typing, so the cost of a longer sentence is visible
-  // before it is saved rather than after.
-  const shown = editing ? draft : row.text;
-  const len = shown.length;
-  const units = len === 0 ? 0 : len <= 70 ? 1 : Math.ceil(len / 67);
+  const atDefault = isSms ? text === row.defaultText
+    : subject === row.defaultSubject && body === row.defaultBody;
 
   return (
-    <div style={{ padding: '15px 18px', borderTop: `1px solid ${T.border}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-        {/* The switch sits first: whether a message goes out at all is a bigger
-            fact about it than what it says. The OTP has none — silencing it
-            stops checkout rather than saving money. */}
-        {row.switchable ? (
-          <Toggle
-            T={T}
-            on={row.enabled}
-            disabled={busy || !canWrite}
-            onClick={() => toggle(!row.enabled)}
-          />
-        ) : (
-          <Chip T={T} tone="accent">{t('integrations.always')}</Chip>
-        )}
-        <span style={{
-          font: `700 13px ${T.font}`,
-          color: row.enabled ? T.text : T.textMute,
-          textDecoration: row.enabled ? 'none' : 'line-through',
-        }}>{t(`integrations.tpl.${row.key}`)}</span>
-        {row.isDefault && <Chip T={T}>{t('integrations.default')}</Chip>}
-        <span style={{ flex: 1 }} />
-        <span style={{ font: `500 11px ${T.mono}`, color: units > 1 ? T.warnFg : T.textMute }}>
-          {t('integrations.units', { len, units })}
-        </span>
-      </div>
-
-      {!editing ? (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-          <span style={{ flex: 1, minWidth: 0, font: `500 13px/1.6 ${T.font}`, color: T.textDim, wordBreak: 'break-word' }}>
-            {row.text}
-          </span>
-          <Btn T={T} kind="quiet" size="sm" onClick={begin}>{t('integrations.edit')}</Btn>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={3}
-            style={{
-              width: '100%', boxSizing: 'border-box', resize: 'vertical',
-              padding: '10px 12px', borderRadius: 12,
-              background: T.surface, border: `1.5px solid ${error ? T.danger : T.border}`,
-              color: T.text, font: `500 13px/1.6 ${T.font}`, outline: 'none',
-            }}
-          />
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Btn T={T} size="sm" disabled={busy} onClick={() => save(draft)}>
-              {busy ? t('ui.working') : t('integrations.save')}
-            </Btn>
-            <Btn T={T} kind="ghost" size="sm" disabled={busy} onClick={() => setEditing(false)}>
-              {t('integrations.cancel')}
-            </Btn>
-            {!row.isDefault && (
-              <Btn T={T} kind="ghost" size="sm" disabled={busy} onClick={() => save(row.defaultText)}>
-                {t('integrations.reset')}
-              </Btn>
-            )}
-          </div>
-          {error && <span style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{error}</span>}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {(showTitle || row.isDefault) && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          {showTitle && (
+            <b style={{ font: `600 16px/1.3 ${T.font}`, color: T.text, minWidth: 0 }}>
+              {t('integrations.editorTitle', { name, channel: isSms ? 'SMS' : t('integrations.email') })}
+            </b>
+          )}
+          {row.isDefault && <KitChip T={T} tone="proc">{t('integrations.default')}</KitChip>}
         </div>
       )}
 
-      {/* The tokens this message may use. Anything else is refused by the API
-          rather than sent to a shopper as a literal brace. */}
-      <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        {row.tokens.map((tok) => (
-          <span
-            key={tok}
+      {channels.length > 1 && (
+        <Seg
+          T={T}
+          phone={phone}
+          label={t('integrations.channelLabel')}
+          value={kind}
+          onChange={onChannel}
+          options={channels.map((c) => ({ id: c, label: c === 'sms' ? 'SMS' : t('integrations.email') }))}
+        />
+      )}
+
+      {isSms ? (
+        <>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            aria-label={t('integrations.textLabel')}
+            maxLength={1000}
+            style={{ ...fieldStyle(T, !!error), height: 84, padding: '12px 15px', resize: 'none', font: `500 15px/1.5 ${T.font}` }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Progress T={T} pct={(len / 70) * 100} over={len > 70} />
+            <span style={{ font: `500 12px ${T.font}`, color: len > 70 ? 'var(--k-warn)' : T.textDim, whiteSpace: 'nowrap' }}>
+              {t('integrations.units', { len, units })}
+            </span>
+          </div>
+          <p style={{ margin: 0, font: `500 12px/1.55 ${T.font}`, color: T.textDim }}>
+            {row.requiredToken && (
+              <><Trans t={t} i18nKey="integrations.requiredToken" values={{ token: `{${row.requiredToken}}` }} components={{ mono }} />{' '}</>
+            )}
+            {(row.tokens || []).includes('order') && (
+              <><Trans t={t} i18nKey="integrations.orderCounted" components={{ mono }} />{' '}</>
+            )}
+            {t('integrations.unicode')}
+            {extra && <>{' '}<Trans t={t} i18nKey="integrations.notCounted" components={{ mono }} /></>}
+          </p>
+        </>
+      ) : (
+        <>
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            aria-label={t('integrations.subjectLabel')}
+            maxLength={200}
+            style={{ ...fieldStyle(T, !!error), height: 50, padding: '0 15px', font: `500 15px ${T.font}` }}
+          />
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            aria-label={t('integrations.bodyLabel')}
+            rows={7}
+            maxLength={5000}
+            style={{ ...fieldStyle(T, !!error), padding: '12px 15px', resize: 'vertical', font: `500 14px/1.55 ${T.font}` }}
+          />
+          <p style={{ margin: 0, font: `500 12px/1.55 ${T.font}`, color: T.textDim }}>{t('integrations.emailPlain')}</p>
+        </>
+      )}
+
+      {tokens && (
+        <span style={{ font: `500 12px/1.5 ${T.font}`, color: T.textDim }}>
+          <Trans t={t} i18nKey="integrations.tokens" values={{ tokens }} components={{ mono }} />
+        </span>
+      )}
+      {error && <span role="alert" style={{ font: `500 12px/1.45 ${T.font}`, color: T.dangerFg }}>{error}</span>}
+
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        <KitBtn T={T} size="sm" disabled={!canWrite || busy || (row.isDefault && atDefault)} onClick={reset}>
+          {t('integrations.reset')}
+        </KitBtn>
+        <KitBtn T={T} kind="primary" size="sm" disabled={!canWrite || busy || !changed} onClick={save}>
+          {busy ? t('ui.working') : t('integrations.save')}
+        </KitBtn>
+      </div>
+    </div>
+  );
+}
+
+/** The sender / from line in a channel card, with its inline edit. */
+function Sender({ T, t, phone, value, source, maxLength, canWrite, busy, error, onSave, bad }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '5px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <span style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('integrations.sender')}</span>
+        {!editing && (
+          <button
+            type="button"
+            disabled={!canWrite}
+            onClick={() => { setDraft(value || ''); setEditing(true); }}
             style={{
-              padding: '3px 8px', borderRadius: 999, font: `600 10.5px ${T.mono}`,
-              background: tok === row.requiredToken ? T.accentBg : T.surface2,
-              color: tok === row.requiredToken ? T.accentFg : T.textMute,
+              border: 'none', background: 'transparent', padding: phone ? '12px 0' : '4px 0', margin: phone ? '-12px 0' : 0,
+              color: canWrite ? T.accentFg : T.textMute, font: `600 12.5px ${T.font}`,
+              cursor: canWrite ? 'pointer' : 'not-allowed',
             }}
-          >{`{${tok}}`}{tok === row.requiredToken ? ' *' : ''}</span>
-        ))}
-        {row.requiredToken && (
-          <span style={{ font: `400 11px ${T.font}`, color: T.textMute }}>
-            {t('integrations.requiredHint', { token: `{${row.requiredToken}}` })}
-          </span>
+          >
+            {t('integrations.change')}
+          </button>
         )}
       </div>
+      {editing ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <input
+            value={draft}
+            autoFocus
+            spellCheck={false}
+            maxLength={maxLength}
+            aria-label={t('integrations.sender')}
+            onChange={(e) => setDraft(e.target.value)}
+            style={{ ...fieldStyle(T, !!error), height: 44, padding: '0 14px', font: `600 13px ${T.mono}` }}
+          />
+          {error && <span role="alert" style={{ font: `500 12px/1.45 ${T.font}`, color: T.dangerFg }}>{error}</span>}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <KitBtn T={T} size="sm" disabled={busy} onClick={() => setEditing(false)}>{t('ui.cancel')}</KitBtn>
+            <KitBtn
+              T={T}
+              kind="primary"
+              size="sm"
+              disabled={busy || !draft.trim() || draft.trim() === value}
+              onClick={async () => { if (await onSave(draft.trim())) setEditing(false); }}
+            >
+              {busy ? t('ui.working') : t('integrations.save')}
+            </KitBtn>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ font: `500 12px ${T.mono}`, color: bad ? T.dangerFg : T.text, overflowWrap: 'anywhere' }}>{value}</span>
+          <SourceChip T={T} source={source} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KeyLine({ T, t, configured }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '5px 0' }}>
+      <span style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('integrations.apiKey')}</span>
+      {configured
+        ? <span style={{ font: `600 12.5px ${T.font}`, color: 'var(--k-ok)' }}>{t('integrations.keySet')}</span>
+        : <KitChip T={T} tone="warn">{t('integrations.keyMissing')}</KitChip>}
+    </div>
+  );
+}
+
+function ChannelCard({ T, icon, title, sub, master, children }) {
+  return (
+    <div style={{
+      padding: 16, borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`,
+      display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <RowIcon T={T} name={icon} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <b style={{ display: 'block', font: `700 15px/1.3 ${T.font}`, color: T.text }}>{title}</b>
+          <div style={{ font: `500 12px/1.4 ${T.font}`, color: T.textDim }}>{sub}</div>
+        </div>
+        {master}
+      </div>
+      {children}
     </div>
   );
 }
 
 export default function AdminIntegrations() {
   const T = useAdminTokens();
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
+  const lang = i18n.language;
+  const { isMobile, isDesktop } = useDevice();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [sender, setSender] = useState('');
-  const [editingSender, setEditingSender] = useState(false);
-  const [senderBusy, setSenderBusy] = useState(false);
-  const [senderError, setSenderError] = useState('');
-  const [masterBusy, setMasterBusy] = useState(false);
+  const [sel, setSel] = useState({ key: 'orderPlaced', channel: 'sms' });
+  const [sheet, setSheet] = useState(false);
+  const [confirmOff, setConfirmOff] = useState(false);
+  const [busy, setBusy] = useState('');
+  const [errors, setErrors] = useState({});
+  const later = useRef(null);
 
   const load = useCallback(async () => {
     setError('');
     try {
-      const d = await adminApi.getIntegrations();
-      setData(d);
-      setSender(d?.sms?.sender || '');
+      setData(await adminApi.getIntegrations());
     } catch (e) {
-      setError(handleApiError(e));
+      setError(handleApiError(e, t('integrations.loadFailed')));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    return () => clearTimeout(later.current);
+  }, [load]);
 
-  // A write lands in the config store and is read back through its cache, so
-  // an immediate re-fetch would show the old value and read as a failed save.
-  const reload = useCallback(() => { setTimeout(load, 2500); }, [load]);
-
-  const toggleMaster = async (on) => {
-    setMasterBusy(true);
+  /** One write, then read back what is in effect (now, and once more after the cache TTL). */
+  const write = async (id, patch) => {
+    setBusy(id);
+    setErrors((p) => ({ ...p, [id]: '' }));
     try {
-      await adminApi.updateIntegrations({ enabled: on });
-      reload();
+      await adminApi.updateIntegrations(patch);
+      await load();
+      clearTimeout(later.current);
+      later.current = setTimeout(load, 2500);
+      return true;
     } catch (e) {
-      setError(handleApiError(e, t('integrations.saveFailed')));
+      setErrors((p) => ({ ...p, [id]: handleApiError(e, t('integrations.saveFailed')) }));
+      return false;
     } finally {
-      setMasterBusy(false);
-    }
-  };
-
-  const saveSender = async () => {
-    setSenderBusy(true);
-    setSenderError('');
-    try {
-      await adminApi.updateIntegrations({ sender });
-      setEditingSender(false);
-      reload();
-    } catch (e) {
-      setSenderError(handleApiError(e, t('integrations.saveFailed')));
-    } finally {
-      setSenderBusy(false);
+      setBusy('');
     }
   };
 
@@ -216,424 +309,309 @@ export default function AdminIntegrations() {
   if (error && !data) return <Failed T={T} message={error} onRetry={load} />;
 
   const sms = data?.sms || {};
-  const rows = Array.isArray(sms.templates) ? sms.templates : [];
+  const email = data?.email || {};
+  const smsRows = Object.fromEntries((sms.templates || []).map((r) => [r.key, r]));
+  const emailRows = Object.fromEntries((email.templates || []).map((r) => [r.key, r]));
+  const canSms = !!sms.storeReady;
+  const canEmail = !!email.storeReady;
+  const mono = <Mono T={T} />;
+  // SMS Office's ErrorCode 150: the sender is not registered with them.
+  const senderRejected = sms.lastFailure?.errorCode === 150;
 
-  return (
-    <>
-      <SectionTitle
-        T={T}
-        title={t('integrations.title')}
-        sub={t('integrations.sub')}
-        right={(
-          <Chip T={T} tone={sms.configured ? 'success' : 'warn'}>
-            {sms.configured ? t('integrations.keySet') : t('integrations.keyMissing')}
-          </Chip>
-        )}
-      />
+  const channelsOf = (key) => [smsRows[key] && 'sms', emailRows[key] && 'email'].filter(Boolean);
+  const pick = (key, channel) => {
+    const chans = channelsOf(key);
+    setSel({ key, channel: chans.includes(channel) ? channel : chans[0] });
+    if (isMobile) setSheet(true);
+  };
+  const selRow = sel.channel === 'sms' ? smsRows[sel.key] : emailRows[sel.key];
 
-      {/* Nothing on this screen can be saved without the config store, so say
-          that before an admin edits five things and loses all of them. */}
-      {!sms.storeReady && (
-        <div style={{ marginBottom: 14 }}>
-          <Note T={T} tone="danger">{t('integrations.storeOffline')}</Note>
-        </div>
-      )}
-
-      {!sms.configured && (
-        <div style={{ marginBottom: 14 }}>
-          <Note T={T} tone="warn">{t('integrations.keyMissingHint')}</Note>
-        </div>
-      )}
-
-      {sms.configured && !sms.enabled && (
-        <div style={{ marginBottom: 14 }}>
-          <Note T={T} tone="danger">{t('integrations.disabledWarning')}</Note>
-        </div>
-      )}
-
-      {/* The provider's own answer for why the last message failed. Without
-          this the only symptom is a shopper seeing "could not send the code",
-          and the cause sits in a log on a host nobody opens. */}
-      {sms.lastFailure && (
-        <div style={{
-          marginBottom: 14, padding: '13px 15px', borderRadius: 14,
-          background: T.dangerBg, border: `1px solid ${alpha(T.danger, 0.33)}`,
-        }}>
-          <div style={{ font: `700 13px ${T.font}`, color: T.dangerFg }}>
-            {t('integrations.lastFailureTitle')}
-          </div>
-          <div style={{ marginTop: 5, font: `500 12.5px/1.55 ${T.font}`, color: T.text }}>
-            {sms.lastFailure.reason}
-          </div>
-          <div style={{ marginTop: 6, font: `500 10.5px ${T.mono}`, color: T.textMute }}>
-            {sms.lastFailure.errorCode != null && `ErrorCode ${sms.lastFailure.errorCode} · `}
-            {sms.lastFailure.at}
-          </div>
-        </div>
-      )}
-
-      <Card T={T} pad={0} style={{ overflow: 'hidden', marginBottom: 20 }}>
-        <div style={{ padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', font: `700 14.5px ${T.font}`, color: T.text }}>SMS Office</span>
-            <span style={{ display: 'block', marginTop: 3, font: `500 11.5px ${T.mono}`, color: T.textMute }}>{sms.endpoint}</span>
-          </span>
-          {/* Master switch. Off stops every message including the code, which
-              stops checkout — the warning above spells that out. */}
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ font: `600 12px ${T.font}`, color: sms.enabled ? T.successFg : T.textMute }}>
-              {sms.enabled ? t('integrations.on') : t('integrations.off')}
-            </span>
-            <Toggle
-              T={T}
-              on={!!sms.enabled}
-              disabled={masterBusy || !sms.storeReady}
-              onClick={() => toggleMaster(!sms.enabled)}
-            />
-          </span>
-        </div>
-
-        {/* The key: status only, never the value. */}
-        <div style={{ padding: '15px 18px', borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-          <span style={{ flex: '1 1 220px', minWidth: 0 }}>
-            <span style={{ display: 'block', font: `700 12.5px ${T.mono}`, color: T.text }}>APP_SMS_KEY</span>
-            <span style={{ display: 'block', font: `400 11.5px/1.5 ${T.font}`, color: T.textMute, marginTop: 3 }}>
-              {t('integrations.keyNote')}
-            </span>
-          </span>
-          <Chip T={T} tone={sms.configured ? 'success' : 'neutral'}>
-            {sms.configured ? t('integrations.keySet') : t('integrations.keyMissing')}
-          </Chip>
-        </div>
-
-        {/* The sender name: editable, because it must match what SMS Office
-            has approved and that can change while approval is pending. */}
-        <div style={{ padding: '15px 18px', borderTop: `1px solid ${T.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-            <span style={{ flex: '1 1 220px', minWidth: 0 }}>
-              <span style={{ display: 'block', font: `700 12.5px ${T.mono}`, color: T.text }}>app.sms.sender</span>
-              <span style={{ display: 'block', font: `400 11.5px/1.5 ${T.font}`, color: T.textMute, marginTop: 3 }}>
-                {t('integrations.senderNote')}
-              </span>
-            </span>
-            {!editingSender && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 14, flex: '1 1 200px', minWidth: 0 }}>
-                <span style={{ flex: 1, minWidth: 0, font: `600 12.5px ${T.mono}`, color: T.textDim }}>{sms.sender}</span>
-                <Btn T={T} kind="quiet" size="sm" onClick={() => { setSender(sms.sender); setEditingSender(true); }}>
-                  {t('integrations.edit')}
-                </Btn>
-              </span>
-            )}
-          </div>
-          {editingSender && (
-            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input
-                value={sender}
-                onChange={(e) => setSender(e.target.value)}
-                maxLength={11}
-                style={{
-                  height: 44, padding: '0 14px', borderRadius: 12, boxSizing: 'border-box',
-                  background: T.surface, border: `1.5px solid ${senderError ? T.danger : T.border}`,
-                  color: T.text, font: `600 13px ${T.mono}`, outline: 'none',
-                }}
-              />
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Btn T={T} size="sm" disabled={senderBusy} onClick={saveSender}>
-                  {senderBusy ? t('ui.working') : t('integrations.save')}
-                </Btn>
-                <Btn T={T} kind="ghost" size="sm" disabled={senderBusy} onClick={() => setEditingSender(false)}>
-                  {t('integrations.cancel')}
-                </Btn>
-              </div>
-              {senderError && <span style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{senderError}</span>}
-            </div>
-          )}
-        </div>
-      </Card>
-
-      <SectionTitle T={T} title={t('integrations.templatesTitle')} sub={t('integrations.templatesSub')} />
-      <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
-        {rows.map((row) => (
-          <TemplateRow key={row.key} T={T} t={t} row={row} onSaved={reload} canWrite={!!sms.storeReady} />
-        ))}
-      </Card>
-
-      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Note T={T} tone="admin">{t('integrations.langNote')}</Note>
-        <Note T={T}>{t('integrations.cancelNote')}</Note>
-      </div>
-
-      <EmailSection T={T} t={t} email={data?.email || {}} onSaved={reload} />
-    </>
-  );
-}
-
-// ---- Email (Resend) --------------------------------------------------------
-//
-// The same shape as the SMS block above, because the same two kinds of thing
-// live in it: a secret key that is reported but never shown, and operational
-// wording that is editable and live.
-//
-// Two differences, both deliberate. There are no billed-unit counts — mail is
-// not priced per 70 characters, so the number would be noise. And every
-// template is switchable, including cancellation and refund: nothing in
-// checkout waits on an email, so turning one off costs courtesy rather than
-// function, which is the opposite of the verification SMS.
-function EmailSection({ T, t, email, onSaved }) {
-  const [from, setFrom] = useState(email.from || '');
-  const [editingFrom, setEditingFrom] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const rows = Array.isArray(email.templates) ? email.templates : [];
-  const canWrite = !!email.storeReady;
-
-  const save = async (patch) => {
-    setBusy(true);
-    setError('');
-    try {
-      await adminApi.updateIntegrations({ email: patch });
-      setEditingFrom(false);
-      onSaved();
-    } catch (e) {
-      setError(handleApiError(e, t('integrations.saveFailed')));
-    } finally {
-      setBusy(false);
+  const rowSub = (key) => {
+    if (key === 'otp') {
+      if (!sms.configured) return [t('integrations.codeNoKey'), true];
+      if (!sms.enabled) return [t('integrations.codeOff'), true];
+      if (senderRejected) return [t('integrations.codeRejected'), true];
+      return [t('integrations.rowSub.otp'), false];
     }
+    if (!isMobile && key === sel.key) return [t('integrations.editingNow'), false];
+    return [t(`integrations.rowSub.${key}`), false];
   };
 
-  return (
-    <div style={{ marginTop: 28 }}>
-      <SectionTitle
+  const smsCell = (key) => {
+    const r = smsRows[key];
+    if (!r) return <span style={{ color: T.textDim }}>—</span>;
+    if (!r.switchable) {
+      return (
+        <span role="img" aria-label={t('integrations.always')} style={{ display: 'inline-flex' }}>
+          <SwitchMark T={T} on={sms.enabled !== false} dim />
+        </span>
+      );
+    }
+    return (
+      <Switch
         T={T}
-        title={t('integrations.emailTitle')}
-        sub={t('integrations.emailSub')}
-        right={(
-          <Chip T={T} tone={email.configured ? 'success' : 'warn'}>
-            {email.configured ? t('integrations.keySet') : t('integrations.keyMissing')}
-          </Chip>
-        )}
+        on={!!r.enabled}
+        dim={!sms.enabled}
+        disabled={!canSms || !!busy}
+        label={`${t(`integrations.row.${key}`)} · SMS`}
+        onChange={(on) => write(`sms:${key}`, { templateEnabled: { [key]: on } })}
       />
+    );
+  };
+  const emailCell = (key) => {
+    const r = emailRows[key];
+    if (!r) return <span style={{ color: T.textDim }}>—</span>;
+    return (
+      <Switch
+        T={T}
+        on={!!r.enabled}
+        dim={!email.configured || !email.enabled}
+        disabled={!canEmail || !!busy}
+        label={`${t(`integrations.row.${key}`)} · ${t('integrations.email')}`}
+        onChange={(on) => write(`email:${key}`, { email: { templateEnabled: { [key]: on } } })}
+      />
+    );
+  };
 
-      {!email.configured && (
-        <div style={{ marginBottom: 14 }}>
-          <Note T={T} tone="warn">{t('integrations.emailKeyMissingHint')}</Note>
-        </div>
-      )}
+  const col = { width: isMobile ? 46 : 72, flex: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center' };
 
-      {email.configured && !email.enabled && (
-        <div style={{ marginBottom: 14 }}>
-          <Note T={T} tone="warn">{t('integrations.emailDisabledWarning')}</Note>
-        </div>
-      )}
-
-      {/* Resend's own reason — "the domain is not verified" is the usual one,
-          and it is the single thing an operator can act on from here. */}
-      {email.lastFailure && (
-        <div style={{
-          marginBottom: 14, padding: '13px 15px', borderRadius: 14,
-          background: T.dangerBg, border: `1px solid ${alpha(T.danger, 0.33)}`,
-        }}>
-          <div style={{ font: `700 13px ${T.font}`, color: T.dangerFg }}>
-            {t('integrations.lastFailureTitle')}
-          </div>
-          <div style={{ marginTop: 5, font: `500 12.5px/1.55 ${T.font}`, color: T.text }}>
-            {email.lastFailure.reason}
-          </div>
-          <div style={{ marginTop: 6, font: `500 10.5px ${T.mono}`, color: T.textMute }}>
-            {email.lastFailure.statusCode != null && `HTTP ${email.lastFailure.statusCode} · `}
-            {email.lastFailure.at}
-          </div>
-        </div>
-      )}
-
-      <Card T={T} pad={0} style={{ overflow: 'hidden', marginBottom: 20 }}>
-        <div style={{ padding: '15px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', font: `700 14.5px ${T.font}`, color: T.text }}>Resend</span>
-            <span style={{ display: 'block', marginTop: 3, font: `500 11.5px ${T.mono}`, color: T.textMute }}>{email.endpoint}</span>
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ font: `600 12px ${T.font}`, color: email.enabled ? T.successFg : T.textMute }}>
-              {email.enabled ? t('integrations.on') : t('integrations.off')}
-            </span>
-            <Toggle
-              T={T}
-              on={!!email.enabled}
-              disabled={busy || !canWrite}
-              onClick={() => save({ enabled: !email.enabled })}
-            />
-          </span>
-        </div>
-
-        <div style={{ padding: '15px 18px', borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-          <span style={{ flex: '1 1 220px', minWidth: 0 }}>
-            <span style={{ display: 'block', font: `700 12.5px ${T.mono}`, color: T.text }}>APP_EMAIL_KEY</span>
-            <span style={{ display: 'block', font: `400 11.5px/1.5 ${T.font}`, color: T.textMute, marginTop: 3 }}>
-              {t('integrations.keyNote')}
-            </span>
-          </span>
-          <Chip T={T} tone={email.configured ? 'success' : 'neutral'}>
-            {email.configured ? t('integrations.keySet') : t('integrations.keyMissing')}
-          </Chip>
-        </div>
-
-        {/* The from-address: editable, because it has to sit on a domain
-            verified with Resend and that verification takes time to land. */}
-        <div style={{ padding: '15px 18px', borderTop: `1px solid ${T.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-            <span style={{ flex: '1 1 220px', minWidth: 0 }}>
-              <span style={{ display: 'block', font: `700 12.5px ${T.mono}`, color: T.text }}>app.email.from</span>
-              <span style={{ display: 'block', font: `400 11.5px/1.5 ${T.font}`, color: T.textMute, marginTop: 3 }}>
-                {t('integrations.fromNote')}
-              </span>
-            </span>
-            {!editingFrom && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 14, flex: '1 1 200px', minWidth: 0 }}>
-                <span style={{ flex: 1, minWidth: 0, font: `600 12.5px ${T.mono}`, color: T.textDim }}>{email.from}</span>
-                <Btn T={T} kind="quiet" size="sm" onClick={() => { setFrom(email.from || ''); setEditingFrom(true); }}>
-                  {t('integrations.edit')}
-                </Btn>
-              </span>
+  const matrix = (
+    <List T={T}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', minHeight: 48,
+        borderBottom: `1px solid ${T.border}`,
+      }}>
+        <b style={{ flex: 1, minWidth: 0, font: `600 16px/1.3 ${T.font}`, color: T.text }}>{t('integrations.templatesTitle')}</b>
+        <span style={{ ...col, font: `600 12px ${T.font}`, color: T.textDim }}>
+          {isMobile ? <Glyph name="sms" size={18} label="SMS" /> : 'SMS'}
+        </span>
+        <span style={{ ...col, font: `600 12px ${T.font}`, color: T.textDim }}>
+          {isMobile ? <Glyph name="mail" size={18} label={t('integrations.email')} /> : t('integrations.email')}
+        </span>
+        {isMobile && <span style={{ width: 16, flex: 'none' }} />}
+      </div>
+      {ROWS.map((key) => {
+        const [subText, alarm] = rowSub(key);
+        const on = !isMobile && key === sel.key;
+        const err = errors[`sms:${key}`] || errors[`email:${key}`];
+        return (
+          <div key={key} style={{ borderBottom: `1px solid ${T.border}`, background: on ? `color-mix(in oklab, ${T.accent} 7%, ${T.surface})` : 'transparent' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', minHeight: 56 }}>
+              <button
+                type="button"
+                onClick={() => pick(key, sel.channel)}
+                aria-current={on || undefined}
+                style={{
+                  flex: 1, minWidth: 0, padding: '11px 0', border: 'none', background: 'transparent', textAlign: 'left',
+                  cursor: 'pointer', color: T.text, display: 'flex', alignItems: 'center', gap: 8,
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <b style={{ display: 'block', font: `700 12.5px/1.4 ${T.font}` }}>{t(`integrations.row.${key}`)}</b>
+                  <span style={{ display: 'block', font: `500 12px/1.4 ${T.font}`, color: alarm ? T.dangerFg : T.textDim }}>{subText}</span>
+                </span>
+              </button>
+              <span style={col}>{smsCell(key)}</span>
+              <span style={col}>{emailCell(key)}</span>
+              {isMobile && (
+                <span aria-hidden="true" onClick={() => pick(key, sel.channel)} style={{ width: 16, flex: 'none', color: T.textDim, display: 'flex', cursor: 'pointer' }}>
+                  <Glyph name="chevR" size={16} />
+                </span>
+              )}
+            </div>
+            {err && (
+              <div role="alert" style={{ padding: '0 16px 10px', font: `500 12px/1.45 ${T.font}`, color: T.dangerFg }}>{err}</div>
             )}
           </div>
-          {editingFrom && (
-            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                maxLength={200}
-                style={{
-                  height: 44, padding: '0 14px', borderRadius: 12, boxSizing: 'border-box',
-                  background: T.surface, border: `1.5px solid ${error ? T.danger : T.border}`,
-                  color: T.text, font: `600 13px ${T.mono}`, outline: 'none',
-                }}
-              />
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Btn T={T} size="sm" disabled={busy} onClick={() => save({ from })}>
-                  {busy ? t('ui.working') : t('integrations.save')}
-                </Btn>
-                <Btn T={T} kind="ghost" size="sm" disabled={busy} onClick={() => setEditingFrom(false)}>
-                  {t('integrations.cancel')}
-                </Btn>
-              </div>
-              {error && <span style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{error}</span>}
-            </div>
-          )}
-        </div>
-      </Card>
+        );
+      })}
+      <div style={{ padding: 16, font: `500 12px/1.5 ${T.font}`, color: T.textDim }}>{t('integrations.cancelNote')}</div>
+    </List>
+  );
 
-      <SectionTitle T={T} title={t('integrations.emailTemplatesTitle')} sub={t('integrations.emailTemplatesSub')} />
-      <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
-        {rows.map((row) => (
-          <EmailTemplateRow key={row.key} T={T} t={t} row={row} onSaved={onSaved} canWrite={canWrite} />
-        ))}
-      </Card>
+  const editor = selRow && (
+    <Editor
+      showTitle={!isMobile}
+      key={`${sel.channel}:${sel.key}:${selRow.isDefault}:${selRow.text ?? ''}${selRow.subject ?? ''}${selRow.body ?? ''}`}
+      T={T}
+      t={t}
+      phone={isMobile}
+      kind={sel.channel}
+      row={selRow}
+      name={t(`integrations.row.${sel.key}`)}
+      channels={channelsOf(sel.key)}
+      onChannel={(c) => setSel((s) => ({ ...s, channel: c }))}
+      canWrite={sel.channel === 'sms' ? canSms : canEmail}
+      busy={busy === `text:${sel.channel}:${sel.key}`}
+      error={errors[`text:${sel.channel}:${sel.key}`]}
+      onSave={(patch) => write(`text:${sel.channel}:${sel.key}`, patch)}
+    />
+  );
+
+  const smsCard = (
+    <ChannelCard
+      T={T}
+      icon="sms"
+      title="SMS"
+      sub={t('integrations.smsSub')}
+      master={(
+        <Switch
+          T={T}
+          on={!!sms.enabled}
+          disabled={!canSms || !!busy}
+          label="SMS"
+          onChange={(on) => (on ? write('sms:master', { enabled: true }) : setConfirmOff(true))}
+        />
+      )}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <KeyLine T={T} t={t} configured={sms.configured} />
+        <Sender
+          T={T}
+          t={t}
+          phone={isMobile}
+          value={sms.sender}
+          source={sms.senderSource}
+          maxLength={11}
+          bad={senderRejected}
+          canWrite={canSms}
+          busy={busy === 'sms:sender'}
+          error={errors['sms:sender']}
+          onSave={(v) => write('sms:sender', { sender: v })}
+        />
+      </div>
+      <p style={{ margin: 0, font: `500 12px/1.5 ${T.font}`, color: T.textDim }}>
+        <Trans t={t} i18nKey="integrations.senderEnvNote" components={{ mono }} />
+      </p>
+      {errors['sms:master'] && <span role="alert" style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{errors['sms:master']}</span>}
+      {!sms.configured && (
+        <Alert T={T} tone="warn"><Trans t={t} i18nKey="integrations.smsNoKey" components={{ mono }} /></Alert>
+      )}
+      {sms.configured && !sms.enabled && <Alert T={T} tone="bad">{t('integrations.smsOff')}</Alert>}
+      {sms.lastFailure && (
+        <Alert T={T} tone="bad" title={t('integrations.lastFailureTitle')}>
+          {[sms.lastFailure.reason, dateTime(sms.lastFailure.at, lang)].filter(Boolean).join(' · ')}
+          {sms.lastFailure.errorCode != null && ` · ErrorCode ${sms.lastFailure.errorCode}`}
+          {senderRejected && <>{'. '}{t('integrations.senderAdvice')}</>}
+        </Alert>
+      )}
+    </ChannelCard>
+  );
+
+  const emailCard = (
+    <ChannelCard
+      T={T}
+      icon="mail"
+      title={t('integrations.email')}
+      sub={t('integrations.emailSub')}
+      master={(
+        <Switch
+          T={T}
+          on={!!email.enabled}
+          disabled={!canEmail || !!busy}
+          label={t('integrations.email')}
+          onChange={(on) => write('email:master', { email: { enabled: on } })}
+        />
+      )}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <KeyLine T={T} t={t} configured={email.configured} />
+        <Sender
+          T={T}
+          t={t}
+          phone={isMobile}
+          value={email.from}
+          source={email.fromSource}
+          maxLength={200}
+          canWrite={canEmail}
+          busy={busy === 'email:from'}
+          error={errors['email:from']}
+          onSave={(v) => write('email:from', { email: { from: v } })}
+        />
+      </div>
+      {errors['email:master'] && <span role="alert" style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{errors['email:master']}</span>}
+      {!email.configured && (
+        <Alert T={T} tone="warn"><Trans t={t} i18nKey="integrations.emailNoKey" components={{ mono }} /></Alert>
+      )}
+      {email.configured && !email.enabled && <Alert T={T} tone="warn">{t('integrations.emailDisabledWarning')}</Alert>}
+      {email.lastFailure && (
+        <Alert T={T} tone="bad" title={t('integrations.emailFailureTitle')}>
+          {[email.lastFailure.reason, dateTime(email.lastFailure.at, lang)].filter(Boolean).join(' · ')}
+          {email.lastFailure.statusCode != null && ` · HTTP ${email.lastFailure.statusCode}`}
+        </Alert>
+      )}
+    </ChannelCard>
+  );
+
+  const left = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+      <div style={{
+        display: 'grid', gap: 16, alignItems: 'start',
+        gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
+      }}>
+        {smsCard}
+        {emailCard}
+      </div>
+      {!isMobile && editor && (
+        <div style={{ padding: 16, borderRadius: 16, background: T.surface, border: `1px solid ${T.border}` }}>
+          {editor}
+        </div>
+      )}
+      <p style={{ margin: 0, font: `500 12px/1.5 ${T.font}`, color: T.textDim }}>{t('integrations.keysNote')}</p>
     </div>
   );
-}
-
-function EmailTemplateRow({ T, t, row, onSaved, canWrite }) {
-  const [editing, setEditing] = useState(false);
-  const [subject, setSubject] = useState(row.subject);
-  const [body, setBody] = useState(row.body);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const begin = () => {
-    setSubject(row.subject);
-    setBody(row.body);
-    setError('');
-    setEditing(true);
-  };
-
-  const run = async (patch) => {
-    setBusy(true);
-    setError('');
-    try {
-      await adminApi.updateIntegrations({ email: patch });
-      setEditing(false);
-      onSaved();
-    } catch (e) {
-      setError(handleApiError(e, t('integrations.saveFailed')));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const field = {
-    padding: '10px 12px', borderRadius: 10, boxSizing: 'border-box', width: '100%',
-    background: T.surface, border: `1.5px solid ${error ? T.danger : T.border}`,
-    color: T.text, font: `500 12.5px ${T.font}`, outline: 'none',
-  };
 
   return (
-    <div style={{ padding: '15px 18px', borderTop: `1px solid ${T.border}` }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
-        <span style={{ flex: '1 1 240px', minWidth: 0 }}>
-          <span style={{ display: 'block', font: `700 13px ${T.font}`, color: T.text }}>
-            {t(`integrations.emailTemplate.${row.key}`, { defaultValue: row.key })}
-          </span>
-          <span style={{ display: 'block', marginTop: 3, font: `600 11.5px ${T.mono}`, color: T.textDim }}>
-            {row.subject}
-          </span>
-          <span style={{ display: 'block', marginTop: 4, font: `400 11.5px/1.5 ${T.font}`, color: T.textMute, whiteSpace: 'pre-wrap' }}>
-            {row.body}
-          </span>
-          {/* The tokens this message may use — anything else is refused as a
-              typo rather than rendered as nothing. */}
-          <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 7 }}>
-            {(row.tokens || []).map((tok) => (
-              <span key={tok} style={{ padding: '2px 7px', borderRadius: 999, background: T.surface2, font: `600 10px ${T.mono}`, color: T.textMute }}>
-                {`{${tok}}`}
-              </span>
-            ))}
-          </span>
-        </span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-          <Toggle
-            T={T}
-            on={!!row.enabled}
-            disabled={busy || !canWrite}
-            onClick={() => run({ templateEnabled: { [row.key]: !row.enabled } })}
-          />
-          <Btn T={T} kind="quiet" size="sm" disabled={!canWrite} onClick={begin}>
-            {t('integrations.edit')}
-          </Btn>
-        </span>
+    <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+      <SectionTitle T={T} lang={lang} title={t('integrations.title')} sub={t('integrations.sub')} />
+
+      {(!canSms || !canEmail) && (
+        <Alert T={T} tone="bad" style={{ marginBottom: 16 }}>{t('integrations.storeOffline')}</Alert>
+      )}
+
+      <div style={{
+        display: 'grid', gap: isMobile ? 14 : 20, alignItems: 'start',
+        gridTemplateColumns: isDesktop ? 'minmax(0, 1.6fr) minmax(0, 1fr)' : 'minmax(0, 1fr)',
+      }}>
+        {left}
+        {matrix}
       </div>
 
-      {editing && (
-        <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 9 }}>
-          <input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} style={field} />
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={6}
-            maxLength={5000}
-            style={{ ...field, resize: 'vertical', lineHeight: 1.6 }}
-          />
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Btn T={T} size="sm" disabled={busy} onClick={() => run({ templates: { [row.key]: { subject, body } } })}>
-              {busy ? t('ui.working') : t('integrations.save')}
-            </Btn>
-            <Btn T={T} kind="ghost" size="sm" disabled={busy} onClick={() => setEditing(false)}>
-              {t('integrations.cancel')}
-            </Btn>
-            {!row.isDefault && (
-              <Btn
-                T={T}
-                kind="ghost"
-                size="sm"
-                disabled={busy}
-                onClick={() => run({ templates: { [row.key]: { subject: row.defaultSubject, body: row.defaultBody } } })}
-              >
-                {t('integrations.reset')}
-              </Btn>
-            )}
+      {isMobile && sheet && editor && (
+        <Dialog
+          T={T}
+          phone
+          title={t('integrations.editorTitle', {
+            name: t(`integrations.row.${sel.key}`),
+            channel: sel.channel === 'sms' ? 'SMS' : t('integrations.email'),
+          })}
+          onClose={() => setSheet(false)}
+          busy={!!busy}
+        >
+          {editor}
+        </Dialog>
+      )}
+
+      {confirmOff && (
+        <Dialog T={T} phone={isMobile} title={t('integrations.offTitle')} onClose={() => setConfirmOff(false)} busy={busy === 'sms:master'}>
+          <List T={T}>
+            <DialogPoint T={T} first icon="lock" tone={T.dangerFg}>{t('integrations.offPointCode')}</DialogPoint>
+            <DialogPoint T={T} icon="sms">{t('integrations.offPointOrders')}</DialogPoint>
+          </List>
+          {errors['sms:master'] && <span role="alert" style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{errors['sms:master']}</span>}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <KitBtn T={T} disabled={busy === 'sms:master'} onClick={() => setConfirmOff(false)}>{t('ui.cancel')}</KitBtn>
+            <KitBtn
+              T={T}
+              kind="danger"
+              disabled={busy === 'sms:master'}
+              style={{ flex: isMobile ? '1 1 0' : 'none' }}
+              onClick={async () => { if (await write('sms:master', { enabled: false })) setConfirmOff(false); }}
+            >
+              {busy === 'sms:master' ? t('ui.working') : t('integrations.offConfirm')}
+            </KitBtn>
           </div>
-          {error && <span style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{error}</span>}
-        </div>
+        </Dialog>
       )}
     </div>
   );

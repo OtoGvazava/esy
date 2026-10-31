@@ -1,5 +1,6 @@
 package com.esyback.ecommerce.service;
 
+import com.esyback.ecommerce.config.PlatformProperties;
 import com.esyback.ecommerce.entity.AuditLog;
 import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.PlatformAdmin;
@@ -20,6 +21,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -73,6 +78,7 @@ public class AdminService {
     // The ADMIN allowlist, read live (Redis override → env ADMIN_EMAILS → ""),
     // exactly as UserService reads it when it grants the role at sign-in.
     private final ConfigStore configStore;
+    private final PlatformProperties platformProperties;
 
     /** Key the allowlist lives under; must match UserService. */
     private static final String ADMIN_EMAILS_KEY = "app.admin-emails";
@@ -85,6 +91,8 @@ public class AdminService {
 
     private static final String ACTION_STORE_SUSPENDED = "STORE_SUSPENDED";
     private static final String ACTION_STORE_REACTIVATED = "STORE_REACTIVATED";
+    private static final String ACTION_STORE_VERIFIED = "STORE_VERIFIED";
+    private static final String ACTION_STORE_UNVERIFIED = "STORE_UNVERIFIED";
     private static final String ACTION_ADMIN_GRANTED = "ADMIN_GRANTED";
     private static final String ACTION_ADMIN_REVOKED = "ADMIN_REVOKED";
     private static final String ACTION_MEMBER_ASSIGNED = "STORE_MEMBER_ASSIGNED";
@@ -161,6 +169,41 @@ public class AdminService {
         return storeSummary(tenant, ownerEmailOf(tenant));
     }
 
+    /**
+     * Vouch for a store: the storefront then draws a tick beside its name.
+     *
+     * <p>Idempotent. Verifying a store that is already verified keeps the
+     * original date and writes no audit row, because nothing changed — the
+     * "verified since" a shopper might be shown should not move every time an
+     * admin presses the switch again.
+     */
+    @Transactional
+    public Map<String, Object> verify(String subdomain, String actorEmail) {
+        Tenant tenant = requireStore(subdomain);
+        if (tenant.getVerifiedAt() == null) {
+            // Millisecond precision: the value is handed to browsers as an
+            // ISO string, and nothing reads it finer than that.
+            tenant.setVerifiedAt(Instant.now().truncatedTo(ChronoUnit.MILLIS));
+            tenantRepository.save(tenant);
+            audit(actorEmail, ACTION_STORE_VERIFIED, TARGET_STORE, tenant.getSubdomain(), null);
+        }
+        return storeSummary(tenant, ownerEmailOf(tenant));
+    }
+
+    /** Take the tick away. Idempotent, like {@link #verify}. */
+    @Transactional
+    public Map<String, Object> unverify(String subdomain, String actorEmail) {
+        Tenant tenant = requireStore(subdomain);
+        Instant was = tenant.getVerifiedAt();
+        if (was != null) {
+            tenant.setVerifiedAt(null);
+            tenantRepository.save(tenant);
+            audit(actorEmail, ACTION_STORE_UNVERIFIED, TARGET_STORE, tenant.getSubdomain(),
+                "was verified " + was);
+        }
+        return storeSummary(tenant, ownerEmailOf(tenant));
+    }
+
     /** Put a store back online and clear all three suspension fields together. */
     @Transactional
     public Map<String, Object> reactivate(String subdomain, String actorEmail) {
@@ -178,36 +221,91 @@ public class AdminService {
 
     // --------------------------------------------------------------- billing
 
-    /**
-     * What each store owes the platform in service fees, biggest debt first,
-     * plus the platform-wide total. Suspended stores are included: taking a
-     * shop offline does not cancel fees already accrued.
-     */
+    /** Every order ever placed — the all-time view. */
     public Map<String, Object> billing() {
-        List<Map<String, Object>> stores = tenantRepository.findAll().stream()
-            .map(t -> {
-                Map<String, Object> row = new LinkedHashMap<>();
-                row.put("subdomain", t.getSubdomain());
-                row.put("name", t.getName());
-                row.put("orderCount", orderService.orderCount(t));
-                row.put("revenue", orderService.revenue(t));
-                row.put("feesOwed", orderService.serviceFeesOwed(t));
-                return row;
-            })
-            .sorted(Comparator
-                .comparing((Map<String, Object> row) -> (BigDecimal) row.get("feesOwed"))
-                .reversed()
-                .thenComparing(row -> String.valueOf(row.get("name"))))
-            .collect(Collectors.toList());
+        return billing(null);
+    }
 
-        BigDecimal totalAccrued = stores.stream()
-            .map(row -> (BigDecimal) row.get("feesOwed"))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    /**
+     * What each store's sales came to and what it owes the platform in service
+     * fees, over one calendar month ({@code "2026-10"}) or, with no month, over
+     * all time. Biggest commission first. Suspended stores are included: taking
+     * a shop offline does not cancel fees already accrued.
+     *
+     * <p>Only stores with something billable in the period are listed — this
+     * is the "who owes what" view; every store, active or not, is on the store
+     * list. The month is read against {@code Order.createdAt}, which is the
+     * server's local time, the same clock the orders were stamped with.
+     *
+     * <p>Every figure is per order, frozen when the order was placed (the fee
+     * rate included), and summed here on the server — see
+     * {@link OrderService#billingFigures}. Nothing is invoiced or paid out yet;
+     * these are what has accrued.
+     */
+    public Map<String, Object> billing(String month) {
+        YearMonth period = parseMonth(month);
+        LocalDateTime from = period == null ? null : period.atDay(1).atStartOfDay();
+        LocalDateTime to = period == null ? null : period.plusMonths(1).atDay(1).atStartOfDay();
+
+        List<Map<String, Object>> stores = new ArrayList<>();
+        List<Order> all = new ArrayList<>();
+        for (Tenant t : tenantRepository.findAll()) {
+            List<Order> orders = orderService.ordersForTenant(t).stream()
+                .filter(o -> from == null
+                    || (o.getCreatedAt() != null && !o.getCreatedAt().isBefore(from) && o.getCreatedAt().isBefore(to)))
+                .toList();
+            OrderService.BillingFigures f = OrderService.billingFigures(orders);
+            if (f.billableCount() == 0) continue;
+            all.addAll(orders);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("subdomain", t.getSubdomain());
+            row.put("name", t.getName());
+            row.put("displayName", t.getDisplayName());
+            putFigures(row, f);
+            stores.add(row);
+        }
+        stores.sort(Comparator
+            .comparing((Map<String, Object> row) -> (BigDecimal) row.get("feesAccrued")).reversed()
+            .thenComparing(row -> (BigDecimal) row.get("sales"), Comparator.reverseOrder())
+            .thenComparing(row -> String.valueOf(row.get("name"))));
+
+        // The totals are the same arithmetic over every listed store's orders,
+        // not a sum of rounded rows — and never a sum done in the browser.
+        OrderService.BillingFigures total = OrderService.billingFigures(all);
+        Map<String, Object> totals = new LinkedHashMap<>();
+        totals.put("storeCount", stores.size());
+        putFigures(totals, total);
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("totalAccrued", totalAccrued);
+        body.put("month", period == null ? null : period.toString());
+        // The rate new orders are charged at today. Each order keeps the rate
+        // it was placed under, so this labels the screen; it computes nothing.
+        body.put("serviceFeeRate", platformProperties.getServiceFeeRate());
+        // Kept from the first version of this endpoint: what is owed after
+        // refunds, platform-wide. Same number as totals.feesOwed.
+        body.put("totalAccrued", total.feesOwed());
+        body.put("totals", totals);
         body.put("stores", stores);
         return body;
+    }
+
+    private static void putFigures(Map<String, Object> m, OrderService.BillingFigures f) {
+        m.put("orderCount", f.orderCount());
+        m.put("revenue", f.revenue());
+        m.put("sales", f.sales());
+        m.put("feesAccrued", f.feesAccrued());
+        m.put("feesWrittenOff", f.feesWrittenOff());
+        m.put("refundCount", f.refundCount());
+        m.put("feesOwed", f.feesOwed());
+    }
+
+    private static YearMonth parseMonth(String month) {
+        if (month == null || month.isBlank()) return null;
+        try {
+            return YearMonth.parse(month.trim());
+        } catch (DateTimeParseException e) {
+            throw bad("month must look like 2026-10");
+        }
     }
 
     // ------------------------------------------------------------ membership
@@ -360,6 +458,7 @@ public class AdminService {
         m.put("active", Boolean.TRUE.equals(t.getIsActive()));
         m.put("suspendedAt", t.getSuspendedAt());
         m.put("suspendReason", t.getSuspendReason());
+        m.put("verifiedAt", t.getVerifiedAt());
         m.put("productCount", productRepository.countByTenant(t));
         m.put("orderCount", orderService.orderCount(t));
         m.put("revenue", orderService.revenue(t));
