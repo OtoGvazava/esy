@@ -17,7 +17,7 @@ export default function Account() {
   const { t } = useTranslation('storefront');
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { orders, getTotalOrders, getTotalSpent } = useOrders();
-  const { mode, language } = useThemeMode();
+  const { appearance, language } = useThemeMode();
 
   if (!isAuthenticated) return <SignIn />;
 
@@ -26,8 +26,18 @@ export default function Account() {
   const recent = (orders || []).slice(0, 3);
 
   const settings = [
-    { id: 'lang', k: t('account.setLanguage'), v: langInfo(language).native, onClick: () => navigate('/settings/language') },
-    { id: 'appearance', k: t('account.setAppearance'), v: mode === 'dark' ? t('account.appearanceDark') : t('account.appearanceLight'), onClick: () => navigate('/settings/appearance') },
+    // Language, appearance and the rest of the display settings are one screen (D1 → D3).
+    {
+      id: 'display',
+      k: t('displayRow', { ns: 'account' }),
+      sub: t('displaySummary', {
+        ns: 'account',
+        language: langInfo(language).native,
+        appearance: t(`appearance.${appearance || 'auto'}`, { ns: 'display' }),
+      }),
+      v: null,
+      onClick: () => navigate('/settings/display'),
+    },
     { id: 'addresses', k: t('account.setAddresses'), v: null, onClick: null },
     { id: 'payments', k: t('account.setPayments'), v: null, onClick: null },
     ...(isAdmin ? [{ id: 'dashboard', k: t('account.setDashboard'), v: t('account.dashboardValue'), onClick: () => navigate('/admin') }] : []),
@@ -116,7 +126,10 @@ export default function Account() {
         <div style={{ padding: '6px 16px 24px', display: 'flex', flexDirection: 'column' }}>
           {settings.map((s, i, arr) => (
             <div key={s.id} onClick={s.onClick || undefined} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 6px', borderBottom: i === arr.length - 1 ? 'none' : `1px solid ${T.border}`, cursor: s.onClick ? 'pointer' : 'default' }}>
-              <span style={{ font: `600 13.5px ${T.font}`, color: s.danger ? T.danger : T.text }}>{s.k}</span>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                <span style={{ font: `600 13.5px ${T.font}`, color: s.danger ? T.danger : T.text }}>{s.k}</span>
+                {s.sub && <span style={{ font: `400 12px ${T.font}`, color: T.textDim }}>{s.sub}</span>}
+              </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: T.textMute, font: `500 12.5px ${T.font}` }}>{s.v}<Icon.arrowR /></span>
             </div>
           ))}

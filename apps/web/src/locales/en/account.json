@@ -1,4 +1,6 @@
 {
+  "displayRow": "Language and display",
+  "displaySummary": "{{language}} · {{appearance}}",
   "myAccount": "My Account",
   "profileInformation": "Profile Information",
   "editProfile": "Edit Profile",

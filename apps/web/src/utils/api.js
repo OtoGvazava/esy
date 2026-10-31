@@ -292,6 +292,15 @@ export const accountApi = {
   verifyPhone(code) {
     return api.post('/api/account/phone/verify', { code });
   },
+  // The shopper's display settings (store plan, Phase 7). Null when the
+  // account has none saved yet (204); the PUT replaces them and returns them
+  // as stored. Open to an account still without a verified phone.
+  getDisplayPrefs() {
+    return api.get('/api/account/display-prefs');
+  },
+  putDisplayPrefs(prefs, options) {
+    return api.put('/api/account/display-prefs', prefs, options);
+  },
 };
 
 export const orderApi = {

@@ -1,0 +1,41 @@
+{
+  "title": "Language and display",
+  "back": "Back",
+  "toAccount": "Account",
+  "intro": "These settings are saved to your esy account and apply in every esy store. Until you change them, they follow your device's settings.",
+  "introGuest": "These settings are kept in this browser. Sign in to your esy account and they will follow you to every esy store. Until you change them, they follow your device's settings.",
+  "language": "Language",
+  "appearance": {
+    "label": "Appearance",
+    "light": "Light",
+    "dark": "Dark",
+    "auto": "Auto"
+  },
+  "text": {
+    "label": "Text size",
+    "glyph": "A",
+    "s": "Small",
+    "m": "Medium",
+    "l": "Large",
+    "xl": "Largest"
+  },
+  "view": {
+    "label": "Product view",
+    "store": "Store default",
+    "grid2": "Grid",
+    "grid3": "Photos",
+    "list": "List"
+  },
+  "solid": {
+    "label": "Reduce transparency",
+    "sub": "Glass panels turn solid, so text is easier to read"
+  },
+  "motion": {
+    "label": "Reduce motion",
+    "sub": "Animations and transitions are turned off"
+  },
+  "saver": {
+    "label": "Data saver",
+    "sub": "Photos load at a smaller size, videos only when tapped"
+  }
+}

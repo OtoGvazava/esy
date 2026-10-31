@@ -1,4 +1,6 @@
 {
+  "displayRow": "ენა და ჩვენება",
+  "displaySummary": "{{language}} · {{appearance}}",
   "myAccount": "ჩემი ანგარიში",
   "profileInformation": "პროფილის ინფორმაცია",
   "editProfile": "პროფილის რედაქტირება",

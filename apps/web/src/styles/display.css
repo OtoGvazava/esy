@@ -1,0 +1,71 @@
+/* The shopper's display settings (store design plan, Phase 7), layered over
+   the owner's design. DisplayPrefsContext puts them on <html> on a storefront:
+
+     data-text="s|m|l|xl"   text size
+     data-solid             reduce transparency
+     data-motion="reduce"   reduce motion
+     data-saver             data saver
+
+   Each starts from the device's own setting until the shopper picks one, and
+   no theme can turn them off (decision 7): these rules come after the theme
+   and style sheets and win over them. */
+
+/* ---- text size ----------------------------------------------------------
+   Zoom on the page, not on the store's menu (App.jsx wraps the routes in
+   .esy-content). The inline styles are px, so scaling rem would need a
+   refactor first (open question 6). */
+html[data-text="s"] .esy-content { zoom: 0.9; }
+html[data-text="l"] .esy-content { zoom: 1.15; }
+html[data-text="xl"] .esy-content { zoom: 1.3; }
+
+/* ---- reduce transparency ------------------------------------------------
+   Every glass surface turns solid. The floating controls (tab bar, capsule,
+   header buttons, top tabs, the buy bar), the store bar and glass cards all
+   read these tokens. Liquid Glass's see-through pills get the surface too;
+   Neon's outlined pills are not glass and keep their look. */
+html[data-th][data-solid] {
+  --k-fl-blur: none;
+  --k-hd-blur: none;
+  --k-fl-bg: var(--k-sf);
+  --k-hd-bg: var(--k-ps);
+}
+html[data-th="glow"][data-solid] { --k-pill-bg: var(--k-sf); }
+html[data-th][data-solid][data-card="glass"] { --k-pc-bg: var(--k-sf); --k-pc-bd: 1px solid var(--k-line); }
+
+html[data-solid] *,
+html[data-solid] *::before,
+html[data-solid] *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* A control that brings its own blur rather than the theme's (the round
+   buttons on a product photo) is see-through by design: give it the solid
+   surface instead. Matches backdrop-filter only, never a decorative filter. */
+html[data-solid] [style*="backdrop-filter: blur("] { background-color: var(--k-sf) !important; }
+
+/* ---- reduce motion ------------------------------------------------------
+   Transitions, animations (the Neon flicker among them) and smooth scrolling
+   stop: everything lands in its end state at once. */
+html[data-motion="reduce"],
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
+html[data-motion="reduce"]::view-transition-group(*),
+html[data-motion="reduce"]::view-transition-old(*),
+html[data-motion="reduce"]::view-transition-new(*) {
+  animation: none !important;
+}
+
+/* ---- data saver ---------------------------------------------------------
+   Product photos wait until they are near the screen (GlowProductCard asks
+   for lazy loading), on a light placeholder until they arrive. Smaller
+   images need server-side thumbnails, which come later. */
+html[data-saver] img[loading="lazy"] { background-color: var(--k-sf2); }

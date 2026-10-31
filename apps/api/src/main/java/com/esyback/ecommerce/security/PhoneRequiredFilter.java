@@ -25,8 +25,9 @@ import java.util.Set;
  * this is the rule. It sits after {@link JwtAuthenticationFilter} and refuses
  * every state-changing {@code /api} request from a signed-in account without a
  * verified phone with {@code 403 PHONE_REQUIRED} — except the endpoints the gate
- * itself needs (sign-in, sign-out, profile, phone) and the bank's callback,
- * which carries no session.
+ * itself needs (sign-in, sign-out, profile, phone), the account's display
+ * settings (language, text size, reduce motion: the gate is read in them) and
+ * the bank's callback, which carries no session.
  *
  * <p>Reads stay open on purpose. The storefront is public anyway, and refusing
  * GETs would break the very screen that asks for the phone. The order and
@@ -76,6 +77,9 @@ public class PhoneRequiredFilter extends OncePerRequestFilter {
     }
 
     static boolean isExempt(String path) {
+        // /api/account/** carries the gate's profile and phone endpoints and
+        // the display settings; narrowing it must keep display-prefs open
+        // (DisplayPrefsTest checks it through the real chain).
         return path.startsWith("/api/auth/")
             || path.equals("/api/account") || path.startsWith("/api/account/")
             || path.equals("/api/payments/bog/callback");

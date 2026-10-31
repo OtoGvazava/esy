@@ -4,6 +4,8 @@ import { STORAGE_KEYS, LANGUAGES } from './constants';
 
 import enNavbar from './locales/en/navbar.json';
 import kaNavbar from './locales/ka/navbar.json';
+import enDisplay from './locales/en/display.json';
+import kaDisplay from './locales/ka/display.json';
 import enHome from './locales/en/home.json';
 import kaHome from './locales/ka/home.json';
 import enCart from './locales/en/cart.json';
@@ -34,6 +36,7 @@ import kaDesign from './locales/ka/design.json';
 const resources = {
   en: {
     navbar: enNavbar,
+    display: enDisplay,
     home: enHome,
     cart: enCart,
     product: enProduct,
@@ -50,6 +53,7 @@ const resources = {
   },
   ka: {
     navbar: kaNavbar,
+    display: kaDisplay,
     home: kaHome,
     cart: kaCart,
     product: kaProduct,

@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon, Placeholder } from './GlowPrimitives';
 import { money } from './GlowChrome';
+import { useDataSaver } from '../../contexts/DisplayPrefsContext';
 
 const tagBg = (tag, T) =>
   tag === 'new' ? T.accent : tag === 'sale' ? T.danger : tag === 'low' ? T.warn : T.text;
@@ -30,6 +31,8 @@ const RATIO = { square: '1 / 1', portrait: '4 / 5', landscape: '4 / 3' };
 export default function GlowProductCard({ T, p, hue = 240, compact = false, onOpen, onAdd, layout = 'grid2', look = {} }) {
   const [imgOk, setImgOk] = useState(Boolean(p.image));
   const { t } = useTranslation('product');
+  // Data saver (Display settings): a photo loads only once it nears the screen.
+  const saver = useDataSaver();
   const list = layout === 'list';
   const photoGrid = layout === 'grid3';
   // A list row's thumbnail is too small to carry a price.
@@ -46,6 +49,7 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
         <img
           src={p.image}
           alt={p.title}
+          loading={saver ? 'lazy' : undefined}
           onError={() => setImgOk(false)}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
