@@ -70,4 +70,49 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     default int claimRefund(Long id, java.math.BigDecimal amount) {
         return claimRefund(id, amount, Order.PaymentStatus.PAID, Order.PaymentStatus.REFUND_PENDING);
     }
+
+    /**
+     * Moves an order from one fulfilment status to the next, only if it is
+     * still where the caller found it.
+     *
+     * <p>One conditional UPDATE, for the reason the claims above are: two
+     * people cancelling the same order (or one shipping it while the other
+     * cancels) arrive as two transactions that each read PLACED. Here exactly
+     * one sees {@code 1}; the other is told the order changed. That is what
+     * makes it safe for a cancellation to put stock back — it can only happen
+     * once.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Order o set o.status = :to where o.id = :id and o.status = :from")
+    int claimStatus(@Param("id") Long id,
+                    @Param("from") Order.Status from,
+                    @Param("to") Order.Status to);
+
+    /**
+     * Marks the order's goods as taken, once, and never for an order that is
+     * already cancelled — a card payment can still land after the store has
+     * cancelled the order, and a cancelled order must hold no stock.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Order o set o.stockCommitted = true where o.id = :id "
+        + "and o.status <> :cancelled "
+        + "and (o.stockCommitted is null or o.stockCommitted = false)")
+    int markStockCommitted(@Param("id") Long id, @Param("cancelled") Order.Status cancelled);
+
+    default int markStockCommitted(Long id) {
+        return markStockCommitted(id, Order.Status.CANCELLED);
+    }
+
+    /**
+     * Claims the right to put a cancelled order's goods back, once. An order
+     * from before the flag existed (null) counts as holding stock only when
+     * its payment status proves the stock was taken — see
+     * OrderService#releaseStock.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Order o set o.stockCommitted = false where o.id = :id "
+        + "and (o.stockCommitted = true "
+        + "or (o.stockCommitted is null and o.paymentStatus in :held))")
+    int releaseStock(@Param("id") Long id,
+                     @Param("held") java.util.Collection<Order.PaymentStatus> held);
 }

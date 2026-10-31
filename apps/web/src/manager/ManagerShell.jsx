@@ -28,7 +28,7 @@ import { Btn, Chip } from '../core/primitives';
 import { EsyMark, Mark, RoleChip } from '../core/domain';
 import { Icons } from '../core/icons';
 import { MNAV, MDOCK, MMORE, OWNER_ONLY } from './nav';
-import ManagerHome from './ManagerHome';
+import ManagerHome, { ManagerCallback } from './ManagerHome';
 import ManagerOverview from './ManagerOverview';
 import ManagerProducts from './ManagerProducts';
 import ManagerSettings from './ManagerSettings';
@@ -37,8 +37,6 @@ import ManagerStats from './ManagerStats';
 import ManagerMoney from './ManagerMoney';
 import ManagerOrders from './ManagerOrders';
 import ManagerOrderDetail from './ManagerOrderDetail';
-import SignIn from '../pages/SignIn';
-import AuthCallback from '../pages/AuthCallback';
 
 function storeUrlFor(sub) {
   const { hostname, port, protocol } = window.location;
@@ -295,7 +293,7 @@ export function MTop({ T, title, sub, right, mode }) {
 export default function ManagerShell() {
   const { T } = useTK();
   const { t } = useTranslation('manager');
-  const { user, isStoreOwner } = useAuth();
+  const { user, isStoreOwner, canManageStore, isAuthenticated, loading: authLoading } = useAuth();
   // Unread orders, for the sidebar badge. Failure is silent: a missing count
   // should cost the merchant a badge, never the whole back office.
   const [newOrders, setNewOrders] = useState(0);
@@ -306,37 +304,33 @@ export default function ManagerShell() {
   const sub = params.get('tenant');
   const q = sub ? `?tenant=${encodeURIComponent(sub)}` : '';
   useEffect(() => {
-    if (!sub) return undefined;
+    if (!sub || !canManageStore) return undefined;
     const ac = new AbortController();
     tenantApi.newOrderCount(sub, { signal: ac.signal })
       .then((n) => { if (!ac.signal.aborted) setNewOrders(Number(n?.count ?? n ?? 0) || 0); })
       .catch(() => {});
     return () => ac.abort();
-  }, [sub]);
+  }, [sub, canManageStore]);
 
   const active = activeKey(pathname);
   const role = isStoreOwner ? 'OWNER' : 'MANAGER';
   const store = { name: sub || t('title'), accent: T.accent };
 
-  // The OAuth round-trip must reach its own routes before any chrome renders.
-  if (pathname.startsWith('/signin') || pathname.startsWith('/auth/callback')) {
-    return (
-      <Routes>
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-      </Routes>
-    );
-  }
+  // The OAuth round-trip lands here before any chrome renders, and goes back
+  // to the page the sign-in started from.
+  if (pathname.startsWith('/auth/callback')) return <ManagerCallback />;
 
-  // No store selected yet: the switcher IS the page, so the chrome that exists
-  // to navigate within a store would have nothing to point at.
-  if (!sub) {
-    return (
-      <div style={{ minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}` }}>
-        <ManagerHome />
-      </div>
-    );
-  }
+  // Restoring the session: draw nothing rather than flash the sign-in.
+  if (authLoading) return <div style={{ minHeight: '100vh', background: T.bg }} />;
+
+  // M0, the front door: signed out, no store chosen yet, or a store this
+  // account does not run. It signs in or picks a store; the chrome that exists
+  // to move around inside a store would have nothing to point at, and its
+  // pages would only collect 403s from the API.
+  if (!isAuthenticated || !sub || !canManageStore) return <ManagerHome />;
+
+  // Signed in already: the old sign-in path leads to the store's first screen.
+  if (pathname.startsWith('/signin')) return <Navigate to={`/${q}`} replace />;
 
   const pages = (
     <Routes>
