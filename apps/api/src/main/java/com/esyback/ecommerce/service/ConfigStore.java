@@ -35,6 +35,10 @@ public class ConfigStore {
     private static final String PREFIX = "config:";
     private static final long TTL_MS = 8000;
 
+    /** {@link #source} values. */
+    public static final String SOURCE_OVERRIDE = "override";
+    public static final String SOURCE_ENV = "env";
+
     private record Cached(String value, long expiresAt) {}
 
     private final Map<String, Cached> cache = new ConcurrentHashMap<>();
@@ -79,6 +83,32 @@ public class ConfigStore {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                 "Config store (Key Value) isn't reachable — write failed");
         }
+    }
+
+    /**
+     * Where a key's effective value comes from: {@code "override"} when an
+     * admin wrote it into this store, {@code "env"} when it is the environment
+     * (or application.yml) value. The admin screens draw one chip per value
+     * from this, because an override can vanish when the free Key Value
+     * instance restarts, and the person reading the screen has to know which
+     * values would survive that.
+     *
+     * <p>With Redis unreachable nothing is overridden — which is the truth at
+     * that moment: every value in effect is the environment's.
+     */
+    public String source(String key) {
+        String v = cachedRedisGet(key);
+        return v != null && !v.isEmpty() ? SOURCE_OVERRIDE : SOURCE_ENV;
+    }
+
+    /**
+     * The environment's value for a key, ignoring any override: what the key
+     * falls back to if the override is cleared or lost. Null when neither the
+     * environment nor application.yml names it. Only for non-secret keys —
+     * callers must never pass an API key or password here.
+     */
+    public String envValue(String key) {
+        return env.getProperty(key);
     }
 
     /** True when Redis is reachable (drives the admin UI 'store ready' badge). */

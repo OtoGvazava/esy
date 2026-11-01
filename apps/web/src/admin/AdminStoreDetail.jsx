@@ -15,6 +15,7 @@ import {
   Empty, Failed, Loading, Stat, StoreStatus, SuspendDialog,
   count, dateTime, isSuspended, lari,
 } from './AdminUI';
+import { List, RowIcon, Switch } from './AdminKit';
 
 // The ported design's fulfilment tone map keys the "out for delivery" state as
 // OUT, while the API sends the entity's own OUT_FOR_DELIVERY (Order.Status).
@@ -167,6 +168,8 @@ export default function AdminStoreDetail() {
   const [suspending, setSuspending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState('');
   const abortRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -236,6 +239,20 @@ export default function AdminStoreDetail() {
       setActionError(handleApiError(e, t('detail.removeMemberFailed')));
     } finally {
       setBusy(false);
+    }
+  };
+
+  // The verified tick. The switch shows what the server kept, never the state
+  // that was asked for: it flips when the answer arrives.
+  const setVerified = async (on) => {
+    setVerifying(true);
+    setVerifyError('');
+    try {
+      applyWrite(await (on ? adminApi.verifyStore(store.subdomain) : adminApi.unverifyStore(store.subdomain)));
+    } catch (e) {
+      setVerifyError(handleApiError(e, t('verify.failed')));
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -352,6 +369,34 @@ export default function AdminStoreDetail() {
         </div>
         <Note T={T} tone="admin" style={{ marginTop: 14 }}>{t('money.excludesRefunds')}</Note>
       </Card>
+
+      {/* Verified: a row in the design's list style, since AD2 draws no
+          control for it. The storefront draws the tick from verifiedAt. */}
+      <List T={T} style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', minHeight: 56, boxSizing: 'border-box' }}>
+          <RowIcon T={T} name="verified" tone={store.verifiedAt ? T.accentFg : undefined} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <b style={{ display: 'block', font: `700 12.5px/1.4 ${T.font}`, color: T.text }}>
+              {t('verify.title')}
+            </b>
+            <div style={{ font: `500 12px/1.45 ${T.font}`, color: T.textDim, marginTop: 2 }}>
+              {store.verifiedAt
+                ? t('verify.onBody', { at: dateTime(store.verifiedAt, lang) || t('detail.dateUnknown') })
+                : t('verify.offBody')}
+            </div>
+            {verifyError && (
+              <div role="alert" style={{ font: `500 12px/1.45 ${T.font}`, color: T.dangerFg, marginTop: 4 }}>{verifyError}</div>
+            )}
+          </div>
+          <Switch
+            T={T}
+            on={!!store.verifiedAt}
+            disabled={verifying}
+            label={t('verify.title')}
+            onChange={setVerified}
+          />
+        </div>
+      </List>
 
       <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
         <Panel T={T} title={t('detail.members')} sub={t('detail.membersSub')}>

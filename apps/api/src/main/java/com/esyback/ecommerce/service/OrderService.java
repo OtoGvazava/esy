@@ -25,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -711,7 +712,12 @@ public class OrderService {
     // than it is, and this figure feeds both the merchant's own stats and the
     // platform's billing screen, which must not disagree.
     public BigDecimal revenue(Tenant tenant) {
-        return orderRepository.findByTenantOrderByCreatedAtDesc(tenant).stream()
+        return revenueOf(orderRepository.findByTenantOrderByCreatedAtDesc(tenant));
+    }
+
+    /** {@link #revenue(Tenant)} over a given set of orders (one store's, one period's). */
+    public static BigDecimal revenueOf(Collection<Order> orders) {
+        return orders.stream()
             .filter(o -> o.getStatus() != Order.Status.CANCELLED)
             .filter(o -> o.getPaymentStatus() != Order.PaymentStatus.REFUNDED)
             .map(OrderService::goodsTotal)
@@ -737,11 +743,72 @@ public class OrderService {
      * collect.
      */
     public BigDecimal serviceFeesOwed(Tenant tenant) {
-        return orderRepository.findByTenantOrderByCreatedAtDesc(tenant).stream()
+        return feesOwedOf(orderRepository.findByTenantOrderByCreatedAtDesc(tenant));
+    }
+
+    /** {@link #serviceFeesOwed(Tenant)} over a given set of orders. */
+    public static BigDecimal feesOwedOf(Collection<Order> orders) {
+        return orders.stream()
             .filter(o -> o.getStatus() != Order.Status.CANCELLED)
             .filter(o -> o.getPaymentStatus() == Order.PaymentStatus.PAID
                 || o.getPaymentStatus() == Order.PaymentStatus.NONE)
-            .map(Order::getServiceFee)
+            .map(OrderService::feeOrZero)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * One store's line on the platform billing screen (admin.esy.ge/billing).
+     *
+     * <p>The screen reads the fee in three steps, and each step is a fact the
+     * orders hold rather than a figure worked out in the browser:
+     * <ul>
+     *   <li><b>sales / feesAccrued</b> — every order that took money (PAID), or
+     *       took none online (NONE, the free-order flow), or took it and is
+     *       giving it back (REFUND_PENDING, REFUNDED). Cancelled orders never
+     *       count. This is "before refunds".</li>
+     *   <li><b>feesWrittenOff / refundCount</b> — the part of that whose money
+     *       is being or has been returned. A partial refund writes off the
+     *       whole order's fee, because {@link #serviceFeesOwed} has always
+     *       dropped a refunded order entirely.</li>
+     *   <li><b>feesOwed</b> — {@link #feesOwedOf}, the merchant's own figure,
+     *       computed by the same method rather than as a subtraction, so the
+     *       two screens cannot disagree. By construction it equals
+     *       feesAccrued − feesWrittenOff.</li>
+     * </ul>
+     * {@code revenue} and {@code orderCount} are the figures the admin store
+     * list already shows, over the same orders.
+     */
+    public record BillingFigures(long orderCount, long billableCount, BigDecimal revenue,
+                                 BigDecimal sales, BigDecimal feesAccrued,
+                                 BigDecimal feesWrittenOff, long refundCount, BigDecimal feesOwed) {}
+
+    public static BillingFigures billingFigures(Collection<Order> orders) {
+        List<Order> billable = orders.stream().filter(OrderService::isBillable).toList();
+        List<Order> refunded = billable.stream().filter(OrderService::isBeingRefunded).toList();
+        return new BillingFigures(
+            orders.size(),
+            billable.size(),
+            revenueOf(orders),
+            billable.stream().map(OrderService::goodsTotal).reduce(BigDecimal.ZERO, BigDecimal::add),
+            billable.stream().map(OrderService::feeOrZero).reduce(BigDecimal.ZERO, BigDecimal::add),
+            refunded.stream().map(OrderService::feeOrZero).reduce(BigDecimal.ZERO, BigDecimal::add),
+            refunded.size(),
+            feesOwedOf(orders));
+    }
+
+    /** Took money, or the free-order flow, or money being returned — and not cancelled. */
+    private static boolean isBillable(Order o) {
+        if (o.getStatus() == Order.Status.CANCELLED) return false;
+        Order.PaymentStatus ps = o.getPaymentStatus();
+        return ps == Order.PaymentStatus.PAID || ps == Order.PaymentStatus.NONE || isBeingRefunded(o);
+    }
+
+    private static boolean isBeingRefunded(Order o) {
+        return o.getPaymentStatus() == Order.PaymentStatus.REFUND_PENDING
+            || o.getPaymentStatus() == Order.PaymentStatus.REFUNDED;
+    }
+
+    private static BigDecimal feeOrZero(Order o) {
+        return o.getServiceFee() == null ? BigDecimal.ZERO : o.getServiceFee();
     }
 }

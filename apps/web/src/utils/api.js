@@ -715,9 +715,23 @@ export const adminApi = {
     );
   },
 
-  // { totalAccrued, stores:[{ subdomain, name, orderCount, revenue, feesOwed }] }
-  getBilling({ signal } = {}) {
-    return api.get('/api/admin/billing', { signal });
+  // { month, serviceFeeRate, totalAccrued,
+  //   totals:{ storeCount, orderCount, revenue, sales, feesAccrued, feesWrittenOff, refundCount, feesOwed },
+  //   stores:[{ subdomain, name, displayName, …the same figures }] }
+  // `month` is 'YYYY-MM' for one calendar month; omitted, all time. Only stores
+  // with something billable in the period are listed.
+  getBilling({ month, signal } = {}) {
+    const query = month ? `?month=${encodeURIComponent(month)}` : '';
+    return api.get(`/api/admin/billing${query}`, { signal });
+  },
+
+  // The storefront's verified tick. Both return the updated store, verifiedAt
+  // (an ISO string, or null) included. Idempotent.
+  verifyStore(subdomain) {
+    return api.post(`/api/admin/stores/${encodeURIComponent(subdomain)}/verify`, {});
+  },
+  unverifyStore(subdomain) {
+    return api.delete(`/api/admin/stores/${encodeURIComponent(subdomain)}/verify`);
   },
 
   // [{ email, source: 'env'|'db', grantedAt, grantedBy }]. An 'env' row comes

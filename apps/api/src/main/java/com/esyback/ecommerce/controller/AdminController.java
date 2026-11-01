@@ -84,6 +84,23 @@ public class AdminController {
         return adminService.reactivate(subdomain, actor(authentication));
     }
 
+    /**
+     * Mark the store verified (the storefront draws a tick beside its name).
+     * Idempotent. Returns the store object, {@code verifiedAt} included.
+     */
+    @PostMapping("/stores/{subdomain}/verify")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Map<String, Object> verify(@PathVariable String subdomain, Authentication authentication) {
+        return adminService.verify(subdomain, actor(authentication));
+    }
+
+    /** Clear the verification. Idempotent. Returns the store object. */
+    @DeleteMapping("/stores/{subdomain}/verify")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Map<String, Object> unverify(@PathVariable String subdomain, Authentication authentication) {
+        return adminService.unverify(subdomain, actor(authentication));
+    }
+
     // ------------------------------------------------------------ membership
 
     /**
@@ -111,10 +128,11 @@ public class AdminController {
 
     // --------------------------------------------------------------- billing
 
+    /** {@code ?month=2026-10} for one calendar month; omitted, all time. 400 on a malformed month. */
     @GetMapping("/billing")
     @PreAuthorize("hasRole('ADMIN')")
-    public Map<String, Object> billing() {
-        return adminService.billing();
+    public Map<String, Object> billing(@RequestParam(required = false) String month) {
+        return adminService.billing(month);
     }
 
     // ---------------------------------------------------------------- admins

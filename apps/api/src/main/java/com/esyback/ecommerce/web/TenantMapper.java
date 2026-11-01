@@ -41,6 +41,9 @@ public final class TenantMapper {
         // switch — a shop closed by its owner and one closed by the platform
         // are different facts and must not be collapsed.
         m.put("suspended", t.getSuspendedAt() != null);
+        // Platform verification (admin.esy.ge sets and clears it), as an
+        // ISO-8601 instant or null. The storefront draws its tick from this.
+        m.put("verifiedAt", t.getVerifiedAt() == null ? null : t.getVerifiedAt().toString());
         // Only whether BOG is wired up — never the id/secret. The storefront
         // uses this to decide redirect-checkout vs the free-order fallback;
         // Store Settings uses it to show a "Connected" badge.
