@@ -4,7 +4,7 @@
 // Auth is a server-set HttpOnly cookie (esy_token, Domain=esy.ge) — never
 // readable from JS — so requests just need to carry cookies; there is no
 // token in localStorage. "Am I signed in?" is answered by /api/auth/user.
-import { isManagerHostname } from './hosts';
+import { isManagerHostname, managerUrl } from './hosts';
 
 // ---- Low-level client -------------------------------------------------------
 export class ApiError extends Error {
@@ -510,6 +510,28 @@ export const tenantApi = {
       ? `/api/tenant/logo?tenant=${encodeURIComponent(devTenant)}`
       : '/api/tenant/logo';
     const res = await fetch(path, { method: 'POST', body: fd, credentials: 'include' });
+    if (!res.ok) {
+      let message = `Upload failed (${res.status})`;
+      try {
+        const b = await res.json();
+        message = b.error || b.message || message;
+      } catch { /* no JSON body */ }
+      throw new ApiError(message, res.status);
+    }
+    return res.json();
+  },
+  // Quick setup's logo, sent right after the store is created (store plan,
+  // Phase 5). Opening a store happens on the platform host, which resolves no
+  // store, so it goes through the back office host, the one that scopes a
+  // request by ?tenant=: the same endpoint and checks as Brand settings, with
+  // the session cookie (Domain=esy.ge) carried across the subdomain.
+  async uploadLogoTo(subdomain, file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    // A lost session answers with a redirect to sign-in: a failure, not a page to follow.
+    const res = await fetch(managerUrl(`/api/tenant/logo?tenant=${encodeURIComponent(subdomain)}`), {
+      method: 'POST', body: fd, credentials: 'include', redirect: 'manual',
+    });
     if (!res.ok) {
       let message = `Upload failed (${res.status})`;
       try {
