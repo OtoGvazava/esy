@@ -31,8 +31,8 @@ const POST_LOGIN = 'esy_post_login';
  * Up to two initials. Latin letters are capitalised; Georgian is left as it
  * is, because its "capitals" are Mtavruli, which the design never uses.
  */
-const initials = (text) => String(text || '').trim().split(/\s+/).filter(Boolean).slice(0, 2)
-  .map((w) => Array.from(w)[0]).join('')
+const initials = (text) => String(text || '').trim().split(/\s+/)
+  .map((w) => Array.from(w).find((c) => /\p{L}/u.test(c))).filter(Boolean).slice(0, 2).join('')
   .replace(/[a-z]/g, (c) => c.toUpperCase());
 
 const ellipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };

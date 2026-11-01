@@ -234,8 +234,11 @@ const latinUpper = (s) => String(s).replace(/[a-z]/g, (c) => c.toUpperCase());
 
 /** Two initials from a person's or a store's name; the first letter of the email otherwise. */
 export function initialsOf(name, email) {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length) return latinUpper(parts.slice(0, 2).map((w) => Array.from(w)[0]).join(''));
+  // The first letter of the first two words that have one: "Fashion & Style"
+  // is "FS", not "F&".
+  const parts = String(name || '').trim().split(/\s+/)
+    .map((w) => Array.from(w).find((c) => /\p{L}/u.test(c))).filter(Boolean);
+  if (parts.length) return latinUpper(parts.slice(0, 2).join(''));
   return latinUpper(Array.from(String(email || '?'))[0] || '?');
 }
 

@@ -53,9 +53,13 @@ export const ACCOUNT = {
   followedStores: ['noor-rugs', 'okra', 'foglio', 'kura', 'salt-stoneware'],
 };
 
+// The first letter of the first two words that have one ("Fashion & Style" →
+// "FS"). Latin is capitalised; Georgian stays as it is, because its capitals
+// are Mtavruli, which the design never uses.
 export function storeInitials(store) {
-  return (store.name || store.subdomain || '?')
-    .split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const two = String(store.name || store.subdomain || '').trim().split(/\s+/)
+    .map((w) => Array.from(w).find((c) => /\p{L}/u.test(c))).filter(Boolean).slice(0, 2).join('');
+  return two.replace(/[a-z]/g, (c) => c.toUpperCase()) || '?';
 }
 
 // Public URL for a store. Prod → https://<sub>.esy.ge. Locally → a real

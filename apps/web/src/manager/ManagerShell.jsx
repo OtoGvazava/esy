@@ -293,7 +293,11 @@ export function MTop({ T, title, sub, right, mode, back }) {
     return (
       <>
         {slots.title && createPortal(heading, slots.title)}
-        {!phone && sub && slots.sub && createPortal(<span className="bx-sm bx-dim">{sub}</span>, slots.sub)}
+        {!phone && sub && slots.sub && createPortal(
+          // Under the title, not under the back button (44 px and a 10 px gap).
+          <span className="bx-sm bx-dim" style={back ? { paddingLeft: 54 } : undefined}>{sub}</span>,
+          slots.sub,
+        )}
         {!phone && right && slots.right && createPortal(right, slots.right)}
         {phone && right && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>{right}</div>}
       </>

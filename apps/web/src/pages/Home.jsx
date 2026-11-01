@@ -279,8 +279,9 @@ function ShopHome() {
       {pillsShown && <CategoryPills gutter={gutter} categories={categories} trailing={sortMenu(isMobile)} />}
 
       {/* result meta — the sort control sits here, on the row it describes,
-          unless the category row above already carries it */}
-      {!pillsShown && <div style={{
+          unless the category row above already carries it. A store with no
+          products yet has nothing to count or sort, so the row waits. */}
+      {!pillsShown && (query || isLoading || products.length > 0) && <div style={{
         position: 'relative', padding: `${sp(14)} ${gutter}px ${sp(6)}`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
       }}>

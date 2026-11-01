@@ -6,7 +6,7 @@
   "productCount_one": "{{count}} product",
   "productCount_other": "{{count}} products",
   "shown": "{{count}} shown",
-  "noProducts": "No products found.",
+  "noProducts": "This store has no products yet.",
   "noProductsQuery": "No products found for “{{query}}”.",
   "reachedEnd": "You’ve reached the end",
   "loadingMore": "loading more…",

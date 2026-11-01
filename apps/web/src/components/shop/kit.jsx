@@ -81,8 +81,10 @@ export function EsyBag({ size = 52, color = 'var(--k-pri)' }) {
 /** "SF" for Studio Form, "ნბ" for ნინო ბერიძე: Latin is capitalised, Georgian left as it is
  *  (toUpperCase would turn it into Mtavruli capitals). */
 export function initials(name) {
-  return String(name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2)
-    .map((w) => w.charAt(0)).join('').replace(/[a-z]/g, (c) => c.toUpperCase());
+  // The first letter of the first two words that have one ("Fashion & Style" → "FS").
+  return String(name || '').trim().split(/\s+/)
+    .map((w) => Array.from(w).find((c) => /\p{L}/u.test(c))).filter(Boolean).slice(0, 2)
+    .join('').replace(/[a-z]/g, (c) => c.toUpperCase());
 }
 
 const digits = (p) => String(p || '').replace(/\D/g, '');

@@ -6,7 +6,7 @@
   "productCount_one": "{{count}} პროდუქტი",
   "productCount_other": "{{count}} პროდუქტი",
   "shown": "{{count}} ნაჩვენები",
-  "noProducts": "პროდუქტი ვერ მოიძებნა.",
+  "noProducts": "ამ მაღაზიაში ჯერ პროდუქტი არ არის.",
   "noProductsQuery": "„{{query}}“-ისთვის პროდუქტი ვერ მოიძებნა.",
   "reachedEnd": "სია დასრულდა",
   "loadingMore": "იტვირთება…",
