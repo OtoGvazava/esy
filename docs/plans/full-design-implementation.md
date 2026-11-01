@@ -199,5 +199,12 @@ What changed in the design, and what the app must copy:
   store is opened, the Design tab in settings, and a storefront that follows the design:
   three themes, six menus, three headers, four product layouts, style options. Tablet
   now draws the phone's header and menu, as the design does; desktop keeps the bar.
-- Not built yet: categories and filters (A3), checkout steps (A6–A7), the back office's
-  M0/M1b/M7 boards, P3 import screen, the billing table (AD5), W7.
+- W3–W7: categories with the collection page and its filters (A1, A3), checkout's two
+  steps (A6–A7; the bag now sends the delivery route and the chosen variant), back-office
+  sign-in, store picker and first visit (M0, M1b), the cancel dialog with stock returned
+  (M7), empty products and orders, CSV import (P3), billing by month and verified stores
+  (AD5, AD2), config sources and the SMS and email screens (AD6, AD7), and shopper Display
+  settings (D3, W7). Orders are priced from the store's catalogue, never the browser.
+- Not built yet: a collections index page, saved items (the heart), the cover photo on
+  the About page, smaller photos for data saver (needs server thumbnails), and a notice
+  to the owner when a manager cancels an order.
