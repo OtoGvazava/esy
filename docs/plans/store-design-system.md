@@ -1,11 +1,12 @@
 # Plan — store design system (themes, quick setup, advanced editor, shopper display)
 
 Status: designed 2026-10-31. Built: Phases 1–7 — the design object with the cover photo
-and verified tick; the 14 looks and the look step in registration; on the storefront the
-themes, menus, headers, product layouts, every style option, the banner and the show
-switches; the Design tab (draft, publish, discard) with a live `StorePreview`; shopper
-Display settings. Phase 8: the landing's three look thumbnails. Not built: the editor's
-autosave, undo, colour check and morph between designs, and the landing's full looks wall.
+and verified tick; the 14 looks and quick setup in registration (look remixes, logo with
+its colour offered first, the creating showreel); on the storefront the themes, menus,
+headers, product layouts, every style option, the banner and the show switches; the
+Design tab (draft, publish with a colour check, discard) with a live `StorePreview`;
+shopper Display settings. Phase 8: the landing's three look thumbnails. Not built: the
+editor's autosave, undo and morph between designs, and the landing's full looks wall.
 Design: artifact **esy Store Themes** — https://claude.ai/artifact/4f7uy5MUZ71XhzB2b6AMV6
 (sections 01–10: theme picker, screens, components, quick setup, looks wall,
 advanced editor, menu styles, product layouts, shopper settings, shared tokens).

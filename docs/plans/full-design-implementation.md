@@ -205,6 +205,9 @@ What changed in the design, and what the app must copy:
   (M7), empty products and orders, CSV import (P3), billing by month and verified stores
   (AD5, AD2), config sources and the SMS and email screens (AD6, AD7), and shopper Display
   settings (D3, W7). Orders are priced from the store's catalogue, never the browser.
+- Every board has been compared with the real screen at phone, tablet and desktop, and
+  the differences fixed; Open a store runs the design's quick setup (O2–O10).
 - Not built yet: a collections index page, saved items (the heart), the cover photo on
-  the About page, smaller photos for data saver (needs server thumbnails), and a notice
-  to the owner when a manager cancels an order.
+  the About page, smaller photos for data saver (needs server thumbnails), a notice to
+  the owner when a manager cancels an order, and what the data model lacks (tracking
+  codes, refund reasons, per-step times, pausing a store).

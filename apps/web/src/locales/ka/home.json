@@ -1,5 +1,4 @@
 {
-  "noMore": "სხვა პროდუქტები აღარ არის",
   "failedToLoad": "პროდუქტების ჩატვირთვა ვერ მოხერხდა",
   "established": "დაარსდა {{year}}",
   "sortNewest": "დალაგება: ახალი",
@@ -7,7 +6,6 @@
   "productCount_other": "{{count}} პროდუქტი",
   "shown": "{{count}} ნაჩვენები",
   "noProducts": "ამ მაღაზიაში ჯერ პროდუქტი არ არის.",
-  "noProductsQuery": "„{{query}}“-ისთვის პროდუქტი ვერ მოიძებნა.",
   "reachedEnd": "სია დასრულდა",
   "loadingMore": "იტვირთება…",
   "loadingMoreN": "იტვირთება კიდევ {{count}}…",

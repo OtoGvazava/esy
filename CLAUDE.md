@@ -72,6 +72,39 @@ image builds the SPA itself.
   `?dryRun=true` to check without writing. **All or nothing**: one bad row
   rejects the file, because there is no bulk delete to clean up a partial run.
 
+### Store design, catalogue and orders
+
+- **Store design** is one JSON object on `Tenant` (`design_published`,
+  `design_draft`): `…/api/tenant/current/design` (draft, publish, discard),
+  owner-only. Web and server share `apps/web/src/core/design/schema.json`;
+  `DesignSchemaParityTest` fails when they drift. Kill switch
+  `app.design.enabled` (`APP_DESIGN_ENABLED`, default true, also on
+  `admin.esy.ge/config`): off ⇒ every store draws the default design and publish
+  is refused. It is not in `render.yaml`; add it there to pin it in prod.
+- **Categories**: `products.category` (free text, ≤ 60). `GET /api/products`
+  takes `category`, `inStock` and repeatable `option=axis:value`;
+  `/api/products/categories` and `/options` feed the pills and filters. The
+  collection page is `/?category=`.
+- **Cover photo** (`tenant_covers`, mirrors the logo): `POST`/`DELETE
+  /api/tenant/cover`, `GET /api/tenant/cover/{id}`. **Verified tick**:
+  `Tenant.verifiedAt`, set by an admin (`POST`/`DELETE
+  /api/admin/stores/{sub}/verify`).
+- **Shopper display settings**: `GET`/`PUT /api/account/display-prefs`
+  (`users.display_prefs`). It sits under `/api/account/`, so an account
+  without a verified phone can still save them.
+- **Orders are priced from the catalogue**: every line must name one of this
+  store's products, and the browser's title and price are ignored
+  (`OrderPricingTest`). Cancelling returns stock exactly once
+  (`orders.stock_committed`, `order_items.stock_taken`). The ship dialog
+  previews the live template (`GET /api/tenant/orders/{id}/notice`); the status
+  `PATCH` takes `sms`/`email: false` to skip a channel for that step.
+- **Store analytics**: `/api/tenant/stats/period?days=` and `/stats/months`,
+  with the same revenue, refund and commission rules as admin billing.
+- **Refusals** (`ApiRefusal`) carry a stable `code` and optional `details`.
+  `ApiErrorAdvice` sends the details nested under `details` and also beside the
+  code, because clients read either form; screens translate by code, never by
+  the English sentence.
+
 Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
 (`AuthController` exposes `/user`, `/token`, `/logout`). ADMIN comes solely from
 `ADMIN_EMAILS`.
@@ -181,7 +214,6 @@ Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
 docker build -t esy:test . && docker run -d -p 8090:8080 -e PORT=8080 esy:test
 curl -s localhost:8090/ | grep -c id=\"root\"          # SPA served
 curl -s localhost:8090/api/products                    # real API
-curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8090/api/auth/dev-login \
-  -H 'Content-Type: application/json' -d '{"email":"a@b.co"}'   # 200
+curl -s -o /dev/null -w '%{http_code}' localhost:8090/api/products/categories  # 200
 curl -s -o /dev/null -w '%{http_code}' localhost:8090/oauth2/authorization/google  # 302
 ```

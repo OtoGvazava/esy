@@ -55,32 +55,6 @@
     "errorTitle": "შესვლა ვერ დასრულდა",
     "errorBody": "შესაძლოა ფანჯარა დაიხურა ან კავშირი გაწყდა. სცადე თავიდან — არაფერი დაკარგულა."
   },
-  "createStore": {
-    "errNameRequired": "მაღაზიის სახელი სავალდებულოა",
-    "errSubShort": "ქვედომენი უნდა იყოს მინიმუმ 3 სიმბოლო",
-    "errCreate": "მაღაზიის შექმნა ვერ მოხერხდა",
-    "liveTitle": "{{name}} აქტიურია",
-    "liveBody": "შენი მაღაზია ხელმისაწვდომია ამ მისამართზე.",
-    "backToStorefront": "მაღაზიაში დაბრუნება",
-    "title": "შენი მაღაზიის გახსნა",
-    "subtitle": "აირჩიე სახელი და ქვედომენი. შენი მაღაზია esy-ზე მაშინვე ეთერში გადის.",
-    "storeName": "მაღაზიის სახელი",
-    "storeNamePlaceholder": "Acme Goods",
-    "subdomain": "ქვედომენი",
-    "subdomainPlaceholder": "acme",
-    "subdomainHint": "პატარა ასოები, ციფრები, დეფისები · 3–30 სიმბოლო",
-    "description": "აღწერა",
-    "descriptionPlaceholder": "რას ყიდი, ერთ წინადადებად",
-    "addressStreet": "ქუჩის მისამართი",
-    "addressStreetPlaceholder": "მთავარი ქ. 123",
-    "addressCity": "ქალაქი",
-    "addressCountry": "ქვეყანა",
-    "addressPostal": "საფოსტო ინდექსი",
-    "established": "დაარსების წელი",
-    "brandAccent": "ბრენდის აქცენტი",
-    "creating": "იქმნება…",
-    "create": "მაღაზიის შექმნა"
-  },
   "checkout": {
     "title": "გადახდა",
     "flow": {
@@ -399,17 +373,6 @@
   "settings": {
     "cancel": "გაუქმება",
     "done": "მზადაა"
-  },
-  "languageSettings": {
-    "title": "აირჩიე ენა",
-    "note": "ჩვენ ვთარგმნით მაღაზიის ინტერფეისს. გამყიდველის კონტენტი (პროდუქტების სახელები, აღწერები) რჩება ორიგინალ ენაზე."
-  },
-  "appearanceSettings": {
-    "title": "აირჩიე გარეგნობა",
-    "note": "აირჩიე როგორ გამოიყურება მაღაზია. სისტემური მიჰყვება შენი მოწყობილობის პარამეტრს.",
-    "light": "ღია",
-    "dark": "მუქი",
-    "system": "სისტემური · ავტო"
   },
   "profileGate": {
     "backToStore": "მაღაზიაში დაბრუნება",
