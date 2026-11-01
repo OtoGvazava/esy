@@ -25,6 +25,9 @@ export function usePhoneVerify() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [errorCode, setErrorCode] = useState('');
+  // Guesses left on this code after a wrong one (the server's CODE_WRONG
+  // carries the number); null when it did not say.
+  const [attemptsLeft, setAttemptsLeft] = useState(null);
   const [resendIn, setResendIn] = useState(0);
   const [lastNumber, setLastNumber] = useState(undefined);
 
@@ -37,12 +40,15 @@ export function usePhoneVerify() {
   const fail = (e, fallback) => {
     setError(e?.message || fallback);
     setErrorCode(e?.code || '');
+    const left = Number(e?.details?.attemptsLeft);
+    setAttemptsLeft(Number.isFinite(left) ? left : null);
   };
 
   const request = async (phoneNumber) => {
     setBusy(true);
     setError('');
     setErrorCode('');
+    setAttemptsLeft(null);
     try {
       const r = await sendPhoneCode(phoneNumber);
       setSent(true);
@@ -65,10 +71,13 @@ export function usePhoneVerify() {
     setBusy(true);
     setError('');
     setErrorCode('');
+    setAttemptsLeft(null);
     try {
       await verifyPhone(code.trim());
     } catch (e) {
       fail(e, 'verify_failed');
+      // A wrong code is typed again from the first box (B5).
+      if (e?.code === 'CODE_WRONG' || e?.code === 'CODE_LOCKED') setCode('');
     } finally {
       setBusy(false);
     }
@@ -81,10 +90,11 @@ export function usePhoneVerify() {
     setCode('');
     setError('');
     setErrorCode('');
+    setAttemptsLeft(null);
   };
 
   return {
-    sent, devCode, destination, code, setCode, busy, error, errorCode,
-    resendIn, request, resend, confirm, reset,
+    sent, devCode, destination, code, setCode, busy, error, errorCode, attemptsLeft,
+    resendIn, request, resend, confirm, reset, lastNumber,
   };
 }

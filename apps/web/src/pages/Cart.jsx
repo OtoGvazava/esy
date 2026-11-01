@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCart, lineKey } from '../contexts/CartContext';
 import { useGlow } from '../styles/glow';
-import { Icon, Placeholder } from '../components/glow/GlowPrimitives';
+import { Placeholder } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
-import { alpha } from '../core/tokens';
+import { EmptyBag } from '../components/shop/EmptyStates';
 
 // No free-shipping threshold and no flat rate live here any more.
 //
@@ -42,25 +42,9 @@ export default function Cart() {
 
   const subtotal = getTotalPrice();
 
-  if (items.length === 0) {
-    return (
-      <GlowScreen T={T}>
-        <GlowTopNav T={T} title={t('bag')} />
-        <div style={{ minHeight: 'calc(100vh - 186px)', padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 14 }}>
-          <div style={{ width: 88, height: 88, borderRadius: 24, background: T.surface, border: `1px solid ${T.border}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.accentFg }}>
-            <Icon.bag width="36" height="36" />
-          </div>
-          <div style={{ font: `700 20px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{t('emptyTitle')}</div>
-          <div style={{ font: `400 13px/1.5 ${T.font}`, color: T.textDim, maxWidth: 260 }}>
-            {t('emptyBody')}
-          </div>
-          <button onClick={() => navigate('/')} style={{ marginTop: 8, height: 48, padding: '0 22px', borderRadius: 14, border: 'none', background: T.grad, color: T.onAccent, font: `700 13.5px ${T.font}`, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: `0 10px 24px ${alpha(T.accent, 0.33)}` }}>
-            {t('browse', { name: tenant.name })} <Icon.arrowR />
-          </button>
-        </div>
-      </GlowScreen>
-    );
-  }
+  // Nothing in it (the design's E3): the way back to everything, and a few of
+  // the store's products under it.
+  if (items.length === 0) return <EmptyBag />;
 
   return (
     <GlowScreen T={T} padBottom={180}>

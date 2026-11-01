@@ -3,6 +3,7 @@ package com.esyback.ecommerce.controller;
 import com.esyback.ecommerce.dto.CreateOrderRequest;
 import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.User;
+import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.service.OrderService;
 import com.esyback.ecommerce.service.TenantContextService;
 import com.esyback.ecommerce.service.UserService;
@@ -28,6 +29,7 @@ public class OrderController {
     private final OrderService orderService;
     private final UserService userService;
     private final TenantContextService tenantContextService;
+    private final ProductRepository productRepository;
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> create(@RequestBody CreateOrderRequest request,
@@ -62,7 +64,31 @@ public class OrderController {
     public ResponseEntity<Map<String, Object>> one(@PathVariable String orderNumber,
                                                    Authentication authentication) {
         User user = currentUser(authentication);
-        return ResponseEntity.ok(toDetailMap(orderService.orderForShopper(orderNumber, user)));
+        Order order = orderService.orderForShopper(orderNumber, user);
+        Map<String, Object> body = toDetailMap(order);
+        withPhotos(body);
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * Each line's product photo, as the product has it now ({@code imageUrl},
+     * null when it has none or is gone). The line keeps its own title and price
+     * from the order; the photo is only how a shopper recognises it, so it is
+     * read live rather than frozen with the order.
+     */
+    @SuppressWarnings("unchecked")
+    private void withPhotos(Map<String, Object> body) {
+        List<Map<String, Object>> lines = (List<Map<String, Object>>) body.get("lines");
+        if (lines == null || lines.isEmpty()) return;
+        List<Long> ids = lines.stream().map(l -> (Long) l.get("productId"))
+            .filter(java.util.Objects::nonNull).distinct().collect(Collectors.toList());
+        Map<Long, String> photos = new HashMap<>();
+        if (!ids.isEmpty()) {
+            productRepository.findAllById(ids).forEach(p -> {
+                if (p.getImageUrl() != null && !p.getImageUrl().isBlank()) photos.put(p.getId(), p.getImageUrl());
+            });
+        }
+        lines.forEach(l -> l.put("imageUrl", photos.get((Long) l.get("productId"))));
     }
 
     /**
@@ -135,8 +161,20 @@ public class OrderController {
      */
     static Map<String, Object> toDetailMap(Order o) {
         Map<String, Object> m = toMap(o);
+        // How it travels and what that cost, as frozen at checkout (D9): the
+        // order screen names the route and prices it beside the goods.
+        m.put("deliveryRoute", o.getDeliveryRoute());
+        m.put("deliveryFee", o.getDeliveryFee());
+        m.put("deliveryExpress", Boolean.TRUE.equals(o.getDeliveryExpress()));
+        // What has been asked back from the bank so far (D2). With the payment
+        // status (refund_pending, refunded) it says how much is on its way.
+        m.put("refunded", o.refundedOrZero());
         m.put("lines", o.getItems().stream().map(i -> {
             Map<String, Object> line = new HashMap<>();
+            // The product and combination, so a bag the bank round trip lost
+            // can be put back together from the order (the A8 return page).
+            line.put("productId", i.getProductId());
+            line.put("variantId", i.getVariantId());
             line.put("title", i.getTitle());
             line.put("variant", i.getVariantLabel());
             line.put("quantity", i.getQuantity());

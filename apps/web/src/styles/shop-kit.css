@@ -1,0 +1,210 @@
+/* The design kit's component classes (esy-kit.css on the "esy Full Design"
+   canvas), for the shopper screens drawn from its boards: the bank return and
+   the placed order (A8, A9), sign-in and the registration gate (B1–B5), one
+   order (C2, C3), personal details (D2), and the closed, empty and offline
+   states (E2–E4).
+
+   Ported rule for rule, with three changes. Every token is the app's own --k-
+   name from themes.css, so a store's theme, mode, brand and style options
+   (design-style.css) apply here exactly as they do to the rest of the store.
+   Every rule is scoped under .sk, the root those screens draw (components/
+   shop/kit.jsx), because the kit's class names are short and generic; nothing
+   outside .sk is touched. The kit's [data-dev] device rules key on the same
+   attribute, which .sk carries from DeviceContext. And nothing transforms
+   case: the kit's capitals (labels, Neon's headings and chips) would turn
+   Georgian into Mtavruli, which the app never draws. */
+
+/* shipped: the kit's one status colour themes.css does not carry */
+[data-th] { --k-ship: #4338ca; --k-ship-bg: #e7e6fb; }
+[data-th][data-md="dark"] { --k-ship: #a9a5ff; --k-ship-bg: #25234a; }
+
+/* ---------- root ---------- */
+.sk { font-family: var(--k-font); color: var(--k-fg); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+.sk, .sk *, .sk *::before, .sk *::after { box-sizing: border-box; }
+.sk[data-dev="ph"] { --gut: 16px; }
+.sk[data-dev="tab"] { --gut: 28px; }
+.sk[data-dev="desk"] { --gut: 48px; }
+.sk button, .sk input, .sk select, .sk textarea { font-family: inherit; }
+.sk :where(a) { color: inherit; }
+.sk p { margin: 0; }
+.sk * { text-wrap-style: pretty; }
+.sk :is(.h1, .h2, .h3, .big) { text-wrap-style: balance; }
+
+/* ---------- type ---------- */
+.sk .big { font: var(--k-w-t) 32px/1.08 var(--k-font-d); letter-spacing: -.025em; margin: 0; text-wrap: balance; }
+.sk .h1 { font: var(--k-w-t) 26px/1.15 var(--k-font-d); letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+.sk .h2 { font: var(--k-w-t) 20px/1.22 var(--k-font-d); letter-spacing: -.015em; margin: 0; text-wrap: balance; }
+.sk .h3 { font: 600 16px/1.3 var(--k-font-d); margin: 0; }
+.sk[data-dev="desk"] .big { font-size: 46px; }
+.sk[data-dev="desk"] .h1 { font-size: 30px; }
+.sk[data-dev="tab"] .big { font-size: 40px; }
+.sk .tx { font-size: 14px; } .sk .sm { font-size: 12.5px; } .sk .xs { font-size: 12px; } .sk .lg { font-size: 16px; }
+.sk .dim { color: var(--k-dim); } .sk .acc { color: var(--k-acc); } .sk .okt { color: var(--k-ok); } .sk .badt { color: var(--k-bad); } .sk .warnt { color: var(--k-warn); }
+.sk .lbl { font: 600 11.5px/1.2 var(--k-font-m); letter-spacing: .06em; color: var(--k-dim); }
+.sk .price, .sk .num { font-variant-numeric: tabular-nums; }
+.sk .price { font-weight: 600; }
+.sk .mono { font-family: var(--k-font-m); font-size: 13px; }
+
+/* ---------- layout helpers ---------- */
+.sk .row { display: flex; align-items: center; gap: 10px; }
+.sk .rowb { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sk .stk { display: flex; flex-direction: column; gap: 12px; }
+.sk .grow { flex: 1; min-width: 0; }
+.sk .gut { padding-left: var(--gut); padding-right: var(--gut); }
+.sk .sep { height: 1px; background: var(--k-line); flex: none; }
+.sk .wrap { flex-wrap: wrap; }
+.sk[data-dev="ph"] .no-ph, .sk[data-dev="tab"] .no-tab, .sk[data-dev="desk"] .no-desk { display: none !important; }
+.sk[data-dev="ph"] :is(.only-tab, .only-desk), .sk[data-dev="tab"] :is(.only-ph, .only-desk), .sk[data-dev="desk"] :is(.only-ph, .only-tab) { display: none !important; }
+
+/* ---------- icons ---------- */
+.sk :is(.ic, .btn svg, .ibtn svg, .li-ic svg, .pill svg) { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: var(--k-ic-w, 1.8); stroke-linecap: round; stroke-linejoin: round; }
+.sk .ic.s { width: 16px; height: 16px; } .sk .ic.l { width: 28px; height: 28px; }
+
+/* ---------- buttons ---------- */
+.sk .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: var(--k-r-btn); font: 600 15px/1 var(--k-font); border: 0; cursor: pointer; white-space: nowrap; text-decoration: none; flex: none; }
+.sk .btn-p { background: var(--k-pri); color: var(--k-on-pri); }
+.sk .btn-i { background: var(--k-ink); color: var(--k-on-ink); }
+.sk .btn-s { background: var(--k-sf2); color: var(--k-fg); }
+.sk .btn-g { background: transparent; color: var(--k-fg); box-shadow: inset 0 0 0 1.5px var(--k-line); }
+.sk .btn-d { background: var(--k-bad-bg); color: var(--k-bad); }
+/* destructive: one deep red in both modes (white on dark mode's light red fails 4.5:1) */
+.sk .btn-bad { background: #c42b2b; color: #fff; }
+.sk .btn-sm { height: 38px; padding: 0 15px; font-size: 13.5px; }
+.sk .btn-lg { height: 54px; font-size: 16px; padding: 0 26px; }
+.sk .btn-b { width: 100%; flex: none; }
+.sk :is(.row, .rowb) > .btn-b { flex: 1 1 0; width: auto; }
+.sk .btn[disabled] { opacity: .42; cursor: default; }
+/* a disabled button is flat and quiet, but its label still reads (3:1 at least) */
+.sk .btn[aria-disabled="true"] { opacity: 1 !important; background: color-mix(in srgb, var(--k-fg) 9%, var(--k-sf)) !important; color: color-mix(in srgb, var(--k-fg) 56%, var(--k-sf)) !important; box-shadow: none !important; border-color: transparent !important; text-shadow: none !important; cursor: default; }
+/* brand names keep their own case inside Neon capitals */
+.sk .nc { text-transform: none !important; }
+.sk .ibtn { width: 44px; height: 44px; border-radius: var(--k-r-ibtn); display: inline-grid; place-items: center; color: var(--k-fg); flex: none; position: relative; border: 0; background: var(--k-sf); cursor: pointer; padding: 0; text-decoration: none; }
+.sk .float { background: var(--k-fl-bg); border: var(--k-fl-bd); box-shadow: var(--k-fl-sh); -webkit-backdrop-filter: var(--k-fl-blur, none); backdrop-filter: var(--k-fl-blur, none); }
+.sk .link { color: var(--k-acc); font-weight: 600; text-decoration: none; }
+/* a link drawn as a button takes the text around it (low specificity, so .sm still sizes it) */
+.sk :where(button.link) { font: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+.sk :where(button.link)[disabled] { opacity: .5; cursor: default; }
+.sk :is(button, a):focus-visible { outline: 2px solid var(--k-pri); outline-offset: 2px; }
+
+/* ---------- inputs & controls ---------- */
+.sk .fld { display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; color: var(--k-dim); min-width: 0; }
+.sk .in { width: 100%; height: 50px; padding: 0 15px; border-radius: var(--k-r-in); background: var(--k-in-bg); border: 1.5px solid var(--k-in-bd); color: var(--k-fg); font: 15px var(--k-font); outline: none; appearance: none; -webkit-appearance: none; }
+.sk .in:focus, .sk .in.on, .sk .ingrp.on, .sk .ingrp:focus-within { border-color: var(--k-pri); box-shadow: 0 0 0 4px color-mix(in oklab, var(--k-pri) 18%, transparent); }
+.sk .in.err, .sk .ingrp.err { border-color: var(--k-bad); }
+.sk .ingrp { display: flex; align-items: center; height: 50px; border-radius: var(--k-r-in); border: 1.5px solid var(--k-in-bd); background: var(--k-in-bg); overflow: hidden; color: var(--k-dim); }
+.sk .ingrp input { flex: 1; min-width: 0; border: 0; background: transparent; height: 100%; padding: 0 4px 0 15px; font: 15px var(--k-font); color: var(--k-fg); outline: none; }
+.sk .ingrp > span { padding: 0 14px; white-space: nowrap; }
+.sk .sel { position: relative; display: flex; min-width: 0; }
+.sk .sel > .in { padding-right: 34px; cursor: pointer; }
+.sk .sel > svg { position: absolute; right: 12px; top: 50%; width: 16px; height: 16px; margin-top: -8px; fill: none; stroke: currentColor; stroke-width: var(--k-ic-w, 1.8); stroke-linecap: round; stroke-linejoin: round; color: var(--k-dim); pointer-events: none; }
+.sk .hint { font-size: 12px; color: var(--k-dim); } .sk .errt { font-size: 12.5px; color: var(--k-bad); }
+.sk .pill { height: 38px; padding: 0 16px; display: inline-flex; align-items: center; gap: 6px; border-radius: var(--k-r-pill); background: var(--k-pill-bg); border: var(--k-pill-bd); color: var(--k-fg); font: 500 13.5px var(--k-font); white-space: nowrap; flex: none; cursor: pointer; text-decoration: none; }
+.sk .pill svg { width: 16px; height: 16px; }
+.sk .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: var(--k-r-pill); font: 600 12px/1 var(--k-font); white-space: nowrap; flex: none; }
+.sk .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.sk .chip.nd::before { display: none; }
+.sk .c-pend { background: var(--k-warn-bg); color: var(--k-warn); } .sk .c-conf { background: var(--k-info-bg); color: var(--k-info); } .sk .c-proc { background: var(--k-sf2); color: var(--k-fg); }
+.sk .c-ship { background: var(--k-ship-bg); color: var(--k-ship); }
+.sk .c-done { background: var(--k-ok-bg); color: var(--k-ok); } .sk .c-canc { background: var(--k-mute-bg); color: var(--k-mute); } .sk .c-ref { background: var(--k-bad-bg); color: var(--k-bad); }
+.sk .chip.pay { background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in oklab, currentColor 55%, transparent); }
+.sk .steps { display: flex; gap: 6px; } .sk .steps i { flex: 1; height: 4px; border-radius: 2px; background: var(--k-line); } .sk .steps i.on { background: var(--k-pri); }
+.sk .otp { position: relative; display: flex; gap: 10px; justify-content: center; }
+.sk .otp span { width: 58px; height: 66px; border-radius: var(--k-r-in); background: var(--k-in-bg); border: 1.5px solid var(--k-in-bd); display: grid; place-items: center; font: 700 26px var(--k-font); font-variant-numeric: tabular-nums; color: var(--k-fg); }
+.sk .otp .on { border-color: var(--k-pri); box-shadow: 0 0 0 4px color-mix(in oklab, var(--k-pri) 18%, transparent); }
+.sk .otp .err { border-color: var(--k-bad); }
+.sk .otp input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; font-size: 16px; color: transparent; background: transparent; caret-color: transparent; cursor: text; }
+.sk .spin { width: 44px; height: 44px; border-radius: 50%; border: 4px solid var(--k-sf2); border-top-color: var(--k-pri); flex: none; animation: sk-spin .9s linear infinite; }
+@keyframes sk-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sk .spin { animation-duration: 2.4s; } }
+html[data-motion="reduce"] .sk .spin { animation-duration: 2.4s; }
+
+/* ---------- surfaces ---------- */
+.sk .card { background: var(--k-sf); border: var(--k-card-bd); box-shadow: var(--k-card-sh); border-radius: var(--k-r-card); }
+.sk .pad { padding: 16px; } .sk .padl { padding: 22px; }
+.sk .list { background: var(--k-sf); border: var(--k-card-bd); box-shadow: var(--k-card-sh); border-radius: var(--k-r-card); overflow: hidden; }
+.sk .li { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--k-line); min-height: 56px; color: var(--k-fg); text-decoration: none; width: 100%; background: none; border-left: 0; border-right: 0; border-top: 0; font: inherit; text-align: left; }
+.sk button.li, .sk a.li { cursor: pointer; }
+.sk .li:last-child { border-bottom: 0; }
+.sk .li-ic { width: 34px; height: 34px; border-radius: var(--k-r-in); background: var(--k-sf2); display: grid; place-items: center; flex: none; color: var(--k-fg); }
+.sk .li-ic svg { width: 18px; height: 18px; }
+.sk .kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; }
+.sk .alert { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--k-r-card); background: var(--k-info-bg); color: var(--k-fg); }
+.sk .alert .ic { color: var(--k-info); } .sk .alert.warn { background: var(--k-warn-bg); } .sk .alert.warn .ic { color: var(--k-warn); } .sk .alert.bad { background: var(--k-bad-bg); } .sk .alert.bad .ic { color: var(--k-bad); } .sk .alert.ok { background: var(--k-ok-bg); } .sk .alert.ok .ic { color: var(--k-ok); }
+.sk .empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 24px; }
+.sk .empty-ic { width: 96px; height: 96px; border-radius: 50%; background: var(--k-sf2); display: grid; place-items: center; color: var(--k-acc); flex: none; }
+.sk .empty-ic .ic { width: 40px; height: 40px; }
+.sk .ph { position: relative; display: grid; place-items: center; border-radius: var(--k-r-img); aspect-ratio: 1 / 1; overflow: hidden; background: var(--k-ph1); width: 100%; flex: none; color: var(--k-ph1f); }
+.sk .ph.t2 { background: var(--k-ph2); color: var(--k-ph2f); } .sk .ph.t3 { background: var(--k-ph3); color: var(--k-ph3f); } .sk .ph.t4 { background: var(--k-ph4); color: var(--k-ph4f); }
+.sk .ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sk .ph svg { width: 46%; height: 46%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- timeline ---------- */
+.sk .tl { display: flex; flex-direction: column; }
+.sk .tl-i { display: flex; gap: 14px; position: relative; padding-bottom: 22px; }
+.sk .tl-i::before { content: ""; position: absolute; left: 11px; top: 26px; bottom: 2px; width: 2px; background: var(--k-line); }
+.sk .tl-i:last-child { padding-bottom: 0; } .sk .tl-i:last-child::before { display: none; }
+.sk .tl-d { width: 24px; height: 24px; border-radius: 50%; background: var(--k-sf); border: 2px solid var(--k-line); flex: none; display: grid; place-items: center; color: var(--k-on-pri); }
+.sk .tl-d svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.sk .tl-i.done .tl-d { background: var(--k-pri); border-color: var(--k-pri); } .sk .tl-i.done::before { background: var(--k-pri); }
+.sk .tl-i.now .tl-d { border-color: var(--k-pri); box-shadow: 0 0 0 4px color-mix(in oklab, var(--k-pri) 22%, transparent); }
+.sk .tl-i.now .tl-d::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--k-pri); }
+[data-md="dark"] .sk .tl-d { border-color: color-mix(in oklab, var(--k-fg) 34%, transparent); }
+.sk .tl-i.bad .tl-d { background: var(--k-bad); border-color: var(--k-bad); color: #fff; } .sk .tl-i.bad::before { background: var(--k-pri); }
+
+/* ---------- overlays ---------- */
+.sk .scrim { position: fixed; inset: 0; background: rgba(8, 8, 12, .44); z-index: 1290; }
+.sk .dialog { position: fixed; z-index: 1300; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 520px; max-width: calc(100% - 48px); max-height: calc(100% - 48px); overflow-y: auto; background: var(--k-sf); border-radius: var(--k-r-sheet); padding: 26px; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .5); display: flex; flex-direction: column; gap: 16px; }
+.sk[data-dev="ph"] .dialog { top: auto; bottom: 0; left: 0; transform: none; width: 100%; max-width: none; max-height: 92%; border-radius: var(--k-r-sheet) var(--k-r-sheet) 0 0; padding: 20px 16px calc(env(safe-area-inset-bottom, 0px) + 18px); }
+.sk .grab { width: 42px; height: 5px; border-radius: 3px; background: var(--k-line); align-self: center; flex: none; }
+
+/* ---------- people ---------- */
+.sk .av { width: 44px; height: 44px; border-radius: 50%; background: var(--k-pri); color: var(--k-on-pri); display: grid; place-items: center; font: 700 15px var(--k-font); flex: none; letter-spacing: .02em; overflow: hidden; position: relative; }
+.sk .av.lg { width: 76px; height: 76px; font-size: 25px; } .sk .av.sm { width: 34px; height: 34px; font-size: 12px; } .sk .av.u { background: var(--k-ink); color: var(--k-on-ink); }
+.sk .av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* ---------- the store's own header, back variant (StoreTop back) ---------- */
+.sk .st-top { position: relative; z-index: 3; padding: calc(env(safe-area-inset-top, 0px) + 14px) var(--gut) 6px; display: flex; align-items: center; gap: 12px; flex: none; }
+
+/* ---------- the platform's bar (PlatTop), on a suspended store's page ---------- */
+.sk .p-nav { display: flex; align-items: center; gap: 28px; padding: calc(env(safe-area-inset-top, 0px) + 14px) var(--gut) 14px; position: relative; z-index: 3; flex: none; }
+.sk .p-links { display: flex; gap: 24px; font-weight: 500; color: var(--k-dim); white-space: nowrap; }
+.sk .p-links a { text-decoration: none; color: inherit; }
+.sk .logo { display: flex; align-items: center; gap: 8px; font: 800 21px/1 var(--k-font); letter-spacing: -.045em; color: var(--k-fg); text-decoration: none; flex: none; }
+.sk .logo svg { width: 30px; height: 30px; }
+
+/* ---------- theme details ---------- */
+[data-th="soft"] .sk .pill { font-weight: 600; }
+[data-th="soft"] .sk .btn { font-weight: 700; }
+[data-th="soft"] .sk .av:not(.u) { box-shadow: 0 0 0 3px var(--k-sf), 0 0 0 5px color-mix(in oklab, var(--k-brand) 35%, transparent); }
+
+[data-th="glow"] .sk .btn-p { background: var(--k-brand); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .55), 0 10px 24px -10px color-mix(in oklab, var(--k-brand) 70%, transparent); border: 1px solid rgba(255, 255, 255, .35); }
+[data-th="glow"] .sk .dialog { background: rgba(255, 255, 255, .94); border: var(--k-fl-bd); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); }
+[data-th="glow"][data-md="dark"] .sk .dialog { background: rgba(30, 30, 32, .94); }
+
+[data-th="neon"] .sk :is(.big, .h1, .h2, .h3) { font-family: var(--k-font-d); letter-spacing: .03em; }
+[data-th="neon"] .sk :is(.lbl, .pill, .chip, .price, .num, .mono) { font-family: var(--k-font-m); }
+[data-th="neon"] .sk :is(.pill, .chip) { letter-spacing: .04em; }
+[data-th="neon"] .sk .pill { font-size: 11.5px; }
+[data-th="neon"] .sk .btn { clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px); letter-spacing: .06em; font-family: var(--k-font-d); font-weight: 700; }
+[data-th="neon"] .sk .btn-i { background: transparent; color: var(--k-neon); box-shadow: inset 0 0 0 1px var(--k-neon); }
+[data-th="neon"] .sk .price { color: var(--k-neon); text-shadow: 0 0 10px color-mix(in oklab, var(--k-neon) 50%, transparent); }
+[data-th="neon"][data-md="light"] .sk .price { text-shadow: none; }
+[data-th="neon"] .sk :is(.in.on, .in:focus, .ingrp.on, .ingrp:focus-within, .otp .on) { box-shadow: 0 0 0 1px var(--k-neon), 0 0 18px -4px var(--k-neon); }
+[data-th="neon"] .sk .chip { background: transparent !important; border: 1px solid currentColor; border-radius: 3px; font-size: 10.5px; }
+[data-th="neon"] .sk .li-ic { background: transparent; border: 1px solid color-mix(in oklab, var(--k-neon) 35%, transparent); color: var(--k-neon); }
+[data-th="neon"] .sk .tl-i.done .tl-d { box-shadow: 0 0 12px -2px var(--k-neon); }
+[data-th="neon"] .sk .av { border-radius: 10px; background: var(--k-sf); color: var(--k-neon); box-shadow: 0 0 0 1px var(--k-neon), 0 0 18px -3px var(--k-neon); font-family: var(--k-font-m); }
+[data-th="neon"] .sk .av.u { color: var(--k-fg); box-shadow: 0 0 0 1px var(--k-line); }
+[data-th="neon"] .sk .btn-s { --nb: color-mix(in srgb, var(--k-fg) 58%, transparent); background: linear-gradient(135deg, transparent 6.3px, var(--nb) 6.3px 7.6px, transparent 7.6px) 0 0 / 9px 9px no-repeat, linear-gradient(315deg, transparent 6.3px, var(--nb) 6.3px 7.6px, transparent 7.6px) 100% 100% / 9px 9px no-repeat, color-mix(in srgb, var(--k-fg) 5%, transparent); box-shadow: inset 0 0 0 1px var(--nb); }
+[data-th="neon"] .sk .ph { border-radius: 0; clip-path: polygon(clamp(4px, 7%, 12px) 0, 100% 0, 100% calc(100% - clamp(4px, 7%, 12px)), calc(100% - clamp(4px, 7%, 12px)) 100%, 0 100%, 0 clamp(4px, 7%, 12px)); }
+[data-th="neon"] .sk .alert { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-info) 60%, transparent); border-radius: 4px; }
+[data-th="neon"] .sk .alert.warn { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-warn) 60%, transparent); }
+[data-th="neon"] .sk .alert.bad { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-bad) 60%, transparent); }
+[data-md="dark"] .sk .av { box-shadow: 0 0 0 1px rgba(255, 255, 255, .16); }
+
+/* ---------- phone touch targets ---------- */
+.sk[data-dev="ph"] .btn-sm { height: 40px; }
+.sk[data-dev="ph"] :is(.row, .rowb, .stk) > .link { padding: 12px 0; margin: -12px 0; }
+
+/* a field in error keeps saying so while it has the focus (last, so it outranks every theme's ring) */
+.sk .in.err:focus, .sk .ingrp.err:focus-within { border-color: var(--k-bad); box-shadow: 0 0 0 4px color-mix(in oklab, var(--k-bad) 18%, transparent); }

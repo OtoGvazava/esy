@@ -1,5 +1,6 @@
 package com.esyback.ecommerce.config;
 
+import com.esyback.ecommerce.web.ApiRefusal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -63,5 +64,16 @@ class ApiErrorAdviceTest {
         // handler would leave only the sentence.
         assertEquals("60", res.getHeaders().getFirst("Retry-After"));
         assertEquals("Wait 60s before asking for another code", res.getBody().get("error"));
+    }
+
+    @Test
+    @DisplayName("a refusal's details sit beside its code and never replace the reason")
+    void carriesDetails() {
+        Map<String, Object> body = advice.handle(new ApiRefusal(HttpStatus.BAD_REQUEST, "CODE_WRONG",
+            "Incorrect code — 3 tries left", Map.of("attemptsLeft", 3, "error", "overwritten?"))).getBody();
+
+        assertEquals("CODE_WRONG", body.get("code"));
+        assertEquals(3, body.get("attemptsLeft"));
+        assertEquals("Incorrect code — 3 tries left", body.get("error"));
     }
 }

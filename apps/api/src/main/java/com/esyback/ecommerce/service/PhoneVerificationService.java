@@ -235,8 +235,11 @@ public class PhoneVerificationService {
                     "Too many wrong codes — request a new one");
             }
             int left = MAX_ATTEMPTS - p.attempts;
+            // attemptsLeft as a number too: the client says "3 tries left" in
+            // Georgian, and must not parse it out of the English sentence.
             throw new ApiRefusal(HttpStatus.BAD_REQUEST, "CODE_WRONG",
-                "Incorrect code — " + left + (left == 1 ? " try" : " tries") + " left");
+                "Incorrect code — " + left + (left == 1 ? " try" : " tries") + " left",
+                java.util.Map.of("attemptsLeft", left));
         }
         // Someone may have verified the same number since the code was sent.
         if (userRepository.existsByVerifiedPhoneAndIdNot(p.normalised, user.getId())) {

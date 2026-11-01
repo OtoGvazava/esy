@@ -55,7 +55,12 @@ public class ApiErrorAdvice {
         body.put("error", reason);
         body.put("message", reason);
         body.put("status", status.value());
-        if (e instanceof ApiRefusal refusal) body.put("code", refusal.getCode());
+        if (e instanceof ApiRefusal refusal) {
+            body.put("code", refusal.getCode());
+            // The figures a translated sentence needs ("3 tries left"), beside
+            // the code — never in place of the keys above.
+            refusal.getDetails().forEach(body::putIfAbsent);
+        }
         // Headers the thrower attached are part of the refusal (Retry-After,
         // WWW-Authenticate) and are lost if this handler drops them.
         return ResponseEntity.status(status).headers(e.getHeaders()).body(body);

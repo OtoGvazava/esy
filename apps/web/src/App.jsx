@@ -11,6 +11,8 @@ import Checkout from './pages/Checkout';
 import PayReturn from './pages/PayReturn';
 import OrderSuccess from './pages/OrderSuccess';
 import Account from './pages/Account';
+import PersonalDetails from './pages/PersonalDetails';
+import OfflineBanner from './components/shop/OfflineBanner';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import SignIn from './pages/SignIn';
@@ -50,7 +52,14 @@ function AppShell() {
   const { tenant, loading } = useContext(TenantContext);
   // A product page carries its own buy bar where the dock would sit.
   const { pathname } = useLocation();
-  const dock = !isDesktop && !pathname.startsWith('/product/');
+  // The bank's return page asks the shopper to wait on it, so it is drawn
+  // with no store menus at all (A8). The placed order, one order, personal
+  // details and sign-in are pushed screens with their own way back: the design
+  // draws them without the tab bar (A9, C2, C3, D2, B1).
+  const focus = pathname === '/pay/return';
+  const pushed = focus || pathname === '/success' || pathname === '/signin'
+    || pathname.startsWith('/orders/') || pathname === '/account/personal';
+  const dock = !isDesktop && !pathname.startsWith('/product/') && !pushed;
 
   // A suspended shop is closed to shoppers (D15). Nothing below this line
   // renders — not the bar, not the dock, not a single route — because a
@@ -61,9 +70,10 @@ function AppShell() {
 
   return (
     <>
-      {isDesktop && <StoreBar />}
+      {isDesktop && !focus && <StoreBar />}
       {/* The page apart from the store's menu: text size zooms this (styles/display.css). */}
       <div className="esy-content">
+      <OfflineBanner />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetails />} />
@@ -74,6 +84,7 @@ function AppShell() {
         <Route path="/pay/return" element={<PayReturn />} />
         <Route path="/success" element={<OrderSuccess />} />
         <Route path="/account" element={<Account />} />
+        <Route path="/account/personal" element={<PersonalDetails />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/orders/:orderNumber" element={<OrderDetail />} />
         <Route path="/signin" element={<SignIn />} />
@@ -120,10 +131,14 @@ function ThemeRoot({ mode }) {
   const platform = usePlatformHost();
   const { tenant } = useContext(TenantContext);
   const admin = isAdminHost();
-  const store = !admin && !isManagerHost() && !platform;
+  // A suspended store has no storefront of its own: its page is esy's, in the
+  // esy theme and the platform's colour (E2).
+  const storefront = !admin && !isManagerHost() && !platform;
+  const closed = storefront && !!tenant?.suspended;
+  const store = storefront && !closed;
   const design = normalizeDesign(store ? tenant?.design : null);
   const th = store ? design.theme : 'esy';
-  const brand = admin ? ADMIN_BRAND : platform ? PLATFORM_BRAND : safeAccent(tenant?.primaryColor);
+  const brand = admin ? ADMIN_BRAND : platform || closed ? PLATFORM_BRAND : safeAccent(tenant?.primaryColor);
   const style = STYLE_KEYS.map((k) => (store && design.style[k] !== 'theme' ? design.style[k] : '')).join('|');
   useEffect(() => {
     const el = document.documentElement;

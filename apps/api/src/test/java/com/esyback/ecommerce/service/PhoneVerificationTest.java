@@ -291,6 +291,11 @@ class PhoneVerificationTest {
             () -> service.verify(user, wrong));
         assertEquals("CODE_WRONG", codeOf(e));
         assertTrue(e.getReason().contains("4 tries left"));
+        // …and as a number, for the client's own sentence
+        assertEquals(4, ((ApiRefusal) e).getDetails().get("attemptsLeft"));
+        ResponseStatusException again = assertThrows(ResponseStatusException.class,
+            () -> service.verify(user, wrong));
+        assertEquals(3, ((ApiRefusal) again).getDetails().get("attemptsLeft"));
     }
 
     @Test
