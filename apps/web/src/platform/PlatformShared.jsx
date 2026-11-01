@@ -3,15 +3,16 @@
 // platform blue as the default accent; tenant brand colors only ever appear
 // on store cards (the "wall of brands against calm esy chrome" rule).
 // (Shared module: intentionally exports hooks + components together.)
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGlow, glowTokens, shiftHue } from '../styles/glow';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { tenantApi } from '../utils/api';
+import { managerUrl } from '../utils/hosts';
 import { PLATFORM_ACCENT, storeInitials } from './platformData';
-import { alpha } from '../core/tokens';
+import { Av, Btn, Glyph, IconBtn, Logo, initialsOf, miStyle, usePDevice } from './PlatformKit';
 
 export { shiftHue };
 
@@ -57,7 +58,7 @@ export function EsyMark({ T, size = 26, suffix = '', onClick }) {
         <path d="M15.5 27.5c4.5 5.5 12.5 5.5 17 0" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
       </svg>
       <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 1 }}>
-        <span style={{ font: `700 ${px * 0.78}px ${T.font}`, letterSpacing: '-0.035em', color: T.text }}>esy</span>
+        <span style={{ font: `700 ${px * 0.78}px ${T.font}`, letterSpacing: '-0.035em', color: T.text }}>{'esy'}</span>
         {suffix && <span style={{ font: `500 ${px * 0.5}px ${T.font}`, letterSpacing: '-0.02em', color: T.textDim }}>{suffix}</span>}
       </span>
     </div>
@@ -115,200 +116,282 @@ export function StatusPill({ T, kind, children }) {
   );
 }
 
-function IconBtn({ T, children, onClick, accent = false }) {
+/** "ქა · EN" — both languages named, the current one first, as on every esy header. */
+function LangBtn({ T, ph, style }) {
+  const { lang, setLang } = usePlatform();
+  const { t } = useTranslation('platform');
   return (
-    <button onClick={onClick} style={{
-      width: 36, height: 36, borderRadius: 12, border: `1px solid ${T.border}`,
-      background: accent ? T.accentBg : 'transparent', color: accent ? T.accentFg : T.text,
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-    }}>{children}</button>
+    <Btn
+      T={T}
+      size="sm"
+      ph={ph}
+      aria-label={t('chrome.langLabel')}
+      onClick={() => setLang(lang === 'ka' ? 'en' : 'ka')}
+      style={style}
+    >
+      {t('chrome.lang')}
+    </Btn>
   );
 }
 
-const GlobeIcon = () => (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>
-);
-const ThemeIcon = ({ dark }) => (dark
-  ? <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" /></svg>
-  : <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10Z" /></svg>);
-
-// Responsive top bar — full nav on desktop, compact on mobile.
-export function PTopBar({ current = 'home' }) {
-  const { T, dark, isDesktop, lang, setLang, toggleTheme } = usePlatform();
-  const { t } = useTranslation('platform');
+/**
+ * A link to a section of the landing page. The landing owns the section ids
+ * (`how`, `pricing`); from any other page this goes home first, and the hash
+ * effect in the top bar scrolls once the section exists.
+ */
+function useSectionLink() {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
-  const signedIn = isAuthenticated;
-  const initials = (user?.name || user?.firstName || 'You').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-  const flipLang = () => setLang(lang === 'ka' ? 'en' : 'ka');
+  const { pathname } = useLocation();
+  return (id) => (e) => {
+    e.preventDefault();
+    const el = pathname === '/' && document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else navigate(`/#${id}`);
+  };
+}
 
-  const link = (label, key, to) => (
-    <span onClick={() => navigate(to)} style={{
-      font: `600 13px ${T.font}`, color: current === key ? T.text : T.textDim,
-      letterSpacing: '-0.01em', cursor: 'pointer',
-      borderBottom: current === key ? `1.5px solid ${T.accent}` : '1.5px solid transparent',
-      paddingBottom: 4,
-    }}>{label}</span>
+// The design's PlatTop. Phone: the mark, the open-a-store button and a menu.
+// Tablet: two links (prices and help would not fit), the language, sign in,
+// the button and the menu. Desktop: four links and no menu. Signed in, the
+// avatar and "my store" take the place of sign-in and the open button.
+// `current` marks the link of the page you are on; `cta={false}` leaves the
+// open-a-store button out where the page is itself that offer (the landing).
+export function PTopBar({ current = 'none', cta = true }) {
+  const { T } = usePlatform();
+  const { ph, desk, gut } = usePDevice();
+  const { t } = useTranslation('platform');
+  const { pathname, hash } = useLocation();
+  const { isAuthenticated, user } = useAuth();
+  const [menu, setMenu] = useState(false);
+  const barRef = useRef(null);
+  // The scrim dims the page under the bar, not the bar itself: measured when the menu opens.
+  const [scrimTop, setScrimTop] = useState(0);
+  const toggleMenu = () => {
+    setScrimTop(Math.max(0, barRef.current?.getBoundingClientRect().bottom || 0));
+    setMenu((v) => !v);
+  };
+  const section = useSectionLink();
+  // Older call sites name the directory "browse".
+  const active = current === 'browse' ? 'stores' : current;
+
+  // Land on #how, #pricing or #contact wherever the page carries that section.
+  useEffect(() => {
+    if (!hash) return undefined;
+    const id = decodeURIComponent(hash.slice(1));
+    const timer = setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }), 60);
+    return () => clearTimeout(timer);
+  }, [hash, pathname]);
+
+  useEffect(() => { setMenu(false); }, [pathname, hash]);
+  useEffect(() => {
+    if (!menu) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setMenu(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menu]);
+
+  const name = user ? [user.firstName, user.lastName].filter(Boolean).join(' ') : '';
+  const links = [
+    { k: 'stores', label: t('chrome.stores'), to: '/stores' },
+    { k: 'how', label: t('chrome.how'), section: 'how' },
+    { k: 'price', label: t('chrome.price'), section: 'pricing', wide: true },
+    { k: 'help', label: t('chrome.help'), to: '/help', wide: true },
+  ];
+  const linkProps = (l) => (l.to
+    ? { as: Link, to: l.to }
+    : { as: 'a', href: `/#${l.section}`, onClick: section(l.section) });
+
+  const avatar = (
+    <Link to="/account" aria-label={t('chrome.account', { name: name || user?.email || '' })} style={{ textDecoration: 'none', display: 'inline-flex' }}>
+      <Av T={T} size="sm" ink>{initialsOf(name, user?.email)}</Av>
+    </Link>
   );
 
-  if (!isDesktop) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px' }}>
-        <EsyMark T={T} size={26} onClick={() => navigate('/')} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <IconBtn T={T} onClick={flipLang}><GlobeIcon /></IconBtn>
-          <IconBtn T={T} onClick={toggleTheme}><ThemeIcon dark={dark} /></IconBtn>
-          {signedIn ? (
-            <span onClick={() => navigate('/account')} style={{
-              width: 36, height: 36, borderRadius: 999, background: T.grad, color: T.onAccent,
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              font: `700 12px ${T.font}`, cursor: 'pointer', boxShadow: `0 8px 22px ${alpha(T.accent, 0.25)}`,
-            }}>{initials}</span>
-          ) : (
-            <button onClick={() => navigate('/signin')} style={{
-              height: 36, padding: '0 14px', borderRadius: 999, border: `1px solid ${T.border}`,
-              background: 'transparent', color: T.text, font: `600 12.5px ${T.font}`, cursor: 'pointer',
-            }}>{t('nav.signIn')}</button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{
-      position: 'sticky', top: 0, zIndex: 20,
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '18px 56px', borderBottom: `1px solid ${T.border}`,
-      background: dark ? 'rgba(10,10,18,0.7)' : 'rgba(255,255,255,0.7)',
-      backdropFilter: 'saturate(180%) blur(12px)',
+    <header ref={barRef} style={{
+      display: 'flex', alignItems: 'center', gap: 28, padding: `14px ${gut}px`,
+      position: 'relative', zIndex: 30, flex: 'none',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
-        <EsyMark T={T} size={26} onClick={() => navigate('/')} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
-          {link(t('nav.browse'), 'browse', '/stores')}
-          {link(t('nav.sell'), 'sell', '/sell')}
-          {link(t('nav.account'), 'account', '/account')}
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button onClick={flipLang} style={{
-          height: 34, padding: '0 12px', borderRadius: 999, border: `1px solid ${T.border}`,
-          background: 'transparent', color: T.textDim, font: `600 12px ${T.font}`, cursor: 'pointer',
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-        }}><GlobeIcon />{lang === 'ka' ? 'ქართული' : 'English'}</button>
-        <button onClick={toggleTheme} style={{
-          width: 34, height: 34, borderRadius: 999, border: `1px solid ${T.border}`,
-          background: 'transparent', color: T.text,
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-        }}><ThemeIcon dark={dark} /></button>
-        {signedIn ? (
-          <button onClick={() => navigate('/account')} style={{
-            height: 34, padding: '4px 12px 4px 4px', borderRadius: 999, border: `1px solid ${T.border}`,
-            background: T.surface, color: T.text, cursor: 'pointer',
-            display: 'inline-flex', alignItems: 'center', gap: 8, font: `600 12.5px ${T.font}`,
-          }}>
-            <span style={{
-              width: 26, height: 26, borderRadius: '50%', background: T.grad, color: T.onAccent,
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `700 11px ${T.font}`,
-            }}>{initials}</span>
-            {(user?.name || 'Account').split(' ')[0]}
-          </button>
-        ) : (
-          <>
-            <button onClick={() => navigate('/signin')} style={{
-              height: 34, padding: '0 14px', borderRadius: 999, border: `1px solid ${T.border}`,
-              background: 'transparent', color: T.text, font: `600 12.5px ${T.font}`, cursor: 'pointer',
-            }}>{t('nav.signIn')}</button>
-            <button onClick={() => navigate('/sell')} style={{
-              height: 34, padding: '0 14px', borderRadius: 999, border: 'none',
-              background: T.grad, color: T.onAccent, font: `700 12.5px ${T.font}`, cursor: 'pointer',
-              boxShadow: `0 10px 28px ${alpha(T.accent, 0.33)}`, display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}>{t('nav.openStore')}
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
-            </button>
-          </>
+      {/* The bar's own controls sit above the open menu's panel (z 2); the scrim starts under the bar. */}
+      <Link to="/" aria-label={t('chrome.home')} style={{ textDecoration: 'none', display: 'inline-flex', position: 'relative', zIndex: 3 }}>
+        <Logo T={T} />
+      </Link>
+
+      {!ph && (
+        <nav aria-label={t('chrome.navLabel')} style={{ display: 'flex', gap: 24, whiteSpace: 'nowrap', font: `500 14px ${T.font}`, position: 'relative', zIndex: 3 }}>
+          {links.filter((l) => desk || !l.wide).map((l) => {
+            const { as: As, ...p } = linkProps(l);
+            const on = active === l.k;
+            return (
+              <As
+                key={l.k}
+                {...p}
+                aria-current={on ? 'page' : undefined}
+                style={{ textDecoration: 'none', color: on ? T.text : T.textDim, fontWeight: on ? 600 : 500 }}
+              >
+                {l.label}
+              </As>
+            );
+          })}
+        </nav>
+      )}
+
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 3 }}>
+        {!ph && <LangBtn T={T} ph={ph} />}
+        {isAuthenticated && avatar}
+        {!isAuthenticated && !ph && (
+          <Btn T={T} size="sm" ph={ph} to="/signin">{t('chrome.signIn')}</Btn>
+        )}
+        {!isAuthenticated && cta && (
+          <Btn T={T} kind="p" size="sm" ph={ph} to="/sell">{t('chrome.openStore')}</Btn>
+        )}
+        {isAuthenticated && !ph && (
+          <Btn T={T} kind="s" size="sm" ph={ph} href={managerUrl('/')}>{t('chrome.myStore')}</Btn>
+        )}
+        {!desk && (
+          <IconBtn
+            T={T}
+            label={t('chrome.menu')}
+            aria-expanded={menu}
+            aria-controls="esy-platform-menu"
+            onClick={toggleMenu}
+          >
+            <Glyph name={menu ? 'close' : 'menu'} />
+          </IconBtn>
         )}
       </div>
-    </div>
+
+      {menu && !desk && (
+        <>
+          <div
+            aria-hidden="true"
+            onClick={() => setMenu(false)}
+            style={{ position: 'fixed', left: 0, right: 0, bottom: 0, top: scrimTop, background: 'rgba(8,8,12,0.44)', zIndex: 1 }}
+          />
+          <nav
+            id="esy-platform-menu"
+            aria-label={t('chrome.menu')}
+            style={{
+              position: 'absolute', top: '100%', left: gut, right: gut, zIndex: 2,
+              background: T.surface, border: 'var(--k-card-bd)', borderRadius: 'var(--k-r-card)',
+              boxShadow: '0 30px 80px -20px rgba(0,0,0,0.5)', padding: 8,
+              display: 'flex', flexDirection: 'column', gap: 2,
+            }}
+          >
+            {links.map((l) => {
+              const { as: As, onClick, ...p } = linkProps(l);
+              // A section of the page you are on changes no route, so the menu closes here too.
+              return (
+                <As
+                  key={l.k}
+                  {...p}
+                  onClick={(e) => { onClick?.(e); setMenu(false); }}
+                  aria-current={active === l.k ? 'page' : undefined}
+                  style={miStyle(T, active === l.k)}
+                >
+                  {l.label}
+                </As>
+              );
+            })}
+            <span aria-hidden="true" style={{ height: 1, background: T.border, margin: '6px 4px' }} />
+            {isAuthenticated ? (
+              <>
+                <Link to="/account" style={miStyle(T, pathname === '/account')}>{t('chrome.myAccount')}</Link>
+                <a href={managerUrl('/')} style={miStyle(T, false)}>{t('chrome.myStore')}</a>
+              </>
+            ) : (
+              <Link to="/signin" style={miStyle(T, false)}>{t('chrome.signIn')}</Link>
+            )}
+            <LangRow T={T} />
+          </nav>
+        </>
+      )}
+    </header>
   );
 }
 
-export function PFooter({ compact = false }) {
-  const { T, isDesktop } = usePlatform();
+/** The language switch as a menu row (phone and tablet menu). */
+function LangRow({ T }) {
+  const { lang, setLang } = usePlatform();
   const { t } = useTranslation('platform');
-  // `to` where a real destination exists. Everything else stays plain text:
-  // the whole footer used to be spans with a pointer cursor, so every entry
-  // looked clickable and none of them was. A label that cannot go anywhere
-  // should not pretend it can.
-  const cols = [
-    { title: t('footer.col.esy'), items: [
-      { label: t('footer.link.about') }, { label: t('footer.link.brand') },
-      { label: t('footer.link.careers') }, { label: t('footer.link.press') }] },
-    { title: t('footer.col.sellers'), items: [
-      { label: t('footer.link.openStore'), to: '/sell' }, { label: t('footer.link.pricing') },
-      { label: t('footer.link.sellerDocs') }, { label: t('footer.link.api') }] },
-    { title: t('footer.col.shoppers'), items: [
-      { label: t('footer.link.browseStores'), to: '/stores' }, { label: t('footer.link.giftCards') },
-      { label: t('footer.link.orderStatus') }, { label: t('footer.link.refunds'), to: '/returns' }] },
-    { title: t('footer.col.resources'), items: [
-      { label: t('footer.link.helpCenter'), to: '/help' }, { label: t('footer.link.status') },
-      { label: t('footer.link.terms'), to: '/terms' }, { label: t('footer.link.privacy'), to: '/privacy' }] },
-  ];
-  const darkT = { ...T, text: '#f2f2f7', textDim: 'rgba(242,242,247,0.6)', textMute: 'rgba(242,242,247,0.4)' };
-  if (!isDesktop) {
-    return (
-      <div style={{ padding: '32px 22px 26px', background: '#0b0b14', color: '#cfd0d8', font: `400 12.5px ${T.font}` }}>
-        <EsyMark T={darkT} size={24} />
-        <div style={{ marginTop: 12, color: 'rgba(242,242,247,0.55)', font: `400 12px/1.5 ${T.font}` }}>
-          {t('footer.taglineShort')}
-        </div>
-        <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px', font: `500 12px ${T.font}` }}>
-          {[
-            { label: t('footer.link.about') },
-            { label: t('footer.link.pricing') },
-            { label: t('footer.link.helpCenter'), to: '/help' },
-            { label: t('footer.link.openStore'), to: '/sell' },
-            { label: t('footer.link.browseStores'), to: '/stores' },
-            { label: t('footer.link.terms'), to: '/terms' },
-          ].map((it) => (it.to
-            ? <Link key={it.label} to={it.to} style={{ color: '#cfd0d8', textDecoration: 'none' }}>{it.label}</Link>
-            : <span key={it.label} style={{ color: 'rgba(242,242,247,0.45)' }}>{it.label}</span>))}
-        </div>
-        <div style={{ marginTop: 22, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', font: `400 11px ${T.font}`, color: 'rgba(242,242,247,0.4)' }}>
-          <span>{t('footer.rightsShort')}</span><span>{t('footer.langs')}</span>
-        </div>
-      </div>
-    );
-  }
   return (
-    <div style={{ padding: compact ? '40px 56px 28px' : '56px 56px 32px', borderTop: `1px solid ${T.border}`, background: '#0b0b14', color: '#cfd0d8', font: `400 13px ${T.font}` }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr', gap: 36, marginBottom: 36 }}>
-        <div>
-          <EsyMark T={darkT} size={28} />
-          <div style={{ marginTop: 16, color: 'rgba(242,242,247,0.6)', font: `400 13px/1.55 ${T.font}`, maxWidth: 280 }}>
-            {t('footer.tagline')}
-          </div>
-          <div style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', font: `600 10.5px ${T.mono}`, letterSpacing: '0.08em', color: 'rgba(242,242,247,0.7)' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3f8a4a' }} />{t('footer.status')}
-          </div>
+    <button type="button" onClick={() => setLang(lang === 'ka' ? 'en' : 'ka')} aria-label={t('chrome.langLabel')} style={miStyle(T, false)}>
+      <Glyph name="globe" size={18} />
+      <span style={{ flex: 1 }}>{t('chrome.langRow')}</span>
+      <span style={{ font: `600 13px ${T.font}`, color: T.textDim }}>{t('chrome.lang')}</span>
+    </button>
+  );
+}
+
+// The design's PlatFoot: the mark and one line, three short columns where
+// every entry goes somewhere real, then the year and the language switch.
+// (Older call sites still pass `compact`; the footer has one size now.)
+export function PFooter() {
+  const { T } = usePlatform();
+  const { ph, tab } = usePDevice();
+  const { t } = useTranslation('platform');
+  const section = useSectionLink();
+  const gut = ph ? 16 : tab ? 24 : 48;
+  const cols = [
+    { h: 'esy', links: [
+      { label: t('chrome.stores'), to: '/stores' },
+      { label: t('chrome.how'), section: 'how' },
+      { label: t('chrome.price'), section: 'pricing' },
+    ] },
+    { h: t('chrome.footHelp'), links: [
+      { label: t('chrome.helpCenter'), to: '/help' },
+      { label: t('chrome.contact'), to: '/help#contact' },
+    ] },
+    { h: t('chrome.footRules'), links: [
+      { label: t('chrome.terms'), to: '/terms' },
+      { label: t('chrome.privacy'), to: '/privacy' },
+      { label: t('chrome.returns'), to: '/returns' },
+      { label: t('chrome.sellerTerms'), to: '/seller-terms' },
+    ] },
+  ];
+  const linkStyle = {
+    display: 'flex', alignItems: 'center', minHeight: ph ? 40 : 30, color: T.textDim,
+    textDecoration: 'none', fontSize: 12.5,
+  };
+
+  return (
+    <footer style={{
+      borderTop: `1px solid ${T.border}`, background: T.surface, color: T.text, font: `400 14px/1.45 ${T.font}`,
+      padding: `${ph ? 24 : 32}px ${gut}px ${ph ? 20 : 24}px`,
+      display: 'flex', flexDirection: 'column', gap: ph ? 16 : 24, flex: 'none',
+    }}>
+      <div style={{ display: 'flex', flexDirection: ph ? 'column' : 'row', gap: ph ? 18 : 40 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, flex: '1.2 1 0' }}>
+          <Link to="/" aria-label={t('chrome.home')} style={{ textDecoration: 'none', display: 'inline-flex', alignSelf: 'flex-start' }}>
+            <Logo T={T} />
+          </Link>
+          <span style={{ fontSize: 12.5, color: T.textDim, maxWidth: 300, textWrap: 'pretty' }}>{t('chrome.tagline')}</span>
         </div>
-        {cols.map((col) => (
-          <div key={col.title}>
-            <div style={{ font: `700 11px ${T.font}`, letterSpacing: '0.12em', color: 'rgba(242,242,247,0.7)', marginBottom: 14 }}>{col.title}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-              {col.items.map((it) => (it.to
-                ? <Link key={it.label} to={it.to} style={{ color: '#cfd0d8', textDecoration: 'none' }}>{it.label}</Link>
-                : <span key={it.label} style={{ color: 'rgba(242,242,247,0.45)' }}>{it.label}</span>))}
+        <nav
+          aria-label={t('chrome.footLabel')}
+          style={{
+            display: 'grid', gridTemplateColumns: `repeat(${ph ? 2 : 3}, minmax(0, 1fr))`,
+            gap: ph ? '12px 16px' : '0 32px', flex: '3 1 0', minWidth: 0,
+          }}
+        >
+          {cols.map((col) => (
+            <div key={col.h} style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              <b style={{ display: 'block', marginBottom: 4, fontSize: 12.5, color: T.text }}>{col.h}</b>
+              {col.links.map((l) => (l.to
+                ? <Link key={l.label} to={l.to} style={linkStyle}>{l.label}</Link>
+                : <a key={l.label} href={`/#${l.section}`} onClick={section(l.section)} style={linkStyle}>{l.label}</a>))}
             </div>
-          </div>
-        ))}
+          ))}
+        </nav>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 22, borderTop: '1px solid rgba(255,255,255,0.1)', font: `400 11.5px ${T.font}`, color: 'rgba(242,242,247,0.45)' }}>
-        <div>{t('footer.rights')}</div>
-        <div style={{ display: 'flex', gap: 18 }}><span>{t('footer.langs')}</span><span>{t('footer.version')}</span></div>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, borderTop: `1px solid ${T.border}`,
+        paddingTop: ph ? 12 : 16,
+      }}>
+        <span style={{ fontSize: 12.5, color: T.textDim }}>{t('chrome.rights')}</span>
+        <LangBtn T={T} ph={ph} style={{ marginLeft: 'auto' }} />
       </div>
-    </div>
+    </footer>
   );
 }
 

@@ -213,145 +213,289 @@
     "sport": "Sport",
     "wear": "Clothing"
   },
-  "legal": {
-    "updated": "Updated: 1 August 2026",
+  "chrome": {
+    "stores": "Stores",
+    "how": "How it works",
+    "price": "Pricing",
+    "help": "Help",
+    "navLabel": "esy",
+    "home": "esy — home page",
+    "lang": "EN · ქა",
+    "langLabel": "Language: English, switch to Georgian",
+    "langRow": "Language",
+    "signIn": "Sign in",
+    "openStore": "Open a store",
+    "myStore": "My store",
+    "myAccount": "My account",
+    "account": "Account: {{name}}",
+    "menu": "Menu",
+    "footLabel": "esy links",
+    "footHelp": "Help",
+    "footRules": "Policies",
+    "helpCenter": "Help centre",
+    "contact": "Contact",
+    "terms": "Terms of service",
+    "privacy": "Privacy",
+    "returns": "Returns",
+    "sellerTerms": "Seller terms",
+    "tagline": "Your online store in a few minutes — in Georgia.",
+    "rights": "© 2026 esy · Tbilisi"
+  },
+  "lost": {
+    "code": "404",
+    "title": "We couldn’t find this page",
+    "body": "The link may have changed, or the store is no longer on esy. Look it up by name.",
+    "placeholder": "Store name",
+    "searchLabel": "Search stores",
+    "host": "{{sub}}.esy.ge",
+    "none": "No store called “{{q}}”.",
+    "searching": "Loading stores…",
+    "home": "Home page",
+    "stores": "All stores"
+  },
+  "helpCenter": {
+    "title": "How can we help?",
+    "searchLabel": "Search help",
+    "placeholder": "For example: delivery, returns",
+    "clear": "Clear search",
+    "resultsLabel": "Search results",
+    "count_one": "{{n}} article",
+    "count_other": "{{n}} articles",
+    "quoted": "“{{q}}”",
+    "allTopics": "All topics",
+    "none": "No article matches that. Try another word, or write to us.",
+    "place": "{{aud}} · {{topic}}",
+    "topicsLabel": "Topics",
+    "faqLabel": "Common questions",
+    "aud": {
+      "buyers": "For shoppers",
+      "sellers": "For sellers"
+    },
+    "topic": {
+      "orders": "Orders and delivery",
+      "pay": "Payment",
+      "refunds": "Returns and refunds",
+      "open": "Opening a store",
+      "payouts": "Getting paid",
+      "sellerOrders": "Orders and refunds"
+    },
+    "talkTitle": "Couldn’t find an answer?",
+    "talkBody": "Write to us and we’ll reply within an hour on working days.",
+    "talkCta": "Write to support",
+    "email": "help@esy.ge",
+    "a": {
+      "where": {
+        "q": "Where is my order?",
+        "a": "Open “My orders” in the store you bought from: it shows where the order is — placed, shipped, out for delivery or delivered. Your esy account lists the orders from every store in one place too."
+      },
+      "cancel": {
+        "q": "Can I cancel an order?",
+        "a": "Yes, while it is still “placed” and unpaid — the order page has a cancel button. For an order that is paid or already shipped, write to the store."
+      },
+      "phone": {
+        "q": "Why do I need to verify my phone?",
+        "a": "With a verified number the store and the courier can reach you about your delivery, and nobody can make throwaway accounts. You confirm it once with an SMS code and it works in every esy store; one number belongs to one account."
+      },
+      "oneAccount": {
+        "q": "Does one account work in every store?",
+        "a": "Yes. You sign in to esy with Google and the same account works in every esy store — your orders, address and language go with you. Signing out once signs you out everywhere."
+      },
+      "howPay": {
+        "q": "How do I pay?",
+        "a": "By card, on Bank of Georgia’s secure page: when you confirm the order you go to the bank’s page, and come back to the store once you have paid."
+      },
+      "cardSafe": {
+        "q": "Can anyone see my card details?",
+        "a": "No. You enter them on the bank’s page, and neither esy nor the store can see them."
+      },
+      "returnItem": {
+        "q": "How do I return an item?",
+        "a": "Open “My orders”, pick the order and write to the store. The store refunds the money to your card, usually within 3–5 working days."
+      },
+      "refundWhen": {
+        "q": "When will the money be back on my card?",
+        "a": "Once the store sends the refund, the bank usually puts it back on the same card within 3–5 working days. A refund does not change the order’s status: a delivered order can carry a refund."
+      },
+      "returnWindow": {
+        "q": "How long do I have to return something?",
+        "a": "14 days from delivery. The item must be unused and in its original condition."
+      },
+      "openCost": {
+        "q": "What does a store cost?",
+        "a": "Opening one is free and there is no monthly fee. esy takes 2% of each sale."
+      },
+      "howOpen": {
+        "q": "How do I open a store?",
+        "a": "Sign in with Google, confirm your number, then pick a name, a link and a style — the store is ready in a few minutes. Then add your products and share the link."
+      },
+      "manage": {
+        "q": "Where do I run my store?",
+        "a": "At manager.esy.ge: products, orders and settings live there. The storefront itself has no admin buttons — it is only for shopping."
+      },
+      "subdomain": {
+        "q": "Can I change my store’s link?",
+        "a": "No. The link (your-name.esy.ge) is chosen when you open the store and does not change afterwards, so the links you have shared keep working. The store’s name can be changed at any time."
+      },
+      "cards": {
+        "q": "How do I take card payments?",
+        "a": "In the back office settings, turn on card payments and enter the API details Bank of Georgia issued for your store at bonline.bog.ge. Shoppers pay on the bank’s secure page and the money goes straight to your account."
+      },
+      "fee": {
+        "q": "When do I pay the fee?",
+        "a": "The 2% fee is fixed when an order is placed and paid once a month, on one invoice. Refunded orders are not counted."
+      },
+      "sellerRefund": {
+        "q": "How do I refund a shopper?",
+        "a": "In the back office, open the order and press “Refund” — in full or in part. Only the owner can do this. The bank confirms a refund later, so until then it shows as pending."
+      },
+      "sellerCancel": {
+        "q": "How do I cancel an order?",
+        "a": "You can cancel an order while it is placed or shipped. The stock goes back by itself and the shopper gets an email; for a paid order, send the refund as well."
+      }
+    }
+  },
+  "legalDocs": {
+    "tabsLabel": "Policies",
+    "toc": "Contents",
+    "tocLabel": "Contents of this document",
+    "parts_one": "{{n}} part",
+    "parts_other": "{{n}} parts",
+    "short": "In short:",
+    "updated": "Updated 31 October 2026",
+    "tab": {
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "returns": "Returns",
+      "seller": "Seller terms"
+    },
     "terms": {
       "title": "Terms of service",
-      "s": [
-        [
-          "1 · Who we are",
-          "esy.ge is a platform where anyone can open a shop.",
-          "esy does not sell goods. We give a merchant a place, a subdomain and tools. The contract of sale is between the buyer and the shop."
-        ],
-        [
-          "2 · Your account",
-          "One account covers both buying and selling.",
-          "You sign in with Google. There is no separate seller account — a shop attaches to an existing one. A verified phone is required before paying and before opening a shop."
-        ],
-        [
-          "3 · Opening a shop",
-          "It is free, and there is no subscription.",
-          "The subdomain is assigned at creation and cannot change afterwards. Platform names — including manager — are reserved and cannot be registered as a shop."
-        ],
-        [
-          "4 · The fee",
-          "esy takes 2% of a sale. Nothing else.",
-          "The fee is frozen onto the order at creation and paid once a month on a single statement. Refunded orders are excluded. Card processing fees belong to the bank."
-        ],
-        [
-          "5 · Prohibited items",
-          "Illegal or dangerous goods are not allowed.",
-          "esy may remove a product or suspend a shop. Suspension closes the storefront — the data remains."
-        ],
-        [
-          "6 · Liability",
-          "In a dispute esy mediates; the contract is between buyer and shop.",
-          "We help both sides reach a resolution and protect buyers against bad-faith behaviour."
-        ]
-      ]
+      "summary": "esy hosts stores. You buy straight from the store and the money goes to the store; we look after your account and its security.",
+      "sections": {
+        "who": {
+          "h": "1. Who we are",
+          "p": "esy.ge is a platform where anyone can open a store. esy does not sell goods: we give sellers a place, a link and the tools, and the contract of sale is between the shopper and the store."
+        },
+        "account": {
+          "h": "2. Your account",
+          "p": "One esy account works in every esy store. Registering needs a Google account and a verified phone number; one number belongs to one account."
+        },
+        "buying": {
+          "h": "3. Buying and paying",
+          "p": "Card payments happen on Bank of Georgia’s secure page. Neither esy nor the store can see your card details. Returning an item and getting your money back have their own rules: <returns>Returns</returns>."
+        },
+        "sellers": {
+          "h": "4. Sellers",
+          "p": "Opening a store, the fee and payouts are covered by the <seller>seller terms</seller>."
+        },
+        "contact": {
+          "h": "5. Contact",
+          "p": "Questions, complaints and disputes: help@esy.ge. We reply within an hour on working days."
+        }
+      }
     },
     "privacy": {
       "title": "Privacy",
-      "s": [
-        [
-          "What we keep",
-          "Your name, email, phone and addresses.",
-          "This data is platform-level and works at every shop. We never store a password — sign-in goes through Google."
-        ],
-        [
-          "What a shop sees",
-          "Only what an order needs.",
-          "A shop sees your name, phone and delivery address — for the order you placed with it. It cannot see orders from other shops."
-        ],
-        [
-          "The address copy",
-          "Every order keeps its own.",
-          "An order stores the address as it was at purchase. Editing or deleting an address later does not change past orders."
-        ],
-        [
-          "Deletion",
-          "You can delete your account at any time.",
-          "Order history stays with the shop for accounting purposes; personal data is removed."
-        ]
-      ]
-    },
-    "returns": {
-      "title": "Cancellations, returns, refunds",
-      "s": [
-        [
-          "Cancelling as a buyer",
-          "You can, while the order is placed and unpaid.",
-          "Cancelling a paid order means a refund, which is a different operation — contact the shop in that case."
-        ],
-        [
-          "Cancelling as a shop",
-          "A shop can cancel at Placed or Shipped.",
-          "After delivery there is no cancellation — that is a return."
-        ],
-        [
-          "Returns",
-          "14 days from delivery.",
-          "The item must be unused and in its original condition. Start a return from the order page or by calling the shop."
-        ],
-        [
-          "Refunds",
-          "Money returns to the same card in 3–5 working days.",
-          "A refund does not change the fulfilment status: a delivered order can be refunded — that is normal, not a data error."
-        ],
-        [
-          "Disputes",
-          "Cannot agree? esy steps in.",
-          "Write to help@esy.ge. We hear both sides and decide within 5 working days."
-        ]
-      ]
-    }
-  },
-  "help": {
-    "title": "How can we help?",
-    "searchPlaceholder": "Type your question…",
-    "commonQuestions": "Common questions",
-    "cats": {
-      "orders": {
-        "k": "My orders",
-        "s": "Where is it, cancelling, returns"
-      },
-      "pay": {
-        "k": "Payments",
-        "s": "Cards, receipts, safety"
-      },
-      "sell": {
-        "k": "Selling on esy",
-        "s": "Opening a shop, products, the fee"
-      },
-      "acc": {
-        "k": "Account",
-        "s": "Sign-in, phone, addresses"
+      "summary": "We keep only what buying and delivery need. A store sees your details only on its own orders, and we never store a password at all.",
+      "sections": {
+        "data": {
+          "h": "1. What we keep",
+          "p": "Your name, email, phone and addresses. They belong to the platform and work in every store. We keep no password — you sign in through Google."
+        },
+        "store": {
+          "h": "2. What a store sees",
+          "p": "Only what an order needs: your name, phone and delivery address, and only on the order you placed with it. It cannot see your orders from other stores."
+        },
+        "copies": {
+          "h": "3. Address copies",
+          "p": "Every order keeps its own copy of the address as it was when you bought. Changing or deleting an address does not change past orders."
+        },
+        "delete": {
+          "h": "4. Deleting your account",
+          "p": "You can ask for your account to be deleted at any time at help@esy.ge. Order history stays with the store for accounting, and your personal details are removed."
+        }
       }
     },
-    "qa": [
-      [
-        "Where is my order?",
-        "Open the order in your account — it shows the stage it is at and the shop’s phone number."
-      ],
-      [
-        "Can I cancel an order?",
-        "Yes, while it is Placed and unpaid. After that, contact the shop."
-      ],
-      [
-        "Why do you need my phone?",
-        "The shop and the courier call this number. It is verified once and works at every shop."
-      ],
-      [
-        "What does opening a shop cost?",
-        "Nothing. esy takes 2% of a sale — there is no other charge."
-      ],
-      [
-        "Where do I manage my shop?",
-        "At manager.esy.ge. There are no management controls in the storefront — a shop is for shopping."
-      ]
-    ],
-    "talkTitle": "Talk to a person",
-    "talkBody": "Mon–Sat 10:00–19:00 · +995 322 40 12 00 · help@esy.ge",
-    "call": "Call us"
+    "returns": {
+      "title": "Cancellations, returns and refunds",
+      "summary": "You cancel an unpaid order yourself, return a delivered item within 14 days, and the money goes back to the same card within 3–5 working days.",
+      "sections": {
+        "buyerCancel": {
+          "h": "1. Cancelling as a shopper",
+          "p": "You can, while the order is placed and unpaid. Cancelling a paid order means a refund, which is a different operation — in that case, contact the store."
+        },
+        "storeCancel": {
+          "h": "2. Cancelling as a store",
+          "p": "A store can cancel an order that is placed or shipped. Once delivered it can no longer be cancelled — that is a return."
+        },
+        "return": {
+          "h": "3. Returns",
+          "p": "14 days from delivery. The item must be unused and in its original condition. To return something, contact the store — you will find its contacts on the store’s page."
+        },
+        "refund": {
+          "h": "4. Refunds",
+          "p": "The money goes back to the same card within 3–5 working days. A refund does not change the order’s status: a delivered order can carry a refund — that is normal, not a mistake."
+        },
+        "dispute": {
+          "h": "5. Disputes",
+          "p": "Can’t agree? esy steps in. Write to help@esy.ge: we hear both sides and decide within 5 working days."
+        }
+      }
+    },
+    "seller": {
+      "title": "Seller terms",
+      "summary": "Opening a store is free. esy takes 2% of each sale, paid once a month, and card payments go straight to your own account.",
+      "sections": {
+        "open": {
+          "h": "1. Opening a store",
+          "p": "Opening is free, with no subscription. The link (subdomain) is assigned when the store is created and does not change afterwards. Platform names — manager among them — are reserved and cannot be registered as a store."
+        },
+        "fee": {
+          "h": "2. The fee",
+          "p": "esy takes 2% of each sale — nothing else. The fee is fixed when an order is placed and paid at the end of the month, on one invoice. Refunded orders are not counted. Card processing charges are the bank’s."
+        },
+        "payouts": {
+          "h": "3. Payouts",
+          "p": "Card payments go through Bank of Georgia straight to the store’s account — esy never holds a shopper’s money. The owner sends refunds from the back office."
+        },
+        "banned": {
+          "h": "4. Prohibited items",
+          "p": "Items the law forbids, and dangerous ones, are not allowed. esy may take a product down or suspend a store. Suspension closes the storefront — the data stays."
+        },
+        "liability": {
+          "h": "5. Liability",
+          "p": "In a dispute esy is the intermediary; the contract is between the shopper and the store. We help both sides settle it and protect shoppers from bad faith."
+        }
+      }
+    }
+  },
+  "me": {
+    "stores": "My stores",
+    "openStore": "Open a new store",
+    "newChip_one": "{{n}} new",
+    "newChip_other": "{{n}} new",
+    "newAria_one": "{{n}} new order",
+    "newAria_other": "{{n}} new orders",
+    "host": "{{sub}}.esy.ge",
+    "owner": "Owner",
+    "manager": "Manager",
+    "panel": "Back office",
+    "orders": "Orders from every store",
+    "orderTitle": "{{store}} · #{{number}}",
+    "orderSub": "{{what}} · {{total}}",
+    "itemMore_one": "{{title}} and {{n}} more",
+    "itemMore_other": "{{title}} and {{n}} more",
+    "items_one": "{{n}} item",
+    "items_other": "{{n}} items",
+    "noOrders": "No orders yet.",
+    "allOrders_one": "All orders · {{n}}",
+    "allOrders_other": "All orders · {{n}}",
+    "browse": "Browse stores",
+    "personal": "Personal details",
+    "personalSub": "Name, phone",
+    "display": "Display and language",
+    "displaySub": "{{appearance}} · {{language}}",
+    "signOut": "Sign out everywhere",
+    "back": "← Account"
   }
 }

@@ -1,134 +1,243 @@
-// The help centre (the design's annex HelpCentre).
+// The help centre (the design's L2): a search over the answers, the topics for
+// shoppers and for sellers, the common questions, and a way to reach a person.
 //
-// Four categories, the questions people actually ask, and a way to reach a
-// human. The last block matters most: a marketplace where something has gone
-// wrong with someone's money or parcel needs a phone number on the page, not a
-// contact form that returns a ticket id.
+// The answers live in the locale files (platform.json → helpCenter.a), one per
+// article, so a new answer is written in translation alone; which topic an
+// article belongs to, and which ones are the common questions, is structure
+// and lives here. Every count on the page is counted from that corpus — the
+// board's "9 articles" was a sketch, and a number that is not the number of
+// answers behind the link would be the first thing a reader catches out.
 //
-// The search field is presentational for now — there is nothing to search yet,
-// since the answers below are the whole corpus. It is rendered because the
-// design leads with it and because it is where a person looks first; when
-// there are enough articles to justify an index it becomes real. Note that it
-// is NOT an input: a box you can type into and get nothing back is worse than
-// a labelled affordance that clearly is not ready.
-import { useState } from 'react';
+// The search is real: it matches the words of the question, the answer and
+// the topic's name, and the query rides the URL (?q=) so a result can be sent
+// to someone. A topic opens the same list with that topic's answers (?topic=).
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePlatform, PTopBar, PFooter } from './PlatformShared';
-import { Icons } from '../core/icons';
-import { alpha } from '../core/tokens';
+import { Btn, Card, Glyph, IconBtn, Lbl, List, LiIc, ingrpInput, ingrpStyle, liStyle, type, usePDevice } from './PlatformKit';
 
-const CATS = [
-  ['orders', 'truck'],
-  ['pay', 'card'],
-  ['sell', 'box'],
-  ['acc', 'user'],
+/** Topics, in the order the page lists them, and the articles under each. */
+const TOPICS = [
+  { id: 'orders', aud: 'buyers', icon: 'truck', articles: ['where', 'cancel', 'phone', 'oneAccount'] },
+  { id: 'pay', aud: 'buyers', icon: 'card', articles: ['howPay', 'cardSafe'] },
+  { id: 'refunds', aud: 'buyers', icon: 'undo', articles: ['returnItem', 'refundWhen', 'returnWindow'] },
+  { id: 'open', aud: 'sellers', icon: 'store', articles: ['openCost', 'howOpen', 'manage', 'subdomain'] },
+  { id: 'payouts', aud: 'sellers', icon: 'bank', articles: ['cards', 'fee'] },
+  { id: 'sellerOrders', aud: 'sellers', icon: 'box', articles: ['sellerRefund', 'sellerCancel'] },
 ];
+const AUDIENCES = ['buyers', 'sellers'];
+/** The common questions, as the design lists them. */
+const FAQ = ['phone', 'oneAccount', 'refundWhen'];
+
+const TOPIC_OF = Object.fromEntries(TOPICS.flatMap((tp) => tp.articles.map((a) => [a, tp])));
+const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+/** One answer as a list row: the question, its place, and the answer when open. */
+function Article({ T, t, id, open, last, onToggle, place = true }) {
+  const tp = TOPIC_OF[id];
+  return (
+    <div style={{ borderBottom: last ? 0 : `1px solid ${T.border}` }}>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={onToggle}
+        style={{ ...liStyle(T, true), cursor: 'pointer', alignItems: place ? 'flex-start' : 'center' }}
+      >
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <b style={{ display: 'block', fontSize: 12.5, lineHeight: 1.45 }}>{t(`helpCenter.a.${id}.q`)}</b>
+          {place && (
+            <span style={{ display: 'block', fontSize: 12, color: T.textDim }}>
+              {t('helpCenter.place', { aud: t(`helpCenter.aud.${tp.aud}`), topic: t(`helpCenter.topic.${tp.id}`) })}
+            </span>
+          )}
+        </span>
+        <Glyph name={open ? 'chevU' : 'chevD'} size={16} style={{ marginTop: place ? 2 : 0 }} />
+      </button>
+      {open && (
+        <p style={{ margin: 0, padding: '0 16px 14px', marginTop: -5, fontSize: 12.5, lineHeight: 1.55, color: T.textDim, textWrap: 'pretty' }}>
+          {t(`helpCenter.a.${id}.a`)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A list of answers, one open at a time. `first` opens the first one, as the
+ * design draws a result list; the common questions start closed. Remounted
+ * (by key) when the query or topic changes, so a new list starts afresh.
+ */
+function Answers({ T, t, ids, first, place }) {
+  const [open, setOpen] = useState(first ? ids[0] : null);
+  return (
+    <List T={T}>
+      {ids.map((id, i) => (
+        <Article
+          key={id}
+          T={T}
+          t={t}
+          id={id}
+          place={place}
+          open={open === id}
+          last={i === ids.length - 1}
+          onToggle={() => setOpen(open === id ? null : id)}
+        />
+      ))}
+    </List>
+  );
+}
 
 export default function PlatformHelp() {
-  const { T, isDesktop } = usePlatform();
+  const { T } = usePlatform();
+  const { ph, desk, gut } = usePDevice();
   const { t } = useTranslation('platform');
-  const mob = !isDesktop;
-  const [open, setOpen] = useState(0);
+  const [params, setParams] = useSearchParams();
+  const [focus, setFocus] = useState(false);
+  const ty = type(T, desk);
 
-  const qa = t('help.qa', { returnObjects: true });
-  const rows = Array.isArray(qa) ? qa : [];
+  const q = params.get('q') || '';
+  const topicId = params.get('topic') || '';
+  const topic = TOPICS.find((tp) => tp.id === topicId) || null;
+  const query = norm(q);
+
+  // Every word of the query must appear in the question, the answer or the
+  // topic's name. Georgian has no case, Latin is folded.
+  const hits = useMemo(() => {
+    if (!query) return [];
+    const words = query.split(' ');
+    return TOPICS.flatMap((tp) => tp.articles.map((id) => ({ id, tp }))).filter(({ id, tp }) => {
+      const hay = norm(`${t(`helpCenter.a.${id}.q`)} ${t(`helpCenter.a.${id}.a`)} ${t(`helpCenter.topic.${tp.id}`)}`);
+      return words.every((w) => hay.includes(w));
+    }).map(({ id }) => id);
+  }, [query, t]);
+
+  const results = query ? hits : topic ? topic.articles : null;
+
+  const setQuery = (value) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set('q', value); else next.delete('q');
+    next.delete('topic');
+    setParams(next, { replace: true });
+  };
+
+  const wrap = desk
+    ? { display: 'flex', flexDirection: 'column', gap: 22, padding: '30px 0 0', maxWidth: 1000, margin: '0 auto' }
+    : { display: 'flex', flexDirection: 'column', gap: ph ? 18 : 22, padding: ph ? `10px ${gut}px 0` : `30px ${gut}px 0` };
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}` }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: T.bg, color: T.text, font: `400 14px/1.45 ${T.font}` }}>
       <PTopBar current="help" />
-
-      <div style={{ padding: mob ? '26px 20px 18px' : '48px 48px 24px', textAlign: mob ? 'left' : 'center' }}>
-        <h1 style={{ margin: 0, font: `700 ${mob ? 26 : 36}px ${T.font}`, letterSpacing: '-0.035em', color: T.text }}>
-          {t('help.title')}
-        </h1>
-        <div style={{
-          margin: mob ? '16px 0 0' : '20px auto 0', maxWidth: 520,
-          display: 'flex', alignItems: 'center', gap: 10, height: 54, padding: '0 18px',
-          borderRadius: 15, background: T.surface, border: `1px solid ${T.border}`,
-          color: T.textMute, font: `500 14px ${T.font}`,
-        }}>
-          <Icons.search size={17} /> {t('help.searchPlaceholder')}
-        </div>
-      </div>
-
-      <div style={{ padding: mob ? '6px 20px 20px' : '12px 48px 24px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: mob ? '1fr' : 'repeat(4, 1fr)',
-          gap: 12, maxWidth: mob ? undefined : 1000, margin: '0 auto',
-        }}>
-          {CATS.map(([id, icon]) => {
-            const Ic = Icons[icon];
-            return (
-              <div key={id} style={{ borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`, padding: 18 }}>
-                <span style={{
-                  width: 38, height: 38, borderRadius: 12, background: T.accentBg, color: T.accentFg,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12,
-                }}>{Ic && <Ic size={17} />}</span>
-                <div style={{ font: `700 14.5px ${T.font}`, color: T.text }}>{t(`help.cats.${id}.k`)}</div>
-                <div style={{ marginTop: 5, font: `400 12.5px/1.5 ${T.font}`, color: T.textDim }}>{t(`help.cats.${id}.s`)}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div style={{ padding: mob ? '8px 20px 24px' : '16px 48px 32px', maxWidth: mob ? undefined : 760, margin: '0 auto' }}>
-        <div style={{ font: `700 18px ${T.font}`, color: T.text, letterSpacing: '-0.02em', marginBottom: 12 }}>
-          {t('help.commonQuestions')}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {rows.map(([q, a], i) => (
-            <button
-              key={q}
-              type="button"
-              onClick={() => setOpen(open === i ? -1 : i)}
-              style={{
-                textAlign: 'left', width: '100%', cursor: 'pointer',
-                borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`,
-                padding: mob ? 16 : 20, color: T.text, font: 'inherit',
-              }}
+      <main style={{ flex: '1 0 auto', paddingBottom: 40 }}>
+        <div style={wrap}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', textAlign: 'center' }}>
+            <h1 style={ty.h1}>{t('helpCenter.title')}</h1>
+            <form
+              role="search"
+              onSubmit={(e) => e.preventDefault()}
+              style={{ width: '100%', maxWidth: 560 }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ flex: 1, font: `700 14px ${T.font}`, color: T.text }}>{q}</span>
-                <span style={{ color: T.textMute, display: 'flex', transform: open === i ? 'rotate(180deg)' : 'none' }}>
-                  <Icons.chevD size={14} />
+              <label style={ingrpStyle(T, focus || !!q)}>
+                <Glyph name="search" style={{ marginLeft: 14 }} />
+                <input
+                  type="search"
+                  value={q}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => setFocus(true)}
+                  onBlur={() => setFocus(false)}
+                  placeholder={t('helpCenter.placeholder')}
+                  aria-label={t('helpCenter.searchLabel')}
+                  autoComplete="off"
+                  style={ingrpInput(T)}
+                />
+                {q && (
+                  <IconBtn
+                    T={T}
+                    label={t('helpCenter.clear')}
+                    onClick={() => setQuery('')}
+                    style={{ width: 36, height: 36, marginRight: 7, borderRadius: '50%' }}
+                  >
+                    <Glyph name="close" size={16} />
+                  </IconBtn>
+                )}
+              </label>
+            </form>
+          </div>
+
+          {results && (
+            <section aria-label={t('helpCenter.resultsLabel')} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p role="status" style={{ margin: 0, fontSize: 12.5 }}>
+                <b>{t('helpCenter.count', { count: results.length, n: results.length })}</b>{' '}
+                <span style={{ color: T.textDim }}>
+                  {query ? t('helpCenter.quoted', { q: q.trim() }) : t(`helpCenter.topic.${topic.id}`)}
                 </span>
-              </div>
-              {open === i && (
-                <div style={{ marginTop: 10, font: `400 13px/1.7 ${T.font}`, color: T.textDim }}>{a}</div>
+                {topic && !query && (
+                  <>
+                    {' · '}
+                    <Link to="/help" style={{ color: T.accentFg, fontWeight: 600, textDecoration: 'none' }}>{t('helpCenter.allTopics')}</Link>
+                  </>
+                )}
+              </p>
+              {results.length ? (
+                <Answers key={`${query}|${topicId}`} T={T} t={t} ids={results} first place />
+              ) : (
+                <Card T={T} pad={16}>
+                  <p style={{ margin: 0, fontSize: 12.5, color: T.textDim }}>{t('helpCenter.none')}</p>
+                </Card>
               )}
-            </button>
-          ))}
-        </div>
-      </div>
+            </section>
+          )}
 
-      <div style={{ padding: mob ? '0 20px 36px' : '0 48px 48px', maxWidth: mob ? undefined : 760, margin: '0 auto' }}>
-        <div style={{
-          borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`, padding: mob ? 18 : 24,
-          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
-        }}>
-          <span style={{
-            width: 46, height: 46, borderRadius: 15, background: T.accentBg, color: T.accentFg,
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}><Icons.phone size={20} /></span>
-          <span style={{ flex: 1, minWidth: 200 }}>
-            <span style={{ display: 'block', font: `700 15px ${T.font}`, color: T.text }}>{t('help.talkTitle')}</span>
-            <span style={{ display: 'block', marginTop: 4, font: `400 12.5px/1.55 ${T.font}`, color: T.textDim }}>
-              {t('help.talkBody')}
-            </span>
-          </span>
-          <a
-            href="tel:+995322401200"
-            style={{
-              height: 46, padding: '0 20px', borderRadius: 14, textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', background: T.grad, color: T.onAccent,
-              font: `700 13.5px ${T.font}`, boxShadow: `0 10px 24px ${alpha(T.accent, 0.33)}`,
-            }}
-          >{t('help.call')}</a>
-        </div>
-      </div>
+          <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <Lbl T={T} as="h2">{t('helpCenter.topicsLabel')}</Lbl>
+            <div style={{
+              display: 'grid', gap: ph ? 16 : desk ? 20 : 14,
+              gridTemplateColumns: ph ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
+            }}>
+              {AUDIENCES.map((aud) => (
+                <div key={aud} style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+                  <b style={{ fontSize: 12.5 }}>{t(`helpCenter.aud.${aud}`)}</b>
+                  <List T={T}>
+                    {TOPICS.filter((tp) => tp.aud === aud).map((tp, i, arr) => (
+                      <Link
+                        key={tp.id}
+                        to={`/help?topic=${tp.id}`}
+                        aria-current={topicId === tp.id && !query ? 'true' : undefined}
+                        style={{
+                          ...liStyle(T, i === arr.length - 1),
+                          background: topicId === tp.id && !query ? `color-mix(in oklab, ${T.accent} 7%, ${T.surface})` : 'transparent',
+                        }}
+                      >
+                        <LiIc T={T} name={tp.icon} />
+                        <b style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>{t(`helpCenter.topic.${tp.id}`)}</b>
+                        <span style={{ fontSize: 12, color: T.textDim, whiteSpace: 'nowrap' }}>
+                          {t('helpCenter.count', { count: tp.articles.length, n: tp.articles.length })}
+                        </span>
+                        <Glyph name="chevR" size={16} style={{ color: T.textDim }} />
+                      </Link>
+                    ))}
+                  </List>
+                </div>
+              ))}
+            </div>
+          </section>
 
+          {!results && (
+            <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Lbl T={T} as="h2">{t('helpCenter.faqLabel')}</Lbl>
+              <Answers T={T} t={t} ids={FAQ} place={false} />
+            </section>
+          )}
+
+          <Card T={T} pad={22} id="contact" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14, scrollMarginTop: 16 }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <b style={{ ...ty.h3, display: 'block' }}>{t('helpCenter.talkTitle')}</b>
+              <p style={{ margin: 0, fontSize: 12.5, color: T.textDim }}>{t('helpCenter.talkBody')}</p>
+            </div>
+            <Btn T={T} kind="p" href={`mailto:${t('helpCenter.email')}`}>{t('helpCenter.talkCta')}</Btn>
+          </Card>
+        </div>
+      </main>
       <PFooter />
     </div>
   );

@@ -1,46 +1,103 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// Page not found (the design's L5). The likely visitor followed an old link —
+// to a page that moved, or to a store that is no longer on esy — so the page
+// says both in one line and offers what they were most likely after: the
+// store, found by name. The field searches the live directory as you type and
+// lists what matches; Enter opens the first. Then home, or every store.
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePlatform, PTopBar } from './PlatformShared';
-import { alpha } from '../core/tokens';
+import { usePlatform, useStores, PTopBar, PFooter, StoreMark } from './PlatformShared';
+import { storeUrl } from './platformData';
+import { Btn, Glyph, List, ingrpInput, ingrpStyle, liStyle, type, usePDevice } from './PlatformKit';
 
-const slugify = (s) => s.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
+const norm = (s) => String(s || '').toLowerCase();
 
 export default function PlatformNotFound() {
-  const { T, isDesktop } = usePlatform();
+  const { T } = usePlatform();
+  const { ph, desk, gut } = usePDevice();
   const { t } = useTranslation('platform');
-  const navigate = useNavigate();
-  const [sub, setSub] = useState('cassette-press');
+  const { stores } = useStores();
+  const [q, setQ] = useState('');
+  const [focus, setFocus] = useState(false);
+  const ty = type(T, desk);
+
+  const query = norm(q.trim());
+  const hits = useMemo(() => {
+    if (!query) return [];
+    return (stores || [])
+      .filter((s) => !s.suspended)
+      .filter((s) => [s.displayName, s.name, s.subdomain, s.tagline].some((v) => norm(v).includes(query)))
+      .slice(0, 5);
+  }, [stores, query]);
+
+  const open = (s) => { window.location.href = storeUrl(s); };
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}` }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: T.bg, color: T.text, font: `400 14px/1.45 ${T.font}` }}>
       <PTopBar />
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 160px)', padding: isDesktop ? '0 56px' : '0 22px' }}>
-        <div style={{ position: 'absolute', top: '20%', left: '25%', right: '25%', height: 320, background: `radial-gradient(60% 80% at 50% 50%, ${alpha(T.accent, 0.19)}, transparent 70%)`, filter: 'blur(40px)', pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', maxWidth: 720, width: '100%', textAlign: 'center' }}>
-          <div style={{ font: `800 12px ${T.mono}`, color: T.accentFg, letterSpacing: '0.16em', marginBottom: 22 }}>{t('notFound.tag')}</div>
-          <h1 style={{ font: `700 ${isDesktop ? 56 : 32}px/1.04 ${T.font}`, color: T.text, letterSpacing: '-0.04em', margin: '0 0 16px' }}>
-            {t('notFound.title')}
-          </h1>
-          <div style={{ font: `400 ${isDesktop ? 16.5 : 14}px/1.55 ${T.font}`, color: T.textDim, maxWidth: 540, margin: '0 auto 28px' }}>
-            {t('notFound.bodyPre')}<span style={{ color: T.text, fontFamily: T.mono, fontSize: isDesktop ? 15 : 13 }}>{sub || 'your-name'}.esy.ge</span>{t('notFound.bodyPost')}
-          </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '8px 8px 8px 16px', background: T.surface, border: `1.5px solid ${T.accent}`, borderRadius: 16, boxShadow: `0 0 0 4px ${alpha(T.accent, 0.1)}`, maxWidth: 480, width: '100%' }}>
-            <span style={{ font: `500 13.5px ${T.mono}`, color: T.textMute }}>https://</span>
-            <input value={sub} onChange={(e) => setSub(slugify(e.target.value))} style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: T.text, font: `700 16px ${T.mono}` }} />
-            <span style={{ font: `500 14px ${T.mono}`, color: T.textDim }}>.esy.ge</span>
-            <button onClick={() => navigate('/sell')} style={{ height: 40, padding: '0 16px', borderRadius: 12, border: 'none', background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${alpha(T.accent, 0.33)}`, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-              {t('notFound.claim')}
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
-            </button>
-          </div>
-          <div style={{ marginTop: 36, display: 'inline-flex', gap: 14, alignItems: 'center' }}>
-            <span onClick={() => navigate('/stores')} style={{ font: `600 13px ${T.font}`, color: T.text, cursor: 'pointer' }}>{t('notFound.browse')}</span>
-            <span style={{ color: T.textMute }}>·</span>
-            <span onClick={() => navigate('/')} style={{ font: `600 13px ${T.font}`, color: T.text, cursor: 'pointer' }}>{t('notFound.home')}</span>
+      <main style={{ display: 'flex', justifyContent: 'center', padding: `72px ${gut}px 56px`, flex: '1 0 auto' }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+          gap: 16, padding: 24, maxWidth: 480, width: '100%', boxSizing: 'border-box',
+        }}>
+          <b style={{
+            ...ty.big, fontSize: 88, lineHeight: 1, color: T.accentFg, fontVariantNumeric: 'tabular-nums',
+          }}>
+            {t('lost.code')}
+          </b>
+          <h1 style={ty.h1}>{t('lost.title')}</h1>
+          <p style={{ ...ty.body, color: T.textDim, textWrap: 'balance' }}>{t('lost.body')}</p>
+
+          <form
+            role="search"
+            onSubmit={(e) => { e.preventDefault(); if (hits[0]) open(hits[0]); }}
+            style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}
+          >
+            <label style={ingrpStyle(T, focus)}>
+              <Glyph name="search" style={{ marginLeft: 14 }} />
+              <input
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onFocus={() => setFocus(true)}
+                onBlur={() => setFocus(false)}
+                placeholder={t('lost.placeholder')}
+                aria-label={t('lost.searchLabel')}
+                autoComplete="off"
+                style={ingrpInput(T)}
+              />
+            </label>
+            {query && (
+              hits.length ? (
+                <List T={T} style={{ textAlign: 'left' }}>
+                  {hits.map((s, i) => (
+                    <a key={s.subdomain} href={storeUrl(s)} style={liStyle(T, i === hits.length - 1)}>
+                      <StoreMark store={s} size={34} radius={10} />
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <b style={{ display: 'block', fontSize: 12.5 }}>{s.displayName || s.name}</b>
+                        <span style={{ display: 'block', fontSize: 12, color: T.textDim }}>{t('lost.host', { sub: s.subdomain })}</span>
+                      </span>
+                      <Glyph name="chevR" size={16} style={{ color: T.textDim }} />
+                    </a>
+                  ))}
+                </List>
+              ) : (
+                <p role="status" style={{ ...ty.body, fontSize: 12.5, color: T.textDim }}>
+                  {stores ? t('lost.none', { q: q.trim() }) : t('lost.searching')}
+                </p>
+              )
+            )}
+          </form>
+
+          <div style={{
+            display: 'grid', gap: 10, width: '100%',
+            gridTemplateColumns: ph ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
+          }}>
+            <Btn T={T} kind="p" to="/" block>{t('lost.home')}</Btn>
+            <Btn T={T} to="/stores" block>{t('lost.stores')}</Btn>
           </div>
         </div>
-      </div>
+      </main>
+      <PFooter />
     </div>
   );
 }
