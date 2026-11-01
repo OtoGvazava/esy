@@ -1,13 +1,11 @@
 {
-  "band": {
-    "allStores": "Platform administration — you can see every store"
-  },
   "nav": {
     "stores": "Stores",
     "billing": "Billing",
     "config": "Configuration",
     "admins": "Admins",
-    "integrations": "Integrations"
+    "messages": "SMS and email",
+    "more": "More"
   },
   "gate": {
     "signInTitle": "Platform administration",
@@ -55,7 +53,7 @@
     "title": "Stores",
     "sub": "Every store on the platform — live and suspended.",
     "searchLabel": "Search stores",
-    "searchPlaceholder": "Name, address or owner email",
+    "searchPlaceholder": "Store, subdomain or owner",
     "clearSearch": "Clear search",
     "resultCount": "{{n}} stores",
     "loadFailed": "Could not load the store list.",
@@ -78,23 +76,31 @@
     "colOwner": "Owner",
     "colStatus": "Status",
     "colAction": "Action",
-    "kpiStores": "Stores"
+    "kpiStores": "Stores",
+    "head": "admin.esy.ge · every store"
   },
   "suspend": {
     "title": "Suspend {{store}}",
-    "body": "The storefront stops serving customers immediately and the owner sees this reason. Orders already placed are not touched.",
-    "reasonLabel": "Reason (required)",
-    "reasonPlaceholder": "Why this store is being suspended",
-    "reasonHint": "The owner reads this and it stays on the record. Be specific.",
-    "reasonTooShort": "Write at least {{n}} characters so the reason is usable.",
-    "review": "Review",
-    "confirmPrompt": "Suspend {{store}} for the reason above?",
-    "confirm": "Yes, suspend it",
-    "back": "Go back",
-    "failed": "Could not suspend this store."
+    "reasonLabel": "Reason",
+    "confirm": "Suspend",
+    "failed": "Could not suspend this store.",
+    "pointShoppers": "Shoppers see an “unavailable” page instead of the store",
+    "pointOrders": "Orders already placed stay in the shoppers’ accounts",
+    "pointOwner": "Nothing is sent to the owner: the reason is kept on the store’s record, so get in touch yourself",
+    "reasonPick": "Choose a reason",
+    "reason": {
+      "counterfeit": "Counterfeit products",
+      "prohibited": "Prohibited items",
+      "fraud": "Fraud or shopper complaints",
+      "ownerRequest": "At the owner’s request",
+      "other": "Another reason"
+    },
+    "noteLabel": "Note for the record",
+    "notePlaceholder": "What happened, and what reinstating needs",
+    "noteTooShort": "“Another reason” needs a note of at least {{n}} characters.",
+    "sure": "I understand the suspension takes effect at once"
   },
   "detail": {
-    "back": "All stores",
     "loadFailed": "Could not load this store.",
     "notFound": "No store at this address",
     "notFoundBody": "Nothing on the platform answers to “{{sub}}”.",
@@ -121,7 +127,8 @@
     "assignFailed": "Could not change this role.",
     "recentOrders": "Recent orders",
     "recentOrdersSub": "Newest first",
-    "noOrders": "No orders yet."
+    "noOrders": "No orders yet.",
+    "head": "{{sub}}.esy.ge"
   },
   "billing": {
     "title": "Billing",
@@ -190,34 +197,40 @@
   },
   "admins": {
     "title": "Admins",
-    "sub": "Accounts that can open this host.",
+    "sub": "Platform administrators",
     "loadFailed": "Could not load the admin list.",
     "empty": "No administrators listed",
     "emptyBody": "Nobody can open this host until an address is added — check ADMIN_EMAILS on the server.",
-    "listHead": "Administrators",
-    "addLabel": "Add an administrator",
     "addPlaceholder": "name@example.com",
-    "addHint": "The account signs in with Google using this address. Access begins at their next sign-in — if they are signed in now, they must sign out first.",
-    "add": "Add",
-    "addFailed": "Could not add this administrator.",
-    "invalidEmail": "Enter a valid email address.",
-    "duplicate": "This address is already an administrator.",
-    "sourceEnv": "Configuration",
     "sourceDb": "Added here",
-    "envSource": "From server configuration",
-    "envLocked": "Granted by the app.admin-emails setting, not by this screen, so it can't be removed here. Change it in the configuration store, or in the ADMIN_EMAILS variable it falls back to.",
-    "granted": "Added {{at}}",
-    "grantedBy": "by {{email}}",
-    "grantedUnknown": "Origin not recorded",
     "remove": "Remove",
     "removeFailed": "Could not remove this administrator.",
     "removeConfirm": "Remove {{email}} from administration?",
     "removeConfirmYes": "Yes, remove",
     "removeSelf": "This is your own account — you will lose access to this host.",
-    "you": "you"
+    "youMark": " · you",
+    "grantedHere": "Added from this screen {{at}}",
+    "footOne": "This admin comes from the server’s <mono>ADMIN_EMAILS</mono> list.",
+    "footTwo": "Both admins come from the server’s <mono>ADMIN_EMAILS</mono> list.",
+    "footAll": "Every admin comes from the server’s <mono>ADMIN_EMAILS</mono> list.",
+    "footDb_one": "{{n}} admin was added from this screen earlier and can be removed here; the rest come from the server’s <mono>ADMIN_EMAILS</mono> list.",
+    "footDb_other": "{{n}} admins were added from this screen earlier and can be removed here; the rest come from the server’s <mono>ADMIN_EMAILS</mono> list.",
+    "howTitle": "How to add an admin",
+    "howBody": "Admins are not added here. The list comes only from the server’s <mono>ADMIN_EMAILS</mono> variable, so nobody can make themselves an admin from a browser.",
+    "howStep1": "In Render, open the service’s Environment.",
+    "howStep2": "Add the email to <mono>ADMIN_EMAILS</mono>, separated by commas.",
+    "howStep3": "The service restarts, and the admin gets access at their next sign-in."
   },
   "shell": {
-    "sidebarNote": "A separate host, separate routes, admin API only. Scopes are never mixed in one response."
+    "navLabel": "Administration",
+    "home": "Stores",
+    "account": "Account: {{name}}",
+    "role": "Platform admin",
+    "toManager": "Back office",
+    "signOut": "Sign out",
+    "host": "admin.esy.ge",
+    "platform": "esy.ge",
+    "back": "Back"
   },
   "config": {
     "title": "Configuration",
@@ -352,6 +365,8 @@
       "orderDelivered": "Delivered",
       "orderCancelled": "Order cancelled (email only)",
       "orderRefunded": "Refund on its way (email only)"
-    }
+    },
+    "senderNotApproved": "The sender {{sender}} is not approved yet · {{when}}.",
+    "todayAt": "today {{time}}"
   }
 }

@@ -17,8 +17,8 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { adminApi, handleApiError } from '../utils/api';
 import { useAdminTokens } from './adminTokens';
-import { SectionTitle } from '../core/primitives';
 import { useDevice } from '../contexts/DeviceContext';
+import { useAdminHead } from './adminHead';
 import { Empty, Failed, Loading, count, lari } from './AdminUI';
 import { Alert, Glyph, KitBtn, KitChip, Kpi, List, Seg } from './AdminKit';
 
@@ -91,6 +91,7 @@ export default function AdminBilling() {
   const period = `${monthName(month)} ${month.slice(0, 4)}`;
   const rate = percent(data?.serviceFeeRate, lang);
   const sub = rate ? t('billing.sub', { rate, period }) : period;
+  useAdminHead({ title: t('billing.title'), sub, phoneSub: sub });
 
   const pick = (id) => {
     if (id === month) return;
@@ -132,7 +133,6 @@ export default function AdminBilling() {
 
   const head = (
     <>
-      <SectionTitle T={T} lang={lang} title={t('billing.title')} sub={sub} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
         <Seg
           T={T}
@@ -159,7 +159,7 @@ export default function AdminBilling() {
 
   // On a phone the shell's own 16px gutter is the design's; more would leave
   // the table too narrow for its three columns.
-  const wrap = { padding: isMobile ? 0 : 20, maxWidth: 1040, margin: '0 auto' };
+  const wrap = { maxWidth: 1040, margin: '0 auto' };
 
   if (loading && !data) {
     return <div style={wrap}>{head}<Loading T={T} /></div>;

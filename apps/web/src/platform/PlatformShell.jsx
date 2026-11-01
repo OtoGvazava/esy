@@ -7,7 +7,9 @@ import PlatformAuth from './PlatformAuth';
 import PlatformNotFound from './PlatformNotFound';
 import PlatformLegal from './PlatformLegal';
 import PlatformHelp from './PlatformHelp';
+import PlatformPersonal from './PlatformPersonal';
 import AuthCallback from '../pages/AuthCallback';
+import DisplaySettings from '../pages/DisplaySettings';
 
 // esy.ge — the platform front door. Mounted (instead of the storefront shell)
 // when usePlatformHost() is true. Distinct route table from the storefront so
@@ -21,12 +23,17 @@ export default function PlatformShell() {
       <Route path="/sell" element={<PlatformRegistration />} />
       <Route path="/create-store" element={<PlatformRegistration />} />
       <Route path="/account" element={<PlatformAccount />} />
+      {/* The account's two settings rows (L4): the one identity's details, and
+          the display settings every store shares. */}
+      <Route path="/account/personal" element={<PlatformPersonal />} />
+      <Route path="/settings/display" element={<DisplaySettings />} />
       <Route path="/signin" element={<PlatformAuth />} />
       {/* The footer has always linked to these; until now every one 404'd. */}
       <Route path="/help" element={<PlatformHelp />} />
       <Route path="/terms" element={<PlatformLegal kind="terms" />} />
       <Route path="/privacy" element={<PlatformLegal kind="privacy" />} />
       <Route path="/returns" element={<PlatformLegal kind="returns" />} />
+      <Route path="/seller-terms" element={<PlatformLegal kind="seller" />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="*" element={<PlatformNotFound />} />
     </Routes>

@@ -13,9 +13,8 @@
 import { Trans, useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
-import { EsyMark } from '../core/domain';
 import { IconGoogle } from '../core/icons';
-import { Glyph, KitBtn, KitChip, Mono } from './AdminKit';
+import { EsyLogo, Glyph, KitBtn, KitChip, Mono } from './AdminKit';
 
 /** manager.<base> on the same scheme and port as this host. */
 function managerUrl() {
@@ -40,7 +39,7 @@ function initials(user) {
 export default function AdminGate({ T, kind }) {
   const { t } = useTranslation('admin');
   const { user, signInWithGoogle, logout } = useAuth();
-  const { isMobile } = useDevice();
+  const { isMobile, isDesktop } = useDevice();
   const denied = kind === 'denied';
   const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
   const mono = <Mono T={T} />;
@@ -48,17 +47,18 @@ export default function AdminGate({ T, kind }) {
   const body = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <EsyMark T={T} size={21} />
+        <EsyLogo T={T} />
         <KitChip T={T} tone="brand">{t('gate.badge')}</KitChip>
       </div>
 
       {!denied ? (
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <h1 style={{ margin: 0, font: `700 26px/1.15 ${T.font}`, letterSpacing: '-0.02em', color: T.text }}>
+            {/* The kit's h1: 26px, 30px on a desktop. */}
+            <h1 style={{ margin: 0, font: `700 ${isDesktop ? 30 : 26}px/1.15 ${T.font}`, letterSpacing: '-0.02em', color: T.text, textWrap: 'balance' }}>
               {t('gate.signInTitle')}
             </h1>
-            <p style={{ margin: 0, font: `400 14px/1.55 ${T.font}`, color: T.textDim }}>
+            <p style={{ margin: 0, font: `400 14px/1.45 ${T.font}`, color: T.textDim, textWrap: 'pretty' }}>
               <Trans t={t} i18nKey="gate.signInBody" components={{ mono }} />
             </p>
           </div>
@@ -81,23 +81,23 @@ export default function AdminGate({ T, kind }) {
         <>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12, padding: '8px 0' }}>
             <span style={{
-              width: 72, height: 72, borderRadius: '50%', background: T.surface2, color: T.accentFg,
+              width: 72, height: 72, borderRadius: '50%', background: T.surface2, color: 'var(--k-acc)',
               display: 'grid', placeItems: 'center',
             }}>
-              <Glyph name="lock" size={34} />
+              <Glyph name="lock" size={40} />
             </span>
-            <h1 style={{ margin: 0, font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em', color: T.text }}>
+            <h1 style={{ margin: 0, font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em', color: T.text, textWrap: 'balance' }}>
               {t('gate.deniedTitle')}
             </h1>
-            <p style={{ margin: 0, font: `400 14px/1.55 ${T.font}`, color: T.textDim }}>
+            <p style={{ margin: 0, font: `400 14px/1.45 ${T.font}`, color: T.textDim, textWrap: 'pretty' }}>
               <Trans t={t} i18nKey="gate.deniedBody" components={{ mono }} />
             </p>
           </div>
 
           {user && (
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16,
-              background: T.surface, border: `1px solid ${T.border}`,
+              display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 'var(--k-r-card)',
+              background: T.surface, border: 'var(--k-card-bd)', boxShadow: 'var(--k-card-sh)',
             }}>
               <span aria-hidden="true" style={{
                 width: 34, height: 34, borderRadius: '50%', background: T.text, color: T.bg,
@@ -147,13 +147,14 @@ export default function AdminGate({ T, kind }) {
       minHeight: '100vh', boxSizing: 'border-box', background: T.bg, color: T.text,
       font: `400 14px ${T.font}`, display: 'flex', justifyContent: 'center',
       alignItems: isMobile ? 'flex-start' : 'center',
-      padding: isMobile ? '40px 16px 24px' : 28,
+      // The board's phone frame adds its own 50px status bar; the page itself starts 20px down.
+      padding: isMobile ? '20px 16px 24px' : 28,
     }}>
       <div style={{
         width: '100%', maxWidth: 460, boxSizing: 'border-box',
         ...(isMobile ? null : {
-          padding: 22, borderRadius: 16, background: T.surface,
-          border: `1px solid ${T.border}`, boxShadow: '0 1px 2px rgba(16,16,24,0.04)',
+          padding: 22, borderRadius: 'var(--k-r-card)', background: T.surface,
+          border: 'var(--k-card-bd)', boxShadow: 'var(--k-card-sh)',
         }),
       }}>
         {body}

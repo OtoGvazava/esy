@@ -371,6 +371,15 @@ public class AdminService {
                 existing == null ? null : (Instant) existing.get("grantedAt"),
                 existing == null ? null : (String) existing.get("grantedBy")));
         }
+        // The person behind an address, once they have signed in and filled in
+        // their profile: the list names people, not only mailboxes. Null for
+        // an address nobody has signed in with yet.
+        byEmail.forEach((email, row) -> row.put("name", userService.findByEmail(email)
+            .map(u -> String.join(" ",
+                    u.getFirstName() == null ? "" : u.getFirstName().trim(),
+                    u.getLastName() == null ? "" : u.getLastName().trim()).trim())
+            .filter(n -> !n.isEmpty())
+            .orElse(null)));
         return new ArrayList<>(byEmail.values());
     }
 

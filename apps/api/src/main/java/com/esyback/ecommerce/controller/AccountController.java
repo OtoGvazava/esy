@@ -60,6 +60,9 @@ public class AccountController {
                 s.put("revenue", orderService.revenue(m.getTenant()));
                 s.put("views", "—");
                 s.put("myRole", "OWNER");
+                // Placed and not yet acted on: the "N new" beside a store on
+                // the platform account, the same count as the back office badge.
+                s.put("newOrders", orderService.newOrderCount(m.getTenant()));
                 return s;
             })
             .collect(Collectors.toList());
@@ -72,12 +75,20 @@ public class AccountController {
                 Map<String, Object> s = TenantMapper.toMap(m.getTenant());
                 s.put("status", Boolean.TRUE.equals(m.getTenant().getIsActive()) ? "live" : "draft");
                 s.put("myRole", "MANAGER");
+                s.put("newOrders", orderService.newOrderCount(m.getTenant()));
                 return s;
             })
             .collect(Collectors.toList());
 
+        // The list shape, plus the first line's title so a row can say what
+        // was bought ("linen shirt · 120 ₾") rather than only how many items.
         List<Map<String, Object>> orders = orderService.ordersForUser(user).stream()
-            .map(OrderController::toMap).collect(Collectors.toList());
+            .map(o -> {
+                Map<String, Object> m = OrderController.toMap(o);
+                m.put("firstItem", o.getItems().isEmpty() ? null : o.getItems().get(0).getTitle());
+                return m;
+            })
+            .collect(Collectors.toList());
 
         boolean sells = !ownedStores.isEmpty();
         boolean shops = !orders.isEmpty();

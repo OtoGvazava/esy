@@ -29,6 +29,16 @@ const PATHS = {
   clock: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>,
   card: <><rect x="3" y="5.5" width="18" height="13" rx="2.5" /><path d="M3 10h18M7 15h4" /></>,
   close: <path d="M6 6l12 12M18 6 6 18" />,
+  // The Shell board's navigation and top bar.
+  shieldCheck: <><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z" /><path d="m9 12 2 2 4-4" /></>,
+  gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5" /></>,
+  more: <><circle cx="5.5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="18.5" cy="12" r="1.6" /></>,
+  external: <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />,
+  back: <path d="M15 5 8 12l7 7" />,
+  logout: <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10" />,
+  manager: <><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></>,
+  ban: <><circle cx="12" cy="12" r="8.5" /><path d="M6 6l12 12" /></>,
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   // A seal with a tick: the verified mark.
   verified: <><path d="M12 3.2 14.1 5l2.7-.3.9 2.6 2.4 1.3-.6 2.7 1.3 2.4-2 1.9-.1 2.7-2.7.5-1.6 2.2-2.4-1.2-2.4 1.2-1.6-2.2-2.7-.5-.1-2.7-2-1.9 1.3-2.4-.6-2.7 2.4-1.3.9-2.6 2.7.3z" /><path d="m9 12.2 2.1 2.1 4-4.3" /></>,
 };
@@ -52,6 +62,27 @@ export function Glyph({ name, size = 20, style, label }) {
     >
       {PATHS[name]}
     </svg>
+  );
+}
+
+/**
+ * The esy bag and wordmark as the kit's `.logo` draws it: a 30px mark and
+ * 21px type by default (the sidebar uses 28 / 19). `font={0}` draws the mark alone.
+ */
+export function EsyLogo({ T, size = 30, font = 21 }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 8, flex: 'none', color: T.text,
+      font: `800 ${font || 21}px/1 ${T.font}`, letterSpacing: '-0.045em',
+    }}>
+      <svg viewBox="0 0 48 48" aria-hidden="true" style={{ width: size, height: size, color: T.accent, flex: 'none' }}>
+        <rect x="4" y="10" width="40" height="34" rx="13" fill="currentColor" />
+        <path d="M17 12V9.5a7 7 0 0 1 14 0V12" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+        <path d="M15.5 27.5c4.5 5.5 12.5 5.5 17 0" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+      </svg>
+      {/* The brand is a proper noun, the same in both languages. */}
+      {font ? 'esy' : null}
+    </span>
   );
 }
 
