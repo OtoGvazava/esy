@@ -511,6 +511,20 @@ public class OrderService {
      * act (D2) — cancelling and refunding are different permissions.
      */
     public Order updateStatus(Tenant tenant, Long orderId, Order.Status next) {
+        return updateStatus(tenant, orderId, next, Notify.BOTH);
+    }
+
+    /**
+     * Which of the shopper's messages a status change sends (the ship step's
+     * two switches, M4). Each still obeys the admin's per-message switch and
+     * needs a recipient; this can only hold a message back, never force one.
+     */
+    public record Notify(boolean sms, boolean email) {
+        public static final Notify BOTH = new Notify(true, true);
+    }
+
+    /** {@link #updateStatus(Tenant, Long, Order.Status)}, with the shopper's messages chosen. */
+    public Order updateStatus(Tenant tenant, Long orderId, Order.Status next, Notify notify) {
         Order order = orderForTenant(tenant, orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
         Order.Status from = order.getStatus();
@@ -527,8 +541,65 @@ public class OrderService {
         }
         Order saved = orderRepository.findById(orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
-        notifyShopper(saved, next);
+        notifyShopper(saved, next, notify == null ? Notify.BOTH : notify);
         return saved;
+    }
+
+    /**
+     * What the shopper would be told if this order moved to {@code next} now:
+     * per channel, who it goes to and the words, or nothing when that channel
+     * would stay silent — no recipient, the admin switched that message off,
+     * or the step has no message on it (a cancellation is never texted).
+     * {@code sending} says whether the platform is sending on that channel at
+     * all (a key and the master switch), so a screen does not promise a
+     * message that will not leave.
+     *
+     * <p>Built from the same recipients, templates and switches the send path
+     * uses, so the preview cannot describe a different message from the one
+     * that goes.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> noticePreview(Tenant tenant, Long orderId, Order.Status next) {
+        Order order = orderForTenant(tenant, orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        String template = templateFor(next);
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("status", next == null ? null : next.name());
+
+        Map<String, Object> text = null;
+        String phone = recipientPhone(order);
+        if (template != null && next != Order.Status.CANCELLED && phone != null && smsTemplates.isEnabled(template)) {
+            text = new java.util.LinkedHashMap<>();
+            text.put("to", phone);
+            text.put("text", smsTemplates.render(template, orderTokens(order)));
+            text.put("sending", sms.isSending());
+        }
+        out.put("sms", text);
+
+        String emailTemplate = next == Order.Status.CANCELLED ? EmailTemplates.ORDER_CANCELLED : template;
+        Map<String, Object> mail = null;
+        String to = recipientEmail(order);
+        if (emailTemplate != null && EmailTemplates.isKnown(emailTemplate) && to != null
+            && emailTemplates.isEnabled(emailTemplate)) {
+            mail = new java.util.LinkedHashMap<>();
+            mail.put("to", to);
+            mail.put("subject", emailTemplates.renderSubject(emailTemplate, orderTokens(order)));
+            mail.put("sending", email.isSending());
+        }
+        out.put("email", mail);
+        return out;
+    }
+
+    /** The message a fulfilment step sends, or null when it sends none. */
+    private static String templateFor(Order.Status next) {
+        if (next == null) return null;
+        return switch (next) {
+            case SHIPPED -> SmsTemplates.ORDER_SHIPPED;
+            case OUT_FOR_DELIVERY -> SmsTemplates.ORDER_OUT;
+            case DELIVERED -> SmsTemplates.ORDER_DELIVERED;
+            case CANCELLED -> EmailTemplates.ORDER_CANCELLED;
+            default -> null;
+        };
     }
 
     /**
@@ -543,18 +614,15 @@ public class OrderService {
      * does now go by email, which is the right medium for it: a written record
      * the shopper can keep and reply to, rather than a notification.
      */
-    private void notifyShopper(Order order, Order.Status next) {
+    private void notifyShopper(Order order, Order.Status next, Notify notify) {
         if (next == Order.Status.CANCELLED) {
-            notifyCancelled(order);
+            if (notify.email()) notifyCancelled(order);
             return;
         }
-        String template = switch (next) {
-            case SHIPPED -> SmsTemplates.ORDER_SHIPPED;
-            case OUT_FOR_DELIVERY -> SmsTemplates.ORDER_OUT;
-            case DELIVERED -> SmsTemplates.ORDER_DELIVERED;
-            default -> null;
-        };
-        if (template != null) notify(order, template);
+        String template = templateFor(next);
+        if (template == null) return;
+        if (notify.sms()) notifySms(order, template);
+        if (notify.email()) notifyEmail(order, template, Map.of());
     }
 
     /** One path for every order message, so all of them obey the same rules. */

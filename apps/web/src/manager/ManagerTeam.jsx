@@ -1,27 +1,75 @@
-// Team — who runs this store (the design's MTeam, decision D17).
+// Team and roles — who runs this store (the design's Y1, decision D17).
 //
 // OWNER-only. Until this screen existed a store role could only be granted
 // from admin.esy.ge, so an owner adding their own colleague had to ask the
 // platform. The rules are the server's and are shared with the admin screen:
 // a store always keeps an owner, a role goes only to an account that already
-// exists, and CUSTOMER is not grantable.
+// exists, and CUSTOMER is not grantable. Its refusals carry codes, so they
+// are said here in the merchant's language.
 //
-// Refusals are shown verbatim. Each one names which rule was hit, and that
-// sentence is more useful than any generic "could not save" this screen could
-// invent.
-import { useCallback, useEffect, useState } from 'react';
+// The list, with each person's role and a "⋯" for changing it; the button
+// that opens Y2; and beside them what each role may do.
+//
+// The board also says when each person was last in ("ბოლოს: დღეს"). Nothing
+// records that, so it is not shown rather than guessed.
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useTK } from '../core/useTK';
-import { Btn, Card, Field, Note } from '../core/primitives';
-import { RoleChip } from '../core/domain';
-import { Icons } from '../core/icons';
-import { teamApi, handleApiError } from '../utils/api';
-import { MTop } from './ManagerShell';
+import { teamApi } from '../utils/api';
+import InviteDialog from './InviteDialog';
+import {
+  Alert, Avatar, Chip, G, Glyph, PageHead, Sheet, SheetHead, btn, card, fullName, ibtn, initials, kv,
+  li, list, teamProblem, type,
+} from './officeKit';
 
-const ROLES = ['OWNER', 'MANAGER'];
+const norm = (s) => String(s || '').trim().toLowerCase();
+
+/** The "⋯" beside a person: change their role, or take it away. */
+function RowMenu({ T, t, member, busy, onRole, onRemove }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef(null);
+  const menuId = useId();
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (wrap.current && !wrap.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const other = member.role === 'OWNER' ? 'MANAGER' : 'OWNER';
+  const item = (danger) => ({
+    display: 'flex', alignItems: 'center', width: '100%', minHeight: 44, padding: '0 14px', boxSizing: 'border-box',
+    border: 0, borderRadius: 10, background: 'transparent', cursor: 'pointer', textAlign: 'left',
+    font: `500 14px ${T.font}`, color: danger ? T.danger : T.text, whiteSpace: 'nowrap',
+  });
+  return (
+    <div ref={wrap} style={{ position: 'relative', flex: 'none' }}>
+      <button
+        type="button" aria-label={t('people.actions', { name: fullName(member) || member.email })}
+        aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} disabled={busy}
+        onClick={() => setOpen((v) => !v)} style={ibtn(T, 'transparent')}
+      ><Glyph>{G.more}</Glyph></button>
+      {open && (
+        <div id={menuId} role="menu" style={{
+          position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 20, minWidth: 210, padding: 6,
+          borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`,
+          boxShadow: '0 18px 44px -18px rgba(0,0,0,.4)', boxSizing: 'border-box',
+        }}>
+          <button type="button" role="menuitem" style={item(false)} onClick={() => { setOpen(false); onRole(other); }}>
+            {t(`people.make.${other}`)}
+          </button>
+          <button type="button" role="menuitem" style={item(true)} onClick={() => { setOpen(false); onRemove(); }}>
+            {t('people.remove')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ManagerTeam() {
   const { T } = useTK();
@@ -35,8 +83,9 @@ export default function ManagerTeam() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState('MANAGER');
+  const [inviting, setInviting] = useState(false);
+  const [removing, setRemoving] = useState(null);
+  const removeTitle = useId();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,7 +95,7 @@ export default function ManagerTeam() {
       setRows(Array.isArray(data) ? data : []);
     } catch (e) {
       setRows([]);
-      setError(handleApiError(e, t('team.loadFailed')));
+      setError(teamProblem(t, e, 'team.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -65,136 +114,126 @@ export default function ManagerTeam() {
       setRows(Array.isArray(next) ? next : []);
       return true;
     } catch (e) {
-      setError(handleApiError(e, t(fallbackKey)));
+      setError(teamProblem(t, e, fallbackKey));
       return false;
     } finally {
       setBusy(false);
     }
   };
 
-  const add = async (e) => {
-    e.preventDefault();
-    const value = email.trim();
-    if (!value) return;
-    const ok = await write(() => teamApi.assign(value, role, devTenant), 'team.assignFailed');
-    if (ok) setEmail('');
-  };
-
-  const mode = isDesktop ? 'desktop' : isMobile ? 'mobile' : 'tablet';
   const owners = rows.filter((r) => r.role === 'OWNER').length;
+  const me = norm(user?.email);
+  // The owner first, then everyone else as the server lists them.
+  const sorted = [...rows].sort((a, b) => (a.role === b.role ? 0 : a.role === 'OWNER' ? -1 : 1));
+
+  const rules = [
+    ['orders', 'both'],
+    ['products', 'both'],
+    ['refunds', 'owner'],
+    ['settings', 'owner'],
+    ['team', 'owner'],
+  ];
 
   return (
-    <div>
-      <MTop
-        T={T}
-        mode={mode}
-        title={t('team.title')}
-        sub={t('team.sub')}
-      />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : isDesktop ? 20 : 18 }}>
+      <PageHead T={T} mobile={isMobile} title={t('people.title')} sub={t('people.sub')} />
 
-      {error && (
-        <Note T={T} tone="danger" style={{ marginBottom: 14 }}>{error}</Note>
-      )}
+      {error && <Alert T={T} tone="bad" role="alert">{error}</Alert>}
 
-      <Card T={T} pad={0} style={{ overflow: 'hidden', marginBottom: 14 }}>
-        {loading ? (
-          <div style={{ padding: 18, font: `500 13px ${T.font}`, color: T.textMute }}>
-            {t('team.loading')}
-          </div>
-        ) : rows.length === 0 ? (
-          <div style={{ padding: 18, font: `500 13px ${T.font}`, color: T.textMute }}>
-            {t('team.empty')}
-          </div>
-        ) : rows.map((m, i) => {
-          const isSelf = user?.email && m.email === user.email;
-          // The last owner cannot go — the server refuses it, and offering the
-          // button anyway would just produce an error the owner can predict.
-          const lastOwner = m.role === 'OWNER' && owners <= 1;
-          const other = ROLES.find((r) => r !== m.role);
-          return (
-            <div key={m.email} style={{
-              display: 'flex', alignItems: 'center', gap: 11, flexWrap: 'wrap',
-              padding: '13px 15px', borderTop: i ? `1px solid ${T.border}` : 'none',
-            }}>
-              <span style={{
-                width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-                background: T.surface2, color: T.textDim,
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                font: `800 12.5px ${T.font}`,
-              }}>{(m.email || '?').charAt(0).toUpperCase()}</span>
-
-              <span style={{ flex: 1, minWidth: 150 }}>
-                <span style={{
-                  display: 'block', font: `600 13px ${T.font}`, color: T.text,
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}>
-                  {m.email}
-                  {isSelf && (
-                    <span style={{ marginLeft: 7, font: `600 11px ${T.font}`, color: T.textMute }}>
-                      · {t('team.you')}
-                    </span>
+      <div style={{
+        display: 'grid', gap: 20, alignItems: 'start',
+        gridTemplateColumns: isDesktop ? 'minmax(0, 1.6fr) minmax(0, 1fr)' : 'minmax(0, 1fr)',
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+          {/* Not clipped, so a row's "⋯" menu can open past the list's edge;
+              the rows paint no background, so the corners stay round. */}
+          <div style={{ ...list(T), overflow: 'visible' }}>
+            {loading ? (
+              <div role="status" style={{ ...li(T, true), font: `400 13px ${T.font}`, color: T.textDim }}>{t('team.loading')}</div>
+            ) : sorted.length === 0 ? (
+              <div style={{ ...li(T, true), font: `400 13px ${T.font}`, color: T.textDim }}>{t('team.empty')}</div>
+            ) : sorted.map((m, i) => {
+              const name = fullName(m);
+              const self = me && norm(m.email) === me;
+              // The last owner cannot go or step down — the server refuses
+              // both, so offering them would only produce a predictable error.
+              const lastOwner = m.role === 'OWNER' && owners <= 1;
+              return (
+                <div key={m.email} style={li(T, i === sorted.length - 1)}>
+                  <Avatar T={T} text={initials(name, m.email)} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <b style={{ display: 'block', font: `600 12.5px/1.4 ${T.font}`, overflowWrap: 'anywhere' }}>
+                      {name || m.email}
+                      {self && <span style={{ fontWeight: 400, color: T.textDim }}> · {t('people.you')}</span>}
+                    </b>
+                    {name && <div style={{ font: `400 12px/1.4 ${T.font}`, color: T.textDim, overflowWrap: 'anywhere' }}>{m.email}</div>}
+                  </div>
+                  <Chip T={T} name={m.role === 'OWNER' ? 'conf' : 'proc'} dot={false}>{t(`role.${m.role}`, { defaultValue: m.role })}</Chip>
+                  {lastOwner ? (
+                    !isMobile && <span style={{ font: `400 12px ${T.font}`, color: T.textDim, whiteSpace: 'nowrap' }}>{t('people.onlyOwner')}</span>
+                  ) : (
+                    <RowMenu
+                      T={T} t={t} member={m} busy={busy}
+                      onRole={(role) => write(() => teamApi.assign(m.email, role, devTenant), 'team.assignFailed')}
+                      onRemove={() => setRemoving(m)}
+                    />
                   )}
-                </span>
-              </span>
+                </div>
+              );
+            })}
+          </div>
+          <button type="button" onClick={() => setInviting(true)} disabled={loading} style={{ ...btn(T, 'p'), alignSelf: 'flex-start' }}>
+            <Glyph>{G.plus}</Glyph>{t('people.give')}
+          </button>
+        </div>
 
-              <RoleChip T={T} role={m.role} label={t(`role.${m.role}`)} showCode={false} />
-
-              {!lastOwner && other && (
-                <Btn T={T} kind="quiet" size="sm" disabled={busy}
-                     onClick={() => write(() => teamApi.assign(m.email, other, devTenant), 'team.assignFailed')}>
-                  {t(`team.makeRole.${other}`)}
-                </Btn>
-              )}
-              {!lastOwner && (
-                <Btn T={T} kind="danger" size="sm" disabled={busy}
-                     onClick={() => {
-                       const msg = isSelf ? t('team.removeSelfConfirm') : t('team.removeConfirm', { email: m.email });
-                       if (window.confirm(msg)) {
-                         write(() => teamApi.remove(m.email, devTenant), 'team.removeFailed');
-                       }
-                     }}>
-                  {t('team.remove')}
-                </Btn>
-              )}
-              {lastOwner && (
-                <span style={{ font: `500 11.5px ${T.font}`, color: T.textMute }}>
-                  {t('team.lastOwner')}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </Card>
-
-      <Card T={T} pad={16}>
-        <form onSubmit={add}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <Field
-                T={T}
-                label={t('team.addLabel')}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                type="email"
-                autoComplete="off"
-              />
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {ROLES.map((r) => (
-                <Btn key={r} T={T} kind={role === r ? 'dark' : 'quiet'} size="md"
-                     type="button" onClick={() => setRole(r)}>
-                  {t(`role.${r}`)}
-                </Btn>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+          <div style={{ ...card(T, 22), display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <h2 style={type.h3(T)}>{t('people.whoTitle')}</h2>
+            <div>
+              {rules.map(([k, who]) => (
+                <div key={k} style={{ ...kv, font: `400 12.5px/1.45 ${T.font}` }}>
+                  <span>{t(`people.who.${k}`)}</span>
+                  <span style={{ color: who === 'owner' ? T.accentFg : T.textDim, whiteSpace: 'nowrap' }}>
+                    {who === 'owner' ? t('role.OWNER') : t('people.both')}
+                  </span>
+                </div>
               ))}
             </div>
-            <Btn T={T} kind="dark" size="md" type="submit" disabled={busy || !email.trim()}>
-              <Icons.plus width="14" height="14" /> {t('team.add')}
-            </Btn>
           </div>
-        </form>
-        <Note T={T} style={{ marginTop: 12 }}>{t('team.addHint')}</Note>
-      </Card>
+          <Alert T={T}>{t('people.note')}</Alert>
+        </div>
+      </div>
+
+      {inviting && (
+        <InviteDialog
+          T={T} isMobile={isMobile} rows={rows} devTenant={devTenant}
+          onDone={(next) => setRows(next)}
+          onClose={() => setInviting(false)}
+        />
+      )}
+
+      {removing && (
+        <Sheet T={T} isMobile={isMobile} titleId={removeTitle} onClose={() => { if (!busy) setRemoving(null); }}>
+          <SheetHead T={T} titleId={removeTitle} title={t('people.removeTitle')} closeLabel={t('invite.close')}
+            onClose={() => { if (!busy) setRemoving(null); }} />
+          <p style={{ margin: 0, font: `400 13px/1.5 ${T.font}`, color: T.textDim }}>
+            {me && norm(removing.email) === me
+              ? t('team.removeSelfConfirm')
+              : t('team.removeConfirm', { email: removing.email })}
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button type="button" disabled={busy} data-autofocus="" onClick={() => setRemoving(null)} style={btn(T, 'g')}>
+              {t('invite.cancel')}
+            </button>
+            <button
+              type="button" disabled={busy}
+              onClick={async () => { if (await write(() => teamApi.remove(removing.email, devTenant), 'team.removeFailed')) setRemoving(null); }}
+              style={{ ...btn(T, 'bad', { block: true }), opacity: busy ? 0.6 : 1 }}
+            >{t('people.remove')}</button>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStoreCategories } from '../../hooks/useStoreCategories';
-import { glowField } from './glowForm';
+import { input } from '../../manager/officeKit';
 
 /** As long as the server stores (Product.CATEGORY_MAX). */
 export const CATEGORY_MAX = 60;
@@ -32,6 +32,7 @@ export default function CategoryField({ T, value, onChange, refresh, disabled })
   const { t } = useTranslation('owner');
   const { categories } = useStoreCategories(refresh);
   const [open, setOpen] = useState(false);
+  const [focus, setFocus] = useState(false);
   const [active, setActive] = useState(-1);
   const wrap = useRef(null);
   const inputRef = useRef(null);
@@ -137,21 +138,21 @@ export default function CategoryField({ T, value, onChange, refresh, disabled })
   return (
     <div>
       <div ref={wrap} style={{ position: 'relative' }}>
-        <div style={{ ...glowField(T), display: 'flex', alignItems: 'center', gap: 2, padding: '0 6px 0 16px' }}>
+        <div style={{ ...input(T, { focus }), display: 'flex', alignItems: 'center', gap: 2, padding: '0 6px 0 15px' }}>
           <input
             ref={inputRef} id={id} role="combobox" aria-expanded={shown} aria-controls={listId}
-            aria-autocomplete="list" aria-describedby={hintId}
+            aria-autocomplete="list" aria-describedby={value.length >= CATEGORY_MAX || !value ? hintId : undefined}
             aria-activedescendant={shown && options[active] ? `${listId}-${active}` : undefined}
             aria-label={t('category.label')}
             value={value} maxLength={CATEGORY_MAX} disabled={disabled} placeholder={t('category.placeholder')}
             autoComplete="off"
             onChange={(e) => { onChange(e.target.value); setOpen(true); setActive(-1); }}
-            onFocus={() => setOpen(true)}
-            onBlur={settle}
+            onFocus={() => { setOpen(true); setFocus(true); }}
+            onBlur={() => { setFocus(false); settle(); }}
             onKeyDown={onKeyDown}
             style={{
               flex: 1, minWidth: 0, height: '100%', border: 0, outline: 'none', background: 'transparent',
-              padding: 0, color: T.text, font: `500 14px ${T.font}`,
+              padding: 0, color: T.text, font: `400 15px ${T.font}`,
             }}
           />
           {value && !disabled && (
@@ -173,9 +174,13 @@ export default function CategoryField({ T, value, onChange, refresh, disabled })
         {list}
       </div>
 
-      <div id={hintId} style={{ marginTop: 6, font: `400 12px ${T.font}`, color: value.length >= CATEGORY_MAX ? T.danger : T.textMute }}>
-        {value.length >= CATEGORY_MAX ? t('category.tooLong', { max: CATEGORY_MAX }) : t('category.hint')}
-      </div>
+      {/* The hint is for an empty field; once a category is chosen the
+          field speaks for itself, as the board draws it. */}
+      {(value.length >= CATEGORY_MAX || !value) && (
+        <div id={hintId} style={{ marginTop: 6, font: `400 12px ${T.font}`, color: value.length >= CATEGORY_MAX ? T.danger : T.textMute }}>
+          {value.length >= CATEGORY_MAX ? t('category.tooLong', { max: CATEGORY_MAX }) : t('category.hint')}
+        </div>
+      )}
     </div>
   );
 }

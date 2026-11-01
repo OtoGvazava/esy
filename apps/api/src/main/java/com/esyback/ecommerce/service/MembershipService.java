@@ -5,6 +5,7 @@ import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.StoreMembershipRepository;
 import com.esyback.ecommerce.repository.UserRepository;
+import com.esyback.ecommerce.web.ApiRefusal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -26,6 +28,16 @@ public class MembershipService {
     /** The roles that mean "runs this shop", as opposed to "shops here". */
     public static final List<StoreMembership.Role> STAFF =
         List.of(StoreMembership.Role.OWNER, StoreMembership.Role.MANAGER);
+
+    // Which staff rule a refusal hit, beside its English sentence, so the
+    // Team screen can say it in Georgian (ApiRefusal). The admin screen,
+    // which shares these rules, still reads the sentence.
+    public static final String TEAM_BAD_EMAIL = "TEAM_BAD_EMAIL";
+    public static final String TEAM_BAD_ROLE = "TEAM_BAD_ROLE";
+    public static final String TEAM_NO_ACCOUNT = "TEAM_NO_ACCOUNT";
+    public static final String TEAM_ALREADY = "TEAM_ALREADY";
+    public static final String TEAM_LAST_OWNER = "TEAM_LAST_OWNER";
+    public static final String TEAM_NOT_STAFF = "TEAM_NOT_STAFF";
 
     /**
      * Upsert a (user, tenant) membership. A higher role is never downgraded by
@@ -104,34 +116,38 @@ public class MembershipService {
     public Assignment assignStaff(Tenant tenant, String email, String roleName) {
         String normalized = normalizeEmail(email);
         if (normalized == null || !normalized.contains("@")) {
-            throw bad("A valid email address is required");
+            throw bad(TEAM_BAD_EMAIL, "A valid email address is required", Map.of());
         }
 
         StoreMembership.Role target;
         try {
             target = StoreMembership.Role.valueOf(String.valueOf(roleName).trim().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw bad("Role must be OWNER or MANAGER");
+            throw bad(TEAM_BAD_ROLE, "Role must be OWNER or MANAGER", Map.of());
         }
         if (!STAFF.contains(target)) {
-            throw bad("Role must be OWNER or MANAGER — CUSTOMER is recorded automatically, not granted");
+            throw bad(TEAM_BAD_ROLE,
+                "Role must be OWNER or MANAGER — CUSTOMER is recorded automatically, not granted", Map.of());
         }
 
         // Identities come from Google, so a row invented for an address nobody
         // has signed in with would never match the person who eventually does.
-        User user = userRepository.findByEmail(normalized).orElseThrow(() -> new ResponseStatusException(
-            HttpStatus.NOT_FOUND,
-            normalized + " has no account yet — they must sign in once before they can be given a role"));
+        User user = userRepository.findByEmail(normalized).orElseThrow(() -> new ApiRefusal(
+            HttpStatus.NOT_FOUND, TEAM_NO_ACCOUNT,
+            normalized + " has no account yet — they must sign in once before they can be given a role",
+            Map.of("email", normalized)));
 
         StoreMembership existing = membershipRepository.findByUserAndTenant(user, tenant).orElse(null);
         StoreMembership.Role was = existing == null ? null : existing.getRole();
         if (was == target) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                normalized + " is already " + target + " of this store");
+            throw new ApiRefusal(HttpStatus.CONFLICT, TEAM_ALREADY,
+                normalized + " is already " + target + " of this store",
+                Map.of("email", normalized, "role", target.name()));
         }
         // Demoting the last owner leaves a shop nobody can configure.
         if (was == StoreMembership.Role.OWNER && ownerCount(tenant) <= 1) {
-            throw bad("This is the store's only owner — give someone else OWNER before changing this one");
+            throw bad(TEAM_LAST_OWNER,
+                "This is the store's only owner — give someone else OWNER before changing this one", Map.of());
         }
 
         return new Assignment(assign(user, tenant, target), was, normalized);
@@ -140,19 +156,22 @@ public class MembershipService {
     /** Take away a store role. Shopping history is untouched. */
     public StoreMembership.Role removeStaff(Tenant tenant, String email) {
         String normalized = normalizeEmail(email);
-        if (normalized == null) throw bad("An email address is required");
+        if (normalized == null) throw bad(TEAM_BAD_EMAIL, "An email address is required", Map.of());
 
-        User user = userRepository.findByEmail(normalized).orElseThrow(() -> new ResponseStatusException(
-            HttpStatus.NOT_FOUND, normalized + " has no account"));
+        User user = userRepository.findByEmail(normalized).orElseThrow(() -> new ApiRefusal(
+            HttpStatus.NOT_FOUND, TEAM_NO_ACCOUNT, normalized + " has no account", Map.of("email", normalized)));
 
         StoreMembership existing = membershipRepository.findByUserAndTenant(user, tenant)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                normalized + " holds no role in this store"));
+            .orElseThrow(() -> new ApiRefusal(HttpStatus.NOT_FOUND, TEAM_NOT_STAFF,
+                normalized + " holds no role in this store", Map.of("email", normalized)));
         if (!STAFF.contains(existing.getRole())) {
-            throw bad(normalized + " is a customer of this store, not staff — there is no role to remove");
+            throw bad(TEAM_NOT_STAFF,
+                normalized + " is a customer of this store, not staff — there is no role to remove",
+                Map.of("email", normalized));
         }
         if (existing.getRole() == StoreMembership.Role.OWNER && ownerCount(tenant) <= 1) {
-            throw bad("This is the store's only owner — a store cannot be left with nobody who can run it");
+            throw bad(TEAM_LAST_OWNER,
+                "This is the store's only owner — a store cannot be left with nobody who can run it", Map.of());
         }
 
         StoreMembership.Role was = existing.getRole();
@@ -169,8 +188,8 @@ public class MembershipService {
         return s.isEmpty() ? null : s;
     }
 
-    private static ResponseStatusException bad(String message) {
-        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    private static ResponseStatusException bad(String code, String message, Map<String, Object> details) {
+        return new ApiRefusal(HttpStatus.BAD_REQUEST, code, message, details);
     }
 
     /** How many people currently hold OWNER of this store. */

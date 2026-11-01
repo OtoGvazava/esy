@@ -263,6 +263,19 @@ public class TenantController {
         return orderService.orderForTenant(tenant, orderId)
             .map(order -> {
                 Map<String, Object> m = new java.util.HashMap<>(OrderController.toMap(order));
+                // Each line's product photo, as the product has it now, so the
+                // lines read as the things they are. One query for all of
+                // them; a product deleted since has none, and the line keeps
+                // its frozen title and price either way.
+                List<Long> productIds = order.getItems().stream()
+                    .map(com.esyback.ecommerce.entity.OrderItem::getProductId)
+                    .filter(java.util.Objects::nonNull).distinct().toList();
+                Map<Long, String> photos = new java.util.HashMap<>();
+                productRepository.findAllById(productIds).forEach(p -> {
+                    if (p.getTenant() != null && p.getTenant().getId().equals(tenant.getId()) && p.getImageUrl() != null) {
+                        photos.put(p.getId(), p.getImageUrl());
+                    }
+                });
                 m.put("lines", order.getItems().stream().map(it -> {
                     Map<String, Object> line = new java.util.HashMap<>();
                     line.put("id", it.getId());
@@ -271,8 +284,16 @@ public class TenantController {
                     line.put("price", it.getPrice());
                     line.put("quantity", it.getQuantity());
                     line.put("variantLabel", it.getVariantLabel());
+                    line.put("image", it.getProductId() == null ? null : photos.get(it.getProductId()));
                     return line;
                 }).collect(Collectors.toList()));
+                // When it was placed as an instant, so the screen can say
+                // "today 13:02" in the merchant's own zone. `placed` is the
+                // server's wall clock with no zone, which reads hours off in
+                // a browser four hours east of it.
+                if (order.getCreatedAt() != null) {
+                    m.put("placedAt", order.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toString());
+                }
                 // The same two figures the refund answers with, so the screen
                 // (and the cancel dialog's "still to refund") never has to
                 // guess what is left after a partial refund. Refundable only
@@ -284,6 +305,27 @@ public class TenantController {
                     || ps == Order.PaymentStatus.REFUND_PENDING;
                 m.put("refunded", order.refundedOrZero());
                 m.put("refundable", refundableNow ? order.refundableAmount() : java.math.BigDecimal.ZERO);
+                // What the screen's money card and delivery card read (M3):
+                // the route the shopper chose and what it cost, frozen at
+                // checkout; esy's fee as frozen on the order (2% of the goods,
+                // billed separately — never re-derived from the total in the
+                // browser); and the bank's id for a card payment.
+                m.put("deliveryRoute", order.getDeliveryRoute());
+                m.put("deliveryExpress", Boolean.TRUE.equals(order.getDeliveryExpress()));
+                m.put("deliveryFee", order.getDeliveryFee());
+                m.put("serviceFee", order.getServiceFee());
+                m.put("bogOrderId", order.getBogOrderId());
+                // Who bought it: the account behind the order, the same person
+                // the order's emails go to. Null for a guest checkout.
+                com.esyback.ecommerce.entity.User buyer = order.getUser();
+                if (buyer != null) {
+                    Map<String, Object> b = new java.util.HashMap<>();
+                    b.put("firstName", buyer.getFirstName());
+                    b.put("lastName", buyer.getLastName());
+                    b.put("email", buyer.getEmail());
+                    b.put("phone", buyer.getPhoneNumber());
+                    m.put("buyer", b);
+                }
                 return ResponseEntity.ok(m);
             })
             .orElseGet(() -> ResponseEntity.notFound().build());
@@ -304,20 +346,41 @@ public class TenantController {
      * Fulfilment transition for one of the current store's orders (decision
      * D1). Legal moves are enforced in OrderService: PLACED→SHIPPED→
      * OUT_FOR_DELIVERY→DELIVERED, cancel only from PLACED or SHIPPED. Body:
-     * {"status": "SHIPPED"}.
+     * {"status": "SHIPPED"}, optionally with {"sms": false} or {"email": false}
+     * to hold that message back (the ship step's switches, M4). Leaving them
+     * out sends both, as before.
      */
     @PatchMapping("/orders/{orderId}/status")
     @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
     public ResponseEntity<Map<String, Object>> updateOrderStatus(@PathVariable Long orderId,
                                                                  @RequestBody Map<String, String> body) {
-        Order.Status next;
+        Order.Status next = parseStatus(body.get("status"));
+        OrderService.Notify notify = new OrderService.Notify(
+            !"false".equalsIgnoreCase(String.valueOf(body.get("sms")).trim()),
+            !"false".equalsIgnoreCase(String.valueOf(body.get("email")).trim()));
+        Tenant tenant = tenantContextService.getCurrentTenant();
+        return ResponseEntity.ok(OrderController.toMap(orderService.updateStatus(tenant, orderId, next, notify)));
+    }
+
+    /**
+     * What the shopper would be told if the order moved to {@code status} now:
+     * {@code {sms: {to, text, sending} | null, email: {to, subject, sending} | null}}.
+     * The ship step shows it before anything is sent (M4).
+     */
+    @GetMapping("/orders/{orderId}/notice")
+    @PreAuthorize("@storeAccess.canManageCurrentStore(authentication)")
+    public ResponseEntity<Map<String, Object>> orderNotice(@PathVariable Long orderId,
+                                                           @RequestParam String status) {
+        Tenant tenant = tenantContextService.getCurrentTenant();
+        return ResponseEntity.ok(orderService.noticePreview(tenant, orderId, parseStatus(status)));
+    }
+
+    private static Order.Status parseStatus(String raw) {
         try {
-            next = Order.Status.valueOf(body.getOrDefault("status", "").trim().toUpperCase());
+            return Order.Status.valueOf(String.valueOf(raw).trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown status");
         }
-        Tenant tenant = tenantContextService.getCurrentTenant();
-        return ResponseEntity.ok(OrderController.toMap(orderService.updateStatus(tenant, orderId, next)));
     }
 
     /**

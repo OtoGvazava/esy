@@ -10,26 +10,18 @@
 //
 // Offered only where the fulfilment chain allows it: placed or shipped.
 // Copy comes from the `manager` namespace, under `cancel`.
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tenantApi, handleApiError } from '../utils/api';
 import { money } from '../core/money';
 import { track } from '../core/tokens';
 import { Note } from '../core/primitives';
 import { Icons } from '../core/icons';
-
-// The design's one destructive red, the same in light and dark mode: its
-// review found white text on dark mode's lighter red failed 4.5:1.
-const DEEP_RED = '#c42b2b';
+// The sheet, the deep red and the short buyer name are shared with the ship
+// and refund dialogs beside this one (M4, M5).
+import { DEEP_RED, Sheet, shortName } from './officeKit';
 
 const enumName = (s) => String(s || 'NONE').toUpperCase().replace(/ /g, '_');
-
-/** "ანა მაისურაძე" → "ანა მ.", the way the design's lists name a buyer. */
-function shortName(full) {
-  const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return parts[0] || '';
-  return `${parts[0]} ${Array.from(parts[parts.length - 1])[0]}.`;
-}
 
 const RefundGlyph = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
@@ -38,61 +30,6 @@ const RefundGlyph = () => (
     <path d="M4 4v5h5" />
   </svg>
 );
-
-/** A centred dialog on a wide screen, a bottom sheet on a phone. */
-function Sheet({ T, isMobile, titleId, onClose, children }) {
-  const box = useRef(null);
-  // The latest close handler, so the listeners are set up once and focus is
-  // not pulled back into the dialog on every render.
-  const close = useRef(onClose);
-  useEffect(() => { close.current = onClose; });
-
-  useEffect(() => {
-    const before = document.activeElement;
-    (box.current?.querySelector('[data-autofocus]:not([disabled])') || box.current)?.focus();
-    const onKey = (e) => { if (e.key === 'Escape') close.current(); };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      if (before && typeof before.focus === 'function') before.focus();
-    };
-  }, []);
-
-  return (
-    <div
-      role="presentation"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) close.current(); }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(8,8,12,0.44)',
-        display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center',
-        padding: isMobile ? 0 : 24,
-      }}
-    >
-      <div
-        ref={box}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        style={{
-          width: '100%', maxWidth: isMobile ? 'none' : 520, boxSizing: 'border-box',
-          maxHeight: isMobile ? '88vh' : 'calc(100vh - 48px)', overflowY: 'auto', outline: 'none',
-          display: 'flex', flexDirection: 'column', gap: 16,
-          padding: isMobile ? '10px 16px calc(env(safe-area-inset-bottom) + 18px)' : 26,
-          borderRadius: isMobile ? '24px 24px 0 0' : 24,
-          background: T.surface, color: T.text, boxShadow: '0 30px 80px -20px rgba(0,0,0,0.5)',
-        }}
-      >
-        {isMobile && (
-          <span aria-hidden="true" style={{
-            width: 42, height: 5, borderRadius: 3, background: T.border, alignSelf: 'center', flex: 'none',
-          }} />
-        )}
-        {children}
-      </div>
-    </div>
-  );
-}
 
 /**
  * `order` is the detail screen's order; `refundable` what is still the

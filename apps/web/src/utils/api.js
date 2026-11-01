@@ -244,11 +244,20 @@ export const productApi = {
     );
     if (!res.ok) {
       let message = `Import failed (${res.status})`;
+      // A file refused outright (empty, no header column, too many rows) says
+      // why with a code and the values in its sentence, so the screen can word
+      // it in Georgian rather than show the English.
+      let code;
+      let details;
       try {
         const b = await res.json();
         message = b.error || b.message || message;
+        code = b.code;
+        details = b.details;
       } catch { /* no JSON body */ }
-      throw new ApiError(message, res.status);
+      const err = new ApiError(message, res.status, code);
+      err.details = details || {};
+      throw err;
     }
     return res.json();
   },
@@ -593,6 +602,27 @@ export const tenantApi = {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });
+  },
+  // The same move with the shopper's messages chosen (the ship step's two
+  // switches, M4): `notify` is { sms, email }, either left out meaning send.
+  // The server can only hold a message back, never send one its rules
+  // would not.
+  moveOrder(orderId, status, notify = {}, devTenant) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    const body = { status };
+    if (notify.sms === false) body.sms = 'false';
+    if (notify.email === false) body.email = 'false';
+    return api.request(`/api/tenant/orders/${orderId}/status${q}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+  // What the shopper would be told if the order moved to `status` now:
+  // { sms: { to, text, sending } | null, email: { to, subject, sending } | null }.
+  orderNotice(orderId, status, devTenant, opts) {
+    const p = new URLSearchParams({ status });
+    if (devTenant) p.set('tenant', devTenant);
+    return api.get(`/api/tenant/orders/${orderId}/notice?${p}`, opts || {});
   },
   // Refund one of this store's orders (D2). Owner-only server-side; a manager
   // gets 403. Pass an empty amount to return everything still refundable.

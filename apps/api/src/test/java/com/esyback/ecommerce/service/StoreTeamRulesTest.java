@@ -6,6 +6,7 @@ import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.StoreMembershipRepository;
 import com.esyback.ecommerce.repository.TenantRepository;
 import com.esyback.ecommerce.repository.UserRepository;
+import com.esyback.ecommerce.web.ApiRefusal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -141,5 +142,44 @@ class StoreTeamRulesTest {
             .isEqualTo(StoreMembership.Role.MANAGER);
         assertThat(roleOf(SECOND)).isNull();
         assertThat(roleOf(OWNER)).isEqualTo("OWNER");
+    }
+
+    /** The code a refusal carries, so the Team screen can word it in Georgian. */
+    private static ApiRefusal refusal(org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {
+        Throwable t = org.assertj.core.api.Assertions.catchThrowable(call);
+        assertThat(t).isInstanceOf(ApiRefusal.class);
+        return (ApiRefusal) t;
+    }
+
+    @Test
+    @Transactional
+    void everyRefusalNamesItsRuleWithACode() {
+        membershipService.assignStaff(tenant, OWNER, "OWNER");
+        membershipService.assignStaff(tenant, SECOND, "MANAGER");
+
+        ApiRefusal ghost = refusal(() -> membershipService.assignStaff(tenant, "Ghost-TR@example.com", "MANAGER"));
+        assertThat(ghost.getCode()).isEqualTo(MembershipService.TEAM_NO_ACCOUNT);
+        // The address as the server normalised it, for the sentence.
+        assertThat(ghost.getDetails()).containsEntry("email", "ghost-tr@example.com");
+        assertThat(ghost.getStatusCode().value()).isEqualTo(404);
+
+        // Already holding that role: the screen says who, and as what.
+        ApiRefusal twice = refusal(() -> membershipService.assignStaff(tenant, SECOND, "MANAGER"));
+        assertThat(twice.getCode()).isEqualTo(MembershipService.TEAM_ALREADY);
+        assertThat(twice.getDetails()).containsEntry("role", "MANAGER").containsEntry("email", SECOND);
+        assertThat(twice.getStatusCode().value()).isEqualTo(409);
+
+        assertThat(refusal(() -> membershipService.assignStaff(tenant, "not-an-address", "MANAGER")).getCode())
+            .isEqualTo(MembershipService.TEAM_BAD_EMAIL);
+        assertThat(refusal(() -> membershipService.assignStaff(tenant, SECOND, "CUSTOMER")).getCode())
+            .isEqualTo(MembershipService.TEAM_BAD_ROLE);
+        assertThat(refusal(() -> membershipService.assignStaff(tenant, OWNER, "MANAGER")).getCode())
+            .isEqualTo(MembershipService.TEAM_LAST_OWNER);
+        assertThat(refusal(() -> membershipService.removeStaff(tenant, OWNER)).getCode())
+            .isEqualTo(MembershipService.TEAM_LAST_OWNER);
+
+        membershipService.removeStaff(tenant, SECOND);
+        assertThat(refusal(() -> membershipService.removeStaff(tenant, SECOND)).getCode())
+            .isEqualTo(MembershipService.TEAM_NOT_STAFF);
     }
 }

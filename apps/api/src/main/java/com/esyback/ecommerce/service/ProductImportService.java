@@ -3,6 +3,7 @@ package com.esyback.ecommerce.service;
 import com.esyback.ecommerce.entity.Product;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.ProductRepository;
+import com.esyback.ecommerce.web.ApiRefusal;
 import com.esyback.ecommerce.web.Csv;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +59,16 @@ public class ProductImportService {
     /** Order is the template's column order. Category last: it is optional, and newest. */
     public static final List<String> COLUMNS = List.of(TITLE, DESCRIPTION, PRICE, QUANTITY, CATEGORY);
     private static final List<String> REQUIRED = List.of(TITLE, PRICE, QUANTITY);
+
+    // Why a whole file is refused, beside the English sentence — the same idea
+    // as a row error's code, for the problems that stop a file being read at
+    // all. The screen words them in Georgian from the code and its details.
+    public static final String FILE_EMPTY = "IMPORT_EMPTY";
+    public static final String FILE_NO_COLUMN = "IMPORT_NO_COLUMN";
+    public static final String FILE_NO_ROWS = "IMPORT_NO_ROWS";
+    public static final String FILE_TOO_MANY_ROWS = "IMPORT_TOO_MANY_ROWS";
+    public static final String FILE_MISSING = "IMPORT_NO_FILE";
+    public static final String FILE_UNREADABLE = "IMPORT_UNREADABLE";
 
     /** How many rows the report carries back for the screen to show. */
     public static final int PREVIEW_ROWS = 50;
@@ -122,27 +133,29 @@ public class ProductImportService {
 
         List<List<String>> rows = Csv.parse(csv);
         if (rows.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            throw new ApiRefusal(HttpStatus.BAD_REQUEST, FILE_EMPTY,
                 "That file is empty. The first line must name the columns: " + String.join(", ", COLUMNS));
         }
 
         Map<String, Integer> columns = headerIndex(rows.get(0));
         for (String required : REQUIRED) {
             if (!columns.containsKey(required)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                throw new ApiRefusal(HttpStatus.BAD_REQUEST, FILE_NO_COLUMN,
                     "The file has no \"" + required + "\" column. Expected columns: "
-                        + String.join(", ", COLUMNS));
+                        + String.join(", ", COLUMNS),
+                    Map.of("column", required));
             }
         }
 
         List<List<String>> body = rows.subList(1, rows.size());
         if (body.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            throw new ApiRefusal(HttpStatus.BAD_REQUEST, FILE_NO_ROWS,
                 "That file has a header row and no products.");
         }
         if (body.size() > MAX_ROWS) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "That file has " + body.size() + " rows; " + MAX_ROWS + " is the most in one upload.");
+            throw new ApiRefusal(HttpStatus.BAD_REQUEST, FILE_TOO_MANY_ROWS,
+                "That file has " + body.size() + " rows; " + MAX_ROWS + " is the most in one upload.",
+                Map.of("rows", body.size(), "max", MAX_ROWS));
         }
 
         List<RowError> errors = new ArrayList<>();

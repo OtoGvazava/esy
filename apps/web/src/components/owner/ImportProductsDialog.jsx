@@ -46,7 +46,7 @@ function Glyph({ size = 20, children }) {
 const kb = (bytes) => `${Math.max(1, Math.round((bytes || 0) / 1024))} KB`;
 
 export default function ImportProductsDialog({ onClose, onImported }) {
-  const { t } = useTranslation(['owner', 'common']);
+  const { t, i18n } = useTranslation(['owner', 'common']);
   const { T } = useTK();
   const { isMobile, isDesktop } = useDevice();
   const fileRef = useRef(null);
@@ -61,6 +61,20 @@ export default function ImportProductsDialog({ onClose, onImported }) {
   // The file input is hidden inside the drop zone, so the zone shows its focus.
   const [zoneFocus, setZoneFocus] = useState(false);
 
+  // A file refused outright (empty, a missing column, too many rows) comes
+  // with a code and the values in its sentence, so it is said in the
+  // merchant's language; anything else shows the server's words.
+  const fileProblem = (err, fallbackKey) => {
+    if (err?.code && i18n.exists(`owner:import.file.${err.code}`)) {
+      const d = err.details || {};
+      return t(`import.file.${err.code}`, {
+        columns: COLUMNS, column: d.column, rows: d.rows, max: d.max ?? MAX_ROWS,
+        field: d.column ? t(`import.field.${d.column}`, { defaultValue: d.column }) : '',
+      });
+    }
+    return handleApiError(err, t(fallbackKey));
+  };
+
   const check = async (picked) => {
     if (!picked) return;
     setFile(picked);
@@ -72,7 +86,7 @@ export default function ImportProductsDialog({ onClose, onImported }) {
     try {
       setReport(await productApi.importCsv(picked, { dryRun: true }));
     } catch (err) {
-      setApiError(handleApiError(err, t('import.checkFailed')));
+      setApiError(fileProblem(err, 'import.checkFailed'));
     } finally {
       setBusy(false);
     }
@@ -90,7 +104,7 @@ export default function ImportProductsDialog({ onClose, onImported }) {
         onImported?.(result);
       }
     } catch (err) {
-      setApiError(handleApiError(err, t('import.failed')));
+      setApiError(fileProblem(err, 'import.failed'));
     } finally {
       setBusy(false);
     }

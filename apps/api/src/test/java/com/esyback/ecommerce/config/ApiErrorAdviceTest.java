@@ -38,6 +38,22 @@ class ApiErrorAdviceTest {
     }
 
     @Test
+    @DisplayName("a coded refusal carries its code, and its details when it has any")
+    void carriesCodeAndDetails() {
+        Map<String, Object> body = advice.handle(new com.esyback.ecommerce.web.ApiRefusal(
+            HttpStatus.BAD_REQUEST, "IMPORT_TOO_MANY_ROWS", "That file has 612 rows; 500 is the most in one upload.",
+            Map.of("rows", 612, "max", 500))).getBody();
+        assertEquals("IMPORT_TOO_MANY_ROWS", body.get("code"));
+        assertEquals(Map.of("rows", 612, "max", 500), body.get("details"));
+
+        // No details: no empty object for the client to mistake for data.
+        Map<String, Object> plain = advice.handle(new com.esyback.ecommerce.web.ApiRefusal(
+            HttpStatus.CONFLICT, "DESIGN_NO_DRAFT", "Nothing to publish")).getBody();
+        assertEquals("DESIGN_NO_DRAFT", plain.get("code"));
+        assertEquals(false, plain.containsKey("details"));
+    }
+
+    @Test
     @DisplayName("a reasonless exception still says something, not null")
     void fallsBackToTheStatusPhrase() {
         Map<String, Object> body = advice.handle(

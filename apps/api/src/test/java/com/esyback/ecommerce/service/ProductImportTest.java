@@ -311,6 +311,39 @@ class ProductImportTest {
 
     @Test
     @Transactional
+    @DisplayName("a refused file says why with a code, and the values its sentence needs")
+    void fileLevelCodes() {
+        // The screen words these in Georgian, so each carries a code like a
+        // row error does — and the column or count the English sentence names.
+        assertThat(refusal("")).satisfies(r -> {
+            assertThat(r.getCode()).isEqualTo(ProductImportService.FILE_EMPTY);
+            assertThat(r.getDetails()).isEmpty();
+        });
+        assertThat(refusal("title,quantity\nMug,3\n")).satisfies(r -> {
+            assertThat(r.getCode()).isEqualTo(ProductImportService.FILE_NO_COLUMN);
+            assertThat(r.getDetails()).containsEntry("column", "price");
+        });
+        assertThat(refusal("title,price,quantity\n").getCode()).isEqualTo(ProductImportService.FILE_NO_ROWS);
+
+        StringBuilder big = new StringBuilder("title,price,quantity\n");
+        for (int i = 0; i < ProductImportService.MAX_ROWS + 3; i++) big.append("Thing ").append(i).append(",1.00,1\n");
+        assertThat(refusal(big.toString())).satisfies(r -> {
+            assertThat(r.getCode()).isEqualTo(ProductImportService.FILE_TOO_MANY_ROWS);
+            assertThat(r.getDetails())
+                .containsEntry("rows", ProductImportService.MAX_ROWS + 3)
+                .containsEntry("max", ProductImportService.MAX_ROWS);
+        });
+        assertThat(stored()).isEmpty();
+    }
+
+    private com.esyback.ecommerce.web.ApiRefusal refusal(String csv) {
+        Throwable t = org.assertj.core.api.Assertions.catchThrowable(() -> importService.importCsv(csv, true));
+        assertThat(t).isInstanceOf(com.esyback.ecommerce.web.ApiRefusal.class);
+        return (com.esyback.ecommerce.web.ApiRefusal) t;
+    }
+
+    @Test
+    @Transactional
     @DisplayName("the template we hand out is a file this importer accepts")
     void templateRoundTrips() {
         // A template that does not import is worse than none: it teaches the

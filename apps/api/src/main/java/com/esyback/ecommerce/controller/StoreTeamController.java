@@ -66,6 +66,11 @@ public class StoreTeamController {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("email", m.getUser() == null ? null : m.getUser().getEmail());
         out.put("name", m.getUser() == null ? null : m.getUser().getUsername());
+        // The person's own name from their profile, so the list can say who
+        // someone is rather than only which address they signed in with. Null
+        // until they have filled the profile in.
+        out.put("firstName", m.getUser() == null ? null : m.getUser().getFirstName());
+        out.put("lastName", m.getUser() == null ? null : m.getUser().getLastName());
         out.put("role", m.getRole() == null ? null : m.getRole().name());
         return out;
     }

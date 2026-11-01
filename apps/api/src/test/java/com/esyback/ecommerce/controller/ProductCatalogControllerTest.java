@@ -225,6 +225,28 @@ class ProductCatalogControllerTest {
     }
 
     @Test
+    @DisplayName("a file the importer cannot read at all answers with a code and its values")
+    void importFileRefusals() throws Exception {
+        // These used to reach the screen as the English sentence alone: the
+        // controller's own handler won over the shared advice and dropped the
+        // code. Now they carry it, with the column or count the sentence names.
+        MockMultipartFile noPrice = new MockMultipartFile("file", "products.csv", "text/csv",
+            "title,quantity\nMug,4\n".getBytes(StandardCharsets.UTF_8));
+        mvc.perform(multipart("/api/products/import").file(noPrice).param("dryRun", "true")
+                .header("Host", STORE).header("Authorization", bearer()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("IMPORT_NO_COLUMN"))
+            .andExpect(jsonPath("$.details.column").value("price"))
+            .andExpect(jsonPath("$.error").isString());
+
+        MockMultipartFile empty = new MockMultipartFile("file", "products.csv", "text/csv", new byte[0]);
+        mvc.perform(multipart("/api/products/import").file(empty)
+                .header("Host", STORE).header("Authorization", bearer()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("IMPORT_NO_FILE"));
+    }
+
+    @Test
     @DisplayName("option parameters are read as axis:value, merged by axis, malformed ones skipped")
     void optionParsing() {
         assertThat(ProductController.options(List.of("Size:M", "size:L", "SIZE:m", "Glaze:", ":x", "bad",

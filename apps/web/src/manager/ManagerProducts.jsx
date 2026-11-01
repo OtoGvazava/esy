@@ -74,6 +74,18 @@ export default function ManagerProducts() {
     return <ImportProductsDialog onClose={() => setImporting(false)} onImported={load} />;
   }
 
+  // The editor is a page too (P2), drawn in place of the list.
+  if (editing !== null) {
+    return (
+      <ProductEditorDialog
+        open
+        product={editing === 'new' ? null : editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => { setEditing(null); load(); }}
+      />
+    );
+  }
+
   // No products yet (P1's empty state): the two ways to start, side by side.
   if (products && products.length === 0) {
     const action = (primary) => ({

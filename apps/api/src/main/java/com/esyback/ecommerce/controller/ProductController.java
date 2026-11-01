@@ -10,6 +10,7 @@ import com.esyback.ecommerce.entity.ProductImage;
 import com.esyback.ecommerce.service.ProductImageService;
 import com.esyback.ecommerce.service.ProductImportService;
 import com.esyback.ecommerce.service.ProductService;
+import com.esyback.ecommerce.web.ApiRefusal;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
@@ -20,7 +21,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -200,13 +200,15 @@ public class ProductController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "dryRun", defaultValue = "false") boolean dryRun) {
         if (file == null || file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a CSV file first");
+            throw new ApiRefusal(HttpStatus.BAD_REQUEST, ProductImportService.FILE_MISSING,
+                "Choose a CSV file first");
         }
         String csv;
         try {
             csv = new String(file.getBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That file could not be read");
+            throw new ApiRefusal(HttpStatus.BAD_REQUEST, ProductImportService.FILE_UNREADABLE,
+                "That file could not be read");
         }
         ProductImportService.Report report = productImportService.importCsv(csv, dryRun);
         Map<String, Object> body = new LinkedHashMap<>();
@@ -288,13 +290,10 @@ public class ProductController {
             .body(img.getData());
     }
 
-    // Surface thrown statuses as { error } (the SPA reads body.error; Spring's
-    // default body masks the reason).
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> handleStatus(ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode())
-            .body(Map.of("error", ex.getReason() == null ? "Request failed" : ex.getReason()));
-    }
+    // No local ResponseStatusException handler: ApiErrorAdvice writes the same
+    // {error} plus message, status and, for an ApiRefusal, its code and details.
+    // The copy that sat here won over the advice and dropped the code, so the
+    // import's file-level refusals reached the screen only as English prose.
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException ex) {
