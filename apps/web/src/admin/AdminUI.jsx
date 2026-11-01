@@ -6,13 +6,14 @@
 // Everything user-facing arrives from the caller's `t()` or is read from the
 // 'admin' namespace here — no copy is baked into a JSX literal.
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Btn, Card, Chip, Field, Note } from '../core/primitives';
-import { Icons } from '../core/icons';
+import { Btn, Card, Chip } from '../core/primitives';
 import { adminApi, handleApiError } from '../utils/api';
 import { alpha } from '../core/tokens';
 import { money } from '../core/money';
+import { useDevice } from '../contexts/DeviceContext';
+import { Dialog, DialogPoint, Glyph, KitBtn, List } from './AdminKit';
 
 // ─── Formatting ─────────────────────────────────────────────────────────────
 const localeFor = (lang) => (String(lang || '').toLowerCase().startsWith('ka') ? 'ka-GE' : 'en-GB');
@@ -131,153 +132,149 @@ export function Stat({ T, label, value, tone }) {
 }
 
 // ─── Suspend ────────────────────────────────────────────────────────────────
-const MIN_REASON = 8;
+/** Why a store is suspended — the reason's first words on the record. */
+export const SUSPEND_REASONS = ['counterfeit', 'prohibited', 'fraud', 'ownerRequest', 'other'];
+const MIN_NOTE = 8;
 
 /**
- * Suspending pulls a live storefront down, so it is two deliberate acts: type a
- * reason, then confirm it. The reason is not optional and not defaulted — it is
- * written to the store's record and the owner reads it, so a blank or a "test"
- * would be worse than useless.
+ * The design's AD3. Suspending pulls a live storefront down, so the dialog
+ * says first what happens — to shoppers, to the orders already placed, and
+ * what the owner is (not) told — then asks why, and takes effect only once the
+ * admin has ticked that they know it is immediate.
+ *
+ * The reason is a choice from a short list plus an optional note ("other"
+ * needs the note): both are written, as one line, to the store's record and
+ * the audit log. Nothing is sent to the owner — the platform has no such
+ * message — and the dialog says so rather than promise an email.
  *
  * `onSuspended` receives the store object the API returns.
  */
 export function SuspendDialog({ T, store, onCancel, onSuspended }) {
   const { t } = useTranslation('admin');
+  const { isMobile } = useDevice();
   const [reason, setReason] = useState('');
-  const [confirming, setConfirming] = useState(false);
-  const [touched, setTouched] = useState(false);
+  const [note, setNote] = useState('');
+  const [sure, setSure] = useState(false);
+  const [focus, setFocus] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const reasonId = useId();
-  const titleId = useId();
-
-  const trimmed = reason.trim();
-  const tooShort = trimmed.length < MIN_REASON;
-
-  useEffect(() => {
-    if (!confirming) document.getElementById(reasonId)?.focus();
-  }, [confirming, reasonId]);
-
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape' && !sending) onCancel(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel, sending]);
+  const noteId = useId();
+  const sureId = useId();
 
   const name = store?.displayName || store?.name || store?.subdomain;
+  const trimmed = note.trim();
+  const noteMissing = reason === 'other' && trimmed.length < MIN_NOTE;
+  const ready = !!reason && !noteMissing && sure && !sending;
 
   const send = async () => {
-    if (sending || tooShort) return;
+    if (!ready) return;
     setSending(true);
     setError('');
+    const why = [t(`suspend.reason.${reason}`), trimmed].filter(Boolean).join(': ');
     try {
-      const updated = await adminApi.suspendStore(store.subdomain, trimmed);
+      const updated = await adminApi.suspendStore(store.subdomain, why);
       onSuspended(updated);
     } catch (e) {
       setError(handleApiError(e, t('suspend.failed')));
-      setConfirming(false);
     } finally {
       setSending(false);
     }
   };
 
+  const field = (on) => ({
+    width: '100%', boxSizing: 'border-box', borderRadius: 12, background: 'var(--k-in-bg)', color: T.text,
+    border: `1.5px solid ${on ? T.accent : 'var(--k-in-bd)'}`, outline: 'none', font: `15px ${T.font}`,
+    boxShadow: on ? `0 0 0 4px color-mix(in oklab, ${T.accent} 18%, transparent)` : 'none',
+  });
+  const label = { display: 'flex', flexDirection: 'column', gap: 7, font: `400 12.5px ${T.font}`, color: T.textDim };
+
   return (
-    <div
-      role="presentation"
-      onMouseDown={(e) => { if (e.target === e.currentTarget && !sending) onCancel(); }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(6,6,14,0.55)', backdropFilter: 'blur(2px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-      }}
-    >
-      <Card
-        T={T}
-        pad={22}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        style={{ width: '100%', maxWidth: 460, boxShadow: T.shadow }}
-      >
-        <div id={titleId} style={{ font: `700 17px ${T.font}`, letterSpacing: '-0.01em' }}>
-          {t('suspend.title', { store: name })}
-        </div>
-        <div style={{ font: `500 12px ${T.mono}`, color: T.textMute, marginTop: 3 }}>
-          {store?.subdomain}
-        </div>
+    <Dialog T={T} phone={isMobile} title={t('suspend.title', { store: name })} onClose={onCancel} busy={sending}>
+      <List T={T}>
+        <DialogPoint T={T} first icon="ban" tone="var(--k-bad)">{t('suspend.pointShoppers')}</DialogPoint>
+        <DialogPoint T={T} icon="receipt">{t('suspend.pointOrders')}</DialogPoint>
+        <DialogPoint T={T} icon="mail">{t('suspend.pointOwner')}</DialogPoint>
+      </List>
 
-        <Note T={T} tone="danger" style={{ margin: '14px 0' }}>{t('suspend.body')}</Note>
-
-        {confirming ? (
-          <div style={{
-            padding: '12px 14px', borderRadius: 14,
-            background: T.surface2, border: `1px solid ${T.border}`,
-          }}>
-            <div style={{
-              font: `600 11px ${T.font}`, color: T.textMute,
-              letterSpacing: '0.07em',
-            }}>
-              {t('suspend.reasonLabel')}
-            </div>
-            <div style={{ font: `500 13.5px/1.55 ${T.font}`, color: T.text, marginTop: 6 }}>
-              {trimmed}
-            </div>
-          </div>
-        ) : (
-          <Field
-            T={T}
+      <label htmlFor={reasonId} style={label}>
+        {t('suspend.reasonLabel')}
+        <span style={{ position: 'relative', display: 'block' }}>
+          <select
             id={reasonId}
-            tall
-            label={t('suspend.reasonLabel')}
-            placeholder={t('suspend.reasonPlaceholder')}
-            hint={t('suspend.reasonHint')}
-            error={touched && tooShort ? t('suspend.reasonTooShort', { n: MIN_REASON }) : undefined}
             value={reason}
-            maxLength={240}
-            onChange={(e) => { setTouched(true); setReason(e.target.value); }}
-          />
-        )}
-
-        {confirming && (
-          <div style={{ font: `600 13px/1.55 ${T.font}`, color: T.text, marginTop: 14 }}>
-            {t('suspend.confirmPrompt', { store: name })}
-          </div>
-        )}
-
-        {error && (
-          <div style={{ font: `500 12.5px/1.5 ${T.font}`, color: T.dangerFg, marginTop: 12 }}>
-            {error}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <Btn
-            T={T}
-            kind="ghost"
-            size="sm"
-            disabled={sending}
-            onClick={() => (confirming ? setConfirming(false) : onCancel())}
+            onChange={(e) => setReason(e.target.value)}
+            onFocus={() => setFocus('reason')}
+            onBlur={() => setFocus('')}
+            style={{ ...field(focus === 'reason'), height: 50, padding: '0 44px 0 15px', appearance: 'none', cursor: 'pointer', color: reason ? T.text : T.textDim }}
           >
-            {confirming ? t('suspend.back') : t('ui.cancel')}
-          </Btn>
-          {confirming ? (
-            <Btn T={T} kind="danger" size="sm" disabled={sending} onClick={send}>
-              {sending ? t('ui.working') : t('suspend.confirm')}
-              {!sending && <Icons.shield size={13} />}
-            </Btn>
-          ) : (
-            <Btn
-              T={T}
-              kind="danger"
-              size="sm"
-              disabled={tooShort}
-              onClick={() => { setTouched(true); if (!tooShort) setConfirming(true); }}
-            >
-              {t('suspend.review')}
-            </Btn>
-          )}
-        </div>
-      </Card>
-    </div>
+            <option value="" disabled>{t('suspend.reasonPick')}</option>
+            {SUSPEND_REASONS.map((r) => <option key={r} value={r}>{t(`suspend.reason.${r}`)}</option>)}
+          </select>
+          <span aria-hidden="true" style={{ position: 'absolute', right: 14, top: 15, color: T.textDim, pointerEvents: 'none', display: 'flex' }}>
+            <Glyph name="chevD" />
+          </span>
+        </span>
+      </label>
+
+      <label htmlFor={noteId} style={label}>
+        {t('suspend.noteLabel')}
+        <textarea
+          id={noteId}
+          value={note}
+          maxLength={240}
+          placeholder={t('suspend.notePlaceholder')}
+          onChange={(e) => setNote(e.target.value)}
+          onFocus={() => setFocus('note')}
+          onBlur={() => setFocus('')}
+          style={{ ...field(focus === 'note'), minHeight: 110, padding: '13px 15px', lineHeight: 1.5, resize: 'none' }}
+        />
+        {noteMissing && trimmed.length > 0 && (
+          <span style={{ font: `400 12.5px ${T.font}`, color: 'var(--k-bad)' }}>{t('suspend.noteTooShort', { n: MIN_NOTE })}</span>
+        )}
+      </label>
+
+      <label htmlFor={sureId} style={{ display: 'flex', alignItems: 'center', gap: 10, font: `400 12.5px/1.45 ${T.font}`, color: T.text, cursor: 'pointer' }}>
+        <input
+          id={sureId}
+          type="checkbox"
+          checked={sure}
+          onChange={(e) => setSure(e.target.checked)}
+          style={{ position: 'absolute', opacity: 0, width: 1, height: 1, margin: 0 }}
+          onFocus={() => setFocus('sure')}
+          onBlur={() => setFocus('')}
+        />
+        <span aria-hidden="true" style={{
+          width: 22, height: 22, borderRadius: 6, flex: 'none', display: 'grid', placeItems: 'center', boxSizing: 'border-box',
+          border: `2px solid ${sure ? T.accent : T.border}`, background: sure ? T.accent : 'transparent', color: T.onAccent,
+          boxShadow: focus === 'sure' ? `0 0 0 3px color-mix(in oklab, ${T.accent} 30%, transparent)` : 'none',
+        }}>
+          {sure && <Glyph name="check" size={14} style={{ strokeWidth: 3 }} />}
+        </span>
+        {t('suspend.sure')}
+      </label>
+
+      {error && <span role="alert" style={{ font: `500 12.5px/1.5 ${T.font}`, color: T.dangerFg }}>{error}</span>}
+
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <KitBtn T={T} disabled={sending} onClick={onCancel}>{t('ui.cancel')}</KitBtn>
+        <KitBtn
+          T={T}
+          kind="danger"
+          aria-disabled={!ready}
+          onClick={send}
+          style={{
+            flex: '1 1 0',
+            // Not ready reads as quiet, not broken: the label stays legible (the kit's aria-disabled).
+            ...(ready ? null : {
+              background: `color-mix(in srgb, ${T.text} 9%, ${T.surface})`,
+              color: `color-mix(in srgb, ${T.text} 56%, ${T.surface})`, cursor: 'default',
+            }),
+          }}
+        >
+          {sending ? t('ui.working') : t('suspend.confirm')}
+        </KitBtn>
+      </div>
+    </Dialog>
   );
 }

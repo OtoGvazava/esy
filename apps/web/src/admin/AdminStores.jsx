@@ -12,7 +12,8 @@ import { useTranslation } from 'react-i18next';
 import { adminApi, handleApiError } from '../utils/api';
 import { useDebounce } from '../hooks/useDebounce';
 import { useAdminTokens } from './adminTokens';
-import { Btn, Card, Chip, Field, Note, SectionTitle } from '../core/primitives';
+import { Btn, Card, Chip, Field, Note } from '../core/primitives';
+import { useAdminHead } from './adminHead';
 import { Mark } from '../core/domain';
 import { Icons } from '../core/icons';
 import { useDevice } from '../contexts/DeviceContext';
@@ -238,18 +239,16 @@ export default function AdminStores() {
   };
 
   const searching = debounced.trim().length > 0;
+  useAdminHead({ title: t('stores.title'), sub: t('stores.head') });
 
   return (
-    <div style={{ padding: 20, maxWidth: 1040, margin: '0 auto' }}>
-      <SectionTitle
-        T={T}
-        lang={lang}
-        title={t('stores.title')}
-        sub={t('stores.sub')}
-        right={stores ? (
+    <div style={{ maxWidth: 1040, margin: '0 auto' }}>
+      {/* A search's own count; without one, the figures below carry the total. */}
+      {stores && searching && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
           <Chip T={T} tone="admin">{t('stores.resultCount', { n: count(stores.length, lang) })}</Chip>
-        ) : null}
-      />
+        </div>
+      )}
 
       <Field
         T={T}

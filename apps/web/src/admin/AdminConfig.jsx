@@ -20,8 +20,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { adminApi, handleApiError } from '../utils/api';
 import { useAdminTokens } from './adminTokens';
-import { SectionTitle } from '../core/primitives';
 import { useDevice } from '../contexts/DeviceContext';
+import { useAdminHead } from './adminHead';
 import { Failed, Loading } from './AdminUI';
 import {
   Alert, Dialog, DialogPoint, Glyph, KitBtn, KitChip, List, Mono, RowIcon, SourceChip, Switch,
@@ -153,6 +153,12 @@ export default function AdminConfig() {
     setRowError((p) => ({ ...p, [field]: '' }));
   };
   const close = () => { setEditing(null); setDialog(null); setTyped(''); };
+
+  // Before the store answers, the line says nothing rather than guess.
+  useAdminHead({
+    title: t('config.title'),
+    sub: data ? (data.storeReady ? t('config.sub') : t('config.subOffline')) : '',
+  });
 
   if (loading) return <Loading T={T} />;
   if (error && !data) return <Failed T={T} message={error} onRetry={load} />;
@@ -525,12 +531,6 @@ export default function AdminConfig() {
 
   return (
     <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-      <SectionTitle
-        T={T}
-        lang={lang}
-        title={t('config.title')}
-        sub={ready ? t('config.sub') : t('config.subOffline')}
-      />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : 20 }}>
         {/* The service name never breaks across lines, as the design sets it. */}

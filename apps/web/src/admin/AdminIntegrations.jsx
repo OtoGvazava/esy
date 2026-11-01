@@ -27,7 +27,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { adminApi, handleApiError } from '../utils/api';
 import { useAdminTokens } from './adminTokens';
-import { SectionTitle } from '../core/primitives';
+import { useAdminHead } from './adminHead';
 import { useDevice } from '../contexts/DeviceContext';
 import { Failed, Loading, dateTime } from './AdminUI';
 import {
@@ -43,9 +43,11 @@ const COUNT_AS = { order: '#99999', code: '1234' };
 const smsLength = (text) => [...String(text || '').replace(/\{(order|code)\}/g, (_, k) => COUNT_AS[k])].length;
 const smsUnits = (len) => (len === 0 ? 0 : len <= 70 ? 1 : Math.ceil(len / 67));
 
-const fieldStyle = (T, bad) => ({
-  width: '100%', boxSizing: 'border-box', borderRadius: 12, background: T.surface, color: T.text,
-  border: `1.5px solid ${bad ? T.danger : T.border}`, outline: 'none',
+// The kit's `.in`: a 1.5px border, the brand with its 4px ring while focused.
+const fieldStyle = (T, bad, focus) => ({
+  width: '100%', boxSizing: 'border-box', borderRadius: 12, background: 'var(--k-in-bg)', color: T.text,
+  border: `1.5px solid ${bad ? T.danger : focus ? T.accent : 'var(--k-in-bd)'}`, outline: 'none',
+  boxShadow: focus && !bad ? `0 0 0 4px color-mix(in oklab, ${T.accent} 18%, transparent)` : 'none',
 });
 
 /** The editor for one message on one channel. Remounted (by key) when the selection changes. */
@@ -54,6 +56,8 @@ function Editor({ T, t, phone, kind, row, name, channels, onChannel, canWrite, b
   const [text, setText] = useState(row.text ?? '');
   const [subject, setSubject] = useState(row.subject ?? '');
   const [body, setBody] = useState(row.body ?? '');
+  const [focus, setFocus] = useState('');
+  const focusProps = (name) => ({ onFocus: () => setFocus(name), onBlur: () => setFocus('') });
   const mono = <Mono T={T} />;
 
   const changed = isSms ? text !== row.text : (subject !== row.subject || body !== row.body);
@@ -108,7 +112,8 @@ function Editor({ T, t, phone, kind, row, name, channels, onChannel, canWrite, b
             onChange={(e) => setText(e.target.value)}
             aria-label={t('integrations.textLabel')}
             maxLength={1000}
-            style={{ ...fieldStyle(T, !!error), height: 84, padding: '12px 15px', resize: 'none', font: `500 15px/1.5 ${T.font}` }}
+            {...focusProps('text')}
+            style={{ ...fieldStyle(T, !!error, focus === 'text'), height: 84, padding: '12px 15px', resize: 'none', font: `500 15px/1.5 ${T.font}` }}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Progress T={T} pct={(len / 70) * 100} over={len > 70} />
@@ -134,7 +139,8 @@ function Editor({ T, t, phone, kind, row, name, channels, onChannel, canWrite, b
             onChange={(e) => setSubject(e.target.value)}
             aria-label={t('integrations.subjectLabel')}
             maxLength={200}
-            style={{ ...fieldStyle(T, !!error), height: 50, padding: '0 15px', font: `500 15px ${T.font}` }}
+            {...focusProps('subject')}
+            style={{ ...fieldStyle(T, !!error, focus === 'subject'), height: 50, padding: '0 15px', font: `500 15px ${T.font}` }}
           />
           <textarea
             value={body}
@@ -142,7 +148,8 @@ function Editor({ T, t, phone, kind, row, name, channels, onChannel, canWrite, b
             aria-label={t('integrations.bodyLabel')}
             rows={7}
             maxLength={5000}
-            style={{ ...fieldStyle(T, !!error), padding: '12px 15px', resize: 'vertical', font: `500 14px/1.55 ${T.font}` }}
+            {...focusProps('body')}
+            style={{ ...fieldStyle(T, !!error, focus === 'body'), padding: '12px 15px', resize: 'vertical', font: `500 14px/1.55 ${T.font}` }}
           />
           <p style={{ margin: 0, font: `500 12px/1.55 ${T.font}`, color: T.textDim }}>{t('integrations.emailPlain')}</p>
         </>
@@ -305,6 +312,8 @@ export default function AdminIntegrations() {
     }
   };
 
+  useAdminHead({ title: t('integrations.title'), sub: t('integrations.sub') });
+
   if (loading) return <Loading T={T} />;
   if (error && !data) return <Failed T={T} message={error} onRetry={load} />;
 
@@ -317,6 +326,14 @@ export default function AdminIntegrations() {
   const mono = <Mono T={T} />;
   // SMS Office's ErrorCode 150: the sender is not registered with them.
   const senderRejected = sms.lastFailure?.errorCode === 150;
+  // "today 14:02" for a failure today, the full date and time otherwise.
+  const when = (at) => {
+    const d = at ? new Date(at) : null;
+    if (!d || Number.isNaN(d.getTime())) return null;
+    if (d.toDateString() !== new Date().toDateString()) return dateTime(at, lang);
+    const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return t('integrations.todayAt', { time });
+  };
 
   const channelsOf = (key) => [smsRows[key] && 'sms', emailRows[key] && 'email'].filter(Boolean);
   const pick = (key, channel) => {
@@ -373,7 +390,9 @@ export default function AdminIntegrations() {
     );
   };
 
-  const col = { width: isMobile ? 46 : 72, flex: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center' };
+  const col = { width: isMobile ? 46 : 72, flex: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', whiteSpace: 'nowrap' };
+  // The kit's `.lbl`, as the matrix's column heads use it.
+  const lbl = { font: '600 11.5px/1.2 var(--k-font-m)', letterSpacing: '0.06em', color: T.textDim };
 
   const matrix = (
     <List T={T}>
@@ -382,11 +401,11 @@ export default function AdminIntegrations() {
         borderBottom: `1px solid ${T.border}`,
       }}>
         <b style={{ flex: 1, minWidth: 0, font: `600 16px/1.3 ${T.font}`, color: T.text }}>{t('integrations.templatesTitle')}</b>
-        <span style={{ ...col, font: `600 12px ${T.font}`, color: T.textDim }}>
-          {isMobile ? <Glyph name="sms" size={18} label="SMS" /> : 'SMS'}
+        <span style={{ ...col, ...lbl }}>
+          {isMobile ? <Glyph name="sms" size={16} label="SMS" /> : 'SMS'}
         </span>
-        <span style={{ ...col, font: `600 12px ${T.font}`, color: T.textDim }}>
-          {isMobile ? <Glyph name="mail" size={18} label={t('integrations.email')} /> : t('integrations.email')}
+        <span style={{ ...col, ...lbl }}>
+          {isMobile ? <Glyph name="mail" size={16} label={t('integrations.email')} /> : t('integrations.email')}
         </span>
         {isMobile && <span style={{ width: 16, flex: 'none' }} />}
       </div>
@@ -490,9 +509,18 @@ export default function AdminIntegrations() {
       {sms.configured && !sms.enabled && <Alert T={T} tone="bad">{t('integrations.smsOff')}</Alert>}
       {sms.lastFailure && (
         <Alert T={T} tone="bad" title={t('integrations.lastFailureTitle')}>
-          {[sms.lastFailure.reason, dateTime(sms.lastFailure.at, lang)].filter(Boolean).join(' · ')}
-          {sms.lastFailure.errorCode != null && ` · ErrorCode ${sms.lastFailure.errorCode}`}
-          {senderRejected && <>{'. '}{t('integrations.senderAdvice')}</>}
+          {senderRejected ? (
+            // SMS Office's 150 has one meaning, so it is said in words, as the design does.
+            <>
+              {t('integrations.senderNotApproved', { sender: sms.sender, when: when(sms.lastFailure.at) })}
+              {' '}{t('integrations.senderAdvice')}
+            </>
+          ) : (
+            <>
+              {[sms.lastFailure.reason, when(sms.lastFailure.at)].filter(Boolean).join(' · ')}
+              {sms.lastFailure.errorCode != null && ` · ErrorCode ${sms.lastFailure.errorCode}`}
+            </>
+          )}
         </Alert>
       )}
     </ChannelCard>
@@ -536,7 +564,7 @@ export default function AdminIntegrations() {
       {email.configured && !email.enabled && <Alert T={T} tone="warn">{t('integrations.emailDisabledWarning')}</Alert>}
       {email.lastFailure && (
         <Alert T={T} tone="bad" title={t('integrations.emailFailureTitle')}>
-          {[email.lastFailure.reason, dateTime(email.lastFailure.at, lang)].filter(Boolean).join(' · ')}
+          {[email.lastFailure.reason, when(email.lastFailure.at)].filter(Boolean).join(' · ')}
           {email.lastFailure.statusCode != null && ` · HTTP ${email.lastFailure.statusCode}`}
         </Alert>
       )}
@@ -563,8 +591,6 @@ export default function AdminIntegrations() {
 
   return (
     <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-      <SectionTitle T={T} lang={lang} title={t('integrations.title')} sub={t('integrations.sub')} />
-
       {(!canSms || !canEmail) && (
         <Alert T={T} tone="bad" style={{ marginBottom: 16 }}>{t('integrations.storeOffline')}</Alert>
       )}

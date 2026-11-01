@@ -4,10 +4,11 @@
 // suspend switch: deciding to pull a storefront down should not require
 // remembering what was on the previous page.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { adminApi, handleApiError } from '../utils/api';
 import { useAdminTokens } from './adminTokens';
+import { useAdminHead } from './adminHead';
 import { Btn, Card, Chip, Field, Note, SectionTitle } from '../core/primitives';
 import { Mark, RoleChip, StatusPair } from '../core/domain';
 import { Icons } from '../core/icons';
@@ -198,6 +199,15 @@ export default function AdminStoreDetail() {
     return () => abortRef.current?.abort();
   }, [load]);
 
+  // The store's name in the top bar, with the way back to the list.
+  const headName = store ? (store.displayName || store.name || store.subdomain) : sub;
+  useAdminHead({
+    title: headName,
+    sub: t('detail.head', { sub: store?.subdomain || sub }),
+    phoneSub: t('detail.head', { sub: store?.subdomain || sub }),
+    back: '/stores',
+  });
+
   // The API answers with the updated store, but only the list fields — members
   // and recentOrders are kept from the record already on screen. Anything that
   // is not a store means re-reading the record rather than patching a guess.
@@ -268,28 +278,15 @@ export default function AdminStoreDetail() {
     }
   };
 
-  const back = (
-    <Link
-      to="/stores"
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12,
-        font: `600 12.5px ${T.font}`, color: T.textDim, textDecoration: 'none',
-      }}
-    >
-      <Icons.arrowL size={14} />
-      {t('detail.back')}
-    </Link>
-  );
-
-  const wrap = { padding: 20, maxWidth: 1040, margin: '0 auto' };
+  // The way back to the list is the top bar's back button (useAdminHead above).
+  const wrap = { maxWidth: 1040, margin: '0 auto' };
 
   if (loading && !store) {
-    return <div style={wrap}>{back}<Loading T={T} /></div>;
+    return <div style={wrap}><Loading T={T} /></div>;
   }
   if (missing) {
     return (
       <div style={wrap}>
-        {back}
         <Empty T={T} title={t('detail.notFound')} body={t('detail.notFoundBody', { sub })} />
       </div>
     );
@@ -297,7 +294,6 @@ export default function AdminStoreDetail() {
   if (error || !store) {
     return (
       <div style={wrap}>
-        {back}
         <Failed T={T} message={error || t('detail.loadFailed')} onRetry={load} />
       </div>
     );
@@ -310,8 +306,6 @@ export default function AdminStoreDetail() {
 
   return (
     <div style={wrap}>
-      {back}
-
       <Card T={T} pad={18} style={{ marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
           <Mark T={T} store={{ name }} size={48} radius={14} />
