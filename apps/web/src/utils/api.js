@@ -11,11 +11,14 @@ export class ApiError extends Error {
   // `code` is the server's stable refusal code (PHONE_TAKEN, CODE_WRONG, …),
   // when it sent one: the reason is English prose, the code is what a screen
   // translates.
-  constructor(message, status, code) {
+  constructor(message, status, code, details) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    // The refusal's whole body: beside the code it can carry the figures a
+    // translated sentence needs (CODE_WRONG's attemptsLeft).
+    this.details = details || null;
   }
 }
 
@@ -67,17 +70,19 @@ class ApiClient {
     if (!response.ok) {
       let message = `Request failed (${response.status})`;
       let code;
+      let details;
       try {
         const body = await response.json();
         message = body.error || body.message || message;
         code = body.code;
+        details = body;
       } catch {
         /* response had no JSON body */
       }
       if (code === 'PHONE_REQUIRED' && typeof window !== 'undefined') {
         window.dispatchEvent(new Event(PHONE_REQUIRED_EVENT));
       }
-      throw new ApiError(message, response.status, code);
+      throw new ApiError(message, response.status, code, details);
     }
 
     if (response.status === 204) return null;

@@ -1,22 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
 import { useAuth } from '../contexts/AuthContext';
+import { PHONE_REQUIRED_EVENT } from '../utils/api';
 import DateOfBirthPicker from './DateOfBirthPicker';
 import PhoneStep from './PhoneStep';
-import { alpha } from '../core/tokens';
+import { Sk, initials, useDev } from './shop/kit';
 
-// The registration gate: a blocking, full-screen prompt shown after sign-in
-// until the account has BOTH the mandatory profile (name, surname, date of
-// birth) and a verified phone. Step 1 is the profile, step 2 the phone with an
-// SMS code; there is no skip, and signing out is the only way past it.
+// The registration gate (the design's B2–B5), shown after sign-in until the
+// account has BOTH the mandatory profile (name, surname, date of birth) and a
+// verified phone. Step 1 is the profile, step 2 the phone with an SMS code.
+// On a phone it is the page itself; on a tablet or desktop a card in the
+// middle of it. The store's name heads it, because the shopper signed in to
+// buy here.
+//
+// "Back to the store" lets the shopper look around first. It is safe: the
+// server refuses every write from an account without a verified phone
+// (PHONE_REQUIRED), and that refusal, or opening checkout, brings the gate
+// straight back. Signing out is the other way past it.
 //
 // An account that already has a profile but no verified phone — one created
-// before the phone was required — sees only step 2, with copy that says why
-// it is being asked now. The server refuses that account's writes until it is
-// verified (PHONE_REQUIRED), so this gate is the way out, not just a nudge.
+// before the phone was required — sees only step 2, with copy that says why it
+// is being asked now.
 export default function ProfileGate() {
-  const { T } = useGlow();
+  const { tenant } = useGlow();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const dev = useDev();
   const { t } = useTranslation('storefront');
   const { isAuthenticated, loading, user, saveProfile, logout } = useAuth();
   const [form, setForm] = useState(null);
@@ -25,12 +36,22 @@ export default function ProfileGate() {
   // Whether step 1 was shown in this visit: tells a new registration apart
   // from an older account meeting the phone requirement for the first time.
   const [didProfile, setDidProfile] = useState(false);
+  // "‹ previous step" from the phone: the saved profile, open again.
+  const [editProfile, setEditProfile] = useState(false);
+  const [away, setAway] = useState(false);
+
+  useEffect(() => {
+    const back = () => setAway(false);
+    window.addEventListener(PHONE_REQUIRED_EVENT, back);
+    return () => window.removeEventListener(PHONE_REQUIRED_EVENT, back);
+  }, []);
 
   if (loading || !isAuthenticated || !user) return null;
   if (user.profileComplete && user.phoneVerified) return null;
+  if (away && pathname !== '/checkout') return null;
 
-  const onPhoneStep = user.profileComplete;
-  const existingAccount = onPhoneStep && !didProfile;
+  const onPhoneStep = user.profileComplete && !editProfile;
+  const existingAccount = user.profileComplete && !didProfile;
 
   const f = form || {
     firstName: user.firstName || '',
@@ -54,103 +75,92 @@ export default function ProfileGate() {
         dateOfBirth: f.dateOfBirth,
       });
       // success → user.profileComplete becomes true → step 2 renders
+      setEditProfile(false);
+      setForm(null);
     } catch (e2) {
-      setDidProfile(false);
+      if (!user.profileComplete) setDidProfile(false);
       setErr(e2?.message || t('profileGate.error'));
     } finally {
       setBusy(false);
     }
   };
 
-  const label = { font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em' };
-  const input = {
-    padding: '12px 14px', borderRadius: 12, border: `1px solid ${T.border}`,
-    background: T.dark ? T.surface2 : '#fff', color: T.text,
-    font: `500 14px ${T.font}`, outline: 'none', width: '100%',
-  };
-  const card = {
-    width: '100%', maxWidth: 420, background: T.surface, border: `1px solid ${T.border}`,
-    borderRadius: 22, padding: 24, display: 'flex', flexDirection: 'column', gap: 16,
-    boxShadow: T.dark ? '0 24px 60px rgba(0,0,0,0.5)' : '0 24px 60px rgba(20,20,60,0.15)',
+  const backToStore = () => {
+    setAway(true);
+    if (pathname === '/checkout') navigate('/');
   };
 
-  // The design's step bar: two segments, filled up to the current step.
-  const steps = !existingAccount && (
-    <div style={{ display: 'flex', gap: 6 }} aria-hidden="true">
-      {[0, 1].map((i) => (
-        <span key={i} style={{ flex: 1, height: 4, borderRadius: 999, background: i <= (onPhoneStep ? 1 : 0) ? T.accent : T.surface2 }} />
-      ))}
+  const progress = (n) => (withPrev) => (
+    <div className="stk" style={{ gap: 8 }}>
+      <div className="steps" aria-hidden="true"><i className="on" /><i className={n === 2 ? 'on' : undefined} /></div>
+      <div className="rowb sm">
+        <span className="dim">{t('profileGate.step', { n })}</span>
+        {withPrev && n === 2 && (
+          <button type="button" className="link" onClick={() => { setEditProfile(true); setErr(''); }}>{t('phoneGate.prevStep')}</button>
+        )}
+      </div>
     </div>
   );
 
-  const signOut = (
-    <div style={{ textAlign: 'center', font: `500 12.5px ${T.font}`, color: T.textMute }}>
-      {t('phoneGate.otherAccount')}{' '}
-      <button type="button" onClick={logout} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: T.accentFg, font: `600 12.5px ${T.font}` }}>
-        {t('phoneGate.signOut')}
-      </button>
-    </div>
-  );
-
+  const card = dev !== 'ph';
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 3000, background: T.bg,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 20, overflowY: 'auto',
-    }}>
-      {onPhoneStep ? (
-        <div style={card} role="dialog" aria-modal="true" aria-labelledby="gate-title">
-          {steps}
-          {!existingAccount && (
-            <span style={{ alignSelf: 'flex-start', padding: '5px 11px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `700 11px ${T.font}` }}>
-              {t('phoneGate.stepChip')}
-            </span>
-          )}
-          <div>
-            <div id="gate-title" style={{ font: `800 20px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>
-              {existingAccount ? t('phoneGate.existingTitle', { name: user.firstName || '' }) : t('phoneGate.title')}
-            </div>
-            <div style={{ marginTop: 6, font: `400 13px/1.55 ${T.font}`, color: T.textDim }}>
-              {existingAccount ? t('phoneGate.existingSubtitle') : t('phoneGate.subtitle')}
-            </div>
+    <Sk
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="gate-title"
+      style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'var(--k-bg)', overflowY: 'auto' }}
+    >
+      <div style={card
+        ? { minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 28 }
+        : { padding: 'calc(env(safe-area-inset-top, 0px) + 18px) 16px 32px', display: 'flex', justifyContent: 'center' }}
+      >
+        <div className={card ? 'stk card padl' : 'stk'} style={{ gap: onPhoneStep ? 20 : 18, width: '100%', maxWidth: 460 }}>
+          <div className="rowb">
+            <span className="row sm"><span className="av sm">{initials(tenant.name)}</span><b>{tenant.name}</b></span>
+            <button type="button" className="link sm" onClick={backToStore}>{t('profileGate.backToStore')}</button>
           </div>
-          <PhoneStep initialNumber="" />
-          {signOut}
-        </div>
-      ) : (
-        <form onSubmit={submit} style={card} aria-labelledby="gate-title">
-          {steps}
-          <div>
-            <div id="gate-title" style={{ font: `800 20px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{t('profileGate.title')}</div>
-            <div style={{ marginTop: 6, font: `400 13px ${T.font}`, color: T.textDim }}>{t('profileGate.subtitle')}</div>
-          </div>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={label}>{t('profileGate.firstName')}</span>
-            <input value={f.firstName} onChange={set('firstName')} autoComplete="given-name" style={input} />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={label}>{t('profileGate.lastName')}</span>
-            <input value={f.lastName} onChange={set('lastName')} autoComplete="family-name" style={input} />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={label}>{t('profileGate.dob')}</span>
-            <DateOfBirthPicker
-              value={f.dateOfBirth}
-              onChange={(v) => { setForm({ ...f, dateOfBirth: v }); setErr(''); }}
+
+          {onPhoneStep ? (
+            <PhoneStep
+              progress={existingAccount ? null : progress(2)}
+              existing={existingAccount}
+              name={user.firstName || ''}
             />
-          </label>
-          {err && <div role="alert" style={{ font: `500 12.5px ${T.font}`, color: T.danger }}>{err}</div>}
-          <button type="submit" disabled={busy} style={{
-            height: 50, borderRadius: 14, border: 'none',
-            background: busy ? T.surface2 : T.grad, color: busy ? T.textMute : '#fff',
-            font: `700 14px ${T.font}`, cursor: busy ? 'not-allowed' : 'pointer',
-            boxShadow: busy ? 'none' : `0 10px 28px ${alpha(T.accent, 0.33)}`,
-          }}>
-            {busy ? t('profileGate.saving') : t('profileGate.next')}
+          ) : (
+            <form className="stk" style={{ gap: 18 }} onSubmit={submit} noValidate>
+              {progress(1)(false)}
+              <div className="stk" style={{ gap: 6 }}>
+                <h1 id="gate-title" className="h1">{t('profileGate.title')}</h1>
+                <p className="dim">{t('profileGate.subtitle')}</p>
+              </div>
+              <label className="fld">
+                {t('profileGate.firstName')}
+                <input className="in" value={f.firstName} onChange={set('firstName')} autoComplete="given-name" />
+              </label>
+              <label className="fld">
+                {t('profileGate.lastName')}
+                <input className="in" value={f.lastName} onChange={set('lastName')} autoComplete="family-name" />
+              </label>
+              <div className="fld">
+                {t('profileGate.dob')}
+                <DateOfBirthPicker
+                  value={f.dateOfBirth}
+                  onChange={(v) => { setForm({ ...f, dateOfBirth: v }); setErr(''); }}
+                />
+              </div>
+              <p className="hint">{t('profileGate.dobHint')}</p>
+              {err && <p className="errt" role="alert">{err}</p>}
+              <button type="submit" className="btn btn-p btn-lg btn-b" disabled={busy} aria-disabled={busy || undefined} style={{ marginTop: 6 }}>
+                {busy ? t('profileGate.saving') : t('profileGate.next')}
+              </button>
+            </form>
+          )}
+
+          <button type="button" className="link sm" style={{ alignSelf: 'center', color: 'var(--k-dim)' }} onClick={logout}>
+            {t('profileGate.signOut')}
           </button>
-          {signOut}
-        </form>
-      )}
-    </div>
+        </div>
+      </div>
+    </Sk>
   );
 }

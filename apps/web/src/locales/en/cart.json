@@ -14,9 +14,10 @@
   "bag": "Your bag",
   "bagCount": "Your bag · {{count}}",
   "emptyTitle": "Your bag is empty",
-  "emptyBody": "Add something you love from the storefront — the cart updates live.",
+  "emptyBody": "Add the things you like.",
   "browse": "Browse {{name}}",
   "shipping": "Shipping",
   "continueCheckout": "Continue to checkout",
-  "deliveryAtCheckout": "Chosen at checkout"
+  "deliveryAtCheckout": "Chosen at checkout",
+  "emptyHeading": "Bag"
 }

@@ -24,6 +24,7 @@ import CategoryPills from '../components/store/CategoryPills';
 import { SortMenu } from '../components/store/CollectionFilters';
 import { useStoreCategories } from '../hooks/useStoreCategories';
 import Collection from './Collection';
+import { NoResults } from '../components/shop/EmptyStates';
 
 const PAGE_SIZE = 12;
 // The home page's sort, the same three as a collection's (A3), kept in the URL
@@ -336,11 +337,19 @@ function ShopHome() {
           ))}
       </div>
 
-      {products.length === 0 && !isLoading && !error && (
+      {/* A search that found nothing is the design's E3: another word to
+          try, the way back to everything, and a few products. */}
+      {products.length === 0 && !isLoading && !error && (query ? (
+        <NoResults
+          query={query}
+          onSearch={(w) => { setQuery(w); setSearchParams({ search: w }, { replace: true }); }}
+          onAll={() => { setQuery(''); navigate('/', { replace: true }); }}
+        />
+      ) : (
         <div style={{ padding: `40px ${gutter}px`, textAlign: 'center', color: T.textDim, font: `500 14px ${T.font}` }}>
-          {query ? t('noProductsQuery', { query }) : t('noProducts')}
+          {t('noProducts')}
         </div>
-      )}
+      ))}
 
       <div ref={loadMoreRef} style={{ position: 'relative', padding: `0 ${gutter}px 14px` }}>
         {(isLoading || hasMore) && products.length > 0 && (

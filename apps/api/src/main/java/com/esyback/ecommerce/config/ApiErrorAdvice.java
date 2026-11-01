@@ -57,8 +57,11 @@ public class ApiErrorAdvice {
         body.put("status", status.value());
         if (e instanceof ApiRefusal refusal) {
             body.put("code", refusal.getCode());
-            // The values inside the sentence, for a client that words it itself.
+            // The values inside the sentence, for a client that words it itself:
+            // nested under details, and also beside the code (never replacing the
+            // keys above), because callers read either form ("3 tries left").
             if (!refusal.getDetails().isEmpty()) body.put("details", refusal.getDetails());
+            refusal.getDetails().forEach(body::putIfAbsent);
         }
         // Headers the thrower attached are part of the refusal (Retry-After,
         // WWW-Authenticate) and are lost if this handler drops them.

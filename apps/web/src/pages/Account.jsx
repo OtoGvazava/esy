@@ -7,8 +7,8 @@ import { useGlow } from '../styles/glow';
 import { managerUrl } from '../hooks/usePlatformHost';
 import { Icon, PoweredBy, langInfo } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, money } from '../components/glow/GlowChrome';
-import PersonalInfo from '../components/PersonalInfo';
 import SignIn from './SignIn';
+import { dayTime } from '../components/shop/kit';
 import { alpha } from '../core/tokens';
 
 export default function Account() {
@@ -38,6 +38,8 @@ export default function Account() {
       v: null,
       onClick: () => navigate('/settings/display'),
     },
+    // Personal details are their own screen (D1 → D2).
+    { id: 'personal', k: t('account.personal.title'), v: null, onClick: () => navigate('/account/personal') },
     { id: 'addresses', k: t('account.setAddresses'), v: null, onClick: null },
     { id: 'payments', k: t('account.setPayments'), v: null, onClick: null },
     ...(isAdmin ? [{ id: 'dashboard', k: t('account.setDashboard'), v: t('account.dashboardValue'), onClick: () => navigate('/admin') }] : []),
@@ -88,9 +90,6 @@ export default function Account() {
           ))}
         </div>
 
-        {/* personal information + phone verification */}
-        <PersonalInfo />
-
         {/* recent orders */}
         {recent.length > 0 && (
           <>
@@ -101,7 +100,8 @@ export default function Account() {
             <div style={{ padding: '0 16px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {recent.map((o, idx) => {
                 const id = (o.orderNumber || o.id || `ESY-${idx}`).toString().toUpperCase();
-                const date = o.createdAt ? new Date(o.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—';
+                // "1 ნოე.": the locale's month names, not the browser's (it printed "Nov 1" in Georgian)
+                const date = dayTime(t, o.createdAt, { time: false }) || '—';
                 const n = o.count ?? (Array.isArray(o.items) ? o.items.length : '—');
                 const delivered = o.status === 'delivered';
                 return (
