@@ -718,10 +718,19 @@ public class OrderService {
     /** {@link #revenue(Tenant)} over a given set of orders (one store's, one period's). */
     public static BigDecimal revenueOf(Collection<Order> orders) {
         return orders.stream()
-            .filter(o -> o.getStatus() != Order.Status.CANCELLED)
-            .filter(o -> o.getPaymentStatus() != Order.PaymentStatus.REFUNDED)
+            .filter(OrderService::countsAsRevenue)
             .map(OrderService::goodsTotal)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Whether an order's goods are in {@link #revenueOf}: not cancelled and
+     * not refunded. The store's analytics divide revenue by the orders this
+     * admits, so the average and the total can never be counted two ways.
+     */
+    static boolean countsAsRevenue(Order o) {
+        return o.getStatus() != Order.Status.CANCELLED
+            && o.getPaymentStatus() != Order.PaymentStatus.REFUNDED;
     }
 
     /**
@@ -729,7 +738,7 @@ public class OrderService {
      * Orders placed before delivery existed have a null fee and are already
      * goods-only, so they need no adjustment.
      */
-    private static BigDecimal goodsTotal(Order o) {
+    static BigDecimal goodsTotal(Order o) {
         BigDecimal total = o.getTotal() == null ? BigDecimal.ZERO : o.getTotal();
         BigDecimal delivery = o.getDeliveryFee();
         return delivery == null ? total : total.subtract(delivery);
@@ -797,13 +806,13 @@ public class OrderService {
     }
 
     /** Took money, or the free-order flow, or money being returned — and not cancelled. */
-    private static boolean isBillable(Order o) {
+    static boolean isBillable(Order o) {
         if (o.getStatus() == Order.Status.CANCELLED) return false;
         Order.PaymentStatus ps = o.getPaymentStatus();
         return ps == Order.PaymentStatus.PAID || ps == Order.PaymentStatus.NONE || isBeingRefunded(o);
     }
 
-    private static boolean isBeingRefunded(Order o) {
+    static boolean isBeingRefunded(Order o) {
         return o.getPaymentStatus() == Order.PaymentStatus.REFUND_PENDING
             || o.getPaymentStatus() == Order.PaymentStatus.REFUNDED;
     }

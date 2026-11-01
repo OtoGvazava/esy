@@ -397,11 +397,15 @@ export default function ManagerDesign() {
   };
   const closeDialog = () => { if (!busy) setDialog(''); };
 
-  const publish = async () => {
+  // `primary`: the publish dialog's colour fix (Z4), saved into the draft first.
+  const publish = async (primary) => {
     if (busy || !canPublish) return;
     setBusy('publish');
     setDialogError('');
     try {
+      if (typeof primary === 'string') {
+        await tenantApi.saveDesignDraft({ ...edit, colours: { ...(edit.colours || {}), primary } }, sub);
+      }
       applyView(await tenantApi.publishDesign(sub));
       unsaved.delete(cacheKey);
       setDialog('');

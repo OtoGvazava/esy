@@ -198,5 +198,14 @@
     "verified": "Verified store",
     "bannerCta": "View item",
     "follow": "Follow us"
+  },
+  "publishCheck": {
+    "ok": "The colour check passed.",
+    "leadWhite": "White text on {{colour}} is hard to read",
+    "leadBlack": "Black text on {{colour}} is hard to read",
+    "body": "(contrast {{ratio}}:1), so shoppers will struggle to read the buttons. «Fix it» takes its darker shade as the store colour: {{fixed}}, {{fixedRatio}}:1.",
+    "buy": "Buy",
+    "anyway": "Publish anyway",
+    "fix": "Fix it"
   }
 }
