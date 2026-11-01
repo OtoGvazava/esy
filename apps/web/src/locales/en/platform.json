@@ -1,4 +1,260 @@
 {
+  "open": {
+    "back": "Back",
+    "backHome": "Back, to the home page",
+    "backLooks": "Back, to the three looks",
+    "cancel": "Cancel",
+    "next": "Continue",
+    "change": "Change",
+    "signOut": "Sign out of this account",
+    "stepOf": "Step {{n}} / {{total}}",
+    "stepMore": "Step {{n}} / {{total}} · All looks",
+    "stepCheck": "Review · last step",
+    "steps": {
+      "profile": "Your profile",
+      "phone": "Verify your phone",
+      "name": "Name and link",
+      "category": "Category",
+      "look": "Look",
+      "brand": "Logo and colour",
+      "check": "Review"
+    },
+    "signin": {
+      "title": "Open a store",
+      "body": "Sign in with Google. The same account buys in any esy store.",
+      "google": "Continue with Google",
+      "ahead": "Next, in about a minute",
+      "bySms": "With an SMS code",
+      "termsPre": "By continuing you accept the ",
+      "termsLink": "seller terms",
+      "termsPost": ".",
+      "panelTitle": "Your store, your brand.",
+      "panelBody": "Makers, studios and small brands from all over Georgia already sell on esy."
+    },
+    "progress": {
+      "title": "Opening a store",
+      "google": "Google account",
+      "done": "Done",
+      "now": "Now",
+      "ahead": "Next: {{steps}}",
+      "once": "One check is enough: the same account buys in any esy store."
+    },
+    "profile": {
+      "label": "Your profile",
+      "title": "Introduce yourself",
+      "body": "Fill it in once and every esy store uses it.",
+      "first": "First name",
+      "last": "Last name",
+      "dob": "Date of birth",
+      "dobWhy": "Stores can't see your date of birth. It is needed for age-restricted items.",
+      "required": "Please fill in your first name, last name and date of birth.",
+      "failed": "Could not save. Try again.",
+      "saving": "Saving…"
+    },
+    "phone": {
+      "label": "Phone check",
+      "title": "Your phone number",
+      "body": "To open a store, your number is confirmed with an SMS code. One number belongs to one account.",
+      "field": "Mobile number",
+      "placeholder": "5XX XX XX XX",
+      "hint": "The number is linked to your account. Buyers can't see it.",
+      "send": "Send the code",
+      "codeTitle": "Enter the code",
+      "codeSent": "The code was sent to",
+      "codeLabel": "4-digit code",
+      "resendInPre": "Send again in ",
+      "resendInPost": "",
+      "resendIn": "Send again in {{time}}",
+      "resend": "Send again",
+      "newCode": "Send a new code",
+      "changeNumber": "Change the number",
+      "confirm": "Confirm",
+      "codeHint": "The code works for {{minutes}} minutes. No SMS? Check the number, or wait and send it again."
+    },
+    "name": {
+      "title": "What is your store called?",
+      "body": "The name shows at the top of your store; the link is what you share with buyers.",
+      "nameLabel": "Store name",
+      "namePlaceholder": "e.g. Studio Form",
+      "linkLabel": "Link",
+      "rule": "3–30 characters: a–z, 0–9 and hyphens",
+      "previewTitle": "How the link will look",
+      "previewNote": "The link works in Instagram, Facebook and WhatsApp.",
+      "yourStore": "Your store",
+      "sub": {
+        "available": "Available",
+        "checking": "Checking…",
+        "taken": "Taken",
+        "reserved": "Reserved",
+        "invalid": "Not valid yet"
+      },
+      "why": {
+        "taken": "Another store has this link. Try another.",
+        "reserved": "This word is kept for esy's own pages."
+      }
+    },
+    "category": {
+      "title": "What do you sell?",
+      "body": "We suggest looks that suit it. You can change everything later."
+    },
+    "look": {
+      "title": "Pick a look",
+      "sub": "Three looks for “{{cat}}”. Change the menu, layout and colour right here.",
+      "subAny": "Three looks to start from. Change the menu, layout and colour right here.",
+      "prev": "Previous look",
+      "next": "Next look",
+      "menu": "Menu",
+      "layout": "Layout",
+      "colour": "Colour",
+      "use": "Use {{name}}",
+      "tune": "Tune {{name}}",
+      "more": "More looks",
+      "shuffle": "Shuffle"
+    },
+    "lookGen": {
+      "social": "Social shop",
+      "boutique": "Boutique",
+      "nightdrop": "Night drop",
+      "sneaker": "Sneaker drop",
+      "bakery": "Corner bakery",
+      "market": "Fresh market",
+      "coffee": "Coffee bar",
+      "glowup": "Glow up",
+      "pastel": "Pastel shelf",
+      "gadget": "Gadget lab",
+      "cleantech": "Clean tech",
+      "studio": "Studio",
+      "gallerywall": "Gallery wall",
+      "toybox": "Toy box"
+    },
+    "more": {
+      "title": "One store, {{count}} looks",
+      "body": "Every thumbnail is your store. Pick one.",
+      "all": "All",
+      "filter": "Show looks for"
+    },
+    "brand": {
+      "title": "Logo and colour",
+      "body": "Both are optional. Add a logo and we take the colour from it.",
+      "logo": "Logo",
+      "drop": "Drop your logo here or choose one",
+      "choose": "Choose a logo",
+      "types": "PNG, JPG, WebP or GIF, up to 5 MB",
+      "chosen": "Added · {{w}} × {{h}}",
+      "change": "Change",
+      "changeLabel": "Change the logo",
+      "remove": "Remove",
+      "errType": "We can't use that file: choose a PNG, JPG, WebP or GIF.",
+      "errSize": "The file is over 5 MB.",
+      "errRead": "We couldn't read that image. Try another file.",
+      "fromLogo": "Colour from your logo",
+      "orOther": " · or pick another",
+      "pick": "Pick a colour",
+      "logoSwatch": "Colour from the logo, {{colour}}",
+      "custom": "Another colour, your own",
+      "customOn": "Your colour, {{colour}}",
+      "checkOk": "The colour reads well on buttons, in light and dark mode.",
+      "check": {
+        "light": "This colour almost disappears on a light page.",
+        "dark": "This colour almost disappears in dark mode."
+      },
+      "fix": "Fix it",
+      "yourStore": "Your store",
+      "later": "You can change all of it later.",
+      "next": "Review"
+    },
+    "spec": {
+      "look": "Look",
+      "theme": "Theme",
+      "menu": "Menu",
+      "layout": "Layout"
+    },
+    "layoutSpec": {
+      "grid2": "2 columns",
+      "grid3": "3 columns",
+      "feed": "Feed",
+      "list": "List"
+    },
+    "colours": {
+      "green": "green",
+      "blue": "blue",
+      "pink": "pink",
+      "orange": "orange",
+      "purple": "purple",
+      "black": "black",
+      "red": "red",
+      "yellow": "yellow",
+      "teal": "teal",
+      "brown": "brown",
+      "grey": "grey",
+      "white": "white"
+    },
+    "check": {
+      "title": "Looking good?",
+      "body": "Confirm and we'll get your store running. It usually takes under 10 seconds.",
+      "preview": "Preview of the store",
+      "noLogo": "No logo",
+      "fromLogo": "{{colour}}, from the logo",
+      "changeWhat": "Change: {{what}}",
+      "termsPre": "I accept esy's ",
+      "termsLink": "seller terms",
+      "termsPost": ". I know esy's fee is {{fee}}% of each sale.",
+      "publish": "Publish the store"
+    },
+    "error": {
+      "taken": {
+        "title": "{{host}} was just taken",
+        "body": "Someone opened a store with this link a moment ago. Pick another.",
+        "action": "Change the link"
+      },
+      "name": {
+        "title": "“{{name}}” is taken",
+        "body": "Another store already uses this name. Pick another one.",
+        "action": "Change the name"
+      },
+      "invalid": {
+        "title": "The store couldn't be opened",
+        "body": "Something in the name or the link isn't accepted. Check them and try again.",
+        "action": "Check the name and link"
+      },
+      "network": {
+        "title": "The store couldn't be opened",
+        "body": "The connection dropped or the server didn't answer. Try again."
+      },
+      "phone": {
+        "title": "Verify your phone first",
+        "body": "esy asks for a verified number before a store opens."
+      }
+    },
+    "creating": {
+      "label": "Creating",
+      "link": "Link",
+      "style": "Look",
+      "logo": "Setting the logo",
+      "logoFailed": "Logo not set",
+      "ways": "ways a store can look"
+    },
+    "live": {
+      "title": "{{name}} is open!",
+      "body": "Your store is live. Orders begin once you add your first product and turn on payment.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "share": "Share",
+      "shareOn": "Share on {{where}}",
+      "instagramCopied": "Link copied — paste it into your Instagram profile.",
+      "nextTitle": "Next steps",
+      "product": "Add your first product",
+      "productSub": "Or upload many at once with a CSV file",
+      "pay": "Turn on card payments",
+      "paySub": "Bank of Georgia · the money comes straight to you",
+      "design": "Customise the design in detail",
+      "designSub": "Menu, layout, font, colours",
+      "dashboard": "Dashboard",
+      "visit": "View the store",
+      "logoFailed": "The logo didn't upload. The store is open anyway — add the logo in Brand settings.",
+      "logoFailedAction": "Open Brand settings"
+    }
+  },
   "nav": {
     "browse": "Browse",
     "sell": "Sell",
@@ -101,64 +357,6 @@
       "sport": "Sport",
       "wear": "Clothing"
     }
-  },
-  "reg": {
-    "stepOf": "Step {{n}} / 4",
-    "stepAccount": "Account",
-    "stepIdentity": "Identity",
-    "stepBrand": "Brand",
-    "stepReview": "Review",
-    "stepLive": "Live",
-    "skipped": "· skipped",
-    "createAccount": "Create your esy account",
-    "createAccountBody": "One login covers everything on esy — selling, buying, following stores. No separate seller account.",
-    "continueGmail": "Continue with Gmail",
-    "accountNote": "We create your account on first sign-in. Same login for buying and selling.",
-    "yourStore": "Your store",
-    "identityTitle": "Pick a name and a subdomain.",
-    "identityBody": "You can change the name later. The subdomain becomes your store's permanent URL.",
-    "storeName": "Store name",
-    "storeNamePlaceholder": "Aurora Audio",
-    "subdomain": "Subdomain",
-    "sub": {
-      "checking": "Checking…",
-      "available": "Available",
-      "taken": "Taken",
-      "reserved": "Reserved",
-      "invalid": "Invalid — 3–30 chars, a–z 0–9 hyphens"
-    },
-    "continue": "Continue",
-    "branding": "Branding",
-    "brandingTitle": "Pick a color. The whole store will use it.",
-    "brandingBodyPre": "Your brand color lives on buttons, badges, and accents across ",
-    "livePreview": "Live preview",
-    "shortDescription": "Short description",
-    "descPlaceholder": "What you make, in one sentence.",
-    "reviewYourStore": "Review your store",
-    "review": "Review",
-    "reviewTitle": "Looking good?",
-    "reviewBody": "Confirm and we'll spin up your subdomain — usually under 10 seconds.",
-    "fieldBrand": "Brand",
-    "fieldPlan": "Plan",
-    "fieldPlanValue": "Free · 2%",
-    "fieldRegion": "Region",
-    "fieldRegionValue": "EU",
-    "errTakenTitle": "{{sub}}.esy.ge was just claimed",
-    "errCreateTitle": "Could not create the store",
-    "creating": "Creating…",
-    "tryAgain": "Try again",
-    "createMyStore": "Create my store",
-    "terms": "By creating you accept esy's Seller Terms. No credit card needed.",
-    "live": "You're live.",
-    "liveBody": "{{name}} is now hosted on esy. Share the link below — the first sale is the hardest one.",
-    "copy": "Copy",
-    "openDashboard": "Open the dashboard",
-    "visitStore": "Visit {{host}}",
-    "category": "Category",
-    "phoneGateEyebrow": "Before you open",
-    "phoneGateTitle": "Verify your number",
-    "phoneGateBody": "Buyers and couriers call this number. It is verified once and works at every shop.",
-    "phoneGateNote": "Both requirements are platform-level — if you have shopped on esy before, you have already passed them."
   },
   "account": {
     "loading": "Loading your account…",

@@ -19,7 +19,7 @@
 // The page body (hero, stories, product count, grid, about strip) follows
 // pages/Home.jsx as a phone draws it; when one changes, the other should too.
 // Only the store's contact buttons are left out, because they would fetch.
-import { Component, useEffect, useMemo } from 'react';
+import { Component, useContext, useEffect, useMemo } from 'react';
 import { MemoryRouter, UNSAFE_LocationContext as LocationContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ThemeProvider, useTheme } from '@mui/material';
@@ -156,6 +156,11 @@ const GUTTER = 16;
 
 function PreviewHome({ products, total, sample }) {
   const { T, tenant } = useGlow();
+  const { tenant: own } = useContext(TenantContext);
+  // The store's own words only. useGlow gives a store that has written none
+  // esy's English placeholder line, and a preview must not put words in a
+  // seller's mouth (a store opened in quick setup has none yet).
+  const bio = own?.tagline || own?.description || '';
   const design = useDesign();
   const { t } = useTranslation('home');
   const { t: td } = useTranslation('design');
@@ -187,7 +192,7 @@ function PreviewHome({ products, total, sample }) {
       )}
 
       <StoreBanner products={items} />
-      {tenant.bio && !cover && !bannerShown(design) && (
+      {bio && !cover && !bannerShown(design) && (
         <div style={{ position: 'relative', padding: `${sp(14)} ${GUTTER}px ${sp(4)}` }}>
           <div style={{
             position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-card)',
@@ -198,7 +203,7 @@ function PreviewHome({ products, total, sample }) {
             <div style={{
               font: `700 26px/1.08 ${T.font}`, letterSpacing: '-0.02em', maxWidth: 620,
               display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-            }}>{tenant.bio}</div>
+            }}>{bio}</div>
             <span style={{
               alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', height: 44, padding: '0 20px',
               borderRadius: 'var(--k-r-btn)', background: '#fff', color: '#0b0b0f', font: `700 14px ${T.font}`,
@@ -258,7 +263,7 @@ function PreviewHome({ products, total, sample }) {
       <div style={{ position: 'relative', padding: `${sp(14)} ${GUTTER}px ${sp(30)}` }}>
         <div style={{ borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`, padding: 16 }}>
           <div style={{ font: `700 15px ${T.font}`, color: T.text, marginBottom: 8 }}>{t('aboutStore')}</div>
-          {tenant.about && tenant.about !== tenant.bio && (
+          {tenant.about && tenant.about !== bio && (
             <div style={{ font: `400 13.5px/1.7 ${T.font}`, color: T.textDim, marginBottom: 12 }}>{tenant.about}</div>
           )}
           {tenant.location && (

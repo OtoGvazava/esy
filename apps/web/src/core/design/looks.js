@@ -25,9 +25,10 @@ export const LOOKS = [
 
 export const lookById = (id) => LOOKS.find((l) => l.id === id) || null;
 
-// Registration's category ids, onto the looks' seven groups.
+// Registration's category ids, onto the looks' seven groups. Quick setup asks
+// for the group itself ("what do you sell?"), so a group id is its own group.
 const GROUP = { fashion: 'fashion', wear: 'fashion', electronics: 'tech', home: 'home', art: 'home', food: 'food' };
-export const groupOf = (category) => GROUP[category] || 'other';
+export const groupOf = (category) => GROUP[category] || (SUGGEST[category] ? category : 'other');
 
 // Three looks a seller sees first for what they sell (store plan, Phase 4).
 const SUGGEST = {

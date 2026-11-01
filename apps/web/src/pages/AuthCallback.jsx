@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
 import { alpha } from '../core/tokens';
+import { isPlatformHost } from '../hooks/usePlatformHost';
 
 // Landing point after Google OAuth. The backend has already set the HttpOnly
 // esy_token cookie (Domain=esy.ge) before redirecting here; we only reach this
@@ -20,8 +21,15 @@ export default function AuthCallback() {
     try {
       const saved = sessionStorage.getItem('esy_post_login');
       sessionStorage.removeItem('esy_post_login');
-      const tenantParam = saved && new URL(saved, window.location.origin).searchParams.get('tenant');
+      const from = saved ? new URL(saved, window.location.origin) : null;
+      const tenantParam = from && from.searchParams.get('tenant');
       if (tenantParam) dest = `/account?tenant=${encodeURIComponent(tenantParam)}`;
+      // Opening a store (esy.ge/sell) continues where it started, with the
+      // look a landing-page link picked (?look=).
+      else if (from && from.pathname === '/sell' && isPlatformHost()) {
+        const look = from.searchParams.get('look');
+        dest = look ? `/sell?look=${encodeURIComponent(look)}` : '/sell';
+      }
     } catch { /* keep default /account */ }
     window.location.replace(dest);
   }, []);

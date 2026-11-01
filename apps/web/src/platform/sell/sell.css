@@ -1,0 +1,196 @@
+/* Opening a store (the design's O2–O10), in the esy look: the design kit's
+   classes (esy-kit.css on the "esy Full Design" canvas) at the kit's sizes,
+   prefixed sl- so nothing outside the flow picks them up. Every colour, radius
+   and face is a theme token from styles/themes.css, so light and dark follow
+   <html data-md> as they do on every platform page.
+
+   The kit draws three devices; here they are the app's own breakpoints
+   (contexts/DeviceContext): a phone up to 768px, a tablet to 1024px. */
+
+.sl{--sl-gut:16px;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--k-page);color:var(--k-fg);font:400 14px/1.45 var(--k-font);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+@media (min-width:769px){.sl{--sl-gut:28px}}
+@media (min-width:1025px){.sl{--sl-gut:48px}}
+.sl :is(button,input,select,textarea){font-family:inherit}
+.sl-main{flex:1 0 auto}
+
+/* ---- the bar across the top, the step bar and the phone's action bar ---- */
+.sl-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 14px) var(--sl-gut) 12px}
+.sl-top > .sl-sm{min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl-top > .sl-link{flex:none;padding:12px 0;margin:-12px 0}
+.sl-gap{width:44px;flex:none}
+.sl-stepsw{padding:0 var(--sl-gut)}
+.sl-steps{display:flex;gap:6px}
+.sl-steps i{flex:1;height:4px;border-radius:2px;background:var(--k-line)}
+.sl-steps i.on{background:var(--k-pri)}
+@media (min-width:769px){.sl-steps{max-width:584px;margin:0 auto}}
+@media (min-width:1025px){.sl-steps{max-width:980px}}
+/* Sticky at the foot: at the bottom of a short screen, kept in view on a long one. */
+.sl-bar{position:sticky;bottom:0;z-index:4;padding:14px var(--sl-gut) calc(env(safe-area-inset-bottom,0px) + 14px);background:var(--k-page);border-top:1px solid var(--k-line);display:flex;flex-direction:column;gap:10px;margin-top:24px}
+
+/* ---- type ---- */
+.sl-h1{font:var(--k-w-t,700) 26px/1.15 var(--k-font-d);letter-spacing:-.02em;margin:0;text-wrap:balance}
+.sl-big{font:var(--k-w-t,700) 32px/1.08 var(--k-font-d);letter-spacing:-.025em;margin:0;text-wrap:balance}
+.sl-h3{font:600 16px/1.3 var(--k-font-d);margin:0}
+@media (min-width:769px){.sl-big{font-size:40px}}
+@media (min-width:1025px){.sl-h1{font-size:30px}.sl-big{font-size:46px}}
+/* A link takes its surroundings' type, so it comes before the size helpers below. */
+.sl-link{color:var(--k-acc);font:inherit;font-weight:600;text-decoration:none;background:none;border:0;padding:0;cursor:pointer}
+.sl-link.bad{color:var(--k-bad)}
+.sl-p{margin:0;color:var(--k-dim)}
+.sl-lg{font-size:16px}
+.sl-sm{font-size:12.5px}
+.sl-xs{font-size:12px}
+.sl-dim{color:var(--k-dim)}
+.sl-lbl{font:600 11.5px/1.2 var(--k-font-m);letter-spacing:.06em;color:var(--k-dim)}
+.sl-num{font-variant-numeric:tabular-nums}
+.sl-hint{margin:0;font-size:12px;color:var(--k-dim)}
+
+/* ---- layout ---- */
+.sl-row{display:flex;align-items:center;gap:10px}
+.sl-rowb{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sl-stk{display:flex;flex-direction:column;gap:12px}
+.sl-grow{flex:1;min-width:0}
+.sl-wrap{flex-wrap:wrap}
+
+/* ---- icons ---- */
+.sl-ic{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:var(--k-ic-w,1.8);stroke-linecap:round;stroke-linejoin:round}
+.sl-ic.s{width:16px;height:16px}
+.sl-ic.l{width:28px;height:28px}
+
+/* ---- buttons ---- */
+.sl-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 22px;border-radius:var(--k-r-btn);font:600 15px/1 var(--k-font);border:0;cursor:pointer;white-space:nowrap;text-decoration:none;flex:none;background:transparent;color:var(--k-fg)}
+.sl-btn.lg{height:54px;font-size:16px;padding:0 26px}
+.sl-btn.sm{height:38px;padding:0 15px;font-size:13.5px}
+@media (max-width:768px){.sl-btn.sm{height:40px}}
+.sl-btn.b{width:100%}
+.sl-row > .sl-btn.b,.sl-rowb > .sl-btn.b{flex:1 1 0;width:auto}
+.sl-btn.p{background:var(--k-pri);color:var(--k-on-pri)}
+.sl-btn.g{box-shadow:inset 0 0 0 1.5px var(--k-line)}
+.sl-btn.s{background:var(--k-sf2)}
+.sl-btn.p:hover{background:color-mix(in oklab,var(--k-pri) 90%,#000)}
+.sl-btn:is(.g,.s):hover{background:color-mix(in oklab,var(--k-fg) 5%,var(--k-sf2))}
+/* A disabled button is flat and quiet, but its label still reads (3:1 at least). */
+.sl-btn[aria-disabled="true"]{background:color-mix(in srgb,var(--k-fg) 9%,var(--k-sf));color:color-mix(in srgb,var(--k-fg) 56%,var(--k-sf));box-shadow:none;cursor:default}
+.sl-ibtn{width:44px;height:44px;border-radius:var(--k-r-ibtn);display:inline-grid;place-items:center;color:var(--k-fg);flex:none;border:0;background:var(--k-sf2);cursor:pointer;padding:0}
+.sl :is(button,a,input,label,[tabindex]):focus-visible,.sl label.sl-link:focus-within,.sl-file:focus-visible + .sl-cbox{outline:3px solid color-mix(in oklab,var(--k-pri) 60%,transparent);outline-offset:2px}
+
+/* ---- fields ---- */
+.sl-fld{display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--k-dim)}
+.sl-in{width:100%;height:50px;padding:0 15px;border-radius:var(--k-r-in);background:var(--k-in-bg);border:1.5px solid var(--k-in-bd);color:var(--k-fg);font:15px var(--k-font);outline:none;appearance:none}
+.sl-ingrp{display:flex;align-items:center;height:50px;border-radius:var(--k-r-in);border:1.5px solid var(--k-in-bd);background:var(--k-in-bg);overflow:hidden;color:var(--k-dim);font-size:15px}
+.sl-ingrp input{flex:1;min-width:0;border:0;background:transparent;height:100%;padding:0 4px 0 15px;font:15px var(--k-font);color:var(--k-fg);outline:none}
+.sl-ingrp > span{padding:0 14px;white-space:nowrap}
+.sl-in:focus,.sl-ingrp:focus-within{border-color:var(--k-pri);box-shadow:0 0 0 4px color-mix(in oklab,var(--k-pri) 18%,transparent)}
+.sl-in.err,.sl-ingrp.err{border-color:var(--k-bad);box-shadow:none}
+.sl-in::placeholder,.sl-ingrp input::placeholder{color:color-mix(in srgb,var(--k-dim) 80%,transparent)}
+
+/* ---- surfaces ---- */
+.sl-card{background:var(--k-sf);border:var(--k-card-bd);box-shadow:var(--k-card-sh);border-radius:var(--k-r-card)}
+.sl-pad{padding:16px}
+.sl-padl{padding:22px}
+.sl-list{background:var(--k-sf);border:var(--k-card-bd);box-shadow:var(--k-card-sh);border-radius:var(--k-r-card);overflow:hidden}
+.sl-li{display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;min-height:56px;border:0;border-bottom:1px solid var(--k-line);background:transparent;color:var(--k-fg);text-decoration:none;text-align:left;font:inherit}
+.sl-li:last-child{border-bottom:0}
+a.sl-li:hover,button.sl-li:hover{background:color-mix(in oklab,var(--k-fg) 3%,var(--k-sf))}
+.sl-li-ic{width:34px;height:34px;border-radius:var(--k-r-in);background:var(--k-sf2);display:grid;place-items:center;flex:none;color:var(--k-fg)}
+.sl-li-ic .sl-ic{width:18px;height:18px}
+.sl-av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:700 15px var(--k-font);flex:none;letter-spacing:.02em;overflow:hidden}
+.sl-av.sm{width:34px;height:34px;font-size:12px}
+.sl-av.lg{width:76px;height:76px;font-size:25px}
+.sl-av img{width:100%;height:100%;object-fit:cover;display:block}
+[data-md="dark"] .sl-av{box-shadow:0 0 0 1px rgba(255,255,255,.16)}
+
+/* ---- chips ---- */
+.sl-chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:var(--k-r-pill);font:600 12px/1 var(--k-font);white-space:nowrap;flex:none}
+.sl-chip.dot::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.sl-chip.proc{background:var(--k-sf2);color:var(--k-fg)}
+.sl-chip.done{background:var(--k-ok-bg);color:var(--k-ok)}
+.sl-chip.conf{background:var(--k-info-bg);color:var(--k-info)}
+.sl-chip.warn{background:var(--k-warn-bg);color:var(--k-warn)}
+.sl-chip.bad{background:var(--k-bad-bg);color:var(--k-bad)}
+.sl-chip.brand{background:color-mix(in oklab,var(--k-pri) 15%,var(--k-sf));color:var(--k-acc)}
+.sl-n{width:26px;height:26px;padding:0;justify-content:center;font-size:12px}
+.sl-n .sl-ic{width:14px;height:14px}
+.sl-now{box-shadow:0 0 0 3px color-mix(in oklab,var(--k-info) 24%,transparent)}
+
+/* ---- choices ---- */
+.sl-tile{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding:16px;border-radius:var(--k-r-card);background:var(--k-sf);border:1.5px solid var(--k-line);text-align:left;font:600 14px/1.35 var(--k-font);color:var(--k-fg);cursor:pointer;min-height:100%}
+.sl-tile .sl-ic{width:28px;height:28px}
+.sl-tile.on{border-color:var(--k-pri);background:color-mix(in oklab,var(--k-pri) 7%,var(--k-sf))}
+.sl-tile.on .sl-ic{color:var(--k-acc)}
+.sl-opt{display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px;border-radius:var(--k-r-card);background:var(--k-sf);border:1.5px solid var(--k-line);width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;min-width:0}
+.sl-opt.on{border-color:var(--k-pri);box-shadow:0 0 0 3px color-mix(in oklab,var(--k-pri) 14%,transparent)}
+.sl-radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--k-line);flex:none;background:var(--k-sf)}
+.sl-radio.on{border:7px solid var(--k-pri)}
+.sl-cbox{width:22px;height:22px;border-radius:6px;border:2px solid var(--k-line);flex:none;display:grid;place-items:center;color:var(--k-on-pri);background:var(--k-sf)}
+.sl-cbox.on{background:var(--k-pri);border-color:var(--k-pri)}
+.sl-pill{height:38px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;border-radius:var(--k-r-pill);background:var(--k-pill-bg);border:var(--k-pill-bd);color:var(--k-fg);font:600 13.5px var(--k-font);white-space:nowrap;flex:none;cursor:pointer}
+.sl-pill.on{background:var(--k-pill-on);color:var(--k-pill-on-fg);border-color:transparent}
+.sl-pills{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 calc(var(--sl-gut) * -1);padding:2px var(--sl-gut)}
+.sl-pills::-webkit-scrollbar{display:none}
+@media (max-width:1024px){.sl-pills{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 48px),transparent)}}
+@media (min-width:1025px){.sl-pills{flex-wrap:wrap;overflow:visible;margin:0;padding:0}.sl-pills .sl-pill{padding:0 13px}}
+.sl-swatch{width:40px;height:40px;border-radius:50%;border:1px solid rgba(0,0,0,.2);flex:none;padding:0;cursor:pointer;position:relative}
+[data-md="dark"] .sl-swatch{border-color:rgba(255,255,255,.26)}
+.sl-swatch.on{box-shadow:0 0 0 2px var(--k-ps),0 0 0 4px var(--k-fg)}
+.sl-swatch.custom{display:grid;place-items:center;background:conic-gradient(from 90deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#3b82f6,#a855f7,#ef4444);color:#fff}
+.sl-swatch.custom svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.45))}
+.sl-swatch input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+.sl-sep{width:1px;height:30px;background:var(--k-line);flex:none}
+.sl-dots{display:flex;gap:6px;justify-content:center}
+.sl-dots i{width:7px;height:7px;border-radius:4px;background:var(--k-line);transition:width .2s}
+.sl-dots i.on{width:20px;background:var(--k-pri)}
+
+/* ---- the one-time code: one input over four cells ---- */
+.sl-otp{position:relative;display:flex;gap:10px}
+.sl-otp span{width:58px;height:66px;border-radius:var(--k-r-in);background:var(--k-in-bg);border:1.5px solid var(--k-in-bd);display:grid;place-items:center;font:700 26px var(--k-font);font-variant-numeric:tabular-nums;color:var(--k-fg)}
+.sl-otp span.on{border-color:var(--k-pri);box-shadow:0 0 0 4px color-mix(in oklab,var(--k-pri) 18%,transparent)}
+.sl-otp.err span{border-color:var(--k-bad)}
+.sl-otp input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;font-size:16px;cursor:text}
+
+/* ---- notices ---- */
+.sl-alert{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:var(--k-r-card);background:var(--k-info-bg);color:var(--k-fg)}
+.sl-alert > .sl-ic{color:var(--k-info)}
+.sl-alert.ok{background:var(--k-ok-bg)}
+.sl-alert.ok > .sl-ic{color:var(--k-ok)}
+.sl-alert.warn{background:var(--k-warn-bg)}
+.sl-alert.warn > .sl-ic{color:var(--k-warn)}
+.sl-alert.bad{background:var(--k-bad-bg)}
+.sl-alert.bad > .sl-ic{color:var(--k-bad)}
+.sl-err{margin:0;font-size:12.5px;line-height:1.5;color:var(--k-bad)}
+.sl-ok{color:var(--k-ok)}
+
+/* ---- the logo drop zone ---- */
+.sl-dz{position:relative;border:2px dashed var(--k-line);border-radius:var(--k-r-card);padding:26px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;color:var(--k-dim);background:var(--k-sf);cursor:pointer}
+.sl-dz.full{flex-direction:row;text-align:left;padding:16px;gap:14px;cursor:default}
+.sl-dz.over{border-color:var(--k-pri);background:color-mix(in oklab,var(--k-pri) 5%,var(--k-sf))}
+.sl-dz:focus-within{border-color:var(--k-pri)}
+.sl-file{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+
+/* ---- progress ---- */
+.sl-prog{height:6px;border-radius:3px;background:var(--k-sf2);overflow:hidden;flex:none}
+.sl-prog i{display:block;height:100%;background:var(--k-pri);border-radius:3px;transition:width .45s ease}
+.sl-spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--k-sf2);border-top-color:var(--k-pri);flex:none;animation:sl-spin .8s linear infinite}
+@keyframes sl-spin{to{transform:rotate(360deg)}}
+.sl-empty-ic{border-radius:50%;display:grid;place-items:center;background:var(--k-ok-bg);color:var(--k-ok);flex:none}
+
+/* ---- a floating menu (the quick changes on the look step) ---- */
+.sl-pop{position:fixed;z-index:50;min-width:200px;max-width:calc(100vw - 24px);padding:6px;border-radius:var(--k-r-card);background:var(--k-fl-bg);border:var(--k-fl-bd);box-shadow:var(--k-fl-sh)}
+.sl-pop button.it{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;border:0;border-radius:calc(var(--k-r-card) - 6px);background:transparent;color:var(--k-fg);font:500 14px var(--k-font);text-align:left;cursor:pointer}
+.sl-pop button.it:hover,.sl-pop button.it:focus-visible{background:var(--k-sf2);outline:none}
+.sl-pop button.it[aria-checked="true"]{font-weight:700}
+.sl-pop .sws{display:flex;flex-wrap:wrap;gap:10px;padding:8px 6px}
+
+/* ---- the look wall's choice, and a thumbnail as a button ---- */
+.sl-th{display:block;border-radius:30px;padding:0;border:0;background:none;cursor:pointer}
+.sl-th.on{outline:3px solid var(--k-pri);outline-offset:6px}
+.sl-spec{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 14px;margin:0;align-content:start}
+.sl-spec dt{color:var(--k-dim)}
+.sl-spec dd{margin:0;font-weight:600;color:var(--k-fg)}
+
+/* ---- the sign-in screen's brand panel (desktop) ---- */
+.sl-panel{width:620px;flex:none;background:var(--k-brand);color:#fff;padding:56px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+.sl-share{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.sl-share > button,.sl-share > a{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px 9px;border-radius:var(--k-r-card);background:var(--k-sf);border:var(--k-card-bd);box-shadow:var(--k-card-sh);text-decoration:none;color:var(--k-fg);min-width:0;white-space:nowrap;cursor:pointer;font:inherit}
+
+@media (prefers-reduced-motion:reduce){.sl-spin{animation-duration:2.4s}.sl-prog i,.sl-dots i{transition:none}}
