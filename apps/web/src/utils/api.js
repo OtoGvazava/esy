@@ -580,6 +580,22 @@ export const tenantApi = {
       : '/api/tenant/stats';
     return api.get(path);
   },
+  // Analytics (X1): one window of 7, 30 or 90 days, or all time with no
+  // `days` — revenue, orders, the average, refunds, the window before, a day
+  // (or month) series and the best sellers. Same owner/manager gate as stats().
+  periodStats(days, devTenant, opts) {
+    const qs = new URLSearchParams();
+    if (days) qs.set('days', String(days));
+    if (devTenant) qs.set('tenant', devTenant);
+    const q = qs.toString();
+    return api.get(`/api/tenant/stats/period${q ? `?${q}` : ''}`, opts || {});
+  },
+  // Finances (X2): revenue and the commission owed per month, newest first,
+  // with the rate new orders are charged today.
+  monthStats(devTenant, opts) {
+    const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
+    return api.get(`/api/tenant/stats/months${q}`, opts || {});
+  },
   // Owner/admin: orders placed against the current store, newest first.
   // Same @storeAccess gate as stats().
   orders(devTenant) {
