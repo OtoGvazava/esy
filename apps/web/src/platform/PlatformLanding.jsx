@@ -153,8 +153,8 @@ export default function PlatformLanding() {
         </div>
       </div>
 
-      {/* HOW IT WORKS */}
-      <div style={{ padding: isDesktop ? '80px 56px 56px' : '36px 22px 24px', borderTop: `1px solid ${T.border}` }}>
+      {/* HOW IT WORKS — the top bar's "როგორ მუშაობს" lands here (#how). */}
+      <div id="how" style={{ padding: isDesktop ? '80px 56px 56px' : '36px 22px 24px', borderTop: `1px solid ${T.border}`, scrollMarginTop: 72 }}>
         <div style={{ font: `600 ${isDesktop ? 11 : 10}px ${T.font}`, color: T.accentFg, letterSpacing: '0.16em', marginBottom: 14 }}>{t('landing.howItWorks')}</div>
         <h2 style={{ font: `700 ${isDesktop ? 38 : 24}px/1.06 ${T.font}`, color: T.text, letterSpacing: '-0.035em', margin: '0 0 28px', maxWidth: 540 }}>
           {t('landing.howTitle')}
@@ -186,8 +186,8 @@ export default function PlatformLanding() {
         </div>
       </div>
 
-      {/* FEE STRIP */}
-      <div style={{ padding: isDesktop ? '56px 56px 80px' : '20px 22px 32px', borderTop: `1px solid ${T.border}` }}>
+      {/* FEE STRIP — the top bar's "ფასები" lands here (#pricing). */}
+      <div id="pricing" style={{ padding: isDesktop ? '56px 56px 80px' : '20px 22px 32px', borderTop: `1px solid ${T.border}`, scrollMarginTop: 72 }}>
         <div style={{
           padding: isDesktop ? '32px' : '20px',
           background: `linear-gradient(135deg, ${alpha(T.accent, 0.06)} 0%, ${alpha(shiftHue(T.accent, 25), 0.06)} 100%)`,

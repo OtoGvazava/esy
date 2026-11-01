@@ -94,17 +94,21 @@ export function useGlow() {
   // initial comes from its own name, and a location or founding year it has
   // not filled in stays empty (the defaults were English and invented).
   const name = tenant ? (tenant.displayName || tenant.name || TENANT.name) : TENANT.name;
+  // A Latin initial is capitalised; a Georgian one stays as it is, because its
+  // "capital" is Mtavruli, which the design never uses.
+  const initial = (Array.from(name.trim())[0] || '').replace(/[a-z]/, (c) => c.toUpperCase());
   const brand = tenant
     ? {
         ...TENANT,
         name,
-        initials: name.trim().charAt(0).toUpperCase() || TENANT.initials,
+        initials: initial || TENANT.initials,
         // The short/long pair the design draws. `bio` is the one-liner in the
-        // hero; `about` is the paragraph. bio falls back to the long form so a
-        // store that has not written a tagline looks exactly as it did before
-        // the split existed — and callers that show both compare the two, which
-        // is how the About strip avoids printing the same sentence twice.
-        bio: tenant.tagline || tenant.description || TENANT.bio,
+        // hero; `about` is the paragraph. bio falls back to the long form, and
+        // callers that show both compare the two, which is how the About strip
+        // avoids printing the same sentence twice. A store that has written
+        // neither shows no hero line at all — never esy's English placeholder,
+        // which every newly opened store would otherwise carry.
+        bio: tenant.tagline || tenant.description || '',
         about: tenant.description || '',
         location: [tenant.addressCity, tenant.addressCountry].filter(Boolean).join(' · '),
         since: tenant.establishedYear || '',
