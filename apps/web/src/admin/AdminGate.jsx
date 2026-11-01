@@ -26,11 +26,15 @@ function managerUrl() {
   return `${protocol}//manager.${base}${p}/`;
 }
 
+// Latin letters only: toUpperCase() would turn Georgian Mkhedruli into
+// Mtavruli capitals, which the design never uses.
+const latinUpper = (s) => s.replace(/[a-z]/g, (c) => c.toUpperCase());
+
 /** Two initials from the profile name, else the first letter of the email. */
 function initials(user) {
   const parts = [user?.firstName, user?.lastName].filter(Boolean).map((s) => String(s).trim()).filter(Boolean);
-  if (parts.length) return parts.map((s) => s.charAt(0)).join('').slice(0, 2).toUpperCase();
-  return String(user?.email || '?').charAt(0).toUpperCase();
+  if (parts.length) return latinUpper(parts.map((s) => s.charAt(0)).join('').slice(0, 2));
+  return latinUpper(String(user?.email || '?').charAt(0));
 }
 
 export default function AdminGate({ T, kind }) {

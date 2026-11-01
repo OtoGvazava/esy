@@ -157,7 +157,9 @@ export default function AdminBilling() {
     </>
   );
 
-  const wrap = { padding: 20, maxWidth: 1040, margin: '0 auto' };
+  // On a phone the shell's own 16px gutter is the design's; more would leave
+  // the table too narrow for its three columns.
+  const wrap = { padding: isMobile ? 0 : 20, maxWidth: 1040, margin: '0 auto' };
 
   if (loading && !data) {
     return <div style={wrap}>{head}<Loading T={T} /></div>;

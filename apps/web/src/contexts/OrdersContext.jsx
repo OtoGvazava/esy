@@ -72,10 +72,17 @@ export const OrdersProvider = ({ children }) => {
         title: i.title,
         price: i.price,
         quantity: i.quantity,
+        // The chosen combination (D11): the server prices that row and takes its stock.
+        variantId: i.variantId ?? undefined,
       }));
       const delivery = {};
       if (orderData?.addressId != null) delivery.addressId = orderData.addressId;
       if (orderData?.address) delivery.address = orderData.address;
+      // The route and the express upgrade (D9). Without them the server reads
+      // the order as collection in person: no delivery fee, and an address it
+      // is told to ignore.
+      if (orderData?.deliveryRoute) delivery.deliveryRoute = orderData.deliveryRoute;
+      if (orderData?.deliveryExpress != null) delivery.deliveryExpress = !!orderData.deliveryExpress;
       const created = await orderApi.create(items, devTenant(), delivery);
       const order = created ? normalize(created) : null;
       if (order) {

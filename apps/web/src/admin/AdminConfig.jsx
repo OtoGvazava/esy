@@ -533,13 +533,19 @@ export default function AdminConfig() {
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : 20 }}>
+        {/* The service name never breaks across lines, as the design sets it. */}
         {ready ? (
           <Alert T={T} tone="ok">
-            <Trans t={t} i18nKey="config.storeConnected" components={{ mono }} />
+            <Trans t={t} i18nKey="config.storeConnected" components={{ mono: <Mono T={T} style={{ whiteSpace: 'nowrap' }} /> }} />
           </Alert>
         ) : (
           <Alert T={T} tone="bad" title={t('config.storeOffline')}>
-            <Trans t={t} i18nKey="config.storeOfflineHint" values={{ bank: shown(bank) }} components={{ mono }} />
+            <Trans
+              t={t}
+              i18nKey="config.storeOfflineHint"
+              values={{ bank: shown(bank) }}
+              components={{ mono: <Mono T={T} style={{ whiteSpace: 'nowrap' }} /> }}
+            />
           </Alert>
         )}
 
