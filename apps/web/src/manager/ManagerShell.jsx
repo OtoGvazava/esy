@@ -277,15 +277,22 @@ function Dock({ T, t, active, q, isOwner, newOrders }) {
  * the title alone, so `right` stays in the page there, and the bar's second
  * line names the store instead (the Shell board's "Studio Form ▾").
  *
+ * `back`, a page's own back button, sits before the title in the bar.
+ *
  * Outside the shell it draws itself in place, as it always did.
  */
-export function MTop({ T, title, sub, right, mode }) {
+export function MTop({ T, title, sub, right, mode, back }) {
   const slots = useContext(TopSlots);
   if (slots) {
     const phone = slots.bx === 'ph';
+    const heading = back ? (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        {back}<b className="bx-h2" style={{ minWidth: 0 }}>{title}</b>
+      </span>
+    ) : <b className="bx-h2">{title}</b>;
     return (
       <>
-        {slots.title && createPortal(<b className="bx-h2">{title}</b>, slots.title)}
+        {slots.title && createPortal(heading, slots.title)}
         {!phone && sub && slots.sub && createPortal(<span className="bx-sm bx-dim">{sub}</span>, slots.sub)}
         {!phone && right && slots.right && createPortal(right, slots.right)}
         {phone && right && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>{right}</div>}
@@ -314,6 +321,12 @@ export function MTop({ T, title, sub, right, mode }) {
       {right}
     </div>
   );
+}
+
+/** Whether a page is drawn inside the shell, whose header bar carries its heading. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useInShell() {
+  return Boolean(useContext(TopSlots));
 }
 
 /** The header bar across the content; MTop fills its slots. */

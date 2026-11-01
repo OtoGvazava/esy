@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { track } from '../core/tokens';
+import { MTop, useInShell } from './ManagerShell';
 
 // ---- glyphs, as the boards draw them (24 × 24, stroked) ---------------------
 export const G = {
@@ -275,13 +276,18 @@ export function useFocusRing() {
  */
 export function PageHead({ T, title, sub, onBack, backLabel, right, mobile }) {
   const { i18n } = useTranslation();
+  const inShell = useInShell();
+  const back = onBack && (
+    <button type="button" onClick={onBack} aria-label={backLabel} style={{ ...ibtn(T), flex: 'none' }}>
+      <Glyph>{G.back}</Glyph>
+    </button>
+  );
+  // Inside the back office the heading is the shell's header bar (MTop), so a
+  // page never shows its title twice.
+  if (inShell) return <MTop T={T} title={title} sub={sub} right={right} back={back} />;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-      {onBack && (
-        <button type="button" onClick={onBack} aria-label={backLabel} style={ibtn(T)}>
-          <Glyph>{G.back}</Glyph>
-        </button>
-      )}
+      {back}
       <div style={{ flex: 1, minWidth: 0 }}>
         <h1 style={{ ...type.h2(T, i18n.language), display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {title}

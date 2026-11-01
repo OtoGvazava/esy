@@ -15,6 +15,7 @@ import { useDevice } from '../../contexts/DeviceContext';
 import { money } from '../../core/money';
 import { alpha } from '../../core/tokens';
 import { productApi, handleApiError } from '../../utils/api';
+import { PageHead } from '../../manager/officeKit';
 
 // The columns the importer reads (ProductImportService.COLUMNS), named as the
 // header row must name them. They are file syntax, not words to translate.
@@ -325,25 +326,13 @@ export default function ImportProductsDialog({ onClose, onImported }) {
     );
   };
 
-  const titleSize = isDesktop ? 27 : isMobile ? 21 : 23;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button
-          type="button" onClick={onClose} aria-label={t('import.back')} disabled={busy && !!report?.ok}
-          style={{
-            width: 44, height: 44, flex: 'none', padding: 0, border: 0, cursor: 'pointer',
-            borderRadius: 'var(--k-r-ibtn)', background: T.surface2, color: T.text, display: 'grid', placeItems: 'center',
-          }}
-        ><Glyph><path d={I.back} /></Glyph></button>
-        <div style={{ minWidth: 0 }}>
-          <h1 style={{ margin: 0, font: `700 ${titleSize}px/1.2 ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>
-            {t('import.pageTitle')}
-          </h1>
-          <div style={{ marginTop: 3, font: `400 12.5px ${T.font}`, color: T.textDim }}>{t('import.pageSub')}</div>
-        </div>
-      </div>
+      {/* In the back office this heading is the shell's header bar. */}
+      <PageHead
+        T={T} title={t('import.pageTitle')} sub={t('import.pageSub')} mobile={isMobile}
+        onBack={busy && !!report?.ok ? undefined : onClose} backLabel={t('import.back')}
+      />
 
       <div style={{
         display: 'grid', gap: 20, alignItems: 'start',

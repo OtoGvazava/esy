@@ -146,13 +146,16 @@ export default function ManagerProducts() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <h1 style={{ font: `800 22px ${T.font}`, color: T.text, letterSpacing: '-0.02em', margin: 0, flex: 1 }}>
-          {t('products.title')}
-        </h1>
-        <button onClick={() => setImporting(true)} style={ghost}>{t('products.importCta')}</button>
-        <button onClick={() => setEditing('new')} style={btn}>{t('products.add')}</button>
-      </div>
+      {/* The title is the shell's header bar; the two actions sit at its end. */}
+      <MTop
+        T={T} title={t('products.title')}
+        right={(
+          <>
+            <button onClick={() => setImporting(true)} style={ghost}>{t('products.importCta')}</button>
+            <button onClick={() => setEditing('new')} style={btn}>{t('products.add')}</button>
+          </>
+        )}
+      />
 
       {error && <div style={{ font: `500 13px ${T.font}`, color: T.danger }}>{error}</div>}
 
