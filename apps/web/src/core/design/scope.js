@@ -6,11 +6,12 @@
 //
 // Only whitelisted ids leave normalizeDesign, and they reach the DOM only as
 // attribute values; nothing here is interpolated into CSS.
+import { STYLE_KEYS, designFamilies } from './htmlAttrs';
 
-// The style options drawn as data-* attributes, in ThemeRoot's order (App.jsx
-// keeps its own copy as STYLE_KEYS). Each is set only when it is not the
-// theme's own, so an option changes just its own properties.
-export const STYLE_ATTRS = ['btn', 'corner', 'card', 'font', 'bg', 'density', 'icon'];
+// The style options drawn as data-* attributes, in ThemeRoot's order (the
+// one list in htmlAttrs.js). Each is set only when it is not the theme's
+// own, so an option changes just its own properties.
+export const STYLE_ATTRS = STYLE_KEYS;
 
 /** The class and data-* attributes that draw a normalised `design` on an element. */
 export function scopeAttrs(design, mode) {
@@ -27,18 +28,10 @@ export function scopeAttrs(design, mode) {
 }
 
 // Faces a design may ask for beyond the default Geist and Noto Sans Georgian,
-// as Google Fonts families; ThemeRoot loads the same for a storefront.
-const FONT_FAMILIES = {
-  serif: ['Fraunces:opsz,wght@9..144,400..700', 'Noto+Serif+Georgian:wght@400..700'],
-  rounded: ['Nunito:wght@400..800'],
-  mono: ['JetBrains+Mono:wght@400;600'],
-  neon: ['Chakra+Petch:wght@500;700', 'JetBrains+Mono:wght@400;600'],
-};
+// as Google Fonts families: the same list ThemeRoot and the page's pre-paint
+// script load for a storefront (core/design/htmlAttrs.js).
 
 /** The font families a normalised `design` draws with. */
 export function designFonts(design) {
-  return [...new Set([
-    ...(FONT_FAMILIES[design.style?.font] || []),
-    ...(design.theme === 'neon' ? FONT_FAMILIES.neon : []),
-  ])];
+  return designFamilies(design.style?.font, design.theme);
 }

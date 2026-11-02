@@ -14,6 +14,7 @@ import { ThemeModeProvider } from './contexts/ThemeModeContext';
 import { DisplayPrefsProvider } from './contexts/DisplayPrefsContext';
 import { safeAccent, PLATFORM_BRAND, ADMIN_BRAND } from './core/tokens';
 import { normalizeDesign } from './core/design/normalize';
+import { STYLE_KEYS, designFamilies, fontsHref } from './core/design/htmlAttrs';
 import NavProgress from './router/NavProgress';
 
 /** Leaves the SPA for another host. react-router only moves within one. */
@@ -44,6 +45,11 @@ export function StoreLayout() {
     || pathname.startsWith('/orders/') || pathname === '/account/personal';
   const dock = !isDesktop && !pathname.startsWith('/product/') && !pushed;
 
+  // Without the store inlined in the page (SpaIndex.java), its chrome waits for
+  // the store rather than drawing esy's name and colours first: the page's
+  // own ground until it arrives.
+  if (loading && !tenant) return <div style={{ minHeight: '100vh' }} />;
+
   // A suspended shop is closed to shoppers (D15). Nothing below this line
   // renders — not the bar, not the dock, not a single route — because a
   // suspended store that still lists products and accepts checkout is exactly
@@ -65,17 +71,9 @@ export function StoreLayout() {
   );
 }
 
-// The store style options drawn as data-* on <html> (styles/design-style.css).
-const STYLE_KEYS = ['btn', 'corner', 'card', 'font', 'bg', 'density', 'icon'];
-
-// Faces a design may ask for, loaded only when a store uses them. Georgian
-// text falls back to the matching Noto face, so each brings its own.
-const FONT_FAMILIES = {
-  serif: ['Fraunces:opsz,wght@9..144,400..700', 'Noto+Serif+Georgian:wght@400..700'],
-  rounded: ['Nunito:wght@400..800'],
-  mono: ['JetBrains+Mono:wght@400;600'],
-  neon: ['Chakra+Petch:wght@500;700', 'JetBrains+Mono:wght@400;600'],
-};
+// The store style options are drawn as data-* on <html> (styles/design-style.css),
+// and a design's faces load only when a store uses them (core/design/htmlAttrs.js,
+// which the page's pre-paint script reads too).
 
 // Puts the active theme on <html>, where styles/themes.css keys every token:
 // data-th is `esy` on the platform, manager and admin hosts and the store's
@@ -85,7 +83,7 @@ const FONT_FAMILIES = {
 // carries its design's style options, each only when it differs from the theme.
 function ThemeRoot({ mode }) {
   const platform = usePlatformHost();
-  const { tenant } = useContext(TenantContext);
+  const { tenant, loading } = useContext(TenantContext);
   const admin = isAdminHost();
   // A suspended store has no storefront of its own: its page is esy's, in the
   // esy theme and the platform's colour (E2).
@@ -97,8 +95,13 @@ function ThemeRoot({ mode }) {
   const brand = admin ? ADMIN_BRAND : platform || closed ? PLATFORM_BRAND : safeAccent(tenant?.primaryColor);
   const style = STYLE_KEYS.map((k) => (store && design.style[k] !== 'theme' ? design.style[k] : '')).join('|');
   // Before paint, so a change of store or theme never shows one frame of the
-  // old one.
+  // old one. The first frame is drawn by the page itself (boot/paint.js) from
+  // the same store and the same lists, so on mount this changes nothing.
   useLayoutEffect(() => {
+    // A store not known yet keeps what the page drew: drawing the defaults
+    // until it arrives is exactly the flash the page draws its first frame
+    // to avoid.
+    if (storefront && loading && !tenant) return;
     const el = document.documentElement;
     el.dataset.th = th;
     el.dataset.md = mode === 'dark' ? 'dark' : 'light';
@@ -106,10 +109,7 @@ function ThemeRoot({ mode }) {
     style.split('|').forEach((v, i) => {
       if (v) el.dataset[STYLE_KEYS[i]] = v; else delete el.dataset[STYLE_KEYS[i]];
     });
-    const families = [...new Set([
-      ...(FONT_FAMILIES[style.split('|')[3]] || []),
-      ...(th === 'neon' ? FONT_FAMILIES.neon : []),
-    ])];
+    const families = designFamilies(style.split('|')[3], th);
     let link = document.getElementById('esy-design-fonts');
     if (families.length) {
       if (!link) {
@@ -118,11 +118,13 @@ function ThemeRoot({ mode }) {
         link.rel = 'stylesheet';
         document.head.appendChild(link);
       }
-      link.href = `https://fonts.googleapis.com/css2?${families.map((f) => `family=${f}`).join('&')}&display=swap`;
+      const href = fontsHref(families);
+      // The same faces the pre-paint script started: left alone, not fetched again.
+      if (link.href !== href) link.href = href;
     } else if (link) {
       link.remove();
     }
-  }, [th, mode, brand, style]);
+  }, [th, mode, brand, style, storefront, loading, tenant]);
   return null;
 }
 

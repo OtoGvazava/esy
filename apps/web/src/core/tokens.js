@@ -42,7 +42,7 @@ export const DEFAULT_ACCENT = '#6366f1';
 // (Geist has no Georgian glyphs, so each letter falls through to the face that
 // has it); both are loaded in index.html. Inline styles read the theme's own
 // stack through T.font, because Soft leads with Noto for Latin too.
-export const FONT = "'Geist', 'Noto Sans Georgian', -apple-system, system-ui, sans-serif";
+export const FONT = "'Geist', 'Geist Fallback', 'Noto Sans Georgian', -apple-system, system-ui, sans-serif";
 export const MONO = "ui-monospace, 'SF Mono', Menlo, monospace";
 
 // The platform's own colour (esy.ge), and administration teal (admin.esy.ge).

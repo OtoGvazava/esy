@@ -30,7 +30,7 @@ html[data-th][data-card="glass"], .k-scope[data-th][data-card="glass"] { --k-pc-
 
 /* type: Georgian falls back to the matching Noto face, which ThemeRoot (or the
    preview) loads */
-html[data-th][data-font="sans"], .k-scope[data-th][data-font="sans"] { --k-font: 'Geist', 'Noto Sans Georgian', system-ui, sans-serif; }
+html[data-th][data-font="sans"], .k-scope[data-th][data-font="sans"] { --k-font: 'Geist', 'Geist Fallback', 'Noto Sans Georgian', system-ui, sans-serif; }
 html[data-th][data-font="serif"], .k-scope[data-th][data-font="serif"] { --k-font: 'Fraunces', 'Noto Serif Georgian', Georgia, serif; }
 html[data-th][data-font="rounded"], .k-scope[data-th][data-font="rounded"] { --k-font: 'Nunito', 'Noto Sans Georgian', system-ui, sans-serif; }
 html[data-th][data-font="mono"], .k-scope[data-th][data-font="mono"] { --k-font: 'JetBrains Mono', 'Noto Sans Georgian', ui-monospace, monospace; }

@@ -1,9 +1,62 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { defineConfig, transformWithEsbuild } from 'vite';
+import react from '@vitejs/plugin-react';
+import schema from './src/core/design/schema.json';
+import { ADMIN_BRAND, DEFAULT_ACCENT, PLATFORM_BRAND } from './src/core/tokens.js';
+import { FONT_FAMILIES, STYLE_KEYS } from './src/core/design/htmlAttrs.js';
+
+// The faces index.html preloads (src/styles/fonts.css): the two every page sets
+// text in. Noto's Latin is preloaded by the page itself when the store's theme
+// is Soft, the one theme that sets Latin in it.
+const PRELOAD = ['geist-latin', 'noto-sans-georgian-georgian'];
+
+/** The built URL of one of src/assets/fonts' faces, or null outside a build. */
+function fontUrl(bundle, base, name) {
+  const asset = Object.values(bundle || {}).find((a) => a.type === 'asset'
+    && (a.originalFileNames || []).some((f) => f.replace(/\\/g, '/').endsWith(`src/assets/fonts/${name}.woff2`)));
+  return asset ? `${base}${asset.fileName}` : null;
+}
+
+// The page's first frame (src/boot/paint.js), inlined into index.html where it
+// says <!--esy:paint-->, with what it needs from the design schema and the
+// brand colours — the same lists ThemeRoot and normalizeDesign read, so the
+// first frame cannot draw an option the app would not — and the preloads for
+// the app's own faces in front of it. It runs after the bundle is written, the
+// only time the faces' built names are known.
+function paintScript() {
+  const file = fileURLToPath(new URL('./src/boot/paint.js', import.meta.url));
+  let base = '/';
+  return {
+    name: 'esy-paint',
+    configResolved(config) { base = config.base; },
+    transformIndexHtml: { order: 'post', async handler(html, ctx) {
+      const preloads = PRELOAD.map((name) => fontUrl(ctx.bundle, base, name)).filter(Boolean)
+        .map((href) => `<link rel="preload" href="${href}" as="font" type="font/woff2" crossorigin>`);
+      const cfg = {
+        themes: schema.options.theme,
+        theme: schema.defaults.theme,
+        keys: STYLE_KEYS,
+        options: Object.fromEntries(STYLE_KEYS.map((k) => [k, schema.options[`style.${k}`]])),
+        defaults: Object.fromEntries(STYLE_KEYS.map((k) => [k, schema.defaults.style[k]])),
+        fonts: FONT_FAMILIES,
+        accent: DEFAULT_ACCENT,
+        platform: PLATFORM_BRAND,
+        admin: ADMIN_BRAND,
+        softLatin: fontUrl(ctx.bundle, base, 'noto-sans-georgian-latin'),
+      };
+      const source = readFileSync(file, 'utf8').replace('export default function paint', 'function paint');
+      const { code } = await transformWithEsbuild(`${source}\ntry { paint(${JSON.stringify(cfg)}); } catch (e) { /* index.html's defaults stand */ }`, file, {
+        minify: true, format: 'iife', target: 'es2017',
+      });
+      return html.replace('<!--esy:paint-->', () => `${preloads.join('\n    ')}\n    <script>${code.trim()}</script>`);
+    } },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), paintScript()],
   server: {
     // NOTE: the Vite dev server is NOT the supported local flow — `docker
     // compose up` (see README) is. This block only matters if you start `vite`
@@ -51,7 +104,7 @@ export default defineConfig({
       '.lvh.me',
       '3e62234f4728.ngrok-free.app',
       '.ngrok-free.app',
-      '.ngrok.io'
+      '.ngrok.io',
     ],
   },
   preview: {
@@ -79,4 +132,4 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', '@mui/material', '@mui/icons-material'],
   },
-})
+});

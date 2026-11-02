@@ -6,22 +6,14 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- The theme tokens key off data-md on <html>. Setting it before the first
-         paint, from the same stored choice useAppTheme reads, keeps a dark-mode
-         visitor from seeing one light frame. ThemeRoot takes over on mount. -->
-    <script>
-      try {
-        var m = localStorage.getItem('theme-mode');
-        if (m !== 'light' && m !== 'dark') m = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-md', m);
-      } catch (e) {}
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Geist draws Latin and Noto Sans Georgian draws Mkhedruli: Georgian is
-         the default language, and without that face KA copy falls through to a
-         system default that does not match the Latin type. -->
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Noto+Sans+Georgian:wght@400..800&display=swap" rel="stylesheet" />
+    <!-- The theme tokens key off <html>'s attributes. They are drawn before the
+         first paint: the server puts the store this page belongs to in place
+         of the first mark (SpaIndex.java), and the build puts the script that
+         draws it in place of the second (src/boot/paint.js) — light or dark,
+         the store's theme, colour, style and display settings, so a store's
+         first frame is already its own. ThemeRoot takes over on mount. -->
+    <!--esy:boot-->
+    <!--esy:paint-->
     <title>esy</title>
   </head>
   <body>

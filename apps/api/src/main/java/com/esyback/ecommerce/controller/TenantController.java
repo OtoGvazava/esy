@@ -15,6 +15,7 @@ import com.esyback.ecommerce.service.TenantCoverService;
 import com.esyback.ecommerce.service.TenantDesignService;
 import com.esyback.ecommerce.service.TenantLogoService;
 import com.esyback.ecommerce.service.TenantService;
+import com.esyback.ecommerce.service.TenantViewService;
 import com.esyback.ecommerce.service.UserService;
 import com.esyback.ecommerce.service.BogPaymentService;
 import com.esyback.ecommerce.web.TenantMapper;
@@ -51,24 +52,12 @@ public class TenantController {
     private final ProductRepository productRepository;
     private final TenantDesignService tenantDesignService;
     private final TenantCoverService tenantCoverService;
+    private final TenantViewService tenantViewService;
 
+    // The same body the page itself carries (TenantViewService, SpaIndex).
     @GetMapping("/current")
     public ResponseEntity<Map<String, Object>> getCurrentTenant() {
-        Tenant tenant = tenantContextService.getCurrentTenant();
-        Map<String, Object> body = TenantMapper.toMap(tenant);
-        body.put("isPlatform", tenantContextService.isPlatformHost());
-        // The design switch rides every response, the platform host's too:
-        // registration reads it there to choose quick setup or today's brand
-        // step. Read once, so `design` and `designEnabled` cannot disagree.
-        boolean designOn = tenantDesignService.isEnabled();
-        body.put("designEnabled", designOn);
-        // The published design, colours merged in from primaryColor /
-        // secondaryColor. Null when nothing is published or the switch is off,
-        // and the storefront then draws today's chrome. Never the draft.
-        body.put("design", designOn ? tenantDesignService.published(tenant) : null);
-        // The cover header's photo, or null; an id-only lookup, never the bytes.
-        body.put("coverUrl", tenantCoverService.currentCoverUrl(tenant));
-        return ResponseEntity.ok(body);
+        return ResponseEntity.ok(tenantViewService.current());
     }
 
     @GetMapping
