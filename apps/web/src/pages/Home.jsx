@@ -22,6 +22,7 @@ import { useStoreBarShown } from '../components/store/storeChrome';
 import { alpha } from '../core/tokens';
 import CategoryPills from '../components/store/CategoryPills';
 import { SortMenu } from '../components/store/CollectionFilters';
+import ViewSwitch from '../components/store/ViewSwitch';
 import { useStoreCategories } from '../hooks/useStoreCategories';
 import Collection from './Collection';
 import { NoResults } from '../components/shop/EmptyStates';
@@ -276,7 +277,12 @@ function ShopHome() {
       )}
 
       {/* The store's categories (A1), each opening its collection. */}
-      {pillsShown && <CategoryPills gutter={gutter} categories={categories} trailing={sortMenu(isMobile)} />}
+      {pillsShown && (
+        <CategoryPills
+          gutter={gutter} categories={categories}
+          trailing={<><ViewSwitch T={T} compact={isMobile} />{sortMenu(isMobile)}</>}
+        />
+      )}
 
       {/* result meta — the sort control sits here, on the row it describes,
           unless the category row above already carries it. A store with no
@@ -302,7 +308,10 @@ function ShopHome() {
             {t('productCount', { count: story ? shown.length : total })}
           </div>
         )}
-        {sortMenu(false)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ViewSwitch T={T} compact={isMobile} />
+          {sortMenu(false)}
+        </div>
       </div>}
 
       {error && (

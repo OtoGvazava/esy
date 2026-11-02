@@ -29,6 +29,7 @@ import {
   CheckRow, FilterChip, FilterSheet, Glyph, LinkButton, OptionPills, PATHS, PriceFilter,
   SectionTitle, SortMenu, pillStyle,
 } from '../components/store/CollectionFilters';
+import ViewSwitch from '../components/store/ViewSwitch';
 
 const PAGE_SIZE = 24;
 
@@ -369,7 +370,10 @@ export default function Collection() {
               {name}
               {counted && <span style={{ color: T.textDim, fontWeight: 400 }}>{` · ${total}`}</span>}
             </h1>
-            {sort}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ViewSwitch T={T} />
+              {sort}
+            </div>
           </div>
         </div>
       )}
@@ -386,6 +390,7 @@ export default function Collection() {
               {filtered ? t('collection.filterCount', { count: chips.length }) : t('collection.filter')}
             </button>
             {sort}
+            <ViewSwitch T={T} compact={isMobile} />
             {isTablet && counted && (
               <span style={{ marginLeft: 'auto', font: `400 12.5px ${T.font}`, color: T.textDim, whiteSpace: 'nowrap' }}>{countText}</span>
             )}
