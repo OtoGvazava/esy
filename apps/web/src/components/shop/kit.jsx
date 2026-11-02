@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 // The shopper screens drawn straight from their boards (A8, A9, B1–B5, C2,
-// C3, D2, E2–E4) share the design kit's classes (styles/shop-kit.css) and
+// C3, D1, D2, E2–E4) share the design kit's classes (styles/shop-kit.css) and
 // these few pieces: the .sk root that carries the device, the kit's own
 // glyphs, the store's header with a back button, a product thumbnail, the
 // four-box code input and the store's reachable channels.
@@ -43,6 +43,8 @@ const PATHS = {
   search: <><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></>,
   wifiOff: <path d="M3 3l18 18M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 6-2.9M19 13a10 10 0 0 0-3.2-2.2M2 9.5A15 15 0 0 1 8 6.3M22 9.5a15 15 0 0 0-9-3.4" />,
   user: <><circle cx="12" cy="8.5" r="4" /><path d="M4.5 20.5c1.5-4 4.3-5.5 7.5-5.5s6 1.5 7.5 5.5" /></>,
+  screen: <><rect x="3.5" y="5" width="17" height="11.5" rx="2" /><path d="M9 20h6M12 16.5V20" /></>,
+  signOut: <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10" />,
 };
 
 /** A line glyph. `cls` is the kit's sizing class: "ic", "ic s", or none inside .btn/.li-ic. */
