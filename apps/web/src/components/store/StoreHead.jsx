@@ -10,7 +10,6 @@
 // the bag in place of language and light/dark, which move into the menu (the
 // canvas's StoreTop draws the header that way for the side menu).
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../../styles/glow';
 import { useDesign } from '../../core/design/useDesign';
@@ -67,7 +66,7 @@ function Controls({ drawer }) {
   return (
     <>
       <HeadButton label={t('toggleTheme')} onClick={toggle}>{mode === 'dark' ? <Icon.sun /> : <Icon.moon />}</HeadButton>
-      <HeadButton to="/settings/display" label={t('menu.language')}><Icon.globe /></HeadButton>
+      <HeadButton to="/settings/display" label={t('title', { ns: 'display' })}><Icon.globe /></HeadButton>
     </>
   );
 }
@@ -76,7 +75,6 @@ export default function StoreHead() {
   const { T, tenant } = useGlow();
   const design = useDesign();
   const { isMobile } = useDevice();
-  const navigate = useNavigate();
   const { mode, toggle: toggleTheme, language } = useThemeMode();
   const { t } = useTranslation('home');
   // ManageButton's own test. These headers give the owner's button a row of
@@ -209,7 +207,7 @@ export default function StoreHead() {
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <ManageButton />
         <ThemePill T={T} dark={mode === 'dark'} onClick={toggleTheme} />
-        <LangPill T={T} lang={language} onClick={() => navigate('/settings/display')} />
+        <LangPill T={T} lang={language} to="/settings/display" label={t('title', { ns: 'display' })} />
       </div>
     </div>
   );
