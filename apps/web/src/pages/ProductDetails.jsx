@@ -121,7 +121,8 @@ function ProductView({ id }) {
                 </div>
                 <Sk h={26} w={128} r={999} style={{ marginBottom: 22 }} />
                 <SkText lines={3} h={11} gap={10} style={{ marginBottom: 26 }} />
-                <Sk h={130} r={16} style={{ marginBottom: 24 }} />
+                {/* The facts card: price, stock and, given the store's city, where it ships from. */}
+                <Sk h={tenant?.location ? 130 : 85} r={16} style={{ marginBottom: 24 }} />
                 {!isMobile && <Sk h={54} r={16} />}
               </div>
             </div>

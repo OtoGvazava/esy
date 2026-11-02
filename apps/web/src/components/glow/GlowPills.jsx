@@ -1,11 +1,12 @@
 // Topbar pills — ported from direction-a.jsx (v2 handoff): a theme toggle and
-// a language pill that opens the language picker.
+// a language pill that opens the language picker. Both answer a press as the
+// header's buttons do (styles/motion.css).
 import { Link } from 'react-router-dom';
 import { Icon, langInfo } from './GlowPrimitives';
 
 export function ThemePill({ T, dark, onClick, compact = true }) {
   return (
-    <button onClick={onClick} aria-label="toggle appearance" style={{
+    <button type="button" onClick={onClick} aria-label="toggle appearance" className="esy-press" style={{
       width: 36, height: 36, borderRadius: compact ? 12 : 999,
       border: `1px solid ${T.border}`, background: 'transparent', color: T.text,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -38,6 +39,6 @@ export function LangPill({ T, lang = 'en', to, onClick, label = 'language', comp
       <span>{compact ? L.short : L.native}</span>
     </>
   );
-  if (to) return <Link to={to} aria-label={label} style={style}>{body}</Link>;
-  return <button type="button" onClick={onClick} aria-label={label} style={style}>{body}</button>;
+  if (to) return <Link to={to} aria-label={label} className="esy-press" style={style}>{body}</Link>;
+  return <button type="button" onClick={onClick} aria-label={label} className="esy-press" style={style}>{body}</button>;
 }

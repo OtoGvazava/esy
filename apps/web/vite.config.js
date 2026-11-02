@@ -49,8 +49,10 @@ function localeChunks(bundle, base) {
 }
 
 // Which translation namespaces each host can reach, read from the build's own
-// chunk graph: every module the host's route table can load, the app's entry
-// included, scanned for useTranslation('ns'), 'ns:key' and { ns: 'ns' }. A
+// module graph: every module the host's route table imports, at once or
+// lazily, and every module the app's entry imports, scanned for
+// useTranslation('ns'), 'ns:key' and { ns: 'ns' }. Modules, not chunks: a
+// chunk Rollup shares between hosts holds components a host never imports. A
 // host that can reach a namespace src/locales/namespaces.js does not give it
 // fails the build: the page would show that namespace's raw keys.
 function checkNamespaces() {
@@ -73,42 +75,41 @@ function checkNamespaces() {
     name: 'esy-namespaces',
     apply: 'build',
     generateBundle(_, bundle) {
-      const chunks = Object.values(bundle).filter((c) => c.type === 'chunk');
-      const byFile = new Map(chunks.map((c) => [c.fileName, c]));
-      const entry = chunks.find((c) => c.isEntry);
+      const own = (id) => /[\\/]src[\\/].*\.jsx?$/.test(id) && !/[\\/]src[\\/]locales[\\/]/.test(id);
       const reach = (start, dynamic, skip = new Set()) => {
         const seen = new Set();
         const stack = [start];
         while (stack.length) {
-          const c = stack.pop();
-          if (!c || seen.has(c.fileName)) continue;
-          seen.add(c.fileName);
-          c.imports.forEach((f) => stack.push(byFile.get(f)));
-          if (dynamic && !skip.has(c.fileName)) c.dynamicImports.forEach((f) => stack.push(byFile.get(f)));
+          const id = stack.pop();
+          if (seen.has(id)) continue;
+          seen.add(id);
+          const info = /node_modules/.test(id) ? null : this.getModuleInfo(id);
+          if (!info) continue;
+          info.importedIds.forEach((m) => stack.push(m));
+          if (dynamic && !skip.has(id)) info.dynamicallyImportedIds.forEach((m) => stack.push(m));
         }
         return seen;
       };
-      const scan = (files) => {
+      const scan = (ids) => {
         const found = new Set();
-        for (const f of files) {
-          for (const id of byFile.get(f).moduleIds) {
-            if (!/[\\/]src[\\/].*\.jsx?$/.test(id) || /[\\/]src[\\/]locales[\\/]/.test(id)) continue;
-            let code;
-            try { code = readFileSync(id, 'utf8'); } catch { continue; }
-            read(code).forEach((n) => found.add(n));
-          }
+        for (const id of ids) {
+          if (!own(id)) continue;
+          let code;
+          try { code = readFileSync(id, 'utf8'); } catch { continue; }
+          read(code).forEach((n) => found.add(n));
         }
         return found;
       };
       // The entry's own imports are every host's; its dynamic imports are the
       // hosts themselves, each walked on its own.
-      const shared = reach(entry, false);
+      const entry = Object.values(bundle).find((c) => c.type === 'chunk' && c.isEntry);
+      const shared = reach(entry.facadeModuleId, false);
       const problems = [];
       for (const host of HOSTS) {
-        const chunk = dynamicChunks(bundle).find((c) => holds(c, `src/router/${host}.jsx`));
-        if (!chunk) continue;
+        const table = [...this.getModuleIds()].find((id) => id.replace(/\\/g, '/').endsWith(`src/router/${host}.jsx`));
+        if (!table) continue;
         const loads = new Set(hostNamespaces(host));
-        const missing = [...scan(new Set([...shared, ...reach(chunk, true, shared)]))].filter((n) => !loads.has(n));
+        const missing = [...scan(new Set([...shared, ...reach(table, true, shared)]))].filter((n) => !loads.has(n));
         if (missing.length) problems.push(`${host}: ${missing.join(', ')}`);
       }
       if (problems.length) {
