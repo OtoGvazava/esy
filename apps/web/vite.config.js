@@ -5,22 +5,117 @@ import react from '@vitejs/plugin-react';
 import schema from './src/core/design/schema.json';
 import { ADMIN_BRAND, DEFAULT_ACCENT, PLATFORM_BRAND } from './src/core/tokens.js';
 import { FONT_FAMILIES, STYLE_KEYS } from './src/core/design/htmlAttrs.js';
+import { ALL_NS, HOST_NS, hostNamespaces } from './src/locales/namespaces.js';
+
+const HOSTS = ['store', 'platform', 'manager', 'admin'];
 
 // The faces index.html preloads (src/styles/fonts.css): the two every page sets
 // text in. Noto's Latin is preloaded by the page itself when the store's theme
 // is Soft, the one theme that sets Latin in it.
 const PRELOAD = ['geist-latin', 'noto-sans-georgian-georgian'];
 
+// Chunks are found by the modules they hold: Rollup leaves facadeModuleId
+// unset on a dynamic entry it has merged other modules into.
+const holds = (c, file) => (c.moduleIds || Object.keys(c.modules || {})).some((m) => m.replace(/\\/g, '/').endsWith(file));
+const dynamicChunks = (bundle) => Object.values(bundle || {}).filter((c) => c.type === 'chunk' && c.isDynamicEntry);
+
 /** The built URL of each host's route table (src/router/<host>.jsx), its own chunk. */
 function hostChunks(bundle, base) {
-  // Found by the modules a chunk holds: Rollup leaves facadeModuleId unset on
-  // a dynamic entry it has merged other modules into.
-  const chunks = Object.values(bundle || {}).filter((c) => c.type === 'chunk' && c.isDynamicEntry);
-  const holds = (c, file) => (c.moduleIds || Object.keys(c.modules || {})).some((m) => m.replace(/\\/g, '/').endsWith(file));
-  return Object.fromEntries(['store', 'platform', 'manager', 'admin'].map((host) => {
+  const chunks = dynamicChunks(bundle);
+  return Object.fromEntries(HOSTS.map((host) => {
     const chunk = chunks.find((c) => holds(c, `src/router/${host}.jsx`));
     return [host, chunk ? `${base}${chunk.fileName}` : null];
   }));
+}
+
+/**
+ * The built URL of each language's strings (src/i18n.js): the shared chunk
+ * and each host's own namespaces, and which of them each host loads.
+ */
+function localeChunks(bundle, base) {
+  const chunks = dynamicChunks(bundle);
+  const url = (file) => {
+    const chunk = chunks.find((c) => holds(c, file));
+    return chunk ? `${base}${chunk.fileName}` : null;
+  };
+  const own = [...new Set(Object.values(HOST_NS).flat())];
+  return {
+    files: Object.fromEntries(['en', 'ka'].map((lng) => [lng, {
+      shared: url(`src/locales/shared.${lng}.js`),
+      ...Object.fromEntries(own.map((ns) => [ns, url(`src/locales/${lng}/${ns}.json`)])),
+    }])),
+    hosts: Object.fromEntries(HOSTS.map((host) => [host, ['shared', ...HOST_NS[host]]])),
+  };
+}
+
+// Which translation namespaces each host can reach, read from the build's own
+// chunk graph: every module the host's route table can load, the app's entry
+// included, scanned for useTranslation('ns'), 'ns:key' and { ns: 'ns' }. A
+// host that can reach a namespace src/locales/namespaces.js does not give it
+// fails the build: the page would show that namespace's raw keys.
+function checkNamespaces() {
+  const names = ALL_NS.join('|');
+  const use = /useTranslation\(\s*\[?([^)\]]*)\]?\s*\)/g;
+  const prefixed = new RegExp(`[\x27"\x60](${names}):[a-zA-Z$]`, 'g');
+  const option = new RegExp(`\\bns(?::\\s*|=)[\x27"](${names})[\x27"]`, 'g');
+  const read = (code) => {
+    const found = new Set();
+    for (const m of code.matchAll(use)) {
+      const list = [...m[1].matchAll(/['"]([a-z]+)['"]/g)].map((x) => x[1]);
+      if (!list.length) found.add('navbar'); // i18n.js's defaultNS
+      list.forEach((n) => found.add(n));
+    }
+    for (const m of code.matchAll(prefixed)) found.add(m[1]);
+    for (const m of code.matchAll(option)) found.add(m[1]);
+    return found;
+  };
+  return {
+    name: 'esy-namespaces',
+    apply: 'build',
+    generateBundle(_, bundle) {
+      const chunks = Object.values(bundle).filter((c) => c.type === 'chunk');
+      const byFile = new Map(chunks.map((c) => [c.fileName, c]));
+      const entry = chunks.find((c) => c.isEntry);
+      const reach = (start, dynamic, skip = new Set()) => {
+        const seen = new Set();
+        const stack = [start];
+        while (stack.length) {
+          const c = stack.pop();
+          if (!c || seen.has(c.fileName)) continue;
+          seen.add(c.fileName);
+          c.imports.forEach((f) => stack.push(byFile.get(f)));
+          if (dynamic && !skip.has(c.fileName)) c.dynamicImports.forEach((f) => stack.push(byFile.get(f)));
+        }
+        return seen;
+      };
+      const scan = (files) => {
+        const found = new Set();
+        for (const f of files) {
+          for (const id of byFile.get(f).moduleIds) {
+            if (!/[\\/]src[\\/].*\.jsx?$/.test(id) || /[\\/]src[\\/]locales[\\/]/.test(id)) continue;
+            let code;
+            try { code = readFileSync(id, 'utf8'); } catch { continue; }
+            read(code).forEach((n) => found.add(n));
+          }
+        }
+        return found;
+      };
+      // The entry's own imports are every host's; its dynamic imports are the
+      // hosts themselves, each walked on its own.
+      const shared = reach(entry, false);
+      const problems = [];
+      for (const host of HOSTS) {
+        const chunk = dynamicChunks(bundle).find((c) => holds(c, `src/router/${host}.jsx`));
+        if (!chunk) continue;
+        const loads = new Set(hostNamespaces(host));
+        const missing = [...scan(new Set([...shared, ...reach(chunk, true, shared)]))].filter((n) => !loads.has(n));
+        if (missing.length) problems.push(`${host}: ${missing.join(', ')}`);
+      }
+      if (problems.length) {
+        this.error(`Translation namespaces a host reads but does not load (add them to src/locales/namespaces.js): ${problems.join('; ')}`);
+      }
+    },
+  };
 }
 
 /** The built URL of one of src/assets/fonts' faces, or null outside a build. */
@@ -57,6 +152,7 @@ function paintScript() {
         admin: ADMIN_BRAND,
         softLatin: fontUrl(ctx.bundle, base, 'noto-sans-georgian-latin'),
         hosts: hostChunks(ctx.bundle, base),
+        locales: localeChunks(ctx.bundle, base),
       };
       const source = readFileSync(file, 'utf8').replace('export default function paint', 'function paint');
       const { code } = await transformWithEsbuild(`${source}\ntry { paint(${JSON.stringify(cfg)}); } catch (e) { /* index.html's defaults stand */ }`, file, {
@@ -69,7 +165,7 @@ function paintScript() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), paintScript()],
+  plugins: [react(), paintScript(), checkNamespaces()],
   server: {
     // NOTE: the Vite dev server is NOT the supported local flow — `docker
     // compose up` (see README) is. This block only matters if you start `vite`

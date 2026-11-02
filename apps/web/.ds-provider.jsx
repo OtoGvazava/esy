@@ -14,6 +14,7 @@ import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from './src/i18n';
+import { ALL_NS } from './src/locales/namespaces';
 import { DeviceProvider } from './src/contexts/DeviceContext';
 import { TenantProvider } from './src/contexts/TenantContext';
 import { AuthProvider, AuthContext } from './src/contexts/AuthContext';
@@ -22,6 +23,10 @@ import { CartProvider } from './src/contexts/CartContext';
 import { ThemeModeProvider } from './src/contexts/ThemeModeContext';
 
 const theme = createTheme();
+// The app loads only its host's strings in one language (src/i18n.js); a
+// preview card can show any component in either, so the harness loads them all.
+i18n.loadLanguages(['en', 'ka']);
+i18n.loadNamespaces(ALL_NS);
 // The app's contexts read the API through the query cache; the harness has no
 // backend, so its reads fail at once and the components draw their defaults.
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

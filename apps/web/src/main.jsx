@@ -8,7 +8,7 @@ import './styles/design-style.css';
 import './styles/display.css';
 import './styles/motion.css';
 import './index.css';
-import './i18n';
+import { i18nReady } from './i18n';
 import { queryClient } from './core/query/client';
 import { categoriesQuery, publicContactsQuery, tenantQuery } from './core/query/queries';
 import { createAppRouter } from './router';
@@ -28,9 +28,11 @@ try {
 
 listenForIntent();
 
-// The host's route table is its own chunk (router/index.jsx), already on its
-// way: the page's pre-paint script asked for it beside this one.
-createAppRouter().then((router) => {
+// The host's route table and its strings are chunks of their own
+// (router/index.jsx, i18n.js), already on their way: the page's pre-paint
+// script asked for them beside this one. The first render waits for both, so
+// it is never drawn with raw keys.
+Promise.all([createAppRouter(), i18nReady]).then(([router]) => {
   createRoot(document.getElementById('root')).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>

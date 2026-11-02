@@ -13,24 +13,17 @@
 // chunks of their own too, warmed once the page is idle.
 import { createBrowserRouter } from 'react-router-dom';
 import AppRoot from '../App';
-import { isAdminHost, isManagerHost, isPlatformHost } from '../hooks/usePlatformHost';
+import { hostKey } from '../core/hostKey';
 import { motionAllowed } from '../core/motion';
 import { prefetchRoute, setPrefetchRoutes, setRouter } from './prime';
 
-// esy.ge → the platform front door; manager.esy.ge → the back office;
-// admin.esy.ge → administration; <sub>.esy.ge → a storefront.
+// One table per face of the app (core/hostKey.js).
 const HOSTS = {
   store: () => import('./store'),
   platform: () => import('./platform'),
   manager: () => import('./manager'),
   admin: () => import('./admin'),
 };
-
-export function hostKey() {
-  if (isAdminHost()) return 'admin';
-  if (isManagerHost()) return 'manager';
-  return isPlatformHost() ? 'platform' : 'store';
-}
 
 const pathOf = (to) => {
   if (typeof to === 'string') {

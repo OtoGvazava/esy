@@ -11,8 +11,9 @@
 //    tenant being the /api/tenant/current body), and the shopper's display
 //    settings from this browser, as DisplayPrefsContext keeps them;
 //  - elsewhere, esy's theme in the host's colour;
-//  - the host's own chunk of the app (its route table) starts loading beside
-//    the app's entry, rather than once the entry has run;
+//  - the host's own chunk of the app (its route table) and its strings, in the
+//    page's language, start loading beside the app's entry, rather than once
+//    the entry has run;
 //  - the store's own faces start loading at once (a design's from Google
 //    Fonts; esy's own are preloaded by index.html), and its name is the title.
 //
@@ -85,6 +86,11 @@ export default function paint(cfg) {
   // This host's part of the app (router/index.jsx loads one table per host).
   const chunk = cfg.hosts && cfg.hosts[admin ? 'admin' : manager ? 'manager' : store ? 'store' : 'platform'];
   if (chunk) add({ rel: 'modulepreload', href: chunk, crossorigin: '' });
+  // Its strings in this page's language (i18n.js, the same choice of language).
+  const locales = cfg.locales;
+  const files = locales && locales.files[lang === 'en' ? 'en' : 'ka'];
+  const parts = locales && locales.hosts[admin ? 'admin' : manager ? 'manager' : store ? 'store' : 'platform'];
+  if (files && parts) parts.forEach((part) => { if (files[part]) add({ rel: 'modulepreload', href: files[part], crossorigin: '' }); });
   // Soft sets Latin in Noto Sans Georgian too, not only Georgian.
   if (theme === 'soft' && cfg.softLatin) add({ rel: 'preload', href: cfg.softLatin, as: 'font', type: 'font/woff2', crossorigin: '' });
   const families = [...new Set([...(cfg.fonts[font] || []), ...(theme === 'neon' ? cfg.fonts.neon : [])])];
