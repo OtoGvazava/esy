@@ -22,6 +22,7 @@ import { useStoreBarShown } from '../components/store/storeChrome';
 import { alpha } from '../core/tokens';
 import CategoryPills from '../components/store/CategoryPills';
 import { SortMenu } from '../components/store/CollectionFilters';
+import ViewSwitch from '../components/store/ViewSwitch';
 import { useStoreCategories } from '../hooks/useStoreCategories';
 import Collection from './Collection';
 import { NoResults } from '../components/shop/EmptyStates';
@@ -157,7 +158,8 @@ function ShopHome() {
   const shown = picked ? picked.items : products;
 
   // The sort control: on the category row's end when the store has categories
-  // (an icon on a phone, as A1 draws it), otherwise on the count row.
+  // (an icon on a phone, as A1 draws it), otherwise on the count row (an icon
+  // there too on a phone, so the count, view and sort pin as one line).
   const pillsShown = !query && categories.length > 0;
   const sortOptions = Object.entries(SORTS).map(([id, s]) => ({ id, label: ts(`collection.sort.${s.key}`) }));
   const sortMenu = (iconOnly) => (
@@ -276,7 +278,12 @@ function ShopHome() {
       )}
 
       {/* The store's categories (A1), each opening its collection. */}
-      {pillsShown && <CategoryPills gutter={gutter} categories={categories} trailing={sortMenu(isMobile)} />}
+      {pillsShown && (
+        <CategoryPills
+          gutter={gutter} categories={categories}
+          trailing={<><ViewSwitch />{sortMenu(isMobile)}</>}
+        />
+      )}
 
       {/* result meta — the sort control sits here, on the row it describes,
           unless the category row above already carries it. A store with no
@@ -302,7 +309,10 @@ function ShopHome() {
             {t('productCount', { count: story ? shown.length : total })}
           </div>
         )}
-        {sortMenu(false)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ViewSwitch />
+          {sortMenu(isMobile)}
+        </div>
       </div>}
 
       {error && (

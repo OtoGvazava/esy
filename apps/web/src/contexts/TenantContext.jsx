@@ -15,8 +15,11 @@ export { TenantContext };
 const devTenantParam = () =>
   new URLSearchParams(window.location.search).get('tenant');
 
-// The tab icon index.html ships (esy's own), kept for the platform host.
+// The tab icon and title index.html ships (esy's own), kept for the platform
+// host. The platform host resolves to the seeded "main" store, whose name is
+// a placeholder that a persisted database keeps, so it is never the title.
 const PLATFORM_ICON = '/favicon.svg';
+const PLATFORM_TITLE = 'esy.ge';
 
 const escapeXml = (s) =>
   s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -48,11 +51,14 @@ const setFavicon = (href) => {
 };
 
 const applyBranding = (t) => {
-  const title = t?.displayName || t?.name;
-  if (title) document.title = title;
   if (!t || t.isPlatform) {
+    document.title = PLATFORM_TITLE;
     setFavicon(PLATFORM_ICON);
-  } else if (t.logoUrl) {
+    return;
+  }
+  const title = t.displayName || t.name;
+  if (title) document.title = title;
+  if (t.logoUrl) {
     setFavicon(t.logoUrl);
   } else if (title) {
     setFavicon(initialIcon(title, t.primaryColor));
