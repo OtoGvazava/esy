@@ -24,8 +24,7 @@
     "store": "Store default",
     "grid2": "Grid",
     "grid3": "Photos",
-    "list": "List",
-    "switchTo": "Product view: {{current}}. Switch to {{next}}"
+    "list": "List"
   },
   "solid": {
     "label": "Reduce transparency",

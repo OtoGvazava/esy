@@ -42,3 +42,10 @@ a {
 }
 
 /* MUI ThemeProvider / Glow tokens control all colors. */
+
+/* A pinned page toolbar (StoreMenus' PinnedBar) has no surface: taps between
+   its controls reach the products under it, its controls and menus still
+   take theirs, and the category pills still scroll sideways. */
+.esy-pinbar :is(a, button, input, nav, [role="menu"]) {
+  pointer-events: auto;
+}

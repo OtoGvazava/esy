@@ -158,7 +158,8 @@ function ShopHome() {
   const shown = picked ? picked.items : products;
 
   // The sort control: on the category row's end when the store has categories
-  // (an icon on a phone, as A1 draws it), otherwise on the count row.
+  // (an icon on a phone, as A1 draws it), otherwise on the count row (an icon
+  // there too on a phone, so the count, view and sort pin as one line).
   const pillsShown = !query && categories.length > 0;
   const sortOptions = Object.entries(SORTS).map(([id, s]) => ({ id, label: ts(`collection.sort.${s.key}`) }));
   const sortMenu = (iconOnly) => (
@@ -283,7 +284,7 @@ function ShopHome() {
         <PinnedBar top={pinTop} pinnedStyle={{ paddingBottom: 14 }}>
           <CategoryPills
             gutter={gutter} categories={categories}
-            trailing={<><ViewSwitch T={T} compact={isMobile} />{sortMenu(isMobile)}</>}
+            trailing={<><ViewSwitch />{sortMenu(isMobile)}</>}
           />
         </PinnedBar>
       )}
@@ -313,8 +314,8 @@ function ShopHome() {
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ViewSwitch T={T} compact={isMobile} />
-          {sortMenu(false)}
+          <ViewSwitch />
+          {sortMenu(isMobile)}
         </div>
       </div></PinnedBar>}
 

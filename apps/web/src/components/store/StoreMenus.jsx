@@ -167,13 +167,13 @@ function usePinned(ref, enabled, top = 0) {
 
 /**
  * A page's toolbar (the category, view and sort row; a collection's filter
- * row) that holds its place and pins to the top once scrolled past, on the
- * floating surface like the top tabs (A1 and A3, scrolled). `top` is the
- * height of what is already fixed above it; `pinnedStyle` is added to the
- * row only while pinned, for a row whose page gives it its side padding.
+ * row) that holds its place and pins to the top once scrolled past (A1 and
+ * A3, scrolled). It has no surface of its own: the pills float over the
+ * products, and taps between them reach the products underneath. `top` is
+ * the height of what is already fixed above it; `pinnedStyle` is added to
+ * the row only while pinned, for a row whose page gives it its side padding.
  */
 export function PinnedBar({ top = 0, pinnedStyle, children }) {
-  const { T } = useGlow();
   const holder = useRef(null);
   const row = useRef(null);
   const pinned = usePinned(holder, true, top);
@@ -190,10 +190,9 @@ export function PinnedBar({ top = 0, pinnedStyle, children }) {
   }, [pinned]);
   return (
     <div ref={holder} style={{ position: 'relative', minHeight: pinned ? height : undefined }}>
-      <div ref={row} style={pinned ? {
+      <div ref={row} className={pinned ? 'esy-pinbar' : undefined} style={pinned ? {
         position: 'fixed', top, left: 0, right: 0, zIndex: Z.bar, paddingBottom: 10,
-        background: 'var(--k-fl-bg)', backdropFilter: 'var(--k-fl-blur)', WebkitBackdropFilter: 'var(--k-fl-blur)',
-        boxShadow: `inset 0 -1px 0 ${T.border}`, ...pinnedStyle,
+        pointerEvents: 'none', ...pinnedStyle,
       } : { position: 'relative' }}
       >
         {children}

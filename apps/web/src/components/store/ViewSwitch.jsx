@@ -6,8 +6,8 @@
 // followed again if the owner changes it later. An owner layout the shopper
 // cannot pick (the feed) shows as a "Store default" option.
 //
-// `compact` draws one round 40 px button that steps to the next view, as A1
-// and A3 draw it on a phone beside the sort icon or pill.
+// Every device draws all the views, a phone too (A1, A3): one tap, and the
+// chosen one is always in sight.
 /* eslint-disable react-refresh/only-export-components */
 import { useContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +26,7 @@ export const VIEW_PATHS = {
   list: <><rect x="4" y="5" width="5" height="5" rx="1.2" /><rect x="4" y="14" width="5" height="5" rx="1.2" /><path d="M12 7.5h8M12 16.5h8" /></>,
 };
 
-export default function ViewSwitch({ T, compact = false }) {
+export default function ViewSwitch() {
   const { t } = useTranslation('display');
   const { tenant } = useContext(TenantContext);
   const display = useDisplayPrefs();
@@ -41,23 +41,6 @@ export default function ViewSwitch({ T, compact = false }) {
   const at = Math.max(0, options.indexOf(current));
   const pick = (v) => display.setView(v === 'store' || v === owner ? null : v);
   const name = (v) => t(`view.${v}`);
-
-  if (compact) {
-    const next = options[(at + 1) % options.length];
-    return (
-      <button
-        type="button" onClick={() => pick(next)}
-        aria-label={t('view.switchTo', { current: name(current), next: name(next) })}
-        style={{
-          width: 40, height: 40, padding: 0, flex: 'none', cursor: 'pointer', color: T.text,
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          border: 0, borderRadius: 'var(--k-r-ibtn)', background: T.surface2,
-        }}
-      >
-        <Glyph size={20}>{VIEW_PATHS[current]}</Glyph>
-      </button>
-    );
-  }
 
   // A radio group, as on Display settings: Tab stops on the chosen view, the arrows move it.
   const onKey = (e, i) => {
