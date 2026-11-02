@@ -22,8 +22,8 @@ import { money } from '../core/money';
 import { track } from '../core/tokens';
 import GlowProductCard from '../components/glow/GlowProductCard';
 import GlowLoadMore from '../components/glow/GlowLoadMore';
-import { HeadButton, MenuStrip } from '../components/store/StoreMenus';
-import { useStoreBarShown } from '../components/store/storeChrome';
+import { HeadButton, MenuStrip, PinnedBar, STRIP_H } from '../components/store/StoreMenus';
+import { STORE_BAR_H, useStoreBarShown } from '../components/store/storeChrome';
 import { useStoreCategories } from '../hooks/useStoreCategories';
 import {
   CheckRow, FilterChip, FilterSheet, Glyph, LinkButton, OptionPills, PATHS, PriceFilter,
@@ -261,6 +261,9 @@ export default function Collection() {
   const openProduct = (p) => navigate(`/product/${p.id}`);
 
   const gutter = isMobile ? 16 : 40;
+  // The toolbar pins under what stays at the top: StoreBar, or the menu strip.
+  const pinTop = !ownHeader ? STORE_BAR_H : STRIP_H[design.menu] ?? 0;
+  const pinPad = { padding: `10px ${gutter}px` };
   // A count is only said once there is one: "0 items" during the first load
   // reads as an empty collection.
   const counted = !loading || products.length > 0;
@@ -275,7 +278,8 @@ export default function Collection() {
   const sort = (
     <SortMenu
       T={T} value={f.sort} options={sortOptions} align={isDesktop ? 'right' : 'left'}
-      pillLabel={(label) => t('collection.sortLabel', { option: label })}
+      // A phone draws the icon, so filter, sort and view share one row (A3).
+      iconOnly={isMobile} pillLabel={(label) => t('collection.sortLabel', { option: label })}
       menuLabel={t('collection.sortMenu')} onChange={(id) => apply({ sort: id })}
     />
   );
@@ -362,6 +366,7 @@ export default function Collection() {
             <span aria-hidden="true">{' / '}</span>
             <span aria-current="page">{name}</span>
           </nav>
+          <PinnedBar top={pinTop} pinnedStyle={pinPad}>
           <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <h1 style={{
               margin: 0, minWidth: 0, color: T.text, font: 'var(--k-w-t) 30px/1.15 var(--k-font-d)',
@@ -375,12 +380,14 @@ export default function Collection() {
               {sort}
             </div>
           </div>
+          </PinnedBar>
         </div>
       )}
 
       {/* Phone and tablet: the filter and sort pills, then what is active. */}
       {!isDesktop && (
         <div style={{ padding: `8px ${gutter}px 0`, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <PinnedBar top={pinTop} pinnedStyle={pinPad}>
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, rowGap: 8 }}>
             <button
               ref={sheetButton} type="button" aria-haspopup="dialog" aria-expanded={sheet}
@@ -395,6 +402,7 @@ export default function Collection() {
               <span style={{ marginLeft: 'auto', font: `400 12.5px ${T.font}`, color: T.textDim, whiteSpace: 'nowrap' }}>{countText}</span>
             )}
           </div>
+          </PinnedBar>
           {filtered && chipRow(isTablet)}
           {isMobile && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 40 }}>

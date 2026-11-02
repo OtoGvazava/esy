@@ -34,6 +34,8 @@ export function useStoreNav() {
 // of its breakpoint. Both sides run in layout effects, so a change lands before
 // the browser paints and no frame ever shows both headers.
 let bars = 0;
+// StoreBar's height, border included: a page toolbar pins under it.
+export const STORE_BAR_H = 76;
 const listeners = new Set();
 const notify = () => listeners.forEach((fn) => fn());
 

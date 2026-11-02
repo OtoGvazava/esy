@@ -28,7 +28,7 @@ import { Icons } from '../../core/icons';
 import { contactApi } from '../../utils/api';
 import { CHANNELS, channelHref } from '../../core/channels';
 import ManageButton from '../ManageButton';
-import { useStoreBarMounted } from './storeChrome';
+import { STORE_BAR_H, useStoreBarMounted } from './storeChrome';
 import { useTenant } from '../../contexts/TenantContext';
 import { useDesign } from '../../core/design/useDesign';
 import { StoreName } from './VerifiedTick';
@@ -75,7 +75,7 @@ export default function StoreBar({ compact }) {
   const bar = (
     <div style={{
       display: 'flex', alignItems: 'center', gap: compact ? 14 : 26,
-      padding: compact ? '0 24px' : '0 48px', height: compact ? 64 : 76,
+      padding: compact ? '0 24px' : '0 48px', height: compact ? 64 : STORE_BAR_H, boxSizing: 'border-box',
       // The theme's header ground: frosted on Liquid Glass and Neon, clear on Soft.
       borderBottom: `1px solid ${T.border}`, background: 'var(--k-hd-bg)',
       backdropFilter: 'var(--k-hd-blur, none)', WebkitBackdropFilter: 'var(--k-hd-blur, none)',
