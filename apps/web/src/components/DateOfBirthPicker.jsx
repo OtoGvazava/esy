@@ -20,8 +20,9 @@ const chevron = <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-
 // dropdowns from `value` alone would discard a year/month chosen before the
 // others, so no single dropdown could ever "stick".
 //
-// Drawn with the kit's classes, so it sits inside a .sk root (ProfileGate,
-// PersonalInfo).
+// Drawn with the kit's classes and carries its own .sk root, so it also draws
+// on pages outside the shop kit (the sell flow's profile step); without it the
+// selects fall back to the browser's and the chevrons grow to fill the row.
 export default function DateOfBirthPicker({ value, onChange }) {
   const { t } = useTranslation('storefront');
   const [sel, setSel] = useState(() => parse(value));
@@ -44,7 +45,7 @@ export default function DateOfBirthPicker({ value, onChange }) {
   const box = (filled) => ({ color: filled ? 'var(--k-fg)' : 'var(--k-dim)' });
 
   return (
-    <div className="row" style={{ gap: 10 }}>
+    <div className="sk"><div className="row" style={{ gap: 10 }}>
       <span className="sel" style={{ flex: 1 }}>
         <select className="in" aria-label={t('dob.day')} value={day || ''} onChange={(e) => emit(year, month, Number(e.target.value))} style={box(!!day)}>
           <option value="">{t('dob.day')}</option>
@@ -66,6 +67,6 @@ export default function DateOfBirthPicker({ value, onChange }) {
         </select>
         {chevron}
       </span>
-    </div>
+    </div></div>
   );
 }
