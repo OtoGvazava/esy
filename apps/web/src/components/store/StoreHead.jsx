@@ -66,7 +66,7 @@ function Controls({ drawer }) {
   return (
     <>
       <HeadButton label={t('toggleTheme')} onClick={toggle}>{mode === 'dark' ? <Icon.sun /> : <Icon.moon />}</HeadButton>
-      <HeadButton to="/settings/display" label={t('title', { ns: 'display' })}><Icon.globe /></HeadButton>
+      <HeadButton to="/settings/display" label={t('title', { ns: 'display' })}><Icon.sliders /></HeadButton>
     </>
   );
 }

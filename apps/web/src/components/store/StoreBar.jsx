@@ -145,8 +145,8 @@ export default function StoreBar({ compact }) {
         );
       })}
 
-      {/* The current language, and a chevron: it opens Language and display
-          (where the language and the look are both chosen), not a switch. */}
+      {/* Settings sliders and the current language: it opens Language and
+          display (where the language and the look are both chosen), not a switch. */}
       <LangPill T={T} lang={language} to="/settings/display" label={t('title', { ns: 'display' })} compact={false} />
 
       <Link to="/cart" style={{

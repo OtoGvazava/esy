@@ -16,14 +16,14 @@ export function ThemePill({ T, dark, onClick, compact = true }) {
   );
 }
 
-// The pill opens the Language and display page rather than flipping the
-// language, so it is drawn as a way in, not a switch: a link with a chevron
-// after the current language, beside the theme toggle's square. Given `to`
+// The pill opens the Language and display page (language, appearance, text
+// size, view) rather than flipping the language, so it carries the settings
+// sliders, not a globe, with the current language beside them. Given `to`
 // it is a real link; `onClick` alone keeps it a button (the design previews).
 export function LangPill({ T, lang = 'en', to, onClick, label = 'language', compact = true }) {
   const L = langInfo(lang);
   const style = {
-    boxSizing: 'border-box', height: 36, padding: compact ? '0 7px 0 10px' : '0 9px 0 13px',
+    boxSizing: 'border-box', height: 36, padding: compact ? '0 10px' : '0 13px',
     borderRadius: compact ? 12 : 999,
     border: `1px solid ${T.border}`, background: 'transparent', color: T.text,
     display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -32,9 +32,8 @@ export function LangPill({ T, lang = 'en', to, onClick, label = 'language', comp
   };
   const body = (
     <>
-      <Icon.globe />
+      <Icon.sliders aria-hidden="true" />
       <span>{compact ? L.short : L.native}</span>
-      <Icon.chevR aria-hidden="true" style={{ color: T.textMute, marginLeft: -1 }} />
     </>
   );
   if (to) return <Link to={to} aria-label={label} style={style}>{body}</Link>;
