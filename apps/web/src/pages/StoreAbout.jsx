@@ -18,6 +18,7 @@ import { Card, Chip, Note } from '../core/primitives';
 import { Mark } from '../core/domain';
 import { StoreContacts } from '../components/store/ContactChannels';
 import { productPageQuery, publicDeliveryQuery } from '../core/query/queries';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { money } from '../core/money';
 import { alpha } from '../core/tokens';
 
@@ -32,14 +33,30 @@ export default function StoreAbout() {
   // shop, so the About page states it rather than saving it for checkout.
   // Both reads are cached and fetched by the route loader before the page
   // opens, so the cards are there with the page rather than after it.
-  const { data: delivery } = useQuery(publicDeliveryQuery());
+  const { data: delivery, isPending: deliveryPending } = useQuery(publicDeliveryQuery());
   const routes = Array.isArray(delivery?.routes) ? delivery.routes : NO_ROUTES;
   // The chip row states how much the shop sells, so it needs the real count.
-  const { data: countPage } = useQuery(productPageQuery({ page: 0, size: 1 }));
+  const { data: countPage, isPending: countPending } = useQuery(productPageQuery({ page: 0, size: 1 }));
   const productCount = countPage?.totalElements ?? null;
 
   const pad = 18;
   const label = { font: `700 14px ${T.font}`, color: T.text, marginBottom: 12 };
+
+  // Opened as the first page of a visit, the reads are still out: the page's
+  // cards stand in for themselves until both are in, rather than the count
+  // chip and the delivery card arriving one by one and pushing the page down.
+  if (deliveryPending || countPending) {
+    return (
+      <GlowScreen T={T} padBottom={40}>
+        <GlowTopNav T={T} title={t('about.title')} onBack={() => navigate(-1)} />
+        <Skeleton style={{ padding: `0 ${pad}px`, maxWidth: 820, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Sk h={230} r={18} />
+          <Sk h={140} r={18} />
+          <Sk h={170} r={18} />
+        </Skeleton>
+      </GlowScreen>
+    );
+  }
 
   return (
     <GlowScreen T={T} padBottom={40}>
