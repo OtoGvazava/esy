@@ -41,7 +41,7 @@ export default function StoreBar({ compact }) {
   const { T, tenant } = useGlow();
   const { t } = useTranslation('home');
   const { getTotalItems } = useCart();
-  const { language } = useThemeMode();
+  const { language, setLanguage } = useThemeMode();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { tenant: store } = useTenant();
@@ -145,9 +145,14 @@ export default function StoreBar({ compact }) {
       })}
 
       {/* Both languages named, the current one first, as on every esy header. */}
-      <span style={{ ...pill }}>
+      <button
+        type="button"
+        aria-label={t('navbar:toggleLanguage')}
+        onClick={() => setLanguage(language === 'ka' ? 'en' : 'ka')}
+        style={pill}
+      >
         <Icon.globe /> {language === 'ka' ? 'ქა · EN' : 'EN · ქა'}
-      </span>
+      </button>
 
       <Link to="/cart" style={{
         ...pill,
