@@ -231,9 +231,13 @@ export function Field({
 // Surface container. `pad={0}` is the edge-to-edge variant — used whenever the
 // content owns its own insets (list rows, tables, media). Pair it with
 // style={{ overflow: 'hidden' }} so children are clipped by the 18px radius.
-export function Card({ T, children, pad = 16, style = {} }) {
+// Anything else it is given (a click handler, a role, a key handler, a class)
+// goes to its element: a caller that makes a card clickable must get a card
+// that clicks.
+export function Card({ T, children, pad = 16, style = {}, ...rest }) {
   return (
     <div
+      {...rest}
       style={{
         padding: pad,
         borderRadius: 18,

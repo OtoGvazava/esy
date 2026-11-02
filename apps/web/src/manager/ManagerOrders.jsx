@@ -99,12 +99,24 @@ function OrderCardSk({ T }) {
   );
 }
 
-function OrderCard({ T, t, lang, order, onOpen }) {
+// The whole card opens the order, as a row of the desktop table does: by tap,
+// or by Enter or Space once it has the focus. Pressing it starts fetching the
+// order (router/prime.js), so the detail is usually ready by the time it opens.
+function OrderCard({ T, t, lang, order, href, onOpen }) {
   const status = enumName(order.status);
   const payment = enumName(order.paymentStatus);
   const dead = isDead(status, payment);
+  const onKeyDown = (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    onOpen();
+  };
   return (
-    <Card T={T} pad={14} style={{ cursor: 'pointer' }} onClick={onOpen}>
+    <Card
+      T={T} pad={14} style={{ cursor: 'pointer' }}
+      role="button" tabIndex={0} onClick={onOpen} onKeyDown={onKeyDown}
+      data-prefetch={href} className="esy-press-soft"
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <span style={{ font: `700 12px ${T.mono}`, color: T.text }}>{orderId(order)}</span>
         <span style={{ flex: 1 }} />
@@ -283,7 +295,7 @@ export default function ManagerOrders() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {shown.map((o) => (
             <OrderCard
-              key={o.id} T={T} t={t} lang={lang} order={o} onOpen={() => open(o)}
+              key={o.id} T={T} t={t} lang={lang} order={o} href={hrefOf(o)} onOpen={() => open(o)}
             />
           ))}
         </div>
