@@ -5,7 +5,7 @@ import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { handleApiError } from '../utils/api';
 import { productsInfinite } from '../core/query/queries';
 import { SORTS, homeListArgs, sortIdOf } from './shopQuery';
-import { Skeleton, SkProductGrid } from '../components/skeleton/Skeleton';
+import { Sk, Skeleton, SkProductGrid } from '../components/skeleton/Skeleton';
 import { useCart } from '../contexts/CartContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useGlow } from '../styles/glow';
@@ -84,6 +84,7 @@ function ShopHome() {
   const products = useMemo(() => list.data?.pages.flatMap((p) => p.products) ?? [], [list.data]);
   const lastPage = list.data?.pages[list.data.pages.length - 1];
   const total = lastPage ? (lastPage.totalElements ?? products.length) : 0;
+  const firstLoad = list.isPending;
   const refreshing = list.isPlaceholderData;
   const isLoading = list.isPending || list.isFetchingNextPage || (refreshing && list.isFetching);
   const error = list.error ? handleApiError(list.error, t('failedToLoad')) : '';
@@ -196,6 +197,44 @@ function ShopHome() {
         </div>
       )}
 
+      {/* The list's first load: one skeleton for everything the list decides
+          — the stories (drawn from the products), the category row and the
+          grid — swapped whole for the real thing, so nothing already on
+          screen moves when the products arrive. */}
+      {firstLoad ? (
+        <Skeleton label={t('common:loading.products')}>
+          {design.show.stories && !query && (
+            <div style={{ display: 'flex', gap: 14, overflow: 'hidden', padding: `${sp(14)} ${gutter}px ${sp(4)}` }}>
+              {[0, 1, 2].map((i) => (
+                <span key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: 74, flex: 'none' }}>
+                  <Sk w={66} h={66} r="50%" />
+                  <Sk w={46} h={12} r={6} style={{ margin: '1px 0 2px' }} />
+                </span>
+              ))}
+            </div>
+          )}
+          {pillsShown ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: `14px ${gutter}px 0` }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 8, overflow: 'hidden' }}>
+                {[64, 88, 74, 70, 80].map((w, i) => <Sk key={i} w={w} h={40} r="var(--k-r-pill)" />)}
+              </div>
+              <Sk w={isMobile ? 40 : 150} h={40} r="var(--k-r-pill)" />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: `${sp(14)} ${gutter}px ${sp(6)}` }}>
+              <Sk w={90} h={13} r={6} />
+              <Sk w={150} h={40} r="var(--k-r-pill)" />
+            </div>
+          )}
+          <div style={{ padding: `${sp(4)} ${gutter}px ${sp(8)}` }}>
+            <SkProductGrid
+              cols={cols} count={cols * 2} gap={sp(gridGap)} layout={layout} look={design.style}
+              compact={isMobile} price={design.show.price}
+            />
+          </div>
+        </Skeleton>
+      ) : (
+      <>
       {/* Stories are curated sets, never the categories again, and only the
           sets the products really support: new (added in the last 14 days),
           under 50 ₾ and running out. There is no sale price, so a "sale"
@@ -287,6 +326,8 @@ function ShopHome() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* A search that found nothing is the design's E3: another word to
           try, the way back to everything, and a few products. */}
@@ -302,6 +343,11 @@ function ShopHome() {
         </div>
       ))}
 
+      {/* What follows the grid waits for the list's first page: under the
+          skeleton it would only be pushed about, and a list shorter than the
+          skeleton would pull it up into view. */}
+      {!firstLoad && (
+      <>
       <div ref={loadMoreRef} style={{ position: 'relative', padding: `0 ${gutter}px 14px` }}>
         {(isLoading || hasMore) && products.length > 0 && (
           <GlowLoadMore T={T} count={Math.max(total - products.length, 0)} />
@@ -360,6 +406,8 @@ function ShopHome() {
         </span>
         <PoweredBy T={T} />
       </div>
+      </>
+      )}
     </div>
   );
 }
