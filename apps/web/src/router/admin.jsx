@@ -1,20 +1,16 @@
 // admin.esy.ge — administration's routes, under its chrome (AdminShell).
-import { lazy } from 'react';
+//
+// The table is its own chunk (router/index.jsx). The shell and the store list
+// come with it; every other screen is a chunk of its own, fetched with its
+// data when its entry is pointed at or pressed (prime.js).
 import { Navigate } from 'react-router-dom';
 import AdminShell from '../admin/AdminShell';
 import AdminStores from '../admin/AdminStores';
-import AdminStoreDetail from '../admin/AdminStoreDetail';
-import AdminBilling from '../admin/AdminBilling';
-import AdminAdmins from '../admin/AdminAdmins';
-import SignIn from '../pages/SignIn';
-import AuthCallback from '../pages/AuthCallback';
 import {
   adminsLoader, billingLoader, configLoader, configScreen, integrationsLoader, integrationsScreen,
   storeLoader, storesLoader,
 } from './adminLoaders';
-
-const AdminConfig = lazy(configScreen);
-const AdminIntegrations = lazy(integrationsScreen);
+import { lazyScreen } from './prime';
 
 // Every screen here keeps its state in the page, not the address, so only a
 // move to another path runs a screen's loader again. A query string that
@@ -23,11 +19,11 @@ const samePage = ({ currentUrl, nextUrl, defaultShouldRevalidate }) => (
   currentUrl.pathname !== nextUrl.pathname ? defaultShouldRevalidate : false
 );
 
-export const adminRoutes = [
+export const routes = [
   // The OAuth round-trip must reach its own routes before any gate runs, or
   // signing in on this host can never complete.
-  { path: 'signin', element: <SignIn /> },
-  { path: 'auth/callback', element: <AuthCallback /> },
+  { path: 'signin', lazy: lazyScreen(() => import('../pages/SignIn')) },
+  { path: 'auth/callback', lazy: lazyScreen(() => import('../pages/AuthCallback')) },
   {
     element: <AdminShell />,
     children: [
@@ -36,12 +32,15 @@ export const adminRoutes = [
       // the page, so the move finds the list cached instead of waiting on it.
       { index: true, element: <Navigate to="/stores" replace />, loader: storesLoader },
       { path: 'stores', element: <AdminStores />, loader: storesLoader, shouldRevalidate: samePage },
-      { path: 'stores/:sub', element: <AdminStoreDetail />, loader: storeLoader, shouldRevalidate: samePage },
-      { path: 'billing', element: <AdminBilling />, loader: billingLoader, shouldRevalidate: samePage },
-      { path: 'integrations', element: <AdminIntegrations />, loader: integrationsLoader, shouldRevalidate: samePage },
-      { path: 'config', element: <AdminConfig />, loader: configLoader, shouldRevalidate: samePage },
-      { path: 'admins', element: <AdminAdmins />, loader: adminsLoader, shouldRevalidate: samePage },
+      { path: 'stores/:sub', lazy: lazyScreen(() => import('../admin/AdminStoreDetail')), loader: storeLoader, shouldRevalidate: samePage },
+      { path: 'billing', lazy: lazyScreen(() => import('../admin/AdminBilling')), loader: billingLoader, shouldRevalidate: samePage },
+      { path: 'integrations', lazy: lazyScreen(integrationsScreen), loader: integrationsLoader, shouldRevalidate: samePage },
+      { path: 'config', lazy: lazyScreen(configScreen), loader: configLoader, shouldRevalidate: samePage },
+      { path: 'admins', lazy: lazyScreen(() => import('../admin/AdminAdmins')), loader: adminsLoader, shouldRevalidate: samePage },
       { path: '*', element: <Navigate to="/stores" replace />, loader: storesLoader },
     ],
   },
 ];
+
+/** Where an administrator goes next from the store list, warmed once the page is idle. */
+export const next = ['/billing', '/admins'];

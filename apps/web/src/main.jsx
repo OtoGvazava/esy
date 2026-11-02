@@ -26,13 +26,16 @@ try {
   if (Array.isArray(boot?.contacts)) queryClient.setQueryData(publicContactsQuery().queryKey, boot.contacts);
 } catch { /* no store in the page: TenantContext asks /api/tenant/current */ }
 
-const router = createAppRouter();
 listenForIntent();
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>,
-);
+// The host's route table is its own chunk (router/index.jsx), already on its
+// way: the page's pre-paint script asked for it beside this one.
+createAppRouter().then((router) => {
+  createRoot(document.getElementById('root')).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+});

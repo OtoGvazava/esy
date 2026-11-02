@@ -49,6 +49,35 @@ export function prime(load) {
 }
 
 /**
+ * A route's `lazy` for a screen that is its own chunk: the module's default
+ * export is the screen. Static loaders stay on the route, so the screen's code
+ * and its data are fetched side by side.
+ */
+export const lazyScreen = (load) => () => load().then((m) => {
+  fresh();
+  return { Component: m.default };
+}, stale);
+
+// A screen's chunk that cannot be fetched is, nearly always, one a deploy has
+// replaced while this tab was open: the page is reloaded once to pick up the
+// new build, rather than the router showing an error. The same failure again
+// straight after that reload is a real one, and is left to surface.
+const RELOADED = 'esy-chunk-reload';
+
+function fresh() {
+  try { sessionStorage.removeItem(RELOADED); } catch { /* storage blocked */ }
+}
+
+function stale(error) {
+  let again = false;
+  try { again = sessionStorage.getItem(RELOADED) === window.location.href; } catch { again = false; }
+  if (again) throw error;
+  try { sessionStorage.setItem(RELOADED, window.location.href); } catch { /* storage blocked: reload anyway */ }
+  window.location.reload();
+  return new Promise(() => {});
+}
+
+/**
  * A route's shouldRevalidate for a screen whose address keeps in-page state
  * (a step, a tab, a filter): a change to that alone never waits on the
  * loader, the screen answers it in place.
@@ -86,8 +115,9 @@ export function setPrefetchRoutes(routes) {
 /**
  * Starts what a screen needs when a link to it is pointed at, focused or
  * pressed, so the click finds it ready: its code (a lazy route) and its data.
+ * `data: false` fetches the code alone (warming a likely next screen).
  */
-export function prefetchRoute(href) {
+export function prefetchRoute(href, { data = true } = {}) {
   let url;
   try {
     url = new URL(href, window.location.href);
@@ -95,14 +125,14 @@ export function prefetchRoute(href) {
     return;
   }
   if (url.origin !== window.location.origin) return;
-  const key = url.pathname + url.search;
+  const key = `${data ? 'all' : 'code'}:${url.pathname}${url.search}`;
   const now = Date.now();
   if (now - (recent.get(key) || 0) < AGAIN_MS) return;
   recent.set(key, now);
   const matches = matchRoutes(table, url.pathname) || [];
   matches.forEach(({ route, params }) => {
     if (typeof route.lazy === 'function') route.lazy().catch(() => {});
-    if (route.loader?.prefetch) route.loader.prefetch(params, url);
+    if (data && route.loader?.prefetch) route.loader.prefetch(params, url);
   });
 }
 

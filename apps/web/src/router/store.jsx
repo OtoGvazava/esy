@@ -1,26 +1,21 @@
 // <sub>.esy.ge — a store's own routes, under the store's chrome (StoreLayout).
+//
+// This table is its own chunk (router/index.jsx loads the host's table only).
+// The screens a shopper lands on or taps first — the shop, a product, the
+// bag, search — come with it; the rest are their own chunks, fetched when a
+// link to them is pointed at or pressed (prime.js), or once the page is idle,
+// and the router keeps the old screen up while one arrives.
 import { Navigate } from 'react-router-dom';
 import { GoTo, StoreLayout } from '../App';
 import { platformUrl } from '../utils/hosts';
 import Home from '../pages/Home';
 import ProductDetails from '../pages/ProductDetails';
-import StoreAbout from '../pages/StoreAbout';
 import SearchOverlay from '../pages/SearchOverlay';
 import Cart from '../pages/Cart';
-import Checkout from '../pages/Checkout';
-import PayReturn from '../pages/PayReturn';
-import OrderSuccess from '../pages/OrderSuccess';
-import Account from '../pages/Account';
-import PersonalDetails from '../pages/PersonalDetails';
-import Orders from '../pages/Orders';
-import OrderDetail from '../pages/OrderDetail';
-import SignIn from '../pages/SignIn';
-import AuthCallback from '../pages/AuthCallback';
-import DisplaySettings from '../pages/DisplaySettings';
 import {
   aboutLoader, checkoutLoader, homeLoader, orderLoader, ordersLoader, productLoader,
 } from './storeLoaders';
-import { searchStays } from './prime';
+import { lazyScreen, searchStays } from './prime';
 
 // The home page and a collection share an address: a sort, a search or a
 // filter is a change within the page and never waits, but moving to another
@@ -31,25 +26,25 @@ const homeRevalidate = ({ currentUrl, nextUrl, defaultShouldRevalidate }) => (
     ? defaultShouldRevalidate : false
 );
 
-export const storeRoutes = [{
+export const routes = [{
   element: <StoreLayout />,
   children: [
     { index: true, element: <Home />, loader: homeLoader, shouldRevalidate: homeRevalidate },
     { path: 'product/:id', element: <ProductDetails />, loader: productLoader },
-    { path: 'about', element: <StoreAbout />, loader: aboutLoader },
+    { path: 'about', lazy: lazyScreen(() => import('../pages/StoreAbout')), loader: aboutLoader },
     { path: 'search', element: <SearchOverlay /> },
     { path: 'cart', element: <Cart /> },
     // Checkout's steps live in ?step=: moving between them never waits.
-    { path: 'checkout', element: <Checkout />, loader: checkoutLoader, shouldRevalidate: searchStays },
-    { path: 'pay/return', element: <PayReturn /> },
-    { path: 'success', element: <OrderSuccess /> },
-    { path: 'account', element: <Account />, loader: ordersLoader },
-    { path: 'account/personal', element: <PersonalDetails /> },
-    { path: 'orders', element: <Orders />, loader: ordersLoader },
-    { path: 'orders/:orderNumber', element: <OrderDetail />, loader: orderLoader },
-    { path: 'signin', element: <SignIn /> },
-    { path: 'auth/callback', element: <AuthCallback /> },
-    { path: 'settings/display', element: <DisplaySettings /> },
+    { path: 'checkout', lazy: lazyScreen(() => import('../pages/Checkout')), loader: checkoutLoader, shouldRevalidate: searchStays },
+    { path: 'pay/return', lazy: lazyScreen(() => import('../pages/PayReturn')) },
+    { path: 'success', lazy: lazyScreen(() => import('../pages/OrderSuccess')) },
+    { path: 'account', lazy: lazyScreen(() => import('../pages/Account')), loader: ordersLoader },
+    { path: 'account/personal', lazy: lazyScreen(() => import('../pages/PersonalDetails')) },
+    { path: 'orders', lazy: lazyScreen(() => import('../pages/Orders')), loader: ordersLoader },
+    { path: 'orders/:orderNumber', lazy: lazyScreen(() => import('../pages/OrderDetail')), loader: orderLoader },
+    { path: 'signin', lazy: lazyScreen(() => import('../pages/SignIn')) },
+    { path: 'auth/callback', lazy: lazyScreen(() => import('../pages/AuthCallback')) },
+    { path: 'settings/display', lazy: lazyScreen(() => import('../pages/DisplaySettings')) },
     // Language and appearance became the one display screen; old links land there.
     { path: 'settings/language', element: <Navigate to="/settings/display" replace /> },
     { path: 'settings/appearance', element: <Navigate to="/settings/display" replace /> },
@@ -63,3 +58,6 @@ export const storeRoutes = [{
     { path: '*', element: <Navigate to="/" replace /> },
   ],
 }];
+
+/** Where a shopper goes next from the shop, warmed once the page is idle. */
+export const next = ['/orders', '/account', '/checkout'];

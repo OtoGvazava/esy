@@ -12,8 +12,8 @@ import {
   adminStoresQuery, billingMonth,
 } from '../core/query/adminQueries';
 
-// The two screens kept out of the first download (router/admin.jsx draws them
-// with React.lazy). Their loaders fetch the code with the data, so a link
+// Two of the screens kept out of the first download (router/admin.jsx loads
+// them as lazy routes). Their loaders fetch the code with the data, so a link
 // pointed at brings both, and the old screen stays up until both are here.
 export const configScreen = () => import('../admin/AdminConfig');
 export const integrationsScreen = () => import('../admin/AdminIntegrations');

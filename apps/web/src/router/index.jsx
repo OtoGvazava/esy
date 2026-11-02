@@ -5,22 +5,31 @@
 // one is ready (route loaders fill the query cache first, prime.js), report
 // that it is waiting (useNavigation, behind NavProgress), restore the scroll
 // position on back and forward, and cross-fade from one page to the next.
+//
+// Each host's table is its own chunk, so a shopper never downloads the back
+// office and an admin never downloads the shop: only the table for this host
+// is fetched (the page's pre-paint script, boot/paint.js, starts that fetch
+// alongside the app's own). Within a table, screens off the first path are
+// chunks of their own too, warmed once the page is idle.
 import { createBrowserRouter } from 'react-router-dom';
 import AppRoot from '../App';
 import { isAdminHost, isManagerHost, isPlatformHost } from '../hooks/usePlatformHost';
 import { motionAllowed } from '../core/motion';
-import { setPrefetchRoutes, setRouter } from './prime';
-import { storeRoutes } from './store';
-import { platformRoutes } from './platform';
-import { managerRoutes } from './manager';
-import { adminRoutes } from './admin';
+import { prefetchRoute, setPrefetchRoutes, setRouter } from './prime';
 
 // esy.ge → the platform front door; manager.esy.ge → the back office;
 // admin.esy.ge → administration; <sub>.esy.ge → a storefront.
-function hostRoutes() {
-  if (isAdminHost()) return adminRoutes;
-  if (isManagerHost()) return managerRoutes;
-  return isPlatformHost() ? platformRoutes : storeRoutes;
+const HOSTS = {
+  store: () => import('./store'),
+  platform: () => import('./platform'),
+  manager: () => import('./manager'),
+  admin: () => import('./admin'),
+};
+
+export function hostKey() {
+  if (isAdminHost()) return 'admin';
+  if (isManagerHost()) return 'manager';
+  return isPlatformHost() ? 'platform' : 'store';
 }
 
 const pathOf = (to) => {
@@ -43,18 +52,28 @@ function crossFade(router) {
   };
 }
 
-export function createAppRouter() {
+// The screens a visitor most likely opens next, fetched once the page has
+// nothing better to do, so the tap that opens one rarely waits for code.
+function warm(next, base) {
+  const run = () => next.forEach((path) => prefetchRoute(`${path}${base}`, { data: false }));
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(run, { timeout: 4000 });
+  else setTimeout(run, 2500);
+}
+
+export async function createAppRouter() {
+  const host = await HOSTS[hostKey()]();
   const routes = [{
     path: '/',
     element: <AppRoot />,
     // Drawn for the moment before the first loaders answer (they do not wait
     // on the first load): the page's own ground, so nothing flashes.
     hydrateFallbackElement: <div style={{ minHeight: '100vh' }} />,
-    children: hostRoutes(),
+    children: host.routes,
   }];
   const router = createBrowserRouter(routes);
   crossFade(router);
   setRouter(router);
   setPrefetchRoutes(routes);
+  if (host.next?.length) warm(host.next, window.location.search);
   return router;
 }

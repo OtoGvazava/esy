@@ -11,6 +11,18 @@ import { FONT_FAMILIES, STYLE_KEYS } from './src/core/design/htmlAttrs.js';
 // is Soft, the one theme that sets Latin in it.
 const PRELOAD = ['geist-latin', 'noto-sans-georgian-georgian'];
 
+/** The built URL of each host's route table (src/router/<host>.jsx), its own chunk. */
+function hostChunks(bundle, base) {
+  // Found by the modules a chunk holds: Rollup leaves facadeModuleId unset on
+  // a dynamic entry it has merged other modules into.
+  const chunks = Object.values(bundle || {}).filter((c) => c.type === 'chunk' && c.isDynamicEntry);
+  const holds = (c, file) => (c.moduleIds || Object.keys(c.modules || {})).some((m) => m.replace(/\\/g, '/').endsWith(file));
+  return Object.fromEntries(['store', 'platform', 'manager', 'admin'].map((host) => {
+    const chunk = chunks.find((c) => holds(c, `src/router/${host}.jsx`));
+    return [host, chunk ? `${base}${chunk.fileName}` : null];
+  }));
+}
+
 /** The built URL of one of src/assets/fonts' faces, or null outside a build. */
 function fontUrl(bundle, base, name) {
   const asset = Object.values(bundle || {}).find((a) => a.type === 'asset'
@@ -44,6 +56,7 @@ function paintScript() {
         platform: PLATFORM_BRAND,
         admin: ADMIN_BRAND,
         softLatin: fontUrl(ctx.bundle, base, 'noto-sans-georgian-latin'),
+        hosts: hostChunks(ctx.bundle, base),
       };
       const source = readFileSync(file, 'utf8').replace('export default function paint', 'function paint');
       const { code } = await transformWithEsbuild(`${source}\ntry { paint(${JSON.stringify(cfg)}); } catch (e) { /* index.html's defaults stand */ }`, file, {
