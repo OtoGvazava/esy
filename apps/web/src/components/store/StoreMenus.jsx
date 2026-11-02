@@ -6,7 +6,6 @@
 // All three draw the one list in storeChrome.js. Every colour, radius and
 // floating surface is a theme token, so Soft, Liquid Glass and Neon each draw
 // these their own way.
-/* eslint-disable react-refresh/only-export-components */
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
@@ -22,9 +21,8 @@ import { useStoreNav } from './storeChrome';
 import { StoreName } from './VerifiedTick';
 import StoreSocials from './StoreSocials';
 
-// Above the dock (1200) and below MUI's dialogs (1300) and the profile gate;
-// a pinned page toolbar goes under the strip and the dock.
-const Z = { bar: 1100, strip: 1150, scrim: 1290, layer: 1295 };
+// Above the dock (1200) and below MUI's dialogs (1300) and the profile gate.
+const Z = { strip: 1150, scrim: 1290, layer: 1295 };
 // The canvas draws one scrim for every theme.
 const SCRIM = 'rgba(8,8,12,.44)';
 const REDUCED = '(prefers-reduced-motion: reduce)';
@@ -149,56 +147,19 @@ function useModal(open, boxRef, firstRef, backRef, onClose) {
 // only once pinned, which sticky cannot tell them, and sticky engages only
 // where index.css's `overflow-x: clip` is supported (its `hidden` fallback
 // makes <body> a scroller that never scrolls, and sticky then sticks to it).
-// `top` is how far down it pins: under whatever is already fixed up there.
-function usePinned(ref, enabled, top = 0) {
+function usePinned(ref, enabled) {
   const [pinned, setPinned] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!enabled || !el || typeof IntersectionObserver === 'undefined') return undefined;
     const io = new IntersectionObserver(
-      ([entry]) => setPinned(entry.boundingClientRect.top < top),
-      { threshold: [0, 1], rootMargin: `${-top}px 0px 0px 0px` },
+      ([entry]) => setPinned(entry.boundingClientRect.top < 0),
+      { threshold: [0, 1] },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [ref, enabled, top]);
+  }, [ref, enabled]);
   return enabled && pinned;
-}
-
-/**
- * A page's toolbar (the category, view and sort row; a collection's filter
- * row) that holds its place and pins to the top once scrolled past (A1 and
- * A3, scrolled). It has no surface of its own: the pills float over the
- * products, and taps between them reach the products underneath. `top` is
- * the height of what is already fixed above it; `pinnedStyle` is added to
- * the row only while pinned, for a row whose page gives it its side padding.
- */
-export function PinnedBar({ top = 0, pinnedStyle, children }) {
-  const holder = useRef(null);
-  const row = useRef(null);
-  const pinned = usePinned(holder, true, top);
-  // The place it leaves keeps its height, so the page does not jump.
-  const [height, setHeight] = useState(0);
-  useLayoutEffect(() => {
-    const el = row.current;
-    if (pinned || !el) return undefined;
-    setHeight(el.offsetHeight);
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const ro = new ResizeObserver(() => setHeight(el.offsetHeight));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [pinned]);
-  return (
-    <div ref={holder} style={{ position: 'relative', minHeight: pinned ? height : undefined }}>
-      <div ref={row} className={pinned ? 'esy-pinbar' : undefined} style={pinned ? {
-        position: 'fixed', top, left: 0, right: 0, zIndex: Z.bar, paddingBottom: 10,
-        pointerEvents: 'none', ...pinnedStyle,
-      } : { position: 'relative' }}
-      >
-        {children}
-      </div>
-    </div>
-  );
 }
 
 const TABS_H = 44;
@@ -493,7 +454,7 @@ export function ActionButton() {
   );
 }
 
-export const STRIP_H = { top: TABS_H, drawer: 60 };
+const STRIP_H = { top: TABS_H, drawer: 60 };
 
 /**
  * Top tabs or the side menu's button on a page without the store header (every

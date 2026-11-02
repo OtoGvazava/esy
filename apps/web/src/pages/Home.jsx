@@ -17,8 +17,8 @@ import GlowLoadMore from '../components/glow/GlowLoadMore';
 import StoreHead from '../components/store/StoreHead';
 import StoreBanner from '../components/store/StoreBanner';
 import { addedRecently, bannerShown } from '../core/design/show';
-import { PinnedBar, STRIP_H, StoreTabs } from '../components/store/StoreMenus';
-import { STORE_BAR_H, useStoreBarShown } from '../components/store/storeChrome';
+import { StoreTabs } from '../components/store/StoreMenus';
+import { useStoreBarShown } from '../components/store/storeChrome';
 import { alpha } from '../core/tokens';
 import CategoryPills from '../components/store/CategoryPills';
 import { SortMenu } from '../components/store/CollectionFilters';
@@ -187,8 +187,6 @@ function ShopHome() {
   const cols = COLS[isDesktop ? 2 : isTablet ? 1 : 0];
   const gridGap = layout === 'grid3' ? 3 : layout === 'feed' ? 18 : layout === 'list' ? 10 : isMobile ? 12 : 16;
   const heroName = isDesktop ? '42px/1.08' : isTablet ? '34px/1.08' : '26px/1.08';
-  // The toolbar pins under what stays at the top: StoreBar, or the top tabs.
-  const pinTop = !ownHeader ? STORE_BAR_H : design.menu === 'top' ? STRIP_H.top : 0;
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh', background: T.page, color: T.text, font: `400 14px ${T.font}`, paddingBottom: 120 }}>
@@ -281,18 +279,16 @@ function ShopHome() {
 
       {/* The store's categories (A1), each opening its collection. */}
       {pillsShown && (
-        <PinnedBar top={pinTop} pinnedStyle={{ paddingBottom: 14 }}>
-          <CategoryPills
-            gutter={gutter} categories={categories}
-            trailing={<><ViewSwitch />{sortMenu(isMobile)}</>}
-          />
-        </PinnedBar>
+        <CategoryPills
+          gutter={gutter} categories={categories}
+          trailing={<><ViewSwitch />{sortMenu(isMobile)}</>}
+        />
       )}
 
       {/* result meta — the sort control sits here, on the row it describes,
           unless the category row above already carries it. A store with no
           products yet has nothing to count or sort, so the row waits. */}
-      {!pillsShown && (query || isLoading || products.length > 0) && <PinnedBar top={pinTop}><div style={{
+      {!pillsShown && (query || isLoading || products.length > 0) && <div style={{
         position: 'relative', padding: `${sp(14)} ${gutter}px ${sp(6)}`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
       }}>
@@ -317,7 +313,7 @@ function ShopHome() {
           <ViewSwitch />
           {sortMenu(isMobile)}
         </div>
-      </div></PinnedBar>}
+      </div>}
 
       {error && (
         <div style={{ position: 'relative', padding: `0 ${gutter}px 8px`, color: T.danger, font: `500 13px ${T.font}` }}>{error}</div>
