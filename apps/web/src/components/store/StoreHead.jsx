@@ -18,7 +18,7 @@ import { useThemeMode } from '../../contexts/ThemeModeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import ManageButton from '../ManageButton';
-import { Icon } from '../glow/GlowPrimitives';
+import { Icon, langInfo } from '../glow/GlowPrimitives';
 import { ThemePill, LangPill } from '../glow/GlowPills';
 import { HeadButton, MenuButton, StoreAvatar } from './StoreMenus';
 import { useStoreNav } from './storeChrome';
@@ -53,7 +53,7 @@ function GlowLogo({ T, tenant, size = 20 }) {
 // with the side menu: two touch-size buttons on the theme's floating surface.
 function Controls({ drawer }) {
   const { t } = useTranslation('navbar');
-  const { mode, toggle } = useThemeMode();
+  const { mode, toggle, language } = useThemeMode();
   const { count } = useStoreNav();
   if (drawer) {
     return (
@@ -66,7 +66,13 @@ function Controls({ drawer }) {
   return (
     <>
       <HeadButton label={t('toggleTheme')} onClick={toggle}>{mode === 'dark' ? <Icon.sun /> : <Icon.moon />}</HeadButton>
-      <HeadButton to="/settings/display" label={t('title', { ns: 'display' })}><Icon.sliders /></HeadButton>
+      {/* A gear and the language code, as on the compact header's pill. */}
+      <HeadButton
+        to="/settings/display" label={t('title', { ns: 'display' })}
+        style={{ width: 'auto', padding: '0 13px', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, letterSpacing: '0.02em' }}
+      >
+        <Icon.gear aria-hidden="true" /><span>{langInfo(language).short}</span>
+      </HeadButton>
     </>
   );
 }

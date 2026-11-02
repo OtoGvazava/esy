@@ -17,9 +17,11 @@ export function ThemePill({ T, dark, onClick, compact = true }) {
 }
 
 // The pill opens the Language and display page (language, appearance, text
-// size, view) rather than flipping the language, so it carries the settings
-// sliders, not a globe, with the current language beside them. Given `to`
-// it is a real link; `onClick` alone keeps it a button (the design previews).
+// size, view) rather than flipping the language, so it carries a gear, the
+// sign for settings, with the current language beside it: not a globe (it
+// promised only the language) and not sliders (in a shop they mean filters).
+// Given `to` it is a real link; `onClick` alone keeps it a button (the
+// design previews).
 export function LangPill({ T, lang = 'en', to, onClick, label = 'language', compact = true }) {
   const L = langInfo(lang);
   const style = {
@@ -32,7 +34,7 @@ export function LangPill({ T, lang = 'en', to, onClick, label = 'language', comp
   };
   const body = (
     <>
-      <Icon.sliders aria-hidden="true" />
+      <Icon.gear aria-hidden="true" />
       <span>{compact ? L.short : L.native}</span>
     </>
   );
