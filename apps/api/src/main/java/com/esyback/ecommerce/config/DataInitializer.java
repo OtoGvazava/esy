@@ -29,8 +29,8 @@ public class DataInitializer implements CommandLineRunner {
     
     private void initializeTenants() {
         // Dev storefronts (reachable locally via ?tenant=<sub>).
-        seedStore("main", "Main Store", "Main Ecommerce Store",
-            "The main ecommerce store", null, "#007bff", "#6c757d");
+        seedStore("main", "esy.ge", "esy.ge",
+            "esy.ge", null, "#007bff", "#6c757d");
         seedStore("electronics", "Electronics Store", "Electronics & Gadgets",
             "Specialized electronics and gadgets store", "electronics", "#28a745", "#17a2b8");
         seedStore("fashion", "Fashion Store", "Fashion & Style",
