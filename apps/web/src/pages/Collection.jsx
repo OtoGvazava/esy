@@ -13,7 +13,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { productApi, handleApiError } from '../utils/api';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { handleApiError } from '../utils/api';
+import { collectionInfinite, facetsQuery, priceBoundsQuery } from '../core/query/queries';
+import { COLLECTION_PAGE_SIZE, SORTS, collectionArgs, readFilters, writeFilters } from './shopQuery';
+import { Skeleton, SkProductGrid } from '../components/skeleton/Skeleton';
 import { useCart } from '../contexts/CartContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useGlow } from '../styles/glow';
@@ -30,58 +34,10 @@ import {
   SectionTitle, SortMenu, pillStyle,
 } from '../components/store/CollectionFilters';
 
-const PAGE_SIZE = 24;
+// The filters as the URL states them, and back (shopQuery.js, which the
+// route loader reads too).
 
-const SORTS = {
-  new: { sortBy: 'id', sortDir: 'desc', key: 'new' },
-  'price-asc': { sortBy: 'price', sortDir: 'asc', key: 'priceAsc' },
-  'price-desc': { sortBy: 'price', sortDir: 'desc', key: 'priceDesc' },
-};
-
-// The query keys this page owns. Anything else in the URL is left as it is.
-const OWN = ['category', 'min', 'max', 'stock', 'o', 'sort'];
-
-const priceParam = (v) => {
-  if (v == null || v === '') return null;
-  const n = Number(v);
-  return Number.isFinite(n) && n >= 0 ? n : null;
-};
-
-/** The filters as the URL states them. */
-function readFilters(params) {
-  const opts = {};
-  params.getAll('o').forEach((raw) => {
-    const at = raw.indexOf(':');
-    if (at <= 0) return;
-    const axis = raw.slice(0, at).trim();
-    const value = raw.slice(at + 1).trim();
-    if (!axis || !value) return;
-    if (!opts[axis]) opts[axis] = [];
-    if (!opts[axis].some((v) => v.toLowerCase() === value.toLowerCase())) opts[axis].push(value);
-  });
-  const sort = params.get('sort');
-  return {
-    category: (params.get('category') || '').trim(),
-    min: priceParam(params.get('min')),
-    max: priceParam(params.get('max')),
-    stock: params.get('stock') === '1',
-    opts,
-    sort: SORTS[sort] ? sort : 'new',
-  };
-}
-
-/** `prev` with this page's keys replaced by `f`, in one fixed order. */
-function writeFilters(prev, f) {
-  const next = new URLSearchParams(prev);
-  OWN.forEach((k) => next.delete(k));
-  if (f.category) next.set('category', f.category);
-  if (f.min != null) next.set('min', String(f.min));
-  if (f.max != null) next.set('max', String(f.max));
-  if (f.stock) next.set('stock', '1');
-  Object.entries(f.opts).forEach(([axis, values]) => values.forEach((v) => next.append('o', `${axis}:${v}`)));
-  if (f.sort && f.sort !== 'new') next.set('sort', f.sort);
-  return next;
-}
+const NO_FACETS = [];
 
 export default function Collection() {
   const { T, tenant } = useGlow();
@@ -100,103 +56,52 @@ export default function Collection() {
   // The URL may spell it in another case; the store's own spelling is the title.
   const name = categories.find((c) => c.name.toLowerCase() === f.category.toLowerCase())?.name || f.category;
 
-  const [products, setProducts] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [facets, setFacets] = useState([]);
-  const [bounds, setBounds] = useState(null);
   const [sheet, setSheet] = useState(false);
   const [copied, setCopied] = useState(false);
   const sheetButton = useRef(null);
   const sentinel = useRef(null);
-  const abortRef = useRef(null);
-  const busyRef = useRef(false);
   const copiedTimer = useRef(null);
   // Where this collection was entered from, in the tab's history: the back
   // button returns there however many filter changes have been pushed since.
   const [entryIdx] = useState(() => window.history.state?.idx ?? null);
 
-  const query = JSON.stringify({
-    category: f.category, minPrice: f.min, maxPrice: f.max, inStock: f.stock, options: f.opts,
-    sortBy: SORTS[f.sort].sortBy, sortDir: SORTS[f.sort].sortDir,
+  // The grid, page by page, from the query cache. A new set of filters starts
+  // again from its first page, with the old grid kept, dimmed, until it
+  // arrives: the page never empties under the shopper's hand.
+  const list = useInfiniteQuery({
+    ...collectionInfinite(collectionArgs(f), COLLECTION_PAGE_SIZE),
+    placeholderData: keepPreviousData,
   });
+  const products = useMemo(() => list.data?.pages.flatMap((p) => p.products) ?? [], [list.data]);
+  const total = list.data?.pages[list.data.pages.length - 1]?.totalElements ?? 0;
+  const refreshing = list.isPlaceholderData;
+  const loading = list.isPending || list.isFetchingNextPage || (refreshing && list.isFetching);
+  const error = list.error ? handleApiError(list.error, t('collection.failed')) : '';
+  const hasMore = !!list.hasNextPage && !list.error;
+  const { fetchNextPage, isFetching } = list;
 
-  const fetchPage = useCallback(async (pageNum, q) => {
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-    busyRef.current = true;
-    setLoading(true);
-    setError('');
-    try {
-      const res = await productApi.collection({ ...q, page: pageNum, size: PAGE_SIZE, signal: ac.signal });
-      if (ac.signal.aborted) return;
-      setProducts((prev) => (pageNum === 0 ? res.products : [...prev, ...res.products]));
-      setTotal(res.totalElements);
-      setHasMore(res.hasMore);
-      setPage(pageNum);
-    } catch (e) {
-      if (ac.signal.aborted || e?.name === 'AbortError') return;
-      setError(handleApiError(e, t('collection.failed')));
-      setHasMore(false);
-    } finally {
-      if (abortRef.current === ac) {
-        busyRef.current = false;
-        setLoading(false);
-      }
-    }
-  }, [t]);
-
-  // A new set of filters starts again from the first page.
-  useEffect(() => {
-    setProducts([]);
-    setHasMore(false);
-    fetchPage(0, JSON.parse(query));
-  }, [query, fetchPage]);
-
-  useEffect(() => () => {
-    abortRef.current?.abort();
-    clearTimeout(copiedTimer.current);
-  }, []);
+  useEffect(() => () => clearTimeout(copiedTimer.current), []);
 
   useEffect(() => {
     const el = sentinel.current;
-    if (!el || !hasMore) return undefined;
+    if (!el || !hasMore || isFetching) return undefined;
     const io = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && !busyRef.current) fetchPage(page + 1, JSON.parse(query));
+      if (entries[0].isIntersecting) fetchNextPage();
     }, { rootMargin: '300px' });
     io.observe(el);
     return () => io.disconnect();
-  }, [hasMore, page, query, fetchPage]);
+  }, [hasMore, isFetching, fetchNextPage]);
 
   // What the category offers to filter by: its variant options, and the span
   // of its prices for the slider (its cheapest and its dearest product).
-  useEffect(() => {
-    setFacets([]);
-    setBounds(null);
-    if (!f.category) return undefined;
-    const ac = new AbortController();
-    productApi.optionFacets(f.category, { signal: ac.signal })
-      .then((rows) => {
-        if (!ac.signal.aborted) setFacets(Array.isArray(rows) ? rows.filter((r) => r?.name && r.values?.length) : []);
-      })
-      .catch(() => {});
-    const edge = (sortDir) => productApi
-      .collection({ category: f.category, size: 1, sortBy: 'price', sortDir, signal: ac.signal })
-      .then((r) => r.products[0]?.price);
-    Promise.all([edge('asc'), edge('desc')])
-      .then(([lo, hi]) => {
-        if (!ac.signal.aborted && lo != null && hi != null) setBounds({ lo: Number(lo), hi: Number(hi) });
-      })
-      .catch(() => {});
-    return () => ac.abort();
-  }, [f.category]);
+  const facetRows = useQuery({ ...facetsQuery(f.category), enabled: !!f.category });
+  const boundsRow = useQuery({ ...priceBoundsQuery(f.category), enabled: !!f.category });
+  const facets = (f.category && facetRows.data) || NO_FACETS;
+  const bounds = (f.category && boundsRow.data) || null;
 
+  // A filter is a change within this page: it keeps the scroll where it is.
   const apply = useCallback((patch) => {
-    setParams((prev) => writeFilters(prev, { ...readFilters(prev), ...patch }));
+    setParams((prev) => writeFilters(prev, { ...readFilters(prev), ...patch }), { preventScrollReset: true });
   }, [setParams]);
   // Stable, because the sheet moves focus in whenever its close handler changes.
   const closeSheet = useCallback(() => setSheet(false), []);
@@ -441,24 +346,28 @@ export default function Collection() {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: gridGap }}>
-              {loading && products.length === 0
-                ? Array.from({ length: cols * 2 }).map((_, i) => (
-                  <div key={i} style={{ borderRadius: 16, overflow: 'hidden', background: T.surface, border: `1px solid ${T.border}` }}>
-                    <div style={{ aspectRatio: '1 / 1', background: T.surface2 }} />
-                    <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ height: 12, width: '70%', borderRadius: 6, background: T.surface2 }} />
-                      <div style={{ height: 10, width: '45%', borderRadius: 6, background: T.surface2 }} />
-                    </div>
-                  </div>
-                ))
-                : products.map((p) => (
+            loading && products.length === 0 ? (
+              // Cards drawn the way this store draws its own, so nothing
+              // moves when the products arrive.
+              <Skeleton label={t('common:loading.products')}>
+                <SkProductGrid
+                  cols={cols} count={cols * 2} gap={gridGap} layout={layout} look={design.style}
+                  compact={isMobile} price={design.show.price}
+                />
+              </Skeleton>
+            ) : (
+              <div
+                className={refreshing ? 'esy-refreshing' : 'esy-settled'}
+                style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: gridGap }}
+              >
+                {products.map((p) => (
                   <GlowProductCard
                     key={p.id} T={T} p={p} hue={tenant.hue} compact={isMobile}
                     layout={layout} look={design.style} onOpen={openProduct} onAdd={handleAdd}
                   />
                 ))}
-            </div>
+              </div>
+            )
           )}
 
           <div ref={sentinel}>

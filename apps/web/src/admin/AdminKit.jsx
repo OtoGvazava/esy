@@ -4,9 +4,10 @@
 // shared icon set lacks. Inline styles from the admin token object, like every
 // other admin screen; no copy lives here — every label arrives from t().
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { alpha } from '../core/tokens';
+import { usePresence } from '../core/usePresence';
 
 // ─── Glyphs ─────────────────────────────────────────────────────────────────
 // Paths copied from the boards (AD0, AD5, AD6, AD7). 24×24, stroked in
@@ -270,30 +271,52 @@ export function Switch({ T, on, onChange, disabled, label, dim }) {
 /**
  * The kit's dialog: a centred 520px card, or a sheet from the bottom edge on a
  * phone. Escape and the scrim close it unless `busy`.
+ *
+ * It comes in over a fading scrim: the sheet rises, the card grows in
+ * (styles/motion.css). A caller that keeps it mounted and passes `open` also
+ * sees it go: it sinks or fades out first, inert, still showing what it showed
+ * while open, since whatever closed it may already have changed what the
+ * caller would put in it. Without `open` it is open for as long as it is
+ * mounted, as it always was.
  */
-export function Dialog({ T, phone, title, onClose, busy, children }) {
+export function Dialog({ T, phone, title, onClose, busy, open = true, children }) {
   const { t } = useTranslation('admin');
   const titleId = useId();
+  const { mounted, state } = usePresence(open);
+  const shown = useRef(null);
+  if (open || !shown.current) shown.current = { title, children };
   useEffect(() => {
+    if (!open) return undefined;
     const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, busy]);
+  }, [open, onClose, busy]);
+  if (!mounted) return null;
   return (
     <div
       role="presentation"
-      onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}
+      inert={!open}
       style={{
-        position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(8,8,12,0.44)',
+        position: 'fixed', inset: 0, zIndex: 60,
         display: 'flex', alignItems: phone ? 'flex-end' : 'center', justifyContent: 'center',
         padding: phone ? 0 : 24,
       }}
     >
+      <div
+        aria-hidden="true"
+        className="esy-scrim"
+        data-state={state}
+        onMouseDown={() => { if (!busy) onClose(); }}
+        style={{ position: 'absolute', inset: 0, background: 'rgba(8,8,12,0.44)' }}
+      />
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        className={phone ? 'esy-sheet' : 'esy-pop-in'}
+        data-state={state}
         style={{
+          position: 'relative',
           width: '100%', maxWidth: phone ? 'none' : 520, background: T.surface, color: T.text,
           borderRadius: phone ? '24px 24px 0 0' : 24, boxShadow: '0 30px 80px -20px rgba(0,0,0,0.5)',
           padding: phone ? '12px 16px 22px' : 26, display: 'flex', flexDirection: 'column', gap: 16,
@@ -304,7 +327,7 @@ export function Dialog({ T, phone, title, onClose, busy, children }) {
           <span aria-hidden="true" style={{ width: 42, height: 5, borderRadius: 3, background: T.border, alignSelf: 'center' }} />
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <b id={titleId} style={{ font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em' }}>{title}</b>
+          <b id={titleId} style={{ font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em' }}>{shown.current.title}</b>
           <button
             type="button"
             onClick={onClose}
@@ -318,7 +341,7 @@ export function Dialog({ T, phone, title, onClose, busy, children }) {
             <Glyph name="close" />
           </button>
         </div>
-        {children}
+        {shown.current.children}
       </section>
     </div>
   );

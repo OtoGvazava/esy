@@ -8,6 +8,7 @@ import { Icons } from '../core/icons';
 import { useDevice } from '../contexts/DeviceContext';
 import { lookById } from '../core/design/looks';
 import LookThumb from '../components/design/LookThumb';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 
 // The hero's three looks (the design's O1), one per theme, each in the colour
 // the board draws it with. A tap opens quick setup on that look.
@@ -66,6 +67,22 @@ function FeaturedChip({ T, store, onClick }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ font: `700 12.5px ${T.font}`, color: T.text, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{store.name}</div>
           <div style={{ font: `500 10px ${T.mono}`, color: T.textMute, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{store.subdomain}.esy.ge</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A featured chip's shape while the directory loads: the strip, the mark, two lines. */
+function FeaturedChipSkeleton({ T }) {
+  return (
+    <div style={{ width: 220, flexShrink: 0, background: T.surface, borderRadius: 16, border: `1px solid ${T.border}`, padding: 12, boxSizing: 'border-box' }}>
+      <Sk h={120} r={12} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+        <Sk w={28} h={28} r={8} />
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <Sk h={10} w="70%" r={5} />
+          <Sk h={8} w="55%" r={4} />
         </div>
       </div>
     </div>
@@ -179,11 +196,19 @@ export default function PlatformLanding() {
           </div>
           <span onClick={() => navigate('/stores')} style={{ font: `600 13px ${T.font}`, color: T.accentFg, cursor: 'pointer', whiteSpace: 'nowrap' }}>{t('landing.seeAll')}</span>
         </div>
-        <div style={{ padding: pad, display: 'flex', gap: 14, overflowX: 'auto' }}>
-          {featured.map((s) => (
-            <FeaturedChip key={s.subdomain} T={T} store={s} onClick={() => { window.location.href = storeUrl(s); }} />
-          ))}
-        </div>
+        {/* The row holds its height while the directory loads, so the strip
+            under it never moves when the stores arrive. */}
+        {stores === null ? (
+          <Skeleton style={{ padding: pad, display: 'flex', gap: 14, overflowX: 'hidden' }}>
+            {[0, 1, 2, 3, 4].map((i) => <FeaturedChipSkeleton key={i} T={T} />)}
+          </Skeleton>
+        ) : (
+          <div style={{ padding: pad, display: 'flex', gap: 14, overflowX: 'auto' }}>
+            {featured.map((s) => (
+              <FeaturedChip key={s.subdomain} T={T} store={s} onClick={() => { window.location.href = storeUrl(s); }} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* FEE STRIP — the top bar's "ფასები" lands here (#pricing). */}

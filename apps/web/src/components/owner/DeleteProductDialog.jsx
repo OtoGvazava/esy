@@ -10,6 +10,10 @@ export default function DeleteProductDialog({ open, product, onClose, onDeleted 
   const { T } = useGlow();
   const [busy, setBusy] = useState(false);
   const [apiError, setApiError] = useState('');
+  // The product last asked about, so the sentence keeps its name while the
+  // dialog fades out after the product has been let go (GlowModal).
+  const [named, setNamed] = useState(product);
+  if (product && product !== named) setNamed(product);
 
   useEffect(() => { if (open) setApiError(''); }, [open]);
 
@@ -49,7 +53,7 @@ export default function DeleteProductDialog({ open, product, onClose, onDeleted 
     <GlowModal open={open} title={t('deleteTitle')} onClose={onClose} busy={busy} footer={footer}>
       {apiError && <div style={glowError(T)}>{apiError}</div>}
       <div style={{ font: `400 14px/1.55 ${T.font}`, color: T.textDim }}>
-        {t('deleteBody', { title: product?.title || '' })}
+        {t('deleteBody', { title: (product || named)?.title || '' })}
       </div>
     </GlowModal>
   );

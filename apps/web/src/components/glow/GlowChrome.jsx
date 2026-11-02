@@ -38,6 +38,7 @@ export function GlowTopNav({ T, title, onBack, right }) {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 16px 8px', maxWidth: 1100, margin: '0 auto' }}>
       <button
         onClick={onBack}
+        className="esy-press"
         aria-label="back"
         style={{ width: 38, height: 38, borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >

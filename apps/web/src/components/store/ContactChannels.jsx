@@ -11,6 +11,7 @@
 // a row of contacts is meant to be recognised before it is read, and green
 // WhatsApp does that where a uniform accent does not.
 import { useCallback, useEffect, useState } from 'react';
+import { usePublicContacts } from '../../hooks/useStoreContacts';
 import { useTranslation } from 'react-i18next';
 import { contactApi, handleApiError } from '../../utils/api';
 import { CHANNEL_TYPES, CHANNELS, PHONE_TYPES } from '../../core/channels';
@@ -43,32 +44,23 @@ function actionFor(t, type) {
  * product). `always` is for the About page, which is where a shopper goes to
  * reach the shop, so its list stays whatever the switch says.
  */
-export function StoreContacts({ T, devTenant = devTenantParam(), compact, onLoaded, always = false, style = {} }) {
+export function StoreContacts({ T, compact, onLoaded, always = false, style = {} }) {
   const { t } = useTranslation('storefront');
-  const [channels, setChannels] = useState([]);
   const { show } = useDesign();
   const hidden = !always && !show.socials;
+  // A store that cannot list its channels still sells: it shows nothing
+  // rather than an error the shopper can do nothing about.
+  const { channels, loaded } = usePublicContacts(!hidden);
 
+  // onLoaded lets a caller share this component's fate — a heading above an
+  // empty contact list reads as "unreachable", so the wrapper hides too.
+  const any = channels.length > 0;
   useEffect(() => {
-    if (hidden) return undefined;
-    const ac = new AbortController();
-    // onLoaded lets a caller share this component's fate — a heading above an
-    // empty contact list reads as "unreachable", so the wrapper hides too.
-    const settle = (rows) => {
-      if (ac.signal.aborted) return;
-      setChannels(rows);
-      if (onLoaded) onLoaded(rows.length > 0);
-    };
-    contactApi.listPublic(devTenant, { signal: ac.signal })
-      .then((rows) => settle(Array.isArray(rows) ? rows : []))
-      // A store that cannot list its channels still sells: show nothing rather
-      // than an error the shopper can do nothing about.
-      .catch(() => settle([]));
-    return () => ac.abort();
+    if (loaded && onLoaded) onLoaded(any);
     // onLoaded is intentionally not a dependency: callers pass an inline
-    // setState, and re-running the fetch on every render would loop.
+    // setState, and re-running this on every render would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devTenant, hidden]);
+  }, [loaded, any]);
 
   if (hidden || channels.length === 0) return null;
 

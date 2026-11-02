@@ -17,8 +17,9 @@
 //                     the overview returns to its figures then.
 // The actions lead to the screen that does the job. Delivery and payments are
 // the owner's settings, so a manager is shown whose they are instead.
-import { useEffect, useId, useState } from 'react';
+import { useId } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
@@ -27,10 +28,12 @@ import { Card, Chip } from '../core/primitives';
 import { money } from '../core/money';
 import { track } from '../core/tokens';
 import { normalizeDesign } from '../core/design/normalize';
-import { deliveryApi } from '../utils/api';
+import { publicDeliveryQuery } from '../core/query/queries';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { MTop } from './ManagerShell';
-import { StatCard } from './ManagerStats';
+import { StatCard, StatCardSk } from './ManagerStats';
 import { useStoreLink } from './storeLink';
+import { SkIn } from './officeSk';
 
 const glyph = {
   width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
@@ -171,14 +174,8 @@ export default function FirstVisit({ T, mode, sub, q, stats }) {
 
   // What shoppers are offered. Unknown until it loads, and a failed read is
   // never counted as done.
-  const [delivery, setDelivery] = useState(null);
-  useEffect(() => {
-    const ac = new AbortController();
-    deliveryApi.listPublic(sub, { signal: ac.signal })
-      .then((d) => { if (!ac.signal.aborted) setDelivery(d || {}); })
-      .catch(() => { if (!ac.signal.aborted) setDelivery({}); });
-    return () => ac.abort();
-  }, [sub]);
+  const offered = useQuery(publicDeliveryQuery());
+  const delivery = offered.isError ? {} : offered.isSuccess ? offered.data || {} : null;
 
   const deliveryDone = !!delivery && (delivery.requiresAddress === true
     || (delivery.routes || []).some((r) => r.route === 'pickup' && String(r.pickupAddress || '').trim()));
@@ -222,8 +219,53 @@ export default function FirstVisit({ T, mode, sub, q, stats }) {
     <div>
       <MTop T={T} mode={mode} title={t('overview.title')} sub={store.displayName || store.name || undefined} />
 
+      {/* The checklist card, its six steps and the two figures, box for box. */}
       {!delivery && (
-        <div style={{ font: `500 13px ${T.font}`, color: T.textMute }}>{t('overview.loading')}</div>
+        <Skeleton label={t('overview.loading')}>
+          <Card T={T} pad={22} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
+                <div style={{ font: `700 20px/1.22 ${T.font}` }}><SkIn w="55%" /></div>
+                <div style={{ font: `400 12.5px/1.45 ${T.font}` }}><SkIn w="30%" /></div>
+              </div>
+              <Sk w={52} h={26} r={13} />
+            </div>
+            <Sk h={6} r={3} />
+          </Card>
+          <div style={{
+            display: 'grid', gap: 20, marginTop: gap, alignItems: 'start',
+            gridTemplateColumns: desktop ? 'minmax(0, 1.6fr) minmax(0, 1fr)' : 'minmax(0, 1fr)',
+          }}>
+            <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, boxSizing: 'border-box',
+                  padding: '12px 16px', borderTop: i ? `1px solid ${T.border}` : 'none',
+                }}>
+                  <Sk w={26} h={26} r={13} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ font: `700 12.5px/1.35 ${T.font}` }}><SkIn w="45%" /></div>
+                    <div style={{ marginTop: 2, font: `400 12px/1.4 ${T.font}` }}><SkIn w="65%" /></div>
+                  </div>
+                  {i < 2 ? <Sk w={20} h={20} r={10} /> : <Sk w={96} h={40} r={12} />}
+                </div>
+              ))}
+            </Card>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: isMobile ? 12 : 16 }}>
+                <StatCardSk T={T} hint />
+                <StatCardSk T={T} hint />
+              </div>
+              <Card T={T} pad={16}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '16px 8px' }}>
+                  <Sk w={72} h={72} r={36} />
+                  <div style={{ width: '100%', textAlign: 'center', font: `600 16px/1.3 ${T.font}` }}><SkIn w="45%" /></div>
+                  <div style={{ width: '100%', textAlign: 'center', font: `400 12.5px/1.45 ${T.font}` }}><SkIn w="70%" /></div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </Skeleton>
       )}
 
       {delivery && (

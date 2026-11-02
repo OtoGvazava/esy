@@ -20,7 +20,8 @@
 // design puts them. They lived here only while that screen did not exist. A
 // row is now a link into the order rather than a place to act on it, so the
 // list reads as a list and a decision is made next to what it affects.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDevice } from '../contexts/DeviceContext';
@@ -29,9 +30,12 @@ import { Card, Note } from '../core/primitives';
 import { Icons } from '../core/icons';
 import { money, feeOf } from '../core/money';
 import { StatusPair } from '../core/domain';
-import { tenantApi, handleApiError } from '../utils/api';
+import { storeOrdersQuery } from '../core/query/managerQueries';
+import { handleApiError } from '../utils/api';
+import { Skeleton } from '../components/skeleton/Skeleton';
 import { MTop } from './ManagerShell';
 import { NoOrders } from './FirstVisit';
+import { SkIn } from './officeSk';
 
 // The API sends status lower-cased with spaces ("out for delivery"); the tone
 // tables and the fulfilment machine both key off the enum name.
@@ -57,6 +61,41 @@ function Payout({ T, order, dead }) {
     <span style={{ font: `700 13px ${T.font}`, color: dead ? T.textMute : T.successFg }}>
       {dead ? '—' : money(total - feeOf(total))}
     </span>
+  );
+}
+
+/**
+ * The two status chips' stand-in: pills drawn with StatusPair's own chip box
+ * (its padding and its 11 px line), so a row keeps the height it will have.
+ */
+function StatusPairSk({ T }) {
+  const pill = (w) => (
+    <span aria-hidden="true" className="esy-sk" style={{
+      display: 'inline-flex', width: w, padding: '5px 11px', boxSizing: 'border-box',
+      borderRadius: 999, font: `700 11px ${T.font}`,
+    }}>{'\u00a0'}</span>
+  );
+  return <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>{pill(74)}{pill(62)}</span>;
+}
+
+/** A phone's order card while the orders load: OrderCard, line for line. */
+function OrderCardSk({ T }) {
+  return (
+    <Card T={T} pad={14}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <span style={{ font: `700 12px ${T.mono}` }}><SkIn w={84} /></span>
+        <span style={{ flex: 1 }} />
+        <span style={{ font: `500 11px ${T.font}` }}><SkIn w={64} /></span>
+      </div>
+      <StatusPairSk T={T} />
+      <div style={{ marginTop: 10, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
+        <span style={{ font: `500 12.5px ${T.font}`, flex: 1 }}><SkIn w="45%" /></span>
+        <span style={{ flexShrink: 0, textAlign: 'right' }}>
+          <span style={{ display: 'block', font: `500 11px ${T.font}` }}><SkIn w={60} /></span>
+          <span style={{ display: 'block', font: `700 13px ${T.font}` }}><SkIn w={52} /></span>
+        </span>
+      </div>
+    </Card>
   );
 }
 
@@ -108,24 +147,13 @@ export default function ManagerOrders() {
   const mode = isMobile ? 'mobile' : isDesktop ? 'desktop' : 'tablet';
   const lang = i18n.language;
 
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const list = useQuery(storeOrdersQuery());
+  const orders = useMemo(() => list.data ?? [], [list.data]);
+  const loading = list.isPending;
+  const error = list.isError ? handleApiError(list.error, t('orders.error')) : '';
   const [filter, setFilter] = useState('all');
-  const open = (o) => navigate(`/orders/${o.id}${q}`);
-
-  const load = useCallback(() => {
-    let alive = true;
-    setLoading(true);
-    setError('');
-    tenantApi.orders(sub)
-      .then((o) => { if (alive) setOrders(Array.isArray(o) ? o : []); })
-      .catch((e) => { if (alive) setError(handleApiError(e, t('orders.error'))); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, [sub, t]);
-
-  useEffect(load, [load]);
+  const hrefOf = (o) => `/orders/${o.id}${q}`;
+  const open = (o) => navigate(hrefOf(o));
 
   const shown = useMemo(
     () => (filter === 'all' ? orders : orders.filter((o) => enumName(o.status) === filter)),
@@ -147,6 +175,22 @@ export default function ManagerOrders() {
   // orders will appear and the store's link to share.
   const none = !loading && !error && orders.length === 0;
 
+  // The table's head, shared with its loading stand-in so the columns are the
+  // same ones from the first frame.
+  const head = (
+    <thead>
+      <tr>
+        <th style={th}>{t('orders.colOrder')}</th>
+        {isDesktop && <th style={th}>{t('orders.colBuyer')}</th>}
+        <th style={{ ...th, textAlign: 'right' }}>{t('orders.colTotal')}</th>
+        <th style={{ ...th, textAlign: 'right' }}>{t('orders.youReceive')}</th>
+        <th style={th}>{t('orders.colStatus')}</th>
+        {isDesktop && <th style={th}>{t('orders.colDate')}</th>}
+        <th style={{ ...th, textAlign: 'right' }} />
+      </tr>
+    </thead>
+  );
+
   return (
     <div>
       <MTop
@@ -164,12 +208,15 @@ export default function ManagerOrders() {
               key={f}
               type="button"
               onClick={() => setFilter(f)}
+              className="esy-press"
               style={{
                 padding: '8px 13px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
                 font: `600 12.5px ${T.font}`,
                 background: on ? T.text : T.surface,
                 color: on ? T.bg : T.textDim,
                 border: `1px solid ${on ? T.text : T.border}`,
+                // The chosen filter darkens in rather than snapping.
+                transition: 'background-color var(--m-base) ease, color var(--m-base) ease, border-color var(--m-base) ease, transform var(--m-quick) var(--m-ease)',
               }}
             >
               {f === 'all' ? t('orders.filterAll') : t(`orders.status.${f.toLowerCase()}`, { defaultValue: f })}
@@ -178,8 +225,37 @@ export default function ManagerOrders() {
         })}
       </div>}
 
+      {/* The list's own shape until it is in: the phone's cards, or the
+          table with its real head and rows of the height its rows will have. */}
       {loading && (
-        <div style={{ font: `500 13px ${T.font}`, color: T.textMute }}>{t('orders.loading')}</div>
+        <Skeleton label={t('orders.loading')}>
+          {isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[0, 1, 2, 3].map((i) => <OrderCardSk key={i} T={T} />)}
+            </div>
+          ) : (
+            <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  {head}
+                  <tbody>
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <tr key={i}>
+                        <td style={{ ...td, font: `700 12px ${T.mono}` }}><SkIn w={84} /></td>
+                        {isDesktop && <td style={td}><SkIn w={110} /></td>}
+                        <td style={tdMoney}><SkIn w={56} /></td>
+                        <td style={tdMoney}><SkIn w={56} /></td>
+                        <td style={td}><StatusPairSk T={T} /></td>
+                        {isDesktop && <td style={td}><SkIn w={80} /></td>}
+                        <td style={{ ...td, textAlign: 'right' }}><SkIn w={14} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+        </Skeleton>
       )}
 
       {error && (
@@ -215,24 +291,16 @@ export default function ManagerOrders() {
         <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={th}>{t('orders.colOrder')}</th>
-                  {isDesktop && <th style={th}>{t('orders.colBuyer')}</th>}
-                  <th style={{ ...th, textAlign: 'right' }}>{t('orders.colTotal')}</th>
-                  <th style={{ ...th, textAlign: 'right' }}>{t('orders.youReceive')}</th>
-                  <th style={th}>{t('orders.colStatus')}</th>
-                  {isDesktop && <th style={th}>{t('orders.colDate')}</th>}
-                  <th style={{ ...th, textAlign: 'right' }} />
-                </tr>
-              </thead>
+              {head}
               <tbody>
                 {shown.map((o) => {
                   const status = enumName(o.status);
                   const payment = enumName(o.paymentStatus);
                   const dead = isDead(status, payment);
                   return (
-                    <tr key={o.id} onClick={() => open(o)} style={{ cursor: 'pointer' }}>
+                    // The order's screen is fetched as its row is pointed at
+                    // or pressed (router/prime.js), so the click finds it in.
+                    <tr key={o.id} onClick={() => open(o)} data-prefetch={hrefOf(o)} style={{ cursor: 'pointer' }}>
                       <td style={{ ...td, font: `700 12px ${T.mono}` }}>{orderId(o)}</td>
                       {isDesktop && (
                         <td style={{ ...td, color: T.textDim }}>

@@ -14,6 +14,7 @@ import { useEffect } from 'react';
 import { Routes, Route, Navigate, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
+import { usePendingLocation } from '../core/useIndicator';
 import { useTK } from '../core/useTK';
 import { SET_TABS } from './nav';
 import { MTop } from './ManagerShell';
@@ -23,13 +24,18 @@ import DeliveryTab from './SettingsDelivery';
 import ContactTab from './SettingsContact';
 
 function Pills({ t, q }) {
-  const { pathname } = useLocation();
+  // The tab being opened is the one marked, so a tap is answered while its
+  // reads are still on the way. Leaving settings altogether keeps the tab on
+  // screen marked until the next screen takes its place.
+  const going = usePendingLocation().pathname;
+  const here = useLocation().pathname;
+  const pathname = going.startsWith('/settings') ? going : here;
   return (
     <nav className="bx-pills" aria-label={t('settingsTabs.tabs')}>
       {SET_TABS.map(([k, , route]) => {
         const on = pathname.startsWith(route);
         return (
-          <Link key={k} to={`${route}${q}`} className={`bx-pill${on ? ' on' : ''}`} aria-current={on ? 'page' : undefined}>
+          <Link key={k} to={`${route}${q}`} className={`bx-pill esy-press${on ? ' on' : ''}`} aria-current={on ? 'page' : undefined}>
             {t(`settingsTabs.tab.${k}`)}
           </Link>
         );

@@ -8,6 +8,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { alpha } from '../../core/tokens';
 import { money } from '../../core/money';
+import { usePresence } from '../../core/usePresence';
 
 // The design's glyphs (A3), drawn at the theme's stroke weight.
 export const PATHS = {
@@ -155,7 +156,10 @@ export function SortMenu({ T, value, options, pillLabel, menuLabel, onChange, al
       {open && (
         <div
           id={id} role="menu" aria-label={menuLabel} onKeyDown={walk}
+          // Opens out of the pill that opened it.
+          className="esy-menu-in"
           style={{
+            '--esy-origin': `top ${align}`,
             position: 'absolute', top: 'calc(100% + 6px)', [align]: 0, zIndex: 60,
             minWidth: 220, maxWidth: 'calc(100vw - 32px)', padding: 6, boxSizing: 'border-box',
             borderRadius: 'var(--k-r-in)', background: T.surface, border: `1px solid ${T.border}`,
@@ -429,12 +433,14 @@ export function OptionPills({ T, name, values, chosen, onToggle, onSurface = fal
  * The sheet a phone or tablet opens the filters in (`.sheet`): over the page
  * and the menu, with the page held still underneath. Focus moves in when it
  * opens and back to the opener when it closes, Tab stays inside, and Escape
- * or a tap on the scrim closes it.
+ * or a tap on the scrim closes it. It rises from the bottom and sinks back
+ * (styles/motion.css), staying on screen, inert, while it goes.
  */
 export function FilterSheet({ T, open, onClose, title, closeLabel, footer, backRef, children }) {
   const panel = useRef(null);
   const closer = useRef(null);
   const titleId = useId();
+  const { mounted, state } = usePresence(open, 280);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -470,12 +476,13 @@ export function FilterSheet({ T, open, onClose, title, closeLabel, footer, backR
     };
   }, [open, onClose, backRef]);
 
-  if (!open) return null;
+  if (!mounted) return null;
   return createPortal(
     <>
-      <div aria-hidden="true" onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: Z.scrim, background: SCRIM }} />
+      <div aria-hidden="true" onClick={onClose} className="esy-scrim" data-state={state} style={{ position: 'fixed', inset: 0, zIndex: Z.scrim, background: SCRIM }} />
       <section
         ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId}
+        className="esy-sheet" data-state={state} inert={!open}
         style={{
           position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: Z.layer, maxHeight: '88vh',
           display: 'flex', flexDirection: 'column', boxSizing: 'border-box',

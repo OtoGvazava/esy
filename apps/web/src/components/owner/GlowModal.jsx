@@ -1,13 +1,18 @@
 import { useEffect } from 'react';
 import { useGlow } from '../../styles/glow';
 import { Icon } from '../glow/GlowPrimitives';
+import { usePresence } from '../../core/usePresence';
 
 // Glow-styled modal shell so owner forms match the storefront (CreateStore /
 // StoreOrders), not MUI. Shared by the product editor, store editor and
 // delete-confirm. Field/label/button style helpers live in ./glowForm.
+//
+// It grows in over a fading scrim and fades back out (styles/motion.css),
+// staying on screen, inert, while it goes.
 
 export default function GlowModal({ open, title, onClose, busy, children, footer }) {
   const { T } = useGlow();
+  const { mounted, state } = usePresence(open);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -16,11 +21,12 @@ export default function GlowModal({ open, title, onClose, busy, children, footer
     return () => window.removeEventListener('keydown', onKey);
   }, [open, busy, onClose]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   return (
     <div
       onClick={busy ? undefined : onClose}
+      className="esy-scrim" data-state={state} inert={!open}
       style={{
         position: 'fixed', inset: 0, zIndex: 2000,
         background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
@@ -30,6 +36,7 @@ export default function GlowModal({ open, title, onClose, busy, children, footer
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className="esy-pop-in" data-state={state}
         style={{
           width: '100%', maxWidth: 480, background: T.bg,
           border: `1px solid ${T.border}`, borderRadius: 20,

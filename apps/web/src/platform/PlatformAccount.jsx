@@ -7,12 +7,15 @@
 // Everything here comes from GET /api/account. The design's "N new" chip is
 // the store's placed-and-not-yet-acted-on orders, and an order row names its
 // first item, both carried by that response.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePlatform, PTopBar, PFooter } from './PlatformShared';
 import { storeUrl } from './platformData';
-import { accountApi, handleApiError } from '../utils/api';
+import { handleApiError } from '../utils/api';
+import { accountQuery } from '../core/query/queries';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { managerUrl } from '../utils/hosts';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeMode } from '../contexts/ThemeModeContext';
@@ -117,29 +120,42 @@ export default function PlatformAccount() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { language, appearance } = useThemeMode();
-  const [state, setState] = useState({ loading: true, data: null, error: null });
   const [allOrders, setAllOrders] = useState(false);
   const ty = type(T, desk);
 
-  useEffect(() => {
-    let alive = true;
-    accountApi.get()
-      .then((d) => alive && setState({ loading: false, data: d, error: null }))
-      .catch((e) => alive && setState({ loading: false, data: null, error: e }));
-    return () => { alive = false; };
-  }, []);
-
-  const { loading, data, error } = state;
+  // Cached: coming back to the account shows it at once while it refreshes.
+  const { data = null, error = null, isPending: loading } = useQuery(accountQuery());
   const notSignedIn = !loading && error && error.status === 401;
 
+  // The page's own columns while it loads — who you are, your stores, and the
+  // orders and settings beside them — so nothing moves when it arrives.
   if (loading) {
+    const wrap = desk
+      ? { display: 'flex', gap: 40, padding: '40px 0 0', maxWidth: 1080, margin: '0 auto', alignItems: 'flex-start' }
+      : { display: 'flex', flexDirection: 'column', gap: ph ? 18 : 22, padding: ph ? `10px ${gut}px 0` : `30px ${gut}px 0` };
+    const card = (h) => <Sk h={h} r="var(--k-r-card)" style={{ ...cardStyle(T), boxShadow: 'none' }} />;
     return (
       <Page T={T}>
-        <div role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '120px 22px', color: T.textDim }}>
-          <span aria-hidden="true" style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${T.accent}`, borderTopColor: 'transparent', animation: 'pfspin 1s linear infinite' }} />
-          {t('account.loading')}
-          <style>{'@keyframes pfspin{to{transform:rotate(360deg)}}'}</style>
-        </div>
+        <Skeleton label={t('account.loading')} style={wrap}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: ph ? 16 : tab ? 18 : 20, ...(desk ? { flex: 1, minWidth: 0 } : null) }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <Sk w={76} h={76} r="50%" />
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
+                <Sk h={24} w="46%" r={8} />
+                <Sk h={11} w="60%" r={6} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Sk h={11} w={90} r={6} />
+              {card(76)}
+              {card(56)}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, ...(desk ? { width: 480, flex: 'none' } : null) }}>
+            <Sk h={11} w={110} r={6} />
+            {card(196)}
+          </div>
+        </Skeleton>
       </Page>
     );
   }

@@ -86,10 +86,13 @@ function Sheet({ T, isMobile, titleId, onClose, children }) {
     };
   }, []);
 
+  // It opens over a fading scrim, rising from the bottom on a phone and
+  // growing in elsewhere (styles/motion.css).
   return (
     <div
       role="presentation"
       onMouseDown={(e) => { if (e.target === e.currentTarget) close.current(); }}
+      className="esy-scrim" data-state="open"
       style={{
         position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(8,8,12,0.44)',
         display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center',
@@ -102,6 +105,7 @@ function Sheet({ T, isMobile, titleId, onClose, children }) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
+        className={isMobile ? 'esy-sheet' : 'esy-pop-in'} data-state="open"
         style={{
           width: '100%', maxWidth: isMobile ? 'none' : 520, boxSizing: 'border-box',
           maxHeight: isMobile ? '88vh' : 'calc(100vh - 48px)', overflowY: 'auto', outline: 'none',

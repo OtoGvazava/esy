@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { productApi, handleApiError } from '../utils/api';
+import { useQuery } from '@tanstack/react-query';
+import { handleApiError } from '../utils/api';
+import { productPageQuery, productQuery, variantsQuery } from '../core/query/queries';
+import { markIfComplete, markLoaded } from '../core/imgFade';
+import { Sk, SkText, Skeleton } from '../components/skeleton/Skeleton';
 import { renderMarkdown } from '../utils/markdown';
 import { useCart } from '../contexts/CartContext';
 import { useDevice } from '../contexts/DeviceContext';
@@ -25,8 +29,14 @@ function iconBtn(T) {
   };
 }
 
+// One product per mount: moving from one product to another (a "you may also
+// like" card) starts the next from its own first photo and no chosen variant.
 export default function ProductDetails() {
   const { id } = useParams();
+  return <ProductView key={id} id={id} />;
+}
+
+function ProductView({ id }) {
   const navigate = useNavigate();
   const { t } = useTranslation('product');
   const { addToCart } = useCart();
@@ -36,40 +46,26 @@ export default function ProductDetails() {
   const { isMobile, isTablet, isDesktop } = useDevice();
   const cols = isDesktop ? 4 : isTablet ? 3 : 2;
 
-  const [product, setProduct] = useState(null);
-  // Variants (D11): the document and the row the shopper has chosen.
-  const [variants, setVariants] = useState(null);
+  // The product and its variants (D11) decide the page's shape, so the page
+  // waits for both; the route loader has usually fetched them already, and a
+  // product opened before is drawn from the cache at once. Null variants is a
+  // product sold without them. "You may also like" fills in at the end.
+  const productRead = useQuery(productQuery(id));
+  const variantsRead = useQuery(variantsQuery(id));
+  const relatedRead = useQuery(productPageQuery({ page: 0, size: 6 }));
+  const product = productRead.data || null;
+  const variants = variantsRead.data ?? null;
+  const loading = productRead.isPending || variantsRead.isPending;
+  const error = productRead.error ? handleApiError(productRead.error, t('productNotFound')) : '';
+  const related = useMemo(
+    () => (relatedRead.data?.products || []).filter((p) => String(p.id) !== String(id)),
+    [relatedRead.data, id],
+  );
+  // The row the shopper has chosen.
   const [pickedRow, setPickedRow] = useState(null);
-  const [related, setRelated] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [imgOk, setImgOk] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const data = await productApi.get(id);
-        if (!alive) return;
-        setProduct(data);
-        setImgIdx(0);
-        setImgOk(Boolean(data.images?.[0] || data.thumbnail));
-        // Null for a product that does not use variants.
-        const vdoc = await productApi.getVariants(id).catch(() => null);
-        if (alive) { setVariants(vdoc); setPickedRow(null); }
-        const list = await productApi.list({ page: 0, size: 6 });
-        if (alive) setRelated(list.products.filter((p) => String(p.id) !== String(id)));
-      } catch (err) {
-        if (alive) setError(handleApiError(err, t('productNotFound')));
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, [id, t]);
+  const imgOk = !imgFailed && Boolean(product?.images?.[0] || product?.thumbnail);
 
   const gallery = (product?.images && product.images.length)
     ? product.images
@@ -107,11 +103,34 @@ export default function ProductDetails() {
     } catch { /* user cancelled */ }
   };
 
+  // The page's own shape while it loads — the photo, the name and price, the
+  // stock chip, the description and the facts card, where each will be — so
+  // nothing moves when the product arrives. The back button works already.
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: T.page, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${T.accent}`, borderTopColor: 'transparent', animation: 'glow-spin 1s linear infinite' }} />
-        <style>{'@keyframes glow-spin{to{transform:rotate(360deg)}}'}</style>
+      <div style={{ position: 'relative', minHeight: '100vh', background: T.page, paddingBottom: isMobile ? 200 : 120 }}>
+        <div style={{ maxWidth: isMobile ? '100%' : 1100, margin: '0 auto', padding: isMobile ? 0 : '28px 40px 0' }}>
+          <Skeleton>
+            <div style={{ display: isMobile ? 'block' : 'grid', gridTemplateColumns: isMobile ? undefined : isDesktop ? '1.05fr 1fr' : '1fr 1fr', gap: isDesktop ? 44 : 26 }}>
+              <Sk h={isMobile ? 460 : 520} r={isMobile ? '0 0 28px 28px' : 20} />
+              <div style={{ padding: isMobile ? '18px 20px 0' : 0, display: 'flex', flexDirection: 'column' }}>
+                <Sk h={11} w={110} r={6} style={{ marginBottom: 12 }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, marginBottom: 12 }}>
+                  <Sk h={isMobile ? 26 : 34} w="56%" r={10} />
+                  <Sk h={isMobile ? 26 : 34} w={isMobile ? 76 : 104} r={10} />
+                </div>
+                <Sk h={26} w={128} r={999} style={{ marginBottom: 22 }} />
+                <SkText lines={3} h={11} gap={10} style={{ marginBottom: 26 }} />
+                <Sk h={130} r={16} style={{ marginBottom: 24 }} />
+                {!isMobile && <Sk h={54} r={16} />}
+              </div>
+            </div>
+          </Skeleton>
+        </div>
+        <button
+          onClick={() => navigate(-1)} aria-label={t('back')}
+          style={{ ...iconBtn(T), position: 'absolute', top: isMobile ? 50 : 44, left: isMobile ? 16 : 'max(56px, calc(50% - 494px))' }}
+        ><Icon.arrowR style={{ transform: 'rotate(180deg)' }} /></button>
       </div>
     );
   }
@@ -132,7 +151,10 @@ export default function ProductDetails() {
     <div>
     <div style={{ position: 'relative', height: isMobile ? 460 : 520, borderRadius: isMobile ? '0 0 28px 28px' : 20, overflow: 'hidden' }}>
       {imgOk ? (
-        <img src={heroImg} alt={product.title} onError={() => setImgOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img
+          key={heroImg} src={heroImg} alt={product.title} className="esy-img" ref={markIfComplete} onLoad={markLoaded}
+          onError={() => setImgFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
       ) : (
         <Placeholder label={product.title} hue={tenant.hue} dark={T.dark} />
       )}
@@ -140,7 +162,7 @@ export default function ProductDetails() {
           draws it, under the same rule as the cards. */}
       <NewBadge createdAt={product.createdAt} style={{ top: 'auto', left: 16, bottom: 16 }} />
       <div style={{ position: 'absolute', top: isMobile ? 50 : 16, left: 16, right: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <button onClick={() => navigate(-1)} style={iconBtn(T)} aria-label="back"><Icon.arrowR style={{ transform: 'rotate(180deg)' }} /></button>
+        <button onClick={() => navigate(-1)} style={iconBtn(T)} aria-label={t('back')}><Icon.arrowR style={{ transform: 'rotate(180deg)' }} /></button>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={share} style={iconBtn(T)} aria-label="share"><Icon.share /></button>
         </div>
@@ -151,7 +173,7 @@ export default function ProductDetails() {
         {gallery.map((src, i) => (
           <button
             key={`${src}-${i}`}
-            onClick={() => { setImgIdx(i); setImgOk(true); }}
+            onClick={() => { setImgIdx(i); setImgFailed(false); }}
             aria-label={t('viewImage', { defaultValue: 'View image' })}
             style={{
               flex: '0 0 auto', width: 64, height: 64, padding: 0, borderRadius: 10,

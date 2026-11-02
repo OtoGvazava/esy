@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { orderApi } from '../utils/api';
+import { myOrdersQuery } from '../core/query/queries';
 import { useAuth } from './AuthContext';
 
 const OrdersContext = createContext();
@@ -39,33 +41,34 @@ const normalize = (o) => {
 
 export const OrdersProvider = ({ children }) => {
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const qc = useQueryClient();
+  const [placing, setPlacing] = useState(false);
 
   // The database is authoritative — orders live behind /api/orders (cookie
-  // session). Guests have none. Re-pull when auth resolves / changes.
-  const refresh = useCallback(async () => {
-    if (!isAuthenticated) { setOrders([]); return; }
-    setLoading(true);
-    try {
-      const rows = await orderApi.list();
-      setOrders(Array.isArray(rows) ? rows.map(normalize) : []);
-    } catch {
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [isAuthenticated]);
+  // session). Guests have none. One cached read, so the orders screen opens on
+  // the list it showed last time while a refetch brings it up to date.
+  const signedIn = isAuthenticated && !authLoading;
+  const query = useQuery({ ...myOrdersQuery(), enabled: signedIn });
+  const orders = useMemo(
+    () => (signedIn && query.data ? query.data.map(normalize) : []),
+    [signedIn, query.data],
+  );
+  const loading = placing || (signedIn && query.isFetching);
+  // Not known yet: the session is still being restored, or the first read is
+  // out. A screen draws its skeleton then, never "no orders yet".
+  const pending = authLoading || (signedIn && query.isPending);
 
-  useEffect(() => {
-    if (authLoading) return;
-    refresh();
-  }, [authLoading, refresh]);
+  const refresh = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      await qc.fetchQuery({ ...myOrdersQuery(), staleTime: 0 });
+    } catch { /* the list keeps what it had */ }
+  }, [isAuthenticated, qc]);
 
   // Place a real order against the current store, then reflect it locally.
   // Returns { success, order } so checkout can route to the receipt.
   const createOrder = async (orderData) => {
-    setLoading(true);
+    setPlacing(true);
     try {
       const items = (orderData?.items || []).map((i) => ({
         productId: i.id ?? i.productId,
@@ -86,13 +89,13 @@ export const OrdersProvider = ({ children }) => {
       const created = await orderApi.create(items, devTenant(), delivery);
       const order = created ? normalize(created) : null;
       if (order) {
-        setOrders((prev) => [order, ...prev.filter((o) => o.id !== order.id)]);
+        qc.setQueryData(myOrdersQuery().queryKey, (prev) => [created, ...(prev || []).filter((o) => o.id !== created.id)]);
       }
       return { success: true, order };
     } catch (error) {
       return { success: false, error: error?.message };
     } finally {
-      setLoading(false);
+      setPlacing(false);
     }
   };
 
@@ -104,6 +107,7 @@ export const OrdersProvider = ({ children }) => {
   const value = {
     orders,
     loading,
+    pending,
     refresh,
     createOrder,
     getOrderById,

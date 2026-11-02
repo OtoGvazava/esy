@@ -126,6 +126,8 @@ textarea.bx-in { height: auto; min-height: 110px; padding: 13px 15px; line-heigh
   white-space: nowrap; flex: none; cursor: pointer; text-decoration: none;
 }
 .bx-pill.on { background: var(--k-pill-on); color: var(--k-pill-on-fg); border-color: transparent; font-weight: 600; }
+/* A pill turns on with a short fade rather than a snap (the press sink is .esy-press's). */
+.bx-pill { transition: background-color var(--m-base) ease, color var(--m-base) ease, transform var(--m-quick) var(--m-ease); }
 .bx-seg { display: flex; background: var(--k-sf2); border-radius: var(--k-r-btn); padding: 4px; gap: 4px; }
 .bx-seg button {
   flex: 1; height: 38px; border: 0; background: transparent; border-radius: calc(var(--k-r-btn) - 4px); color: var(--k-dim);
@@ -133,6 +135,12 @@ textarea.bx-in { height: auto; min-height: 110px; padding: 13px 15px; line-heigh
   cursor: pointer; white-space: nowrap; padding: 0 10px;
 }
 .bx-seg button.on { background: var(--k-sf); color: var(--k-fg); font-weight: 600; box-shadow: 0 1px 4px rgba(0, 0, 0, .14); }
+/* A segmented control whose chosen segment's ground slides to the next one
+   (.esy-ind inside it, core/useIndicator.js) instead of jumping there. */
+.bx-seg.slide { position: relative; }
+.bx-seg.slide > .esy-ind { background: var(--k-sf); border-radius: calc(var(--k-r-btn) - 4px); box-shadow: 0 1px 4px rgba(0, 0, 0, .14); }
+.bx-seg.slide button { position: relative; z-index: 1; transition: color var(--m-base) ease, transform var(--m-quick) var(--m-ease); }
+.bx-seg.slide button.on { background: transparent; box-shadow: none; }
 .bx-chip {
   display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: var(--k-r-pill);
   font: 600 12px/1 var(--k-font); white-space: nowrap; flex: none;
@@ -273,8 +281,16 @@ textarea.bx-in { height: auto; min-height: 110px; padding: 13px 15px; line-heigh
   display: flex; align-items: center; gap: 12px; min-height: 42px; padding: 0 12px; border-radius: 10px; flex: none;
   color: var(--k-dim); text-decoration: none; font-weight: 500; font-size: 14px;
 }
-.bx-side a.bx-nav:hover { background: color-mix(in oklab, var(--k-fg) 5%, transparent); }
-.bx-side a.bx-nav.on { background: color-mix(in oklab, var(--k-pri) 12%, transparent); color: var(--k-acc); font-weight: 600; }
+/* The current entry's ground is not the entry's own: it is one marker
+   (.bx-ind, core/useIndicator.js) that slides to the entry tapped, under the
+   entries, so the entries sit above it. */
+.bx-side .bx-nav, .bx-rail .bx-nav {
+  position: relative; z-index: 1;
+  transition: color var(--m-base) ease, transform var(--m-quick) var(--m-ease);
+}
+.bx-side .bx-ind { border-radius: 10px; background: color-mix(in oklab, var(--k-pri) 12%, transparent); }
+.bx-side a.bx-nav:not(.on):hover { background: color-mix(in oklab, var(--k-fg) 5%, transparent); }
+.bx-side a.bx-nav.on { color: var(--k-acc); font-weight: 600; }
 .bx-side .bx-nav.lock { opacity: .55; cursor: not-allowed; }
 .bx-side .bx-nav .bx-badge-n {
   height: 22px; min-width: 22px; padding: 0 8px; border-radius: var(--k-r-pill); background: var(--k-pri); color: var(--k-on-pri);
@@ -310,7 +326,8 @@ textarea.bx-in { height: auto; min-height: 110px; padding: 13px 15px; line-heigh
   position: relative; width: 56px; height: 52px; border-radius: 14px; display: flex; flex-direction: column; align-items: center;
   justify-content: center; color: var(--k-dim); text-decoration: none; flex: none;
 }
-.bx-rail a.bx-nav.on { background: var(--k-sf2); color: var(--k-fg); font-weight: 600; }
+.bx-rail .bx-ind { border-radius: 14px; background: var(--k-sf2); }
+.bx-rail a.bx-nav.on { color: var(--k-fg); font-weight: 600; }
 .bx-rail .bx-nav.lock { opacity: .45; }
 .bx-badge {
   position: absolute; top: 6px; right: 8px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px;

@@ -9,7 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { useGlow, glowTokens, shiftHue } from '../styles/glow';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { tenantApi } from '../utils/api';
+import { useQuery } from '@tanstack/react-query';
+import { directoryQuery } from '../core/query/queries';
 import { managerUrl } from '../utils/hosts';
 import { PLATFORM_ACCENT, storeInitials } from './platformData';
 import { Av, Btn, Glyph, IconBtn, Logo, initialsOf, miStyle, usePDevice } from './PlatformKit';
@@ -32,18 +33,13 @@ export function usePlatform() {
 }
 
 // Live store directory from the real backend (GET /api/tenant).
+// One cached read for the landing page, the directory and the not-found page.
 export function useStores() {
-  const [stores, setStores] = useState(null);
-  const [error, setError] = useState(null);
-  useEffect(() => {
-    let alive = true;
-    tenantApi.list()
-      .then((data) => { if (alive) setStores(Array.isArray(data) ? data : []); })
-      .catch((e) => { if (alive) { setError(e); setStores([]); } });
-    return () => { alive = false; };
-  }, []);
-  return { stores, loading: stores === null, error };
+  const { data, error, isPending } = useQuery(directoryQuery());
+  const stores = data || (error ? NO_STORES : null);
+  return { stores, loading: isPending, error: error || null };
 }
+const NO_STORES = [];
 
 // "esy" wordmark — the design's bag mark (a bag with a smile) in the platform
 // colour, then the lowercase wordmark. The design writes plain "esy"; a caller
@@ -207,10 +203,14 @@ export function PTopBar({ current = 'none', cta = true }) {
     </Link>
   );
 
+  // Each page draws its own bar, so the bar is named for the page change
+  // (styles/motion.css): it stays in place while the page under it changes,
+  // and the current link's underline, named too, slides from the old link to
+  // the new one rather than jumping.
   return (
     <header ref={barRef} style={{
       display: 'flex', alignItems: 'center', gap: 28, padding: `14px ${gut}px`,
-      position: 'relative', zIndex: 30, flex: 'none',
+      position: 'relative', zIndex: 30, flex: 'none', viewTransitionName: 'esy-topbar',
     }}>
       {/* The bar's own controls sit above the open menu's panel (z 2); the scrim starts under the bar. */}
       <Link to="/" aria-label={t('chrome.home')} style={{ textDecoration: 'none', display: 'inline-flex', position: 'relative', zIndex: 3 }}>
@@ -227,9 +227,16 @@ export function PTopBar({ current = 'none', cta = true }) {
                 key={l.k}
                 {...p}
                 aria-current={on ? 'page' : undefined}
-                style={{ textDecoration: 'none', color: on ? T.text : T.textDim, fontWeight: on ? 600 : 500 }}
+                className="esy-press-soft"
+                style={{ position: 'relative', textDecoration: 'none', color: on ? T.text : T.textDim, fontWeight: on ? 600 : 500 }}
               >
                 {l.label}
+                {on && (
+                  <span aria-hidden="true" style={{
+                    position: 'absolute', left: 0, right: 0, bottom: -7, height: 2, borderRadius: 2,
+                    background: T.accent, viewTransitionName: 'esy-pnav-ind',
+                  }} />
+                )}
               </As>
             );
           })}
@@ -271,6 +278,8 @@ export function PTopBar({ current = 'none', cta = true }) {
           <nav
             id="esy-platform-menu"
             aria-label={t('chrome.menu')}
+            // Opens out of the menu button at the bar's end.
+            className="esy-menu-in"
             style={{
               position: 'absolute', top: '100%', left: gut, right: gut, zIndex: 2,
               background: T.surface, border: 'var(--k-card-bd)', borderRadius: 'var(--k-r-card)',

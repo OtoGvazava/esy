@@ -1,0 +1,157 @@
+/* Motion: how the app moves between pages and how its controls answer a tap.
+   One set of durations and curves for every host, so the storefront, the
+   platform, the back office and admin all move alike.
+
+   Reduce motion: on a storefront display.css stops every transition and
+   animation when the shopper's setting is on (data-motion="reduce"). The other
+   hosts have no such setting and follow the device's, at the end of this file.
+   A storefront carries data-text (DisplayPrefsContext), which tells the two
+   apart: there the shopper's choice wins, even over the device. */
+
+:root {
+  --m-quick: 140ms;
+  --m-base: 240ms;
+  --m-slow: 340ms;
+  /* settles without a bounce */
+  --m-ease: cubic-bezier(.2, .8, .2, 1);
+  /* a small overshoot: the sliding tab marker and the icon pop */
+  --m-spring: cubic-bezier(.34, 1.36, .64, 1);
+}
+
+/* ---- page change ----------------------------------------------------------
+   A short cross-fade, the new page rising a few pixels into place (the
+   router's view transition, router/index.jsx). The chrome is left out of it:
+   menus and bars keep their own names below, so they stay put while the page
+   under them changes, and a tab marker sliding to the new page is seen
+   sliding rather than fading. */
+::view-transition-old(root) { animation: esy-vt-out var(--m-quick) ease both; }
+::view-transition-new(root) { animation: esy-vt-in var(--m-base) var(--m-ease) both; }
+@keyframes esy-vt-out { to { opacity: 0; } }
+@keyframes esy-vt-in { from { opacity: 0; transform: translateY(8px); } }
+
+/* Fixed chrome: shown live, never snapshotted. */
+::view-transition-group(esy-progress),
+::view-transition-group(esy-dock),
+::view-transition-group(esy-storebar),
+::view-transition-group(esy-side),
+::view-transition-group(esy-mdock) { animation: none; }
+::view-transition-old(esy-progress),
+::view-transition-old(esy-dock),
+::view-transition-old(esy-storebar),
+::view-transition-old(esy-side),
+::view-transition-old(esy-mdock) { display: none; }
+::view-transition-new(esy-progress),
+::view-transition-new(esy-dock),
+::view-transition-new(esy-storebar),
+::view-transition-new(esy-side),
+::view-transition-new(esy-mdock) { animation: none; }
+/* A header bar stays where it is; only its title cross-fades. */
+::view-transition-group(esy-topbar) { animation-duration: var(--m-base); }
+
+/* ---- the navigation progress bar (router/NavProgress.jsx) ---------------- */
+.esy-progress {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 2147483000; height: 2.5px;
+  pointer-events: none; transform-origin: 0 50%; transform: scaleX(0); opacity: 0;
+  background: var(--k-acc, var(--k-brand));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--k-acc, var(--k-brand)) 60%, transparent);
+  view-transition-name: esy-progress;
+  transition: transform 320ms linear, opacity 200ms ease;
+}
+.esy-progress[data-state="run"] { opacity: 1; }
+.esy-progress[data-state="done"] { opacity: 0; transition: transform 160ms ease-out, opacity 240ms ease 140ms; }
+.esy-progress[data-state="idle"] { transition: none; }
+
+/* ---- skeletons (components/skeleton) --------------------------------------
+   Drawn at once so the page keeps its final shape, but invisible for the
+   first 150 ms: a load that is quicker than that never shows one. */
+.esy-sk {
+  position: relative; overflow: hidden; display: block;
+  background: var(--k-sf2, rgba(127, 127, 127, .14)); border-radius: 8px;
+}
+.esy-sk::after {
+  content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--k-sf, #fff) 50%, transparent), transparent);
+  animation: esy-sk-shine 1.5s ease-in-out .3s infinite;
+}
+.esy-sk-wait { opacity: 0; animation: esy-sk-show 220ms ease 150ms forwards; }
+@keyframes esy-sk-show { to { opacity: 1; } }
+@keyframes esy-sk-shine { to { transform: translateX(100%); } }
+
+/* A list being refreshed under a new filter or sort keeps the old rows,
+   dimmed, until the new ones arrive. */
+.esy-refreshing { opacity: .55; transition: opacity var(--m-base) ease; }
+.esy-settled { opacity: 1; transition: opacity var(--m-base) ease; }
+
+/* A photo fades in once it has decoded, rather than snapping in line by line. */
+.esy-img { opacity: 0; transition: opacity var(--m-slow) ease; }
+.esy-img[data-loaded] { opacity: 1; }
+
+/* ---- menus ----------------------------------------------------------------
+   The marker that slides from one option to the next (core/useIndicator.js),
+   as Instagram's tabs do: it is measured onto the current option and moved
+   with a transform, so it travels rather than jumping. */
+.esy-ind {
+  position: absolute; top: 0; left: 0; pointer-events: none; will-change: transform;
+  transition: transform var(--m-base) var(--m-spring), width var(--m-base) var(--m-spring),
+    height var(--m-base) var(--m-spring), opacity var(--m-quick) ease;
+}
+.esy-ind[data-still] { transition: none; }
+
+/* The option just chosen gives a small pop. */
+.esy-pop { animation: esy-pop var(--m-slow) var(--m-ease); }
+@keyframes esy-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Press feedback: a control sinks a little under the finger, and its colour
+   eases when it becomes the current one. An inline transition on the same
+   element would replace both, so these carry the colour's too. */
+.esy-press { transition: transform var(--m-quick) var(--m-ease), color var(--m-base) ease; -webkit-tap-highlight-color: transparent; }
+.esy-press:active { transform: scale(.94); }
+.esy-press-soft { transition: transform var(--m-quick) var(--m-ease), color var(--m-base) ease; -webkit-tap-highlight-color: transparent; }
+.esy-press-soft:active { transform: scale(.98); }
+
+/* A menu or popover opens out of the control that opened it. */
+.esy-menu-in { animation: esy-menu-in 170ms var(--m-ease) both; transform-origin: var(--esy-origin, top right); }
+@keyframes esy-menu-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+.esy-menu-up { animation: esy-menu-up 170ms var(--m-ease) both; transform-origin: var(--esy-origin, bottom left); }
+@keyframes esy-menu-up { from { opacity: 0; transform: translateY(4px) scale(.97); } }
+
+/* A sheet rises from the bottom over a fading scrim, and sinks back. */
+.esy-scrim[data-state="open"] { animation: esy-fade-in var(--m-base) ease both; }
+.esy-scrim[data-state="closed"] { animation: esy-fade-out var(--m-base) ease both; }
+.esy-sheet[data-state="open"] { animation: esy-sheet-in var(--m-slow) var(--m-ease) both; }
+.esy-sheet[data-state="closed"] { animation: esy-sheet-out var(--m-base) ease-in both; }
+@keyframes esy-fade-in { from { opacity: 0; } }
+@keyframes esy-fade-out { to { opacity: 0; } }
+@keyframes esy-sheet-in { from { transform: translateY(100%); } }
+@keyframes esy-sheet-out { to { transform: translateY(100%); } }
+
+/* A dialog grows in from slightly smaller. */
+.esy-pop-in[data-state="open"] { animation: esy-pop-in var(--m-base) var(--m-ease) both; }
+.esy-pop-in[data-state="closed"] { animation: esy-fade-out var(--m-quick) ease both; }
+@keyframes esy-pop-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+
+/* ---- the device's reduce motion, where no shopper setting applies -------- */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-text]) ::view-transition-group(*),
+  html:not([data-text]) ::view-transition-old(*),
+  html:not([data-text]) ::view-transition-new(*) { animation: none !important; }
+  html:not([data-text]) .esy-progress,
+  html:not([data-text]) .esy-ind,
+  html:not([data-text]) .esy-img,
+  html:not([data-text]) .esy-press,
+  html:not([data-text]) .esy-press-soft { transition: none !important; }
+  html:not([data-text]) .esy-sk::after,
+  html:not([data-text]) .esy-pop,
+  html:not([data-text]) .esy-menu-in,
+  html:not([data-text]) .esy-menu-up,
+  html:not([data-text]) .esy-scrim,
+  html:not([data-text]) .esy-sheet,
+  html:not([data-text]) .esy-pop-in { animation: none !important; }
+  html:not([data-text]) .esy-sk-wait { animation: esy-sk-show 1ms linear 150ms forwards !important; }
+  html:not([data-text]) .esy-press:active,
+  html:not([data-text]) .esy-press-soft:active { transform: none; }
+}

@@ -11,14 +11,15 @@
 // Each month's row is the admin billing screen's own figure for that month
 // (/api/tenant/stats/months), so the two screens cannot disagree. Nothing is
 // invoiced yet, and the invoice column says exactly that.
-import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTK } from '../core/useTK';
 import { money, FEE_PERCENT } from '../core/money';
 import { handleApiError } from '../utils/api';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { MTop } from './ManagerShell';
 import { useMonthStats } from './useStoreStats';
 import { Alert } from './officeBx';
+import { SkIn } from './officeSk';
 
 /** "2026-10" → its month number and year. */
 const parts = (ym) => {
@@ -26,12 +27,75 @@ const parts = (ym) => {
   return { y, m };
 };
 
+/**
+ * The figures' stand-in while they load, in the screen's own boxes: the three
+ * figure cards, the months table and the card about where the money goes.
+ */
+function MoneySkeleton({ t }) {
+  const kpi = (
+    <div className="bx-card bx-kpi">
+      <span className="bx-sm"><SkIn w="55%" /></span>
+      <b><SkIn w="50%" /></b>
+      <span className="bx-xs"><SkIn w="70%" /></span>
+    </div>
+  );
+  return (
+    <Skeleton label={t('finances.loading')} style={{ display: 'flex', flexDirection: 'column', gap: 'inherit' }}>
+      <div className="bx-kpis" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+        {kpi}{kpi}{kpi}
+      </div>
+      <div className="bx-two">
+        <div className="bx-card bx-stk" style={{ gap: 0, overflow: 'hidden' }}>
+          <div className="bx-pad" style={{ borderBottom: '1px solid var(--k-line)' }}><b className="bx-h3"><SkIn w="35%" /></b></div>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="bx-tbl">
+              <thead>
+                <tr>
+                  <th scope="col">{t('finances.colMonth')}</th>
+                  <th scope="col" className="r">{t('finances.colRevenue')}</th>
+                  <th scope="col" className="r">{t('finances.colFee')}</th>
+                  <th scope="col" className="bx-no-ph">{t('finances.colInvoice')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[0, 1, 2, 3].map((i) => (
+                  <tr key={i}>
+                    <td><SkIn w={90} /></td>
+                    <td className="r"><SkIn w={64} /></td>
+                    <td className="r"><SkIn w={48} /></td>
+                    <td className="bx-no-ph"><Sk w={96} h={26} r={13} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="bx-stk" style={{ gap: 14 }}>
+          <div className="bx-card bx-stk" style={{ gap: 0 }}>
+            <div className="bx-pad" style={{ borderBottom: '1px solid var(--k-line)' }}><b className="bx-h3"><SkIn w="45%" /></b></div>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="bx-li" style={{ alignItems: 'flex-start' }}>
+                <div className="bx-grow bx-stk" style={{ gap: 4 }}>
+                  <div className="bx-rowb">
+                    <b className="bx-sm bx-grow"><SkIn w="45%" /></b>
+                    <Sk w={72} h={26} r={13} />
+                  </div>
+                  <span className="bx-xs"><SkIn w="85%" /></span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Sk h={72} r="var(--k-r-card)" />
+        </div>
+      </div>
+    </Skeleton>
+  );
+}
+
 export default function ManagerMoney() {
   const { T } = useTK();
   const { t } = useTranslation('manager');
-  const [params] = useSearchParams();
-  const devTenant = params.get('tenant') || undefined;
-  const { data, loading, error } = useMonthStats(devTenant);
+  const { data, loading, error } = useMonthStats();
 
   const rate = Number(data?.serviceFeeRate);
   // The rate new orders are charged today, as a whole percent where it is one.
@@ -69,7 +133,7 @@ export default function ManagerMoney() {
     <div className="bx-page">
       <MTop T={T} title={t('finances.title')} sub={t('finances.sub', { percent })} />
 
-      {loading && <div className="bx-sm bx-dim">{t('finances.loading')}</div>}
+      {loading && <MoneySkeleton t={t} />}
       {error && !loading && <Alert tone="bad" icon="warn"><span className="bx-sm">{handleApiError(error, t('finances.loadFailed'))}</span></Alert>}
 
       {data && !loading && now && (

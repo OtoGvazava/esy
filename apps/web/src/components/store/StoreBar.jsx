@@ -17,7 +17,7 @@
 // home page then has no hero band. The one thing added for cover is the
 // store's cover photo, when it has one, across the top of the home page; with
 // none the page is the bar and the shop, as the design draws it.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCart } from '../../contexts/CartContext';
@@ -25,7 +25,7 @@ import { useGlow } from '../../styles/glow';
 import { useThemeMode } from '../../contexts/ThemeModeContext';
 import { Icon } from '../glow/GlowPrimitives';
 import { Icons } from '../../core/icons';
-import { contactApi } from '../../utils/api';
+import { usePublicContacts } from '../../hooks/useStoreContacts';
 import { CHANNELS, channelHref } from '../../core/channels';
 import ManageButton from '../ManageButton';
 import { useStoreBarMounted } from './storeChrome';
@@ -47,19 +47,11 @@ export default function StoreBar({ compact }) {
   const { tenant: store } = useTenant();
   const design = useDesign();
   const socials = design.show.socials;
-  const [channels, setChannels] = useState([]);
   const [coverFailed, setCoverFailed] = useState(null);
 
   // The quick channel buttons are the store's social buttons up here, so the
   // design's socials switch hides them; there is nothing to fetch then.
-  useEffect(() => {
-    if (!socials) return undefined;
-    const ac = new AbortController();
-    contactApi.listPublic(undefined, { signal: ac.signal })
-      .then((rows) => { if (!ac.signal.aborted) setChannels(Array.isArray(rows) ? rows : []); })
-      .catch(() => {});
-    return () => ac.abort();
-  }, [socials]);
+  const { channels } = usePublicContacts(socials);
 
   const cover = design.header === 'cover' && pathname === '/' && store?.coverUrl && coverFailed !== store.coverUrl
     ? store.coverUrl : null;
@@ -80,6 +72,8 @@ export default function StoreBar({ compact }) {
       borderBottom: `1px solid ${T.border}`, background: 'var(--k-hd-bg)',
       backdropFilter: 'var(--k-hd-blur, none)', WebkitBackdropFilter: 'var(--k-hd-blur, none)',
       position: 'sticky', top: 0, zIndex: 50,
+      // Stays put while the page under it cross-fades (styles/motion.css).
+      viewTransitionName: 'esy-storebar',
     }}>
       <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
         {tenant?.logoUrl ? (
@@ -110,6 +104,8 @@ export default function StoreBar({ compact }) {
         <button
           type="button"
           onClick={() => navigate('/search')}
+          data-prefetch="/search"
+          className="esy-press-soft"
           style={{
             display: 'flex', alignItems: 'center', gap: 9, height: 44, padding: '0 16px',
             borderRadius: 999, width: 320, background: T.bg, border: `1px solid ${T.border}`,
@@ -149,7 +145,7 @@ export default function StoreBar({ compact }) {
         <Icon.globe /> {language === 'ka' ? 'ქა · EN' : 'EN · ქა'}
       </span>
 
-      <Link to="/cart" style={{
+      <Link to="/cart" className="esy-press" style={{
         ...pill,
         background: count ? T.accentBg : 'transparent',
         borderColor: count ? T.accent : T.border,
@@ -158,7 +154,7 @@ export default function StoreBar({ compact }) {
         <Icon.bag /> {count || 0}
       </Link>
 
-      <Link to="/account" aria-label={t('account', { defaultValue: 'Account' })} style={{
+      <Link to="/account" aria-label={t('account', { defaultValue: 'Account' })} className="esy-press" style={{
         width: 36, height: 36, borderRadius: '50%', display: 'inline-flex',
         alignItems: 'center', justifyContent: 'center',
         border: `1px solid ${T.border}`, color: T.textDim, textDecoration: 'none',

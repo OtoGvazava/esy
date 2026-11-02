@@ -23,17 +23,20 @@
 //
 // The verification code has no switch (checkout needs it), and cancellations
 // and refunds go by email only: the matrix draws both rules.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { adminApi, handleApiError } from '../utils/api';
+import { adminIntegrationsQuery } from '../core/query/adminQueries';
 import { useAdminTokens } from './adminTokens';
 import { useAdminHead } from './adminHead';
 import { useDevice } from '../contexts/DeviceContext';
-import { Failed, Loading, dateTime } from './AdminUI';
+import { Failed, dateTime } from './AdminUI';
 import {
   Alert, Dialog, DialogPoint, Glyph, KitBtn, KitChip, List, Mono, Progress, RowIcon, Seg, SourceChip,
   Switch, SwitchMark,
 } from './AdminKit';
+import { IntegrationsSkeleton } from './AdminSkeletons';
 
 /** Matrix rows, top to bottom: the code, the four order notices, then email-only. */
 const ROWS = ['otp', 'orderPlaced', 'orderShipped', 'orderOut', 'orderDelivered', 'orderCancelled', 'orderRefunded'];
@@ -60,22 +63,46 @@ function Editor({ T, t, phone, kind, row, name, channels, onChannel, canWrite, b
   const focusProps = (name) => ({ onFocus: () => setFocus(name), onBlur: () => setFocus('') });
   const mono = <Mono T={T} />;
 
+  // The server's copy the fields were filled from, and whether a save or a
+  // reset from here is waiting for its answer. A read that brings another
+  // copy fills the fields again only when they still hold the last one
+  // untouched, or when it is that answer: a read never overwrites what is
+  // being typed. (The copy keeps its identity while nothing in it changes:
+  // the query cache shares what is equal from one read to the next.)
+  const [base, setBase] = useState(row);
+  const [saving, setSaving] = useState(false);
+  if (row !== base) {
+    const untouched = text === (base.text ?? '') && subject === (base.subject ?? '') && body === (base.body ?? '');
+    setBase(row);
+    if (untouched || saving) {
+      setText(row.text ?? '');
+      setSubject(row.subject ?? '');
+      setBody(row.body ?? '');
+      setSaving(false);
+    }
+  }
+  const typing = (set) => (e) => { set(e.target.value); setSaving(false); };
+
   const changed = isSms ? text !== row.text : (subject !== row.subject || body !== row.body);
   const len = smsLength(text);
   const units = smsUnits(len);
   const tokens = (row.tokens || []).map((k) => `{${k}}`).join(', ');
   const extra = isSms && /\{(store|url)\}/.test(text);
 
-  const save = () => onSave(isSms ? { templates: { [row.key]: text } }
+  const send = (patch) => {
+    setSaving(true);
+    onSave(patch).then((ok) => { if (!ok) setSaving(false); });
+  };
+  const save = () => send(isSms ? { templates: { [row.key]: text } }
     : { email: { templates: { [row.key]: { subject, body } } } });
   const reset = () => {
     if (isSms) {
       setText(row.defaultText);
-      onSave({ templates: { [row.key]: row.defaultText } });
+      send({ templates: { [row.key]: row.defaultText } });
     } else {
       setSubject(row.defaultSubject);
       setBody(row.defaultBody);
-      onSave({ email: { templates: { [row.key]: { subject: row.defaultSubject, body: row.defaultBody } } } });
+      send({ email: { templates: { [row.key]: { subject: row.defaultSubject, body: row.defaultBody } } } });
     }
   };
   const atDefault = isSms ? text === row.defaultText
@@ -109,7 +136,7 @@ function Editor({ T, t, phone, kind, row, name, channels, onChannel, canWrite, b
         <>
           <textarea
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={typing(setText)}
             aria-label={t('integrations.textLabel')}
             maxLength={1000}
             {...focusProps('text')}
@@ -136,7 +163,7 @@ function Editor({ T, t, phone, kind, row, name, channels, onChannel, canWrite, b
         <>
           <input
             value={subject}
-            onChange={(e) => setSubject(e.target.value)}
+            onChange={typing(setSubject)}
             aria-label={t('integrations.subjectLabel')}
             maxLength={200}
             {...focusProps('subject')}
@@ -144,7 +171,7 @@ function Editor({ T, t, phone, kind, row, name, channels, onChannel, canWrite, b
           />
           <textarea
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={typing(setBody)}
             aria-label={t('integrations.bodyLabel')}
             rows={7}
             maxLength={5000}
@@ -268,9 +295,6 @@ export default function AdminIntegrations() {
   const lang = i18n.language;
   const { isMobile, isDesktop } = useDevice();
 
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [sel, setSel] = useState({ key: 'orderPlaced', channel: 'sms' });
   const [sheet, setSheet] = useState(false);
   const [confirmOff, setConfirmOff] = useState(false);
@@ -278,31 +302,27 @@ export default function AdminIntegrations() {
   const [errors, setErrors] = useState({});
   const later = useRef(null);
 
-  const load = useCallback(async () => {
-    setError('');
-    try {
-      setData(await adminApi.getIntegrations());
-    } catch (e) {
-      setError(handleApiError(e, t('integrations.loadFailed')));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+  // The settings from the query cache. The editor and the sender lines fill
+  // their own fields from them, and a read never overwrites what is typed.
+  const settings = useQuery(adminIntegrationsQuery());
+  const { refetch } = settings;
+  const data = settings.data ?? null;
 
-  useEffect(() => {
-    load();
-    return () => clearTimeout(later.current);
-  }, [load]);
+  useEffect(() => () => clearTimeout(later.current), []);
 
-  /** One write, then read back what is in effect (now, and once more after the cache TTL). */
+  /**
+   * One write, then read back what is in effect: now — the read every write
+   * sets off (core/query/client.js), waited for rather than doubled — and
+   * once more after the cache TTL.
+   */
   const write = async (id, patch) => {
     setBusy(id);
     setErrors((p) => ({ ...p, [id]: '' }));
     try {
       await adminApi.updateIntegrations(patch);
-      await load();
+      await refetch({ cancelRefetch: false });
       clearTimeout(later.current);
-      later.current = setTimeout(load, 2500);
+      later.current = setTimeout(() => { refetch(); }, 2500);
       return true;
     } catch (e) {
       setErrors((p) => ({ ...p, [id]: handleApiError(e, t('integrations.saveFailed')) }));
@@ -314,8 +334,11 @@ export default function AdminIntegrations() {
 
   useAdminHead({ title: t('integrations.title'), sub: t('integrations.sub') });
 
-  if (loading) return <Loading T={T} />;
-  if (error && !data) return <Failed T={T} message={error} onRetry={load} />;
+  // A retry after a failure draws the skeleton again, as the first load did.
+  if (settings.isPending || (settings.isError && !data && settings.isFetching)) return <IntegrationsSkeleton />;
+  if (settings.isError && !data) {
+    return <Failed T={T} message={handleApiError(settings.error, t('integrations.loadFailed'))} onRetry={() => refetch()} />;
+  }
 
   const sms = data?.sms || {};
   const email = data?.email || {};
@@ -451,7 +474,7 @@ export default function AdminIntegrations() {
   const editor = selRow && (
     <Editor
       showTitle={!isMobile}
-      key={`${sel.channel}:${sel.key}:${selRow.isDefault}:${selRow.text ?? ''}${selRow.subject ?? ''}${selRow.body ?? ''}`}
+      key={`${sel.channel}:${sel.key}`}
       T={T}
       t={t}
       phone={isMobile}
@@ -603,10 +626,12 @@ export default function AdminIntegrations() {
         {matrix}
       </div>
 
-      {isMobile && sheet && editor && (
+      {/* Kept mounted with `open`, so the sheet and the confirmation animate out as well as in. */}
+      {isMobile && editor && (
         <Dialog
           T={T}
           phone
+          open={sheet}
           title={t('integrations.editorTitle', {
             name: t(`integrations.row.${sel.key}`),
             channel: sel.channel === 'sms' ? 'SMS' : t('integrations.email'),
@@ -618,27 +643,32 @@ export default function AdminIntegrations() {
         </Dialog>
       )}
 
-      {confirmOff && (
-        <Dialog T={T} phone={isMobile} title={t('integrations.offTitle')} onClose={() => setConfirmOff(false)} busy={busy === 'sms:master'}>
-          <List T={T}>
-            <DialogPoint T={T} first icon="lock" tone={T.dangerFg}>{t('integrations.offPointCode')}</DialogPoint>
-            <DialogPoint T={T} icon="sms">{t('integrations.offPointOrders')}</DialogPoint>
-          </List>
-          {errors['sms:master'] && <span role="alert" style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{errors['sms:master']}</span>}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <KitBtn T={T} disabled={busy === 'sms:master'} onClick={() => setConfirmOff(false)}>{t('ui.cancel')}</KitBtn>
-            <KitBtn
-              T={T}
-              kind="danger"
-              disabled={busy === 'sms:master'}
-              style={{ flex: isMobile ? '1 1 0' : 'none' }}
-              onClick={async () => { if (await write('sms:master', { enabled: false })) setConfirmOff(false); }}
-            >
-              {busy === 'sms:master' ? t('ui.working') : t('integrations.offConfirm')}
-            </KitBtn>
-          </div>
-        </Dialog>
-      )}
+      <Dialog
+        T={T}
+        phone={isMobile}
+        open={confirmOff}
+        title={t('integrations.offTitle')}
+        onClose={() => setConfirmOff(false)}
+        busy={busy === 'sms:master'}
+      >
+        <List T={T}>
+          <DialogPoint T={T} first icon="lock" tone={T.dangerFg}>{t('integrations.offPointCode')}</DialogPoint>
+          <DialogPoint T={T} icon="sms">{t('integrations.offPointOrders')}</DialogPoint>
+        </List>
+        {errors['sms:master'] && <span role="alert" style={{ font: `500 12px ${T.font}`, color: T.dangerFg }}>{errors['sms:master']}</span>}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <KitBtn T={T} disabled={busy === 'sms:master'} onClick={() => setConfirmOff(false)}>{t('ui.cancel')}</KitBtn>
+          <KitBtn
+            T={T}
+            kind="danger"
+            disabled={busy === 'sms:master'}
+            style={{ flex: isMobile ? '1 1 0' : 'none' }}
+            onClick={async () => { if (await write('sms:master', { enabled: false })) setConfirmOff(false); }}
+          >
+            {busy === 'sms:master' ? t('ui.working') : t('integrations.offConfirm')}
+          </KitBtn>
+        </div>
+      </Dialog>
     </div>
   );
 }

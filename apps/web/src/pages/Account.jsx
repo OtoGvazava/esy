@@ -10,14 +10,53 @@ import { GlowScreen, GlowTopNav, money } from '../components/glow/GlowChrome';
 import SignIn from './SignIn';
 import { dayTime } from '../components/shop/kit';
 import { alpha } from '../core/tokens';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 
 export default function Account() {
   const { T } = useGlow();
   const navigate = useNavigate();
   const { t } = useTranslation('storefront');
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
-  const { orders, getTotalOrders, getTotalSpent } = useOrders();
+  const { user, isAuthenticated, isAdmin, logout, loading } = useAuth();
+  const { orders, pending, getTotalOrders, getTotalSpent } = useOrders();
   const { appearance, language } = useThemeMode();
+
+  // While the session is restored the page is drawn in its own shape, rather
+  // than the sign-in screen flashing up first for a shopper who is signed in.
+  if (loading) {
+    return (
+      <GlowScreen T={T}>
+        <GlowTopNav T={T} title={t('account.title')} />
+        <Skeleton label={t('common:loading.profile')} style={{ maxWidth: 620, margin: '0 auto' }}>
+          <div style={{ padding: '6px 16px 16px' }}>
+            <div style={{ padding: '18px 16px', borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+              <Sk w={56} h={56} r="50%" />
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Sk h={15} w="48%" r={7} />
+                <Sk h={11} w="62%" r={6} />
+                <Sk h={18} w={70} r={999} />
+              </div>
+            </div>
+          </div>
+          <div style={{ padding: '0 16px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            {[0, 1].map((i) => (
+              <div key={i} style={{ padding: '12px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Sk h={18} w="60%" r={7} />
+                <Sk h={9} w="70%" r={5} />
+              </div>
+            ))}
+          </div>
+          <div style={{ padding: '6px 16px 24px', display: 'flex', flexDirection: 'column' }}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 6px', borderBottom: i === 4 ? 'none' : `1px solid ${T.border}` }}>
+                <Sk h={12} w={`${44 - i * 4}%`} r={6} />
+                <Sk h={12} w={12} r={4} />
+              </div>
+            ))}
+          </div>
+        </Skeleton>
+      </GlowScreen>
+    );
+  }
 
   if (!isAuthenticated) return <SignIn />;
 
@@ -84,7 +123,11 @@ export default function Account() {
             { id: 'spent', v: money(getTotalSpent()), k: t('account.statSpent') },
           ].map(({ id, v, k }) => (
             <div key={id} style={{ padding: '12px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ font: `800 18px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{v}</span>
+              {/* Until the orders are known a figure is a placeholder of its
+                  height, never a 0 that turns into the real count. */}
+              {pending
+                ? <Sk h={18} w="60%" r={7} style={{ margin: '2px 0 3px' }} />
+                : <span style={{ font: `800 18px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{v}</span>}
               <span style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em' }}>{k}</span>
             </div>
           ))}

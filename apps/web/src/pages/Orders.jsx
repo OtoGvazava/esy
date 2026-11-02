@@ -5,12 +5,43 @@ import { useGlow } from '../styles/glow';
 import { Icon, PoweredBy } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, money } from '../components/glow/GlowChrome';
 import { alpha } from '../core/tokens';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 
 export default function Orders() {
   const { T, tenant } = useGlow();
   const navigate = useNavigate();
   const { t } = useTranslation('storefront');
-  const { orders } = useOrders();
+  const { orders, pending } = useOrders();
+
+  // The list's own shape until it is known: the heading and a few order rows.
+  if (pending) {
+    return (
+      <GlowScreen T={T}>
+        <GlowTopNav T={T} title={t('orders.title')} />
+        <Skeleton label={t('common:loading.orders')} style={{ maxWidth: 620, margin: '0 auto' }}>
+          <div style={{ padding: '6px 22px 14px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+            <Sk h={24} w="44%" r={8} />
+            <Sk h={11} w="22%" r={6} />
+          </div>
+          <div style={{ padding: '0 16px 6px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} style={{ padding: '14px 14px', borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Sk w={42} h={42} r={12} />
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  <Sk h={12} w="40%" r={6} />
+                  <Sk h={10} w="55%" r={5} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 7 }}>
+                  <Sk h={13} w={56} r={6} />
+                  <Sk h={10} w={44} r={5} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Skeleton>
+      </GlowScreen>
+    );
+  }
 
   if (!orders || orders.length === 0) {
     return (
@@ -58,6 +89,8 @@ export default function Orders() {
                 key={o.id || idx}
                 role="button"
                 tabIndex={0}
+                className="esy-press-soft"
+                data-prefetch={o.orderNumber ? `/orders/${encodeURIComponent(o.orderNumber)}` : undefined}
                 onClick={() => o.orderNumber && navigate(`/orders/${encodeURIComponent(o.orderNumber)}`)}
                 onKeyDown={(e) => {
                   if ((e.key === 'Enter' || e.key === ' ') && o.orderNumber) {

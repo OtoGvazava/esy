@@ -23,6 +23,7 @@ import { useDesign } from '../../core/design/useDesign';
 import { addedRecently } from '../../core/design/show';
 import NewBadge from '../store/NewBadge';
 import { useDataSaver } from '../../contexts/DisplayPrefsContext';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 
 const tagBg = (tag, T) =>
   tag === 'new' ? T.accent : tag === 'sale' ? T.danger : tag === 'low' ? T.warn : T.text;
@@ -60,6 +61,10 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
           src={p.image}
           alt={p.title}
           loading={saver ? 'lazy' : undefined}
+          // Fades in once decoded rather than drawing in line by line.
+          className="esy-img"
+          ref={markIfComplete}
+          onLoad={markLoaded}
           onError={() => setImgOk(false)}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
@@ -106,9 +111,13 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
   // The design's card: the theme decides its ground, padding and corners
   // (Liquid Glass draws a bare photo, Soft a white tile), the photo carries
   // the colour, and the quick add is one round button.
+  // Pointing at a card (or pressing it) starts fetching its product, so the
+  // page it opens is usually ready by the click (router/prime.js).
   return (
     <div
       onClick={() => onOpen?.(p)}
+      data-prefetch={`/product/${p.id}`}
+      className="esy-press-soft"
       style={{
         background: photoGrid ? 'transparent' : 'var(--k-pc-bg)', borderRadius: 'var(--k-r-card)',
         border: photoGrid ? 'none' : 'var(--k-pc-bd)', padding: photoGrid ? 0 : 'var(--k-pc-pad)',

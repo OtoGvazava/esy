@@ -1,7 +1,8 @@
-// Shared pieces for the four /api/admin screens: the load/fail/empty states
-// they all need, the money and date formatters, and the suspend dialog (used
-// from both the store list and a single store's record, so the "typed reason,
-// then confirm" rule exists in exactly one place).
+// Shared pieces for the four /api/admin screens: the fail and empty states
+// they all need (a screen still loading draws its skeleton, AdminSkeletons),
+// the money and date formatters, and the suspend dialog (used from both the
+// store list and a single store's record, so the "typed reason, then confirm"
+// rule exists in exactly one place).
 //
 // Everything user-facing arrives from the caller's `t()` or is read from the
 // 'admin' namespace here — no copy is baked into a JSX literal.
@@ -54,16 +55,7 @@ export function dateTime(value, lang) {
   }).format(d);
 }
 
-// ─── Load / fail / empty ────────────────────────────────────────────────────
-export function Loading({ T }) {
-  const { t } = useTranslation('admin');
-  return (
-    <div style={{ padding: '48px 8px', textAlign: 'center', color: T.textMute, font: `500 13px ${T.font}` }}>
-      {t('ui.loading')}
-    </div>
-  );
-}
-
+// ─── Fail / empty ───────────────────────────────────────────────────────────
 /**
  * A failed call. Says what failed and offers a retry — and deliberately renders
  * NO data alongside it, because a half-drawn screen next to an error reads as

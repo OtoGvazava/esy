@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTK } from '../../core/useTK';
+import { useIndicator } from '../../core/useIndicator';
 import { renderMarkdown } from '../../utils/markdown';
 import { input } from '../../manager/officeKit';
 
@@ -16,6 +17,8 @@ export default function MarkdownField({ value, onChange, rows = 5 }) {
   const [preview, setPreview] = useState(false);
   const [focus, setFocus] = useState(false);
   const sel = useRef(null); // [start, end] to restore after controlled update
+  const tabs = useRef(null);
+  const ind = useIndicator(tabs, preview ? 'preview' : 'write');
 
   useLayoutEffect(() => {
     if (sel.current && ref.current) {
@@ -63,8 +66,10 @@ export default function MarkdownField({ value, onChange, rows = 5 }) {
     background: 'transparent', color: T.textDim, font: `600 12px ${T.font}`, cursor: 'pointer',
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   };
+  // The chosen tab's ground is the marker under the two (useIndicator), not its own.
   const tab = (on) => ({
-    ...tool, padding: '0 8px', background: on ? T.surface2 : 'transparent', color: on ? T.text : T.textDim,
+    ...tool, position: 'relative', zIndex: 1, padding: '0 8px', color: on ? T.text : T.textDim,
+    transition: 'color var(--m-base) ease, transform var(--m-quick) var(--m-ease)',
   });
   const box = {
     ...input(T, { focus: focus && !preview }), height: 'auto', minHeight: Math.max(110, rows * 24),
@@ -90,8 +95,12 @@ export default function MarkdownField({ value, onChange, rows = 5 }) {
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1" /></svg>
         </button>
         <span style={{ flex: 1 }} />
-        <button type="button" onClick={() => setPreview(false)} style={tab(!preview)} aria-pressed={!preview}>{t('mdWrite')}</button>
-        <button type="button" onClick={() => setPreview(true)} style={tab(preview)} aria-pressed={preview}>{t('mdPreview')}</button>
+        {/* Write and preview: the chosen one's ground slides to the other. */}
+        <span ref={tabs} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 2, flex: 'none' }}>
+          <span aria-hidden="true" className="esy-ind" data-still={ind.still || undefined} style={{ ...ind.style, borderRadius: 8, background: T.surface2 }} />
+          <button type="button" onClick={() => setPreview(false)} data-ind="write" className="esy-press" style={tab(!preview)} aria-pressed={!preview}>{t('mdWrite')}</button>
+          <button type="button" onClick={() => setPreview(true)} data-ind="preview" className="esy-press" style={tab(preview)} aria-pressed={preview}>{t('mdPreview')}</button>
+        </span>
       </div>
 
       {preview ? (

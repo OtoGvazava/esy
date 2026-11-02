@@ -12,11 +12,15 @@
 //
 // A product must be saved before it can have variants, because the
 // combinations hang off its id. The card says so rather than doing nothing.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { productApi, handleApiError } from '../../utils/api';
 import { money } from '../../core/money';
+import { editVariantsQuery } from '../../core/query/managerQueries';
+import { Sk, Skeleton } from '../skeleton/Skeleton';
 import { Alert, btn, card } from '../../manager/officeKit';
+import { SkIn } from '../../manager/officeSk';
 
 const MAX_AXES = 2;
 const keyOf = (r) => r.key.join('|');
@@ -115,16 +119,32 @@ export default function VariantEditor({ T, productId, basePrice, onChanged, onDi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const load = useCallback(async () => {
-    if (!productId) return;
-    try {
-      adopt(await productApi.getVariants(productId));
-    } catch (e) {
-      setError(handleApiError(e, t('variants.loadFailed')));
+  // The product's document from the query cache (the products screen reads
+  // it before the editor opens). It is taken up once per product; from then
+  // on the grid on screen is the one each save answered with, so a read that
+  // lands while stock is being typed changes nothing typed.
+  const read = useQuery({ ...editVariantsQuery(productId), enabled: !!productId });
+  const adopted = useRef(null);
+  // Before paint, so a document already in the cache is the first thing drawn.
+  useLayoutEffect(() => {
+    if (!productId || adopted.current === productId) return;
+    if (read.isSuccess) {
+      adopted.current = productId;
+      setError('');
+      adopt(read.data);
+    } else if (read.isError) {
+      setError(handleApiError(read.error, t('variants.loadFailed')));
     }
-  }, [productId, t, adopt]);
+  }, [productId, read.isSuccess, read.isError, read.data, read.error, t, adopt]);
 
-  useEffect(() => { load(); }, [load]);
+  // Read again (cancelling the axes, or after a refused save) and start over from it.
+  const load = async () => {
+    if (!productId) return;
+    const again = await read.refetch();
+    if (again.isSuccess) adopt(again.data);
+    else if (again.isError) setError(handleApiError(again.error, t('variants.loadFailed')));
+  };
+
   useEffect(() => { onDirty?.(dirty); }, [dirty, onDirty]);
 
   // Every save sends the whole document and renders what comes back, so the
@@ -193,6 +213,18 @@ export default function VariantEditor({ T, productId, basePrice, onChanged, onDi
         {head(t('variants.sub'))}
         <div style={{ padding: '0 16px 16px' }}><Alert T={T}>{t('variants.saveProductFirst')}</Alert></div>
       </div>
+    );
+  }
+
+  // The card's head, and rows where the grid goes, until the document is in.
+  if (read.isPending) {
+    return (
+      <Skeleton style={shell}>
+        {head(<SkIn w={180} />)}
+        <div style={{ padding: '0 16px 16px', display: 'grid', gap: 10 }}>
+          {[0, 1, 2].map((i) => <Sk key={i} h={34} r={9} />)}
+        </div>
+      </Skeleton>
     );
   }
 

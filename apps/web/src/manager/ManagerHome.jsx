@@ -9,10 +9,11 @@
 // permission snapshot /api/auth/user returns is computed for ?tenant=.
 //
 // The colour is esy's own, not a store's: no store is chosen here yet.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { accountApi, handleApiError } from '../utils/api';
+import { handleApiError } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useTK } from '../core/useTK';
@@ -20,7 +21,10 @@ import { TK, PLATFORM_BRAND, safeAccent, onColor, track } from '../core/tokens';
 import { Chip, Note } from '../core/primitives';
 import { EsyMark } from '../core/domain';
 import { Icons } from '../core/icons';
+import { accountQuery } from '../core/query/queries';
 import { platformUrl } from '../utils/hosts';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
+import { SkIn } from './officeSk';
 
 // Where AuthContext's signInWithGoogle keeps the path to come back to. The
 // shared AuthCallback only restores ?tenant= and lands on /account, which the
@@ -203,6 +207,35 @@ function StoreList({ T, stores }) {
   );
 }
 
+/** The picker while the account's stores load: its heading and rows in the list's own card. */
+function StoreListSk({ T }) {
+  const { t } = useTranslation('manager');
+  const { isDesktop } = useDevice();
+  return (
+    <Skeleton label={t('overview.loading')} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ font: `700 ${isDesktop ? 30 : 26}px/1.15 ${T.font}` }}><SkIn w="70%" /></div>
+      <div style={{
+        borderRadius: 16, overflow: 'hidden', background: T.surface, border: `1px solid ${T.border}`, boxShadow: cardEdge,
+      }}>
+        {[0, 1].map((i) => (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, boxSizing: 'border-box',
+            padding: '11px 12px 11px 16px', borderTop: i ? `1px solid ${T.border}` : 'none',
+          }}>
+            <Sk w={34} h={34} r={17} />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', font: `700 12.5px/1.4 ${T.font}` }}><SkIn w="45%" /></span>
+              <span style={{ display: 'block', font: `400 12px/1.4 ${T.font}` }}><SkIn w="35%" /></span>
+            </span>
+            <Sk w={64} h={26} r={13} />
+          </div>
+        ))}
+      </div>
+      <Sk h={48} r={12} />
+    </Skeleton>
+  );
+}
+
 /**
  * The back office for someone without a store to be in: the sign-in, the
  * store picker, or the way to open a first store.
@@ -214,23 +247,13 @@ export default function ManagerHome() {
   const T = usePlatformTokens();
   const [params] = useSearchParams();
   const oauthError = params.get('error');
-  const [stores, setStores] = useState(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (authLoading || !isAuthenticated) return undefined;
-    let alive = true;
-    accountApi.get()
-      .then((a) => {
-        if (!alive) return;
-        setStores([
-          ...(a?.ownedStores || []).map((s) => ({ ...s, myRole: 'OWNER' })),
-          ...(a?.managedStores || []).map((s) => ({ ...s, myRole: 'MANAGER' })),
-        ]);
-      })
-      .catch((e) => { if (alive) setError(handleApiError(e, t('access.loadFailed'))); });
-    return () => { alive = false; };
-  }, [authLoading, isAuthenticated, t]);
+  // The account's stores, OWNER and MANAGER tiers alike, each with its role.
+  const account = useQuery({ ...accountQuery(), enabled: !authLoading && isAuthenticated });
+  const stores = useMemo(() => (account.data ? [
+    ...(account.data.ownedStores || []).map((s) => ({ ...s, myRole: 'OWNER' })),
+    ...(account.data.managedStores || []).map((s) => ({ ...s, myRole: 'MANAGER' })),
+  ] : null), [account.data]);
+  const error = account.isError && !stores ? handleApiError(account.error, t('access.loadFailed')) : '';
 
   if (authLoading) return <Frame T={T} wide={!isMobile} />;
 
@@ -275,9 +298,7 @@ export default function ManagerHome() {
       <Account T={T} user={user} onSignOut={logout} />
 
       {error && <Note T={T} tone="danger">{error}</Note>}
-      {!stores && !error && (
-        <div style={{ font: `500 13px ${T.font}`, color: T.textDim }}>{t('overview.loading')}</div>
-      )}
+      {!stores && !error && <StoreListSk T={T} />}
 
       {stores && stores.length > 0 && (
         <>

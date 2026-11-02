@@ -1,41 +1,23 @@
-import { useContext, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { platformUrl } from './utils/hosts';
-import Home from './pages/Home';
-import ProductDetails from './pages/ProductDetails';
-import StoreAbout from './pages/StoreAbout';
+import { useContext, useEffect, useLayoutEffect } from 'react';
+import { Outlet, ScrollRestoration, useLocation } from 'react-router-dom';
 import StoreClosed from './pages/StoreClosed';
-import SearchOverlay from './pages/SearchOverlay';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import PayReturn from './pages/PayReturn';
-import OrderSuccess from './pages/OrderSuccess';
-import Account from './pages/Account';
-import PersonalDetails from './pages/PersonalDetails';
 import OfflineBanner from './components/shop/OfflineBanner';
-import Orders from './pages/Orders';
-import OrderDetail from './pages/OrderDetail';
-import SignIn from './pages/SignIn';
-import AuthCallback from './pages/AuthCallback';
-import DisplaySettings from './pages/DisplaySettings';
 import AppProviders from './providers/AppProviders';
 import GlowDock from './components/glow/GlowDock';
 import StoreBar from './components/store/StoreBar';
 import { useDevice } from './contexts/DeviceContext';
 import { TenantContext } from './contexts/TenantContext';
 import ProfileGate from './components/ProfileGate';
-import PlatformShell from './platform/PlatformShell';
-import ManagerShell from './manager/ManagerShell';
-import AdminShell from './admin/AdminShell';
 import { useAppTheme } from './hooks/useAppTheme';
 import { usePlatformHost, isManagerHost, isAdminHost } from './hooks/usePlatformHost';
 import { ThemeModeProvider } from './contexts/ThemeModeContext';
 import { DisplayPrefsProvider } from './contexts/DisplayPrefsContext';
 import { safeAccent, PLATFORM_BRAND, ADMIN_BRAND } from './core/tokens';
 import { normalizeDesign } from './core/design/normalize';
+import NavProgress from './router/NavProgress';
 
 /** Leaves the SPA for another host. react-router only moves within one. */
-function GoTo({ href }) {
+export function GoTo({ href }) {
   useEffect(() => { window.location.replace(href); }, [href]);
   return null;
 }
@@ -43,7 +25,8 @@ function GoTo({ href }) {
 // Storefront: shopping only (scope rule: no admin functions in the store).
 // Management lives at manager.esy.ge — the ManageButton on Home is the one
 // affordance, and the old /manage + /settings/store|config routes are gone.
-function AppShell() {
+// The routes themselves are router/store.jsx; this is the chrome around them.
+export function StoreLayout() {
   // The storefront takes two shapes, as the design specifies: a bar across the
   // top on desktop, and on a phone or tablet the store's own header with the
   // store's menu (tab bar, capsule, top tabs, side menu…). It had only ever had
@@ -74,34 +57,7 @@ function AppShell() {
       {/* The page apart from the store's menu: text size zooms this (styles/display.css). */}
       <div className="esy-content">
       <OfflineBanner />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/product/:id" element={<ProductDetails />} />
-        <Route path="/about" element={<StoreAbout />} />
-        <Route path="/search" element={<SearchOverlay />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/pay/return" element={<PayReturn />} />
-        <Route path="/success" element={<OrderSuccess />} />
-        <Route path="/account" element={<Account />} />
-        <Route path="/account/personal" element={<PersonalDetails />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/orders/:orderNumber" element={<OrderDetail />} />
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/settings/display" element={<DisplaySettings />} />
-        {/* Language and appearance became the one display screen; old links land there. */}
-        <Route path="/settings/language" element={<Navigate to="/settings/display" replace />} />
-        <Route path="/settings/appearance" element={<Navigate to="/settings/display" replace />} />
-        {/* /create-store was a real storefront route until the duplicate
-            wizard was removed. Bookmarks and old links still point at it, so
-            it forwards to the one flow that remains rather than dead-ending. */}
-        <Route path="/create-store" element={<GoTo href={platformUrl('/sell')} />} />
-        {/* Without this, an unknown path rendered a blank page — the shell
-            drew, the router matched nothing, and the shopper got the chrome
-            around an empty middle. */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Outlet />
       </div>
       {dock && <GlowDock />}
       <ProfileGate />
@@ -140,7 +96,9 @@ function ThemeRoot({ mode }) {
   const th = store ? design.theme : 'esy';
   const brand = admin ? ADMIN_BRAND : platform || closed ? PLATFORM_BRAND : safeAccent(tenant?.primaryColor);
   const style = STYLE_KEYS.map((k) => (store && design.style[k] !== 'theme' ? design.style[k] : '')).join('|');
-  useEffect(() => {
+  // Before paint, so a change of store or theme never shows one frame of the
+  // old one.
+  useLayoutEffect(() => {
     const el = document.documentElement;
     el.dataset.th = th;
     el.dataset.md = mode === 'dark' ? 'dark' : 'light';
@@ -168,27 +126,23 @@ function ThemeRoot({ mode }) {
   return null;
 }
 
-// esy.ge → platform front door; manager.esy.ge → back office;
-// <sub>.esy.ge → tenant storefront. Same bundle, host-selected shell.
-function Shell() {
-  const platform = usePlatformHost(); // unconditional — hooks rules
-  if (isAdminHost()) return <AdminShell />;
-  if (isManagerHost()) return <ManagerShell />;
-  return platform ? <PlatformShell /> : <AppShell />;
-}
-
-function App() {
+// The root of every host's route table (router/index.jsx): the providers, the
+// theme on <html>, the navigation bar and scroll restoration. esy.ge is the
+// platform front door, manager.esy.ge the back office, admin.esy.ge
+// administration and <sub>.esy.ge a storefront: the same bundle, with the
+// host's own chrome as the layout route under this one.
+export default function AppRoot() {
   const { mode, appearance, theme, toggleTheme, setMode, language, setLanguage } = useAppTheme();
   return (
-    <Router>
-      <AppProviders theme={theme} mode={mode}>
-        <ThemeModeProvider value={{ mode, appearance, toggle: toggleTheme, setMode, language, setLanguage }}>
-          <ThemeRoot mode={mode} />
-          <DisplayPrefsProvider><Shell /></DisplayPrefsProvider>
-        </ThemeModeProvider>
-      </AppProviders>
-    </Router>
+    <AppProviders theme={theme} mode={mode}>
+      <ThemeModeProvider value={{ mode, appearance, toggle: toggleTheme, setMode, language, setLanguage }}>
+        <ThemeRoot mode={mode} />
+        <NavProgress />
+        {/* A new page opens at its top; back and forward return to where the
+            page was left, which the query cache can redraw at once. */}
+        <ScrollRestoration />
+        <DisplayPrefsProvider><Outlet /></DisplayPrefsProvider>
+      </ThemeModeProvider>
+    </AppProviders>
   );
 }
-
-export default App;

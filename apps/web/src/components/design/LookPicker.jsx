@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LookThumb from './LookThumb';
 import { LOOKS, groupOf, lookById, suggestedLooks } from '../../core/design/looks';
+import { usePresence } from '../../core/usePresence';
 
 function LookCard({ T, t, look, on, brand, mode, scale, onPick, showGroup, flex }) {
   const d = look.design;
@@ -47,6 +48,8 @@ function LookCard({ T, t, look, on, brand, mode, scale, onPick, showGroup, flex 
 export default function LookPicker({ T, category, categoryLabel, value, onChange, brand, mode, isMobile }) {
   const { t } = useTranslation('design');
   const [more, setMore] = useState(false);
+  // The sheet rises over a fading scrim and sinks back, inert while it goes.
+  const sheet = usePresence(more);
   // A look picked from the sheet, on the landing page or by the store before
   // leads the row, so the choice is always in view (the editor's Z3 row
   // starts with it too).
@@ -72,6 +75,7 @@ export default function LookPicker({ T, category, categoryLabel, value, onChange
       <button
         type="button"
         onClick={() => setMore(true)}
+        className="esy-press"
         style={{
           marginTop: 10, height: 44, padding: '0 16px', borderRadius: 999, cursor: 'pointer',
           border: `1px solid ${T.border}`, background: 'transparent', color: T.text,
@@ -79,10 +83,10 @@ export default function LookPicker({ T, category, categoryLabel, value, onChange
         }}
       >{t('look.more', { count: LOOKS.length })}</button>
 
-      {more && (
-        <div role="dialog" aria-modal="true" aria-label={t('look.moreTitle')} style={{ position: 'fixed', inset: 0, zIndex: 2000 }}>
-          <div onClick={() => setMore(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.42)' }} />
-          <div style={{
+      {sheet.mounted && (
+        <div role="dialog" aria-modal="true" aria-label={t('look.moreTitle')} inert={!more} style={{ position: 'fixed', inset: 0, zIndex: 2000 }}>
+          <div onClick={() => setMore(false)} className="esy-scrim" data-state={sheet.state} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.42)' }} />
+          <div className="esy-sheet" data-state={sheet.state} style={{
             position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '88vh', overflowY: 'auto',
             maxWidth: 980, margin: '0 auto', background: T.page || T.bg, borderRadius: '24px 24px 0 0',
             padding: isMobile ? '18px 16px 28px' : '24px 28px 32px', boxShadow: T.shadow,

@@ -11,13 +11,17 @@
 // orders" switch and its temporary closure dates (no such fields, and
 // checkout has no rule to honour them), and Z7's "check" of the keys (they
 // are stored as given; the bank is first asked when a shopper pays).
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useTenant } from '../contexts/TenantContext';
 import { tenantApi, handleApiError } from '../utils/api';
 import { money, FEE_PERCENT } from '../core/money';
+import { storeOrdersQuery } from '../core/query/managerQueries';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { Alert, BxIcon, Fld, SaveBar, Select, initialsOf, useBx } from './officeBx';
+import { SkField, SkIn } from './officeSk';
 
 // Server-allowed store categories (mirrors TenantService.CATEGORIES).
 const CATEGORIES = ['fashion', 'electronics', 'home', 'food', 'art', 'sport', 'wear'];
@@ -90,9 +94,102 @@ function useStoreForm() {
   return { tenant, sub, form, set, dirty, busy, error, saved, save, cancel, refresh };
 }
 
-function Loading() {
+/**
+ * The tab's own shape until the store is in, and its save bar already at the
+ * foot (it rests disabled until something is changed), so nothing moves when
+ * the fields arrive. `kind` is the tab: shop, brand or payments.
+ */
+function Loading({ kind }) {
   const { t } = useTranslation('manager');
-  return <div className="bx-sm bx-dim">{t('settingsTabs.loading')}</div>;
+  const bx = useBx();
+  const noop = () => {};
+  const body = {
+    shop: (
+      <div className="bx-two">
+        <div className="bx-card bx-pad bx-stk" style={{ gap: 14 }}>
+          <SkField />
+          <SkField w="26%" />
+          <SkField w="30%" h={110} />
+          <div className="bx-row" style={bx === 'ph' ? { flexDirection: 'column', alignItems: 'stretch', gap: 14 } : { gap: 12, alignItems: 'flex-start' }}>
+            <SkField className="bx-grow" />
+            <SkField w="60%" style={bx === 'ph' ? undefined : { width: 140, flex: 'none' }} />
+          </div>
+        </div>
+      </div>
+    ),
+    brand: (
+      <div className="bx-two even">
+        <div className="bx-stk" style={{ gap: 16 }}>
+          <div className="bx-card bx-pad bx-stk" style={{ gap: 12 }}>
+            <b className="bx-h3"><SkIn w="25%" /></b>
+            <div className="bx-row" style={{ gap: 16 }}>
+              <Sk w={76} h={76} r={22} />
+              <div className="bx-stk bx-grow" style={{ gap: 6 }}>
+                <span className="bx-xs"><SkIn w="70%" /></span>
+                <Sk w={120} h={38} r="var(--k-r-btn)" />
+              </div>
+            </div>
+          </div>
+          <div className="bx-card bx-pad bx-stk" style={{ gap: 12 }}>
+            <b className="bx-h3"><SkIn w="30%" /></b>
+            <Sk h={120} r="var(--k-r-card)" />
+          </div>
+          <Sk h={72} r="var(--k-r-card)" />
+        </div>
+        <div className="bx-stk" style={{ gap: 16 }}>
+          <div className="bx-card bx-pad bx-stk" style={{ gap: 12 }}>
+            <b className="bx-h3"><SkIn w="30%" /></b>
+            <SkField />
+            <div className="bx-row" style={{ gap: 12, alignItems: 'flex-start' }}>
+              <SkField className="bx-grow" w="30%" />
+              <SkField w="60%" style={{ width: bx === 'ph' ? 120 : 140, flex: 'none' }} />
+            </div>
+            <SkField w="26%" />
+            <p className="bx-hint"><SkIn w="70%" /></p>
+          </div>
+          <div className="bx-card bx-pad bx-stk" style={{ gap: 12 }}>
+            <b className="bx-h3"><SkIn w="25%" /></b>
+            <div className="bx-row" style={{ gap: 24 }}>
+              <SkField w="70%" h={44} style={{ width: 120 }} />
+              <SkField w="70%" h={44} style={{ width: 120 }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+    payments: (
+      <div className="bx-two">
+        <div className="bx-card bx-padl bx-stk" style={{ gap: 14 }}>
+          <div className="bx-row" style={{ gap: 12 }}>
+            <Sk w={44} h={44} r={12} />
+            <div className="bx-grow">
+              <b style={{ display: 'block' }}><SkIn w="45%" /></b>
+              <div className="bx-xs"><SkIn w="60%" /></div>
+            </div>
+          </div>
+          <SkField />
+          <SkField w="24%" />
+          <Sk h={48} r="var(--k-r-btn)" />
+        </div>
+        <div className="bx-card bx-padl bx-stk" style={{ gap: 12 }}>
+          <b className="bx-h3"><SkIn w="40%" /></b>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="bx-row bx-sm" style={{ gap: 12 }}>
+              <Sk w={30} h={26} r={13} />
+              <span className="bx-grow"><SkIn w="75%" /></span>
+            </div>
+          ))}
+          <Sk h={64} r="var(--k-r-card)" />
+        </div>
+      </div>
+    ),
+  }[kind];
+  return (
+    <>
+      <Skeleton label={t('settingsTabs.loading')}>{body}</Skeleton>
+      {kind !== 'payments' && <SaveBar t={t} dirty={false} busy={false} saved={false} onSave={noop} onCancel={noop} />}
+    </>
+  );
 }
 
 // ---------------------------------------------------------------- Z1 Shop
@@ -102,7 +199,7 @@ export function ShopTab() {
   const { t: tOwner } = useTranslation('owner');
   const f = useStoreForm();
   const bx = useBx();
-  if (!f.form) return <Loading />;
+  if (!f.form) return <Loading kind="shop" />;
   const { form, set } = f;
   const known = CATEGORIES.includes(form.category);
 
@@ -335,7 +432,7 @@ export function BrandTab() {
   const { t } = useTranslation('manager');
   const f = useStoreForm();
   const bx = useBx();
-  if (!f.form || !f.tenant) return <Loading />;
+  if (!f.form || !f.tenant) return <Loading kind="brand" />;
   const { form, set } = f;
   const q = f.sub ? `?tenant=${encodeURIComponent(f.sub)}` : '';
   const georgia = t('settingsTabs.brand.georgia');
@@ -436,24 +533,16 @@ export function PaymentsTab() {
   const [clientId, setClientId] = useState('');
   const [secret, setSecret] = useState('');
   const [editing, setEditing] = useState(false);
-  const [last, setLast] = useState(undefined); // undefined while loading, null for none
   const on = !!f.tenant?.bogConfigured;
 
-  // The latest card payment, from the store's own orders.
-  useEffect(() => {
-    if (!on) return undefined;
-    let live = true;
-    tenantApi.orders(f.sub)
-      .then((rows) => {
-        if (!live) return;
-        const paid = (Array.isArray(rows) ? rows : []).filter((o) => String(o.paymentStatus).toLowerCase() === 'paid');
-        setLast(paid[0] || null);
-      })
-      .catch(() => { if (live) setLast(null); });
-    return () => { live = false; };
-  }, [on, f.sub]);
+  // The latest card payment, from the store's own orders: undefined while
+  // they load, null for none (or for a list that could not be read).
+  const orders = useQuery({ ...storeOrdersQuery(), enabled: on });
+  const last = orders.isError ? null
+    : orders.isSuccess ? orders.data.find((o) => String(o.paymentStatus).toLowerCase() === 'paid') || null
+      : undefined;
 
-  if (!f.form || !f.tenant) return <Loading />;
+  if (!f.form || !f.tenant) return <Loading kind="payments" />;
 
   const connect = async () => {
     const ok = await f.save({ bogClientId: clientId.trim(), bogClientSecret: secret.trim() });
@@ -493,7 +582,7 @@ export function PaymentsTab() {
                 <div className="bx-li bx-kv bx-sm" style={{ padding: '10px 16px' }}>
                   <span className="bx-dim">{t('settingsTabs.pay.lastPayment')}</span>
                   <span>
-                    {last === undefined ? '…'
+                    {last === undefined ? <Skeleton label={t('settingsTabs.loading')}><SkIn w={120} /></Skeleton>
                       : last ? `${when(t, last.placed)} · ${money(last.total)}`
                         : t('settingsTabs.pay.noPaymentYet')}
                   </span>

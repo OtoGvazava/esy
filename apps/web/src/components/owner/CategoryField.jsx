@@ -96,7 +96,10 @@ export default function CategoryField({ T, value, onChange, refresh, disabled })
   const list = shown && (
     <ul
       id={listId} role="listbox" aria-label={t('category.label')}
+      // Opens out of the field above it.
+      className="esy-menu-in"
       style={{
+        '--esy-origin': 'top center',
         position: 'absolute', left: 0, right: 0, top: 'calc(100% + 6px)', zIndex: 5, margin: 0,
         listStyle: 'none', padding: 6, borderRadius: 14, background: T.surface,
         border: `1px solid ${T.border}`, boxShadow: '0 18px 44px -18px rgba(0,0,0,.4)',

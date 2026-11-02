@@ -118,7 +118,7 @@ export default function PlatformHelp() {
     const next = new URLSearchParams(params);
     if (value) next.set('q', value); else next.delete('q');
     next.delete('topic');
-    setParams(next, { replace: true });
+    setParams(next, { replace: true, preventScrollReset: true });
   };
 
   const wrap = desk

@@ -7,17 +7,21 @@
 // day's bar and the platform's month can never disagree. Revenue and the
 // average leave out cancelled and refunded orders and delivery; the footnote
 // says so where the numbers are read.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTenant } from '../contexts/TenantContext';
 import { useTK } from '../core/useTK';
+import { useIndicator } from '../core/useIndicator';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 import { Card } from '../core/primitives';
 import { money } from '../core/money';
 import { handleApiError } from '../utils/api';
-import { usePeriodStats } from './useStoreStats';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
+import { PERIODS, periodOf, usePeriodStats } from './useStoreStats';
 import { MTop } from './ManagerShell';
 import { Alert, BxIcon } from './officeBx';
+import { SkIn } from './officeSk';
 
 /** A figure on a card. Kept for the overview and first-visit screens. */
 export function StatCard({ T, label, value, tone, hint }) {
@@ -37,7 +41,16 @@ export function StatCard({ T, label, value, tone, hint }) {
   );
 }
 
-const PERIODS = [7, 30, 90, null];
+/** StatCard's stand-in while its figure loads: the same card, line for line. */
+export function StatCardSk({ T, hint }) {
+  return (
+    <Card T={T} pad={16}>
+      <div style={{ font: `500 13px ${T.font}` }}><SkIn w="55%" /></div>
+      <div style={{ marginTop: 8, font: `800 24px ${T.font}` }}><SkIn w="45%" /></div>
+      {hint && <div style={{ marginTop: 4, font: `500 12px ${T.font}` }}><SkIn w="70%" /></div>}
+    </Card>
+  );
+}
 
 /** "2026-10-02" as a local date, with no time zone shift. */
 const day = (iso) => {
@@ -184,6 +197,56 @@ function Chart({ t, data }) {
   );
 }
 
+/**
+ * The figures' stand-in while a window loads, in the screen's own boxes: the
+ * four figure cards, the chart card at the plot's height and the best sellers.
+ */
+function StatsSkeleton({ t }) {
+  return (
+    // The page's own gap between the figures and the two cards below.
+    <Skeleton label={t('analytics.loading')} style={{ display: 'flex', flexDirection: 'column', gap: 'inherit' }}>
+      <div className="bx-kpis">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="bx-card bx-kpi">
+            <span className="bx-sm"><SkIn w="50%" /></span>
+            <b><SkIn w="60%" /></b>
+            <span className="bx-xs"><SkIn w="75%" /></span>
+          </div>
+        ))}
+      </div>
+      <div className="bx-two">
+        <div className="bx-card bx-padl bx-stk" style={{ gap: 14 }}>
+          <div className="bx-stk" style={{ gap: 2 }}>
+            <b className="bx-h3"><SkIn w="35%" /></b>
+            <span className="bx-xs"><SkIn w="50%" /></span>
+          </div>
+          <div className="bx-plot">
+            <span />
+            <Sk h="100%" r={10} />
+          </div>
+          <div className="bx-xs" style={{ marginLeft: 54 }}><SkIn w="100%" /></div>
+          <p className="bx-xs"><SkIn w="80%" /></p>
+        </div>
+        <div className="bx-card bx-stk" style={{ gap: 0 }}>
+          <div className="bx-pad" style={{ borderBottom: '1px solid var(--k-line)' }}>
+            <b className="bx-h3"><SkIn w="40%" /></b>
+          </div>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="bx-li">
+              <Sk w={40} h={40} r={10} />
+              <div className="bx-grow">
+                <b className="bx-sm" style={{ display: 'block' }}><SkIn w="60%" /></b>
+                <div className="bx-xs"><SkIn w="30%" /></div>
+              </div>
+              <b className="bx-price"><SkIn w={56} /></b>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Skeleton>
+  );
+}
+
 function TopSellers({ t, rows }) {
   return (
     <div className="bx-card bx-stk" style={{ gap: 0 }}>
@@ -194,7 +257,9 @@ function TopSellers({ t, rows }) {
       {rows.map((r) => (
         <div key={`${r.productId ?? ''}|${r.title}`} className="bx-li">
           <span className="bx-ph" style={{ width: 40, borderRadius: 10 }}>
-            {r.imageUrl ? <img src={r.imageUrl} alt="" loading="lazy" /> : <BxIcon name="products" style={{ width: 18, height: 18 }} />}
+            {r.imageUrl
+              ? <img src={r.imageUrl} alt="" loading="lazy" className="esy-img" ref={markIfComplete} onLoad={markLoaded} />
+              : <BxIcon name="products" style={{ width: 18, height: 18 }} />}
           </span>
           <div className="bx-grow">
             <b className="bx-sm" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</b>
@@ -216,16 +281,22 @@ export default function ManagerStats() {
   const devTenant = params.get('tenant') || undefined;
   // The window rides the URL (?days=7|30|90|all), so a reload or a shared
   // link keeps it; 30 days when none is given, as the board opens.
-  const asked = params.get('days');
-  const [days, setDays] = useState(asked === 'all' ? null : PERIODS.includes(Number(asked)) ? Number(asked) : 30);
-  const { data, loading, error } = usePeriodStats(days, devTenant);
+  const [days, setDays] = useState(() => periodOf(params));
+  const { data, loading, error } = usePeriodStats(days);
   const name = tenant?.displayName || tenant?.name || devTenant || '';
+  const seg = useRef(null);
+  // The chosen window's ground slides to the window tapped.
+  const ind = useIndicator(seg, days ?? 'all');
 
-  const choose = (d) => {
-    setDays(d);
+  const addressFor = (d) => {
     const next = new URLSearchParams(params);
     next.set('days', d ? String(d) : 'all');
-    setParams(next, { replace: true });
+    return next;
+  };
+  const choose = (d) => {
+    setDays(d);
+    // A change within the page: it keeps its place on the page.
+    setParams(addressFor(d), { replace: true, preventScrollReset: true });
   };
 
   const prev = data?.previous;
@@ -235,15 +306,22 @@ export default function ManagerStats() {
     <div className="bx-page">
       <MTop T={T} title={t('analytics.title')} sub={name ? t('analytics.sub', { name }) : undefined} />
 
-      <div className="bx-seg" role="group" aria-label={t('analytics.period')} style={{ maxWidth: 360, width: '100%' }}>
+      <div ref={seg} className="bx-seg slide" role="group" aria-label={t('analytics.period')} style={{ maxWidth: 360, width: '100%' }}>
+        <span aria-hidden="true" className="esy-ind" data-still={ind.still || undefined} style={ind.style} />
         {PERIODS.map((d) => (
-          <button key={d || 'all'} type="button" className={d === days ? 'on' : undefined} aria-pressed={d === days} onClick={() => choose(d)}>
+          <button
+            key={d || 'all'} type="button" data-ind={d ?? 'all'} className={`esy-press${d === days ? ' on' : ''}`}
+            aria-pressed={d === days} onClick={() => choose(d)}
+            // A window's figures are fetched as the pointer comes to it
+            // (router/prime.js), so the tap usually finds them in.
+            data-prefetch={`/stats?${addressFor(d)}`}
+          >
             {d ? t('analytics.days', { count: d }) : t('analytics.all')}
           </button>
         ))}
       </div>
 
-      {loading && <div className="bx-sm bx-dim">{t('analytics.loading')}</div>}
+      {loading && <StatsSkeleton t={t} />}
       {error && !loading && <Alert tone="bad" icon="warn"><span className="bx-sm">{handleApiError(error, t('analytics.loadFailed'))}</span></Alert>}
 
       {data && !loading && (

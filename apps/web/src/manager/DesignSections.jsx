@@ -11,6 +11,7 @@
 // The cover photo is not: like the logo it is the store's own picture, saved
 // the moment it is chosen, and the section says so.
 import { useEffect, useId, useRef, useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useTenant } from '../contexts/TenantContext';
 import { useDevice } from '../contexts/DeviceContext';
@@ -18,7 +19,11 @@ import { Btn, Card, Toggle } from '../core/primitives';
 import { Icons } from '../core/icons';
 import { money } from '../core/money';
 import schema from '../core/design/schema.json';
-import { productApi, tenantApi } from '../utils/api';
+import { productPageQuery, productQuery } from '../core/query/queries';
+import { markIfComplete, markLoaded } from '../core/imgFade';
+import { tenantApi } from '../utils/api';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
+import { SkIn } from './officeSk';
 
 // Every switch but stories, which ManagerDesign draws first: the board's
 // (Z3) after it in its order, then the three it does not draw. Anything the
@@ -123,7 +128,13 @@ function Thumb({ T, src, size = 40 }) {
       width: size, height: size, flex: 'none', borderRadius: 10, overflow: 'hidden',
       background: T.surface2, display: 'block',
     }}>
-      {src && <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+      {/* It fades in on its tile once it has decoded. */}
+      {src && (
+        <img
+          src={src} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      )}
     </span>
   );
 }
@@ -137,10 +148,10 @@ function ProductPick({ T, productId, onPick }) {
   const { t } = useTranslation('design');
   const { isMobile } = useDevice();
   const searchId = useId();
-  const [known, setKnown] = useState({}); // id → product; null when gone, false when it failed to load
+  const [known, setKnown] = useState({}); // id → the product as it was picked from the search
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
-  const [found, setFound] = useState({ phase: 'idle', items: [] }); // idle | loading | ready | failed
+  const [asked, setAsked] = useState(''); // the search as it is sent: what was typed, once typing stops
   const opener = useRef(null);
   const size = isMobile ? 'md' : 'sm';
 
@@ -148,36 +159,30 @@ function ProductPick({ T, productId, onPick }) {
   const close = () => {
     setOpen(false);
     setQ('');
+    setAsked('');
     requestAnimationFrame(() => opener.current?.focus());
   };
 
-  // The picked product's name and photo.
-  useEffect(() => {
-    if (!productId || productId in known) return undefined;
-    const ac = new AbortController();
-    productApi.get(productId, { signal: ac.signal })
-      .then((p) => { if (!ac.signal.aborted) setKnown((k) => ({ ...k, [productId]: p })); })
-      .catch((e) => {
-        if (ac.signal.aborted || e?.name === 'AbortError') return;
-        // Gone (deleted, or not this store's) is said as such; anything else
-        // is a load that failed, which says nothing about the product.
-        setKnown((k) => ({ ...k, [productId]: e?.status === 404 ? null : false }));
-      });
-    return () => ac.abort();
-  }, [productId, known]);
+  // The picked product's name and photo, read by its id unless it was just
+  // picked from the search.
+  const one = useQuery({ ...productQuery(productId), enabled: !!productId && !(productId in known) });
 
-  // The search, a moment after typing stops.
+  // The search, a moment after typing stops. A new search keeps the last
+  // results, dimmed, until its own arrive.
   useEffect(() => {
     if (!open) return undefined;
-    const ac = new AbortController();
-    const timer = setTimeout(() => {
-      setFound((f) => ({ ...f, phase: 'loading' }));
-      productApi.list({ page: 0, size: 8, q: q.trim(), signal: ac.signal })
-        .then((res) => { if (!ac.signal.aborted) setFound({ phase: 'ready', items: res.products }); })
-        .catch((e) => { if (!ac.signal.aborted && e?.name !== 'AbortError') setFound({ phase: 'failed', items: [] }); });
-    }, 250);
-    return () => { clearTimeout(timer); ac.abort(); };
+    const timer = setTimeout(() => setAsked(q.trim()), 250);
+    return () => clearTimeout(timer);
   }, [open, q]);
+  const search = useQuery({
+    ...productPageQuery({ page: 0, size: 8, q: asked }),
+    enabled: open,
+    placeholderData: keepPreviousData,
+  });
+  const found = {
+    phase: search.isError ? 'failed' : search.isFetching ? 'loading' : search.isSuccess ? 'ready' : 'idle',
+    items: search.isError ? [] : search.data?.products ?? [],
+  };
 
   const pick = (p) => {
     setKnown((k) => ({ ...k, [p.id]: p }));
@@ -185,7 +190,13 @@ function ProductPick({ T, productId, onPick }) {
     close();
   };
 
-  const picked = productId ? known[productId] : undefined;
+  // undefined while it loads; null when it is gone (deleted, or not this
+  // store's), false when it failed to load, which says nothing about the
+  // product.
+  let picked;
+  if (productId && productId in known) picked = known[productId];
+  else if (productId && one.isSuccess) picked = one.data;
+  else if (productId && one.isError) picked = one.error?.status === 404 ? null : false;
   const label = <div style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{t('editor.banner.product')}</div>;
   const hint = <div style={hintStyle(T)}>{t('editor.banner.productHint')}</div>;
 
@@ -200,7 +211,7 @@ function ProductPick({ T, productId, onPick }) {
           }}>
             <Thumb T={T} src={picked ? picked.thumbnail || picked.images?.[0] : null} />
             <span style={{ flex: '1 1 140px', minWidth: 0, font: `600 13.5px/1.35 ${T.font}`, color: picked ? T.text : T.textMute }}>
-              {picked === undefined ? t('editor.banner.loading')
+              {picked === undefined ? <Skeleton label={t('editor.banner.loading')}><SkIn w="55%" /></Skeleton>
                 : picked === null ? t('editor.banner.missing')
                   : picked === false ? t('editor.banner.failed') : picked.title}
             </span>
@@ -241,15 +252,29 @@ function ProductPick({ T, productId, onPick }) {
         </span>
         <Btn T={T} kind="ghost" size="md" onClick={close}>{t('editor.banner.cancel')}</Btn>
       </div>
-      <div aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {found.phase === 'loading' && !found.items.length && <div style={hintStyle(T)}>{t('editor.banner.loading')}</div>}
+      <div
+        aria-live="polite" className={search.isPlaceholderData ? 'esy-refreshing' : 'esy-settled'}
+        style={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+      >
+        {/* Result rows as they will be drawn, until the first results are in. */}
+        {found.phase === 'loading' && !found.items.length && (
+          <Skeleton label={t('editor.banner.loading')} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 52, padding: '6px 8px', boxSizing: 'border-box' }}>
+                <Sk w={40} h={40} r={10} />
+                <span style={{ flex: 1, minWidth: 0, font: `600 13.5px/1.35 ${T.font}` }}><SkIn w="55%" /></span>
+                <span style={{ font: `500 12.5px ${T.font}` }}><SkIn w={48} /></span>
+              </div>
+            ))}
+          </Skeleton>
+        )}
         {found.phase === 'failed' && <div style={{ ...hintStyle(T), color: T.dangerFg }}>{t('editor.banner.failed')}</div>}
         {found.phase === 'ready' && !found.items.length && <div style={hintStyle(T)}>{t('editor.banner.noResults')}</div>}
         {found.items.map((p) => {
           const on = p.id === productId;
           return (
             <button
-              key={p.id} type="button" aria-pressed={on} onClick={() => pick(p)}
+              key={p.id} type="button" aria-pressed={on} onClick={() => pick(p)} className="esy-press-soft"
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 52, padding: '6px 8px',
                 border: 'none', borderRadius: 12, cursor: 'pointer', textAlign: 'left',

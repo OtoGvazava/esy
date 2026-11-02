@@ -1,18 +1,20 @@
 // What the storefront's chrome shares: the one list of places a shopper can go
 // (the store's menu draws it six ways), and whether StoreBar is the header.
 import { useLayoutEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { usePendingLocation } from '../../core/useIndicator';
 import { useCart } from '../../contexts/CartContext';
 import { Icon } from '../glow/GlowPrimitives';
 
 /**
  * Shop · search · bag · orders · account, each a real route, with the bag's
  * live count. `Icon` is the glyph's component; the tab bar swaps in the
- * signed-in avatar and first name for the account item.
+ * signed-in avatar and first name for the account item. `active` follows the
+ * place being opened, not only the one on screen, so a menu answers the tap
+ * while the next screen loads.
  */
 export function useStoreNav() {
-  const { pathname } = useLocation();
+  const { pathname } = usePendingLocation();
   const { getTotalItems } = useCart();
   const { t } = useTranslation('navbar');
   const count = getTotalItems();

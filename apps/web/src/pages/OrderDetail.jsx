@@ -1,9 +1,12 @@
-import { useCallback, useContext, useEffect, useState } from 'react';
+import { useContext, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOrders } from '../contexts/OrdersContext';
 import { TenantContext } from '../contexts/TenantContext';
-import { orderApi, deliveryApi } from '../utils/api';
+import { orderApi } from '../utils/api';
+import { myOrderQuery, publicDeliveryQuery } from '../core/query/queries';
+import { Sk as SkBlock, SkRows, Skeleton } from '../components/skeleton/Skeleton';
 import { money } from '../core/money';
 import { channelHref } from '../core/channels';
 import { BackTop, DeskTitle, G, Sk, Thumb, dayTime, phoneText, useDev, useStoreChannels } from '../components/shop/kit';
@@ -48,31 +51,16 @@ export default function OrderDetail() {
   const { refresh } = useOrders();
   const { tenant } = useContext(TenantContext);
 
-  const [order, setOrder] = useState(null);
-  const [routes, setRoutes] = useState(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  // Cached reads, usually fetched by the route loader before the page opens.
+  const orderRead = useQuery(myOrderQuery(orderNumber));
+  const { data: routes = null } = useQuery(publicDeliveryQuery());
+  const order = orderRead.data || null;
+  const loading = orderRead.isPending;
+  const [cancelError, setCancelError] = useState('');
+  const error = cancelError || (orderRead.error ? orderRead.error.message || t('orderDetail.loadFailed') : '');
   const [cancelling, setCancelling] = useState(false);
   const [confirming, setConfirming] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setOrder(await orderApi.get(orderNumber));
-    } catch (e) {
-      setError(e?.message || t('orderDetail.loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  }, [orderNumber, t]);
-
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    const ac = new AbortController();
-    deliveryApi.listPublic(undefined, { signal: ac.signal }).then((r) => { if (!ac.signal.aborted) setRoutes(r); }).catch(() => {});
-    return () => ac.abort();
-  }, []);
 
   // The store's own channels answer "a question about the order?" — only when
   // the order is from the store this page is on; another store's order is
@@ -82,15 +70,15 @@ export default function OrderDetail() {
 
   const cancel = async () => {
     setCancelling(true);
-    setError('');
+    setCancelError('');
     try {
       const updated = await orderApi.cancel(orderNumber);
-      setOrder((prev) => ({ ...prev, ...updated, cancellable: false }));
+      qc.setQueryData(myOrderQuery(orderNumber).queryKey, (prev) => ({ ...prev, ...updated, cancellable: false }));
       setConfirming(false);
       // The list is cached in context and would still show this as placed.
       refresh();
     } catch (e) {
-      setError(e?.message || t('orderDetail.cancelFailed'));
+      setCancelError(e?.message || t('orderDetail.cancelFailed'));
       setConfirming(false);
     } finally {
       setCancelling(false);
@@ -113,7 +101,31 @@ export default function OrderDetail() {
         <div style={wrap}>
           {deskTitle}
           {loading ? (
-            <p className="dim" role="status" style={{ textAlign: 'center', padding: '48px 0' }}>{t('orderDetail.loading')}</p>
+            // The page's two columns as they will be: the status card with its
+            // steps and the lines on the left, the totals on the right.
+            <Skeleton label={t('orderDetail.loading')}>
+              <div style={dev === 'ph' ? { display: 'flex', flexDirection: 'column', gap: 16 }
+                : { display: 'flex', gap: dev === 'tab' ? 20 : 32, alignItems: 'flex-start' }}
+              >
+                <div className="stk" style={dev === 'ph' ? { gap: 16 } : { gap: dev === 'tab' ? 16 : 18, flex: 1, minWidth: 0 }}>
+                  <div className="card padl stk" style={{ gap: 16 }}>
+                    <SkBlock h={20} w="46%" r={8} />
+                    <SkBlock h={12} w="64%" r={6} />
+                    <SkRows count={4} divider={false} rowProps={{ lead: 22, round: true, trail: false, h: 40 }} />
+                  </div>
+                  <div className="card padl">
+                    <SkRows count={2} rowProps={{ lead: 56, h: 64 }} />
+                  </div>
+                </div>
+                <div className="stk" style={dev === 'ph' ? { gap: 16 } : { gap: dev === 'tab' ? 16 : 18, width: dev === 'tab' ? 300 : 400, flex: 'none' }}>
+                  <div className="card padl stk" style={{ gap: 12 }}>
+                    <SkBlock h={12} w="100%" r={6} />
+                    <SkBlock h={12} w="100%" r={6} />
+                    <SkBlock h={18} w="100%" r={8} />
+                  </div>
+                </div>
+              </div>
+            </Skeleton>
           ) : (
             <div className="empty" style={{ maxWidth: 460, margin: '0 auto', gap: 14 }}>
               <span className="empty-ic"><G name="bag" /></span>

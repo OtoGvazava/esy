@@ -12,6 +12,7 @@ import React, { useContext, useMemo } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from './src/i18n';
 import { DeviceProvider } from './src/contexts/DeviceContext';
 import { TenantProvider } from './src/contexts/TenantContext';
@@ -21,6 +22,9 @@ import { CartProvider } from './src/contexts/CartContext';
 import { ThemeModeProvider } from './src/contexts/ThemeModeContext';
 
 const theme = createTheme();
+// The app's contexts read the API through the query cache; the harness has no
+// backend, so its reads fail at once and the components draw their defaults.
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 const themeMode = {
   mode: 'light',
@@ -65,6 +69,7 @@ function DemoSignedIn({ children }) {
 export function GlowPreviewProvider({ children }) {
   return (
     <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <ThemeModeProvider value={themeMode}>
           <DeviceProvider>
@@ -82,6 +87,7 @@ export function GlowPreviewProvider({ children }) {
           </DeviceProvider>
         </ThemeModeProvider>
       </MemoryRouter>
+      </QueryClientProvider>
     </I18nextProvider>
   );
 }

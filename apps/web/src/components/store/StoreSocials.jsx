@@ -3,9 +3,8 @@
 // the theme's well, WhatsApp in its own green. Drawn only while the store's
 // design keeps `show.socials` on, and only for channels the store really lists:
 // a store that published none gets no row at all.
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { contactApi } from '../../utils/api';
+import { usePublicContacts } from '../../hooks/useStoreContacts';
 import { CHANNELS, channelHref } from '../../core/channels';
 import { Icons } from '../../core/icons';
 import { useDesign } from '../../core/design/useDesign';
@@ -20,18 +19,9 @@ export default function StoreSocials({ style }) {
   const { T } = useGlow();
   const { t } = useTranslation('design');
   const { show } = useDesign();
-  const [channels, setChannels] = useState([]);
   const on = show.socials;
-
-  useEffect(() => {
-    if (!on) return undefined;
-    const ac = new AbortController();
-    contactApi.listPublic(undefined, { signal: ac.signal })
-      .then((rows) => { if (!ac.signal.aborted) setChannels(Array.isArray(rows) ? rows : []); })
-      // A list that cannot load draws no row; the shop still sells.
-      .catch(() => {});
-    return () => ac.abort();
-  }, [on]);
+  // A list that cannot load draws no row; the shop still sells.
+  const { channels } = usePublicContacts(on);
 
   if (!on) return null;
   // One button per kind, in the canvas's order.

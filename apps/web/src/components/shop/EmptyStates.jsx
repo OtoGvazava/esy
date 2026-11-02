@@ -7,10 +7,10 @@
 // what it is instead. The words a search suggests ("try another word") are
 // the last word of those products' names — the noun in a Georgian name like
 // «ქვის ჭიქა» — so each one finds something.
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { productApi } from '../../utils/api';
+import { productPageQuery } from '../../core/query/queries';
 import { useCart } from '../../contexts/CartContext';
 import { useGlow } from '../../styles/glow';
 import { useBottomClearance, useDesign } from '../../core/design/useDesign';
@@ -20,18 +20,12 @@ import { G, Sk, useDev } from './kit';
 const COUNT = { ph: 2, tab: 3, desk: 4 };
 const GAP = { ph: 12, tab: 16, desk: 24 };
 
-/** The store's newest few products (four: the most a desktop row shows). */
+/** The store's newest few products (four: the most a desktop row shows); null until known. */
 function useNewest() {
-  const [products, setProducts] = useState(null);
-  useEffect(() => {
-    const ac = new AbortController();
-    productApi.list({ page: 0, size: 4, sortBy: 'id', sortDir: 'desc', signal: ac.signal })
-      .then((r) => { if (!ac.signal.aborted) setProducts(r.products); })
-      .catch(() => { if (!ac.signal.aborted) setProducts([]); });
-    return () => ac.abort();
-  }, []);
-  return products;
+  const { data, error } = useQuery(productPageQuery({ page: 0, size: 4, sortBy: 'id', sortDir: 'desc' }));
+  return data ? data.products : error ? NONE : null;
 }
+const NONE = [];
 
 /** "You might like" and a row of product cards: two on a phone, three on a tablet, four on a desktop. */
 export function Suggestions({ products }) {

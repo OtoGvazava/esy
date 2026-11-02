@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { orderApi, deliveryApi } from '../utils/api';
+import { myOrderQuery, publicDeliveryQuery } from '../core/query/queries';
 import { money } from '../core/money';
 import { G, Sk, Thumb, dayTime, useDev } from '../components/shop/kit';
 
@@ -27,17 +27,8 @@ export default function OrderSuccess() {
   const { user } = useAuth();
   const { state } = useLocation();
   const number = state?.orderId ? String(state.orderId) : '';
-  const [order, setOrder] = useState(null);
-  const [routes, setRoutes] = useState(null);
-
-  useEffect(() => {
-    if (!number) return undefined;
-    const ac = new AbortController();
-    orderApi.get(number).then((o) => { if (!ac.signal.aborted) setOrder(o); }).catch(() => {});
-    deliveryApi.listPublic(undefined, { signal: ac.signal })
-      .then((r) => { if (!ac.signal.aborted) setRoutes(r); }).catch(() => {});
-    return () => ac.abort();
-  }, [number]);
+  const { data: order = null } = useQuery({ ...myOrderQuery(number), enabled: !!number });
+  const { data: routes = null } = useQuery({ ...publicDeliveryQuery(), enabled: !!number });
 
   if (!number) return <Navigate to="/orders" replace />;
 

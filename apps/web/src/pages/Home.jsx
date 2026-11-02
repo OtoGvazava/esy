@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { productApi, handleApiError } from '../utils/api';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
+import { handleApiError } from '../utils/api';
+import { productsInfinite } from '../core/query/queries';
+import { SORTS, homeListArgs, sortIdOf } from './shopQuery';
+import { Skeleton, SkProductGrid } from '../components/skeleton/Skeleton';
 import { useCart } from '../contexts/CartContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useGlow } from '../styles/glow';
@@ -26,14 +30,8 @@ import { useStoreCategories } from '../hooks/useStoreCategories';
 import Collection from './Collection';
 import { NoResults } from '../components/shop/EmptyStates';
 
-const PAGE_SIZE = 12;
-// The home page's sort, the same three as a collection's (A3), kept in the URL
-// as ?sort= so back and forward and a shared link keep it. Newest is the default.
-const SORTS = {
-  new: { sortBy: 'id', sortDir: 'desc', key: 'new' },
-  'price-asc': { sortBy: 'price', sortDir: 'asc', key: 'priceAsc' },
-  'price-desc': { sortBy: 'price', sortDir: 'desc', key: 'priceDesc' },
-};
+// The home page's sort is the same three as a collection's (A3), kept in the
+// URL as ?sort= so back and forward and a shared link keep it (shopQuery.js).
 // Vertical spacing between sections and the grid's gaps follow the store's
 // spacing option (density): --k-dn is 1 for "normal" (styles/design-style.css).
 const sp = (px) => `calc(${px}px * var(--k-dn, 1))`;
@@ -65,87 +63,42 @@ function ShopHome() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation('home');
   const { t: ts } = useTranslation('storefront');
-  const sortId = SORTS[searchParams.get('sort')] ? searchParams.get('sort') : 'new';
-  const sortRef = useRef(sortId);
-  sortRef.current = sortId;
+  const sortId = sortIdOf(searchParams);
   const { categories } = useStoreCategories();
 
   const [query, setQuery] = useState(searchParams.get('search') || '');
-  const [products, setProducts] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState('');
-
   const loadMoreRef = useRef(null);
   const gridRef = useRef(null);
   const [story, setStory] = useState(null);
-  const abortControllerRef = useRef(null);
-  const requestIdRef = useRef(0);
-  const isLoadingRef = useRef(false);
 
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
 
-  const loadMoreProducts = useCallback(async (pageNum, q, isInitial = false) => {
-    if (isLoadingRef.current) return;
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-    const requestId = ++requestIdRef.current;
-
-    isLoadingRef.current = true;
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const { sortBy, sortDir } = SORTS[sortRef.current];
-      const res = await productApi.list({
-        page: pageNum, size: PAGE_SIZE, q, sortBy, sortDir, signal: abortController.signal,
-      });
-      if (requestId === requestIdRef.current) {
-        setProducts((prev) => (isInitial ? res.products : [...prev, ...res.products]));
-        setHasMore(res.hasMore);
-        setTotal(res.totalElements ?? res.products.length);
-        setCurrentPage(pageNum);
-      }
-    } catch (e) {
-      if (requestId === requestIdRef.current && e.name !== 'AbortError') {
-        setError(handleApiError(e, t('failedToLoad')));
-        setHasMore(false);
-      }
-    } finally {
-      if (requestId === requestIdRef.current) {
-        isLoadingRef.current = false;
-        setIsLoading(false);
-      }
-    }
-  }, [t]);
-
-  // Reload from page 0 whenever the (debounced) search or the sort changes.
-  useEffect(() => {
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    setProducts([]);
-    setCurrentPage(0);
-    setHasMore(true);
-    setError('');
-    isLoadingRef.current = false;
-    loadMoreProducts(0, debouncedQuery, true);
-  }, [debouncedQuery, sortId, loadMoreProducts]);
-
-  useEffect(() => () => abortControllerRef.current?.abort(), []);
+  // The grid, page by page, from the query cache: coming back to the shop
+  // redraws every page already scrolled through, at once. A new search or
+  // sort keeps the old grid, dimmed, until its first page arrives, rather
+  // than emptying the page and filling it again.
+  const list = useInfiniteQuery({
+    ...productsInfinite(homeListArgs(searchParams, debouncedQuery)),
+    placeholderData: keepPreviousData,
+  });
+  const products = useMemo(() => list.data?.pages.flatMap((p) => p.products) ?? [], [list.data]);
+  const lastPage = list.data?.pages[list.data.pages.length - 1];
+  const total = lastPage ? (lastPage.totalElements ?? products.length) : 0;
+  const refreshing = list.isPlaceholderData;
+  const isLoading = list.isPending || list.isFetchingNextPage || (refreshing && list.isFetching);
+  const error = list.error ? handleApiError(list.error, t('failedToLoad')) : '';
+  const hasMore = !!list.hasNextPage && !list.error;
+  const { fetchNextPage, isFetching } = list;
 
   useEffect(() => {
     const target = loadMoreRef.current;
-    if (!target) return;
+    if (!target || !hasMore || isFetching) return undefined;
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && !isLoadingRef.current && hasMore) {
-        loadMoreProducts(currentPage + 1, debouncedQuery, false);
-      }
+      if (entries[0].isIntersecting) fetchNextPage();
     }, { rootMargin: '300px', threshold: 0.1 });
     observer.observe(target);
     return () => observer.disconnect();
-  }, [currentPage, debouncedQuery, hasMore, loadMoreProducts]);
+  }, [hasMore, isFetching, fetchNextPage]);
 
   // The story sets, each kept only while the loaded products fill it.
   const stories = [
@@ -168,7 +121,7 @@ function ShopHome() {
       onChange={(id) => {
         const next = new URLSearchParams(searchParams);
         if (id === 'new') next.delete('sort'); else next.set('sort', id);
-        setSearchParams(next, { replace: true });
+        setSearchParams(next, { replace: true, preventScrollReset: true });
       }}
     />
   );
@@ -309,33 +262,30 @@ function ShopHome() {
         <div style={{ position: 'relative', padding: `0 ${gutter}px 8px`, color: T.danger, font: `500 13px ${T.font}` }}>{error}</div>
       )}
 
-      {/* product grid */}
-      <div ref={gridRef} style={{ scrollMarginTop: 80,
-        position: 'relative', display: 'grid',
-        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-        gap: sp(gridGap), padding: `${sp(4)} ${gutter}px ${sp(8)}`,
-      }}>
-        {/* A first load drew nothing at all until the request came back. The
-            design fills the grid with card-shaped skeletons so the page keeps
-            its shape and the wait reads as loading rather than as an empty
-            shop. */}
-        {isLoading && products.length === 0
-          ? Array.from({ length: cols * 2 }).map((_, i) => (
-            <div key={i} style={{ borderRadius: 16, overflow: 'hidden', background: T.surface, border: `1px solid ${T.border}` }}>
-              <div style={{ aspectRatio: '1 / 1', background: T.surface2 }} />
-              <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ height: 12, width: '70%', borderRadius: 6, background: T.surface2 }} />
-                <div style={{ height: 10, width: '45%', borderRadius: 6, background: T.surface2 }} />
-              </div>
-            </div>
-          ))
-          : shown.map((p) => (
-            <GlowProductCard
-              key={p.id} T={T} p={p} hue={tenant.hue} compact={isMobile}
-              layout={layout} look={design.style}
-              onOpen={openProduct} onAdd={handleAdd}
+      {/* product grid. A first load fills it with cards drawn the way this
+          store draws its own (its layout, ratio and card look), so the page
+          keeps its shape and nothing moves when the products arrive. */}
+      <div ref={gridRef} style={{ scrollMarginTop: 80, position: 'relative', padding: `${sp(4)} ${gutter}px ${sp(8)}` }}>
+        {isLoading && products.length === 0 ? (
+          <Skeleton label={t('common:loading.products')}>
+            <SkProductGrid
+              cols={cols} count={cols * 2} gap={sp(gridGap)} layout={layout} look={design.style}
+              compact={isMobile} price={design.show.price}
             />
-          ))}
+          </Skeleton>
+        ) : (
+          <div className={refreshing ? 'esy-refreshing' : 'esy-settled'} style={{
+            display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: sp(gridGap),
+          }}>
+            {shown.map((p) => (
+              <GlowProductCard
+                key={p.id} T={T} p={p} hue={tenant.hue} compact={isMobile}
+                layout={layout} look={design.style}
+                onOpen={openProduct} onAdd={handleAdd}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* A search that found nothing is the design's E3: another word to
@@ -343,7 +293,7 @@ function ShopHome() {
       {products.length === 0 && !isLoading && !error && (query ? (
         <NoResults
           query={query}
-          onSearch={(w) => { setQuery(w); setSearchParams({ search: w }, { replace: true }); }}
+          onSearch={(w) => { setQuery(w); setSearchParams({ search: w }, { replace: true, preventScrollReset: true }); }}
           onAll={() => { setQuery(''); navigate('/', { replace: true }); }}
         />
       ) : (

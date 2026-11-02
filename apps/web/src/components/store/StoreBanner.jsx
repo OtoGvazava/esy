@@ -7,10 +7,11 @@
 //
 // Banner text is the owner's own words, drawn as text (React escapes it), in
 // whichever language the owner wrote it; only the button is translated.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { productApi } from '../../utils/api';
+import { productQuery } from '../../core/query/queries';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useDesign } from '../../core/design/useDesign';
 import { bannerShown } from '../../core/design/show';
@@ -42,17 +43,9 @@ export default function StoreBanner({ products } = {}) {
   // The product the banner points at, as loaded for that id. A product that
   // was deleted, or belongs to another store, answers 404 and the banner
   // simply goes without a photo and a button.
-  const [loaded, setLoaded] = useState(null); // { id, product }
+  // One cached read, which the home page's route loader starts with the page.
+  const { data: loaded = null } = useQuery({ ...productQuery(productId), enabled: !!productId && !products });
   const [photoFailed, setPhotoFailed] = useState(null);
-
-  useEffect(() => {
-    if (!productId || products) return undefined;
-    const ac = new AbortController();
-    productApi.get(productId, { signal: ac.signal })
-      .then((p) => { if (!ac.signal.aborted) setLoaded({ id: productId, product: p }); })
-      .catch(() => { if (!ac.signal.aborted) setLoaded({ id: productId, product: null }); });
-    return () => ac.abort();
-  }, [productId, products]);
 
   if (!banner) return null;
 
@@ -61,7 +54,7 @@ export default function StoreBanner({ products } = {}) {
   const gutter = isMobile ? 16 : 40;
   const product = !productId ? null
     : products ? products.find((p) => String(p.id) === String(productId)) || null
-      : loaded?.id === productId ? loaded.product : null;
+      : loaded;
   const src = product ? product.thumbnail || product.image || product.images?.[0] || null : null;
   const photo = src && photoFailed !== src ? src : null;
   const fg = { position: 'relative', maxWidth: '66%', textWrap: 'pretty' };

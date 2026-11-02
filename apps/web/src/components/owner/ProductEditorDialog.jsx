@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useTK } from '../../core/useTK';
 import { useDevice } from '../../contexts/DeviceContext';
 import { money, feeOf, FEE_PERCENT } from '../../core/money';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 import { productApi, handleApiError } from '../../utils/api';
 import VariantEditor from './VariantEditor';
 import MarkdownField from './MarkdownField';
@@ -206,7 +207,17 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
               {photos.map((p, i) => (
                 <span key={p.key} style={{ ...tile, boxShadow: i === 0 ? `0 0 0 2px ${T.accent}` : 'none' }}>
-                  <img src={p.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: p.fresh ? 0.7 : 1 }} />
+                  {/* A saved photo fades in on its tile once it has decoded; one
+                      just chosen is on the device already, and stays dimmed
+                      until it is saved. */}
+                  {p.fresh ? (
+                    <img src={p.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7 }} />
+                  ) : (
+                    <img
+                      src={p.url} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  )}
                   {i === 0 && (
                     <span style={{
                       position: 'absolute', top: 6, left: 6, height: 20, padding: '0 6px', lineHeight: '20px',

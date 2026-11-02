@@ -15,6 +15,7 @@ import { useBottomClearance, useDesign } from '../core/design/useDesign';
 import { LANGS, TEXT_SIZES, VIEWS } from '../core/display/prefs';
 import { HeadButton } from '../components/store/StoreMenus';
 import { langInfo } from '../components/glow/GlowPrimitives';
+import { useIndicator } from '../core/useIndicator';
 import { GlowScreen } from '../components/glow/GlowChrome';
 
 // The design's glyphs for this screen, drawn at the theme's stroke weight.
@@ -39,21 +40,27 @@ function Glyph({ name, size = 16 }) {
 }
 
 // The theme's segmented control (the kit's .seg): the chosen option lifts out
-// of the well; Neon lights it instead.
+// of the well; Neon lights it instead. The lifted part is one thumb that
+// slides to the option chosen, rather than each option lighting on its own.
 function useSegLook() {
   const { T, dark } = useGlow();
   const { theme } = useDesign();
   const neon = theme === 'neon';
   return {
-    well: { display: 'flex', gap: 4, padding: 4, borderRadius: 'var(--k-r-btn)', background: T.surface2 },
+    well: { position: 'relative', display: 'flex', gap: 4, padding: 4, borderRadius: 'var(--k-r-btn)', background: T.surface2 },
+    thumb: {
+      borderRadius: 'calc(var(--k-r-btn) - 4px)',
+      background: neon ? 'var(--k-neon)' : dark ? (theme === 'glow' ? '#3a3a3e' : `color-mix(in oklab, ${T.text} 16%, ${T.surface2})`) : T.surface,
+      boxShadow: neon ? '0 0 22px -4px var(--k-neon)'
+        : dark ? `0 0 0 1px color-mix(in oklab, ${T.text} 18%, transparent)` : '0 1px 4px rgba(0,0,0,.14)',
+    },
     button: (on) => ({
+      position: 'relative', zIndex: 1,
       flex: 1, minWidth: 0, minHeight: 40, padding: neon ? '0 8px' : '0 10px', border: 0, cursor: 'pointer',
       borderRadius: 'calc(var(--k-r-btn) - 4px)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
       font: `${on ? 600 : 500} 13.5px ${neon ? 'var(--k-font-m)' : T.font}`, whiteSpace: 'nowrap',
       color: on ? (neon ? 'var(--k-on-neon)' : T.text) : T.textDim,
-      background: on ? (neon ? 'var(--k-neon)' : dark ? (theme === 'glow' ? '#3a3a3e' : `color-mix(in oklab, ${T.text} 16%, ${T.surface2})`) : T.surface) : 'transparent',
-      boxShadow: !on ? 'none' : neon ? '0 0 22px -4px var(--k-neon)'
-        : dark ? `0 0 0 1px color-mix(in oklab, ${T.text} 18%, transparent)` : '0 1px 4px rgba(0,0,0,.14)',
+      background: 'transparent',
     }),
   };
 }
@@ -65,6 +72,8 @@ function useSegLook() {
 function Seg({ labelledBy, options, value, onChange, wellStyle, buttonStyle }) {
   const look = useSegLook();
   const refs = useRef([]);
+  const well = useRef(null);
+  const ind = useIndicator(well, value ?? null);
   const at = Math.max(0, options.findIndex((o) => o.id === value));
   const onKey = (e, i) => {
     const n = options.length;
@@ -79,13 +88,15 @@ function Seg({ labelledBy, options, value, onChange, wellStyle, buttonStyle }) {
     refs.current[next]?.focus();
   };
   return (
-    <div role="radiogroup" aria-labelledby={labelledBy} style={{ ...look.well, ...wellStyle }}>
+    <div ref={well} role="radiogroup" aria-labelledby={labelledBy} style={{ ...look.well, ...wellStyle }}>
+      <span aria-hidden="true" className="esy-ind" data-still={ind.still || undefined} style={{ ...ind.style, ...look.thumb }} />
       {options.map((o, i) => {
         const on = o.id === value;
         return (
           <button
             key={o.id} ref={(el) => { refs.current[i] = el; }} type="button" role="radio" aria-checked={on}
             tabIndex={i === at ? 0 : -1} lang={o.lang} onClick={() => onChange(o.id)} onKeyDown={(e) => onKey(e, i)}
+            data-ind={o.id} className="esy-press-soft"
             style={{ ...look.button(on), ...buttonStyle }}
           >{o.content}</button>
         );

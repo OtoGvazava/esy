@@ -3,20 +3,23 @@
 // the membership list and the last handful of orders on the same screen as the
 // suspend switch: deciding to pull a storefront down should not require
 // remembering what was on the previous page.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi, handleApiError } from '../utils/api';
+import { adminStoreQuery } from '../core/query/adminQueries';
 import { useAdminTokens } from './adminTokens';
 import { useAdminHead } from './adminHead';
 import { Btn, Card, Chip, Field, Note, SectionTitle } from '../core/primitives';
 import { Mark, RoleChip, StatusPair } from '../core/domain';
 import { Icons } from '../core/icons';
 import {
-  Empty, Failed, Loading, Stat, StoreStatus, SuspendDialog,
+  Empty, Failed, Stat, StoreStatus, SuspendDialog,
   count, dateTime, isSuspended, lari,
 } from './AdminUI';
 import { List, RowIcon, Switch } from './AdminKit';
+import { StoreDetailSkeleton } from './AdminSkeletons';
 
 // The ported design's fulfilment tone map keys the "out for delivery" state as
 // OUT, while the API sends the entity's own OUT_FOR_DELIVERY (Order.Status).
@@ -161,43 +164,23 @@ export default function AdminStoreDetail() {
   const { t, i18n } = useTranslation('admin');
   const lang = i18n.language;
   const { sub } = useParams();
+  const qc = useQueryClient();
 
-  const [store, setStore] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [missing, setMissing] = useState(false);
   const [suspending, setSuspending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState('');
-  const abortRef = useRef(null);
 
-  const load = useCallback(async () => {
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-    setLoading(true);
-    setError('');
-    setMissing(false);
-    try {
-      const data = await adminApi.getStore(sub, { signal: ac.signal });
-      if (ac.signal.aborted) return;
-      setStore(data);
-    } catch (e) {
-      if (ac.signal.aborted || e?.name === 'AbortError') return;
-      setStore(null);
-      if (e?.status === 404) setMissing(true);
-      else setError(handleApiError(e, t('detail.loadFailed')));
-    } finally {
-      if (!ac.signal.aborted) setLoading(false);
-    }
-  }, [sub, t]);
-
-  useEffect(() => {
-    load();
-    return () => abortRef.current?.abort();
-  }, [load]);
+  // The record from the query cache (the route's loader has usually fetched
+  // it before this screen is shown). A failed read shows no record at all.
+  const record = useQuery(adminStoreQuery(sub));
+  const store = record.isError ? null : (record.data ?? null);
+  const missing = record.isError && record.error?.status === 404;
+  const error = record.isError && !missing ? handleApiError(record.error, t('detail.loadFailed')) : '';
+  // A retry after a failure draws the skeleton again, as the first load did.
+  const pending = record.isPending || (record.isError && record.isFetching);
+  const recordKey = adminStoreQuery(sub).queryKey;
 
   // The store's name in the top bar, with the way back to the list.
   const headName = store ? (store.displayName || store.name || store.subdomain) : sub;
@@ -210,10 +193,10 @@ export default function AdminStoreDetail() {
 
   // The API answers with the updated store, but only the list fields — members
   // and recentOrders are kept from the record already on screen. Anything that
-  // is not a store means re-reading the record rather than patching a guess.
+  // is not a store is left to the re-read every write sets off
+  // (core/query/client.js) rather than patched in as a guess.
   const applyWrite = (updated) => {
-    if (updated?.subdomain) setStore((prev) => ({ ...prev, ...updated }));
-    else load();
+    if (updated?.subdomain) qc.setQueryData(recordKey, (prev) => prev && { ...prev, ...updated });
   };
 
   // Both member writes answer with the full refreshed detail — members
@@ -221,8 +204,7 @@ export default function AdminStoreDetail() {
   // patched locally. A role change can cascade (promoting a second owner
   // changes what is allowed for the first), and a guessed list would diverge.
   const applyDetail = (updated) => {
-    if (updated?.subdomain) setStore(updated);
-    else load();
+    if (updated?.subdomain) qc.setQueryData(recordKey, updated);
   };
 
   const assignMember = async (email, role) => {
@@ -281,8 +263,8 @@ export default function AdminStoreDetail() {
   // The way back to the list is the top bar's back button (useAdminHead above).
   const wrap = { maxWidth: 1040, margin: '0 auto' };
 
-  if (loading && !store) {
-    return <div style={wrap}><Loading T={T} /></div>;
+  if (pending) {
+    return <div style={wrap}><StoreDetailSkeleton /></div>;
   }
   if (missing) {
     return (
@@ -294,7 +276,7 @@ export default function AdminStoreDetail() {
   if (error || !store) {
     return (
       <div style={wrap}>
-        <Failed T={T} message={error || t('detail.loadFailed')} onRetry={load} />
+        <Failed T={T} message={error || t('detail.loadFailed')} onRetry={() => record.refetch()} />
       </div>
     );
   }

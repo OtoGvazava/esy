@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { usePlatform, useStores, PTopBar, PFooter, StoreMark, StoreArtStrip, StatusPill } from './PlatformShared';
 import { CATEGORIES, storeInitials, storeUrl } from './platformData';
 import { alpha } from '../core/tokens';
+import { Skeleton } from '../components/skeleton/Skeleton';
 
 function StoreCard({ T, t, store, onOpen, layout = 'tall' }) {
   return (
@@ -173,9 +174,13 @@ export default function PlatformDirectory() {
 
       <div style={{ padding: isDesktop ? '8px 56px 32px' : '8px 22px 24px' }}>
         {loading && (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: isDesktop ? 18 : 12 }}>
-            {Array.from({ length: cols * 2 }).map((_, i) => <CardSkeleton key={i} T={T} layout={isDesktop ? 'tall' : 'short'} />)}
-          </div>
+          // Shown only once the wait has lasted a moment (Skeleton), so a
+          // directory already in the cache never flashes one.
+          <Skeleton>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: isDesktop ? 18 : 12 }}>
+              {Array.from({ length: cols * 2 }).map((_, i) => <CardSkeleton key={i} T={T} layout={isDesktop ? 'tall' : 'short'} />)}
+            </div>
+          </Skeleton>
         )}
 
         {!loading && !isEmpty && (

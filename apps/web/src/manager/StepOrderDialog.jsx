@@ -12,28 +12,26 @@
 // The board also asks for a courier and a tracking code. Orders have no place
 // to keep either, so they are not asked for here rather than collected and
 // dropped.
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { tenantApi, handleApiError } from '../utils/api';
+import { orderNoticeQuery } from '../core/query/managerQueries';
+import { Skeleton } from '../components/skeleton/Skeleton';
 import { Alert, Sheet, SheetHead, Switch, btn, li, list, maskPhone, shortName } from './officeKit';
+import { SkIn } from './officeSk';
 
 export default function StepOrderDialog({ T, order, next, isMobile, sub, buyerName, routeLabel, onDone, onClose }) {
   const { t } = useTranslation('manager');
   const titleId = useId();
-  const [notice, setNotice] = useState(null);
-  const [noticeError, setNoticeError] = useState(false);
+  // Read as the dialog opens, and afresh every time it does (orderNoticeQuery).
+  const preview = useQuery(orderNoticeQuery(order.id, next));
+  const noticeError = preview.isError;
+  const notice = noticeError ? {} : preview.isSuccess ? preview.data || {} : null;
   const [sms, setSms] = useState(true);
   const [email, setEmail] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    const ac = new AbortController();
-    tenantApi.orderNotice(order.id, next, sub, { signal: ac.signal })
-      .then((n) => { if (!ac.signal.aborted) setNotice(n || {}); })
-      .catch(() => { if (!ac.signal.aborted) { setNotice({}); setNoticeError(true); } });
-    return () => ac.abort();
-  }, [order.id, next, sub]);
 
   const shut = () => { if (!busy) onClose(); };
   const smsLive = !!notice?.sms?.sending;
@@ -57,7 +55,8 @@ export default function StepOrderDialog({ T, order, next, isMobile, sub, buyerNa
 
   const row = (key, label, channel, live, on, setOn) => {
     let line;
-    if (!notice) line = t('step.loading');
+    // The address the message goes to is on its way: a bar in its line.
+    if (!notice) line = <Skeleton label={t('step.loading')}><SkIn w="55%" /></Skeleton>;
     else if (!channel) line = t(`step.no.${key}`);
     else if (!live) line = t('step.notSending', { to: key === 'sms' ? maskPhone(channel.to) : channel.to });
     else line = key === 'sms' ? maskPhone(channel.to) : channel.to;

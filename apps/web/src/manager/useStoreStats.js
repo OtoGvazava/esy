@@ -1,60 +1,53 @@
-// Shared loaders for the store's own figures. Their own module because
-// Overview, Analytics and Finances read them, and a hook exported from a
-// component file breaks fast refresh.
-import { useCallback, useEffect, useState } from 'react';
-import { tenantApi } from '../utils/api';
+// Shared reads for the store's own figures, from the query cache
+// (core/query/managerQueries.js). Their own module because Overview,
+// Analytics and Finances read them, and a hook exported from a component file
+// breaks fast refresh.
+import { useQuery } from '@tanstack/react-query';
+import { monthStatsQuery, periodStatsQuery, storeStatsQuery } from '../core/query/managerQueries';
 
-/** Lifetime totals (GET /api/tenant/stats): the overview's cards. */
-export function useStoreStats(devTenant) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+/** The windows Analytics offers: 7, 30 or 90 days, or all time (null). */
+export const PERIODS = [7, 30, 90, null];
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setData(await tenantApi.stats(devTenant));
-    } catch (e) {
-      // Cleared rather than kept: a figure that may be out of date reads as
-      // current, and these are the numbers a merchant decides on.
-      setData(null);
-      setError(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [devTenant]);
-
-  useEffect(() => { load(); }, [load]);
-  return { data, loading, error, reload: load };
+/**
+ * The window the address asks for (?days=7|30|90|all), so a reload or a
+ * shared link keeps it; 30 days when none is given, as the board opens. The
+ * screen and its route loader read it the same way.
+ */
+export function periodOf(params) {
+  const asked = params.get('days');
+  if (asked === 'all') return null;
+  return PERIODS.includes(Number(asked)) ? Number(asked) : 30;
 }
 
 /**
- * One request's answer, kept per key: a new key (another window, another
- * store) clears the old figures at once rather than showing them under the
- * new label while the request is out.
+ * A read as the screens take it: `data` null until it is in, and null again
+ * after a failure. Cleared rather than kept: a figure that may be out of date
+ * reads as current, and these are the numbers a merchant decides on.
  */
-function useFetched(key, fetcher) {
-  const [state, setState] = useState({ key: null, data: null, error: '' });
-  useEffect(() => {
-    const ac = new AbortController();
-    fetcher({ signal: ac.signal })
-      .then((data) => { if (!ac.signal.aborted) setState({ key, data, error: '' }); })
-      .catch((e) => { if (!ac.signal.aborted && e?.name !== 'AbortError') setState({ key, data: null, error: e }); });
-    return () => ac.abort();
-    // fetcher is rebuilt every render; the key is what names the request.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-  const current = state.key === key;
-  return { data: current ? state.data : null, error: current ? state.error : '', loading: !current };
+function figures(query) {
+  return {
+    data: query.isError ? null : query.data ?? null,
+    loading: query.isPending,
+    error: query.isError ? query.error : '',
+  };
 }
 
-/** Analytics (X1): a window of `days` (7, 30, 90) or all time (null). */
-export function usePeriodStats(days, devTenant) {
-  return useFetched(`${devTenant || ''}|${days || 'all'}`, (opts) => tenantApi.periodStats(days, devTenant, opts));
+/** Lifetime totals (GET /api/tenant/stats): the overview's cards. */
+export function useStoreStats() {
+  const query = useQuery(storeStatsQuery());
+  return { ...figures(query), reload: query.refetch };
+}
+
+/**
+ * Analytics (X1): a window of `days` (7, 30, 90) or all time (null). Each
+ * window is its own read: a window not read before shows nothing until its
+ * figures arrive, rather than the last window's under the new label.
+ */
+export function usePeriodStats(days) {
+  return figures(useQuery(periodStatsQuery(days)));
 }
 
 /** Finances (X2): month by month, newest first. */
-export function useMonthStats(devTenant) {
-  return useFetched(devTenant || '', (opts) => tenantApi.monthStats(devTenant, opts));
+export function useMonthStats() {
+  return figures(useQuery(monthStatsQuery()));
 }

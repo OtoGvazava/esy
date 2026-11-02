@@ -46,9 +46,9 @@ export default function CategoryPills({ gutter = 16, categories = [], trailing =
           WebkitMaskImage: more ? FADE : 'none', maskImage: more ? FADE : 'none',
         }}
       >
-        <Link to="/" aria-current="page" style={pillStyle(T, true)}>{t('categories.all')}</Link>
+        <Link to="/" aria-current="page" className="esy-press" style={pillStyle(T, true)}>{t('categories.all')}</Link>
         {categories.map((c) => (
-          <Link key={c.name} to={`/?category=${encodeURIComponent(c.name)}`} style={pillStyle(T, false)}>
+          <Link key={c.name} to={`/?category=${encodeURIComponent(c.name)}`} className="esy-press" style={pillStyle(T, false)}>
             {c.name}
           </Link>
         ))}

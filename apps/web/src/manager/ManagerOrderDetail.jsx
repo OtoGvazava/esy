@@ -17,14 +17,18 @@
 // steps and its payment state, but no time for each step, no courier and no
 // record of who pressed what — so those parts of the board's history are not
 // drawn rather than made up.
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useTK } from '../core/useTK';
 import { money, FEE_PERCENT } from '../core/money';
-import { tenantApi, handleApiError } from '../utils/api';
+import { markIfComplete, markLoaded } from '../core/imgFade';
+import { storeOrderQuery, storeOrdersQuery } from '../core/query/managerQueries';
+import { handleApiError } from '../utils/api';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import CancelOrderDialog from './CancelOrderDialog';
 import StepOrderDialog from './StepOrderDialog';
 import RefundOrderDialog from './RefundOrderDialog';
@@ -32,6 +36,7 @@ import {
   Alert, Avatar, Chip, G, Glyph, PAY_HUE, PageHead, STATUS_HUE,
   btn, card, formatPhone, initials, kv, li, list, shortName, type,
 } from './officeKit';
+import { SkIn } from './officeSk';
 
 const NEXT_STEP = {
   PLACED: 'SHIPPED',
@@ -84,7 +89,11 @@ function Thumb({ src }) {
   if (src && !broken) {
     return (
       <span style={box}>
-        <img src={src} alt="" onError={() => setBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {/* It fades in on its tile once it has decoded. */}
+        <img
+          src={src} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} onError={() => setBroken(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
       </span>
     );
   }
@@ -132,6 +141,80 @@ function History({ T, t, events }) {
   );
 }
 
+/**
+ * The order's own shape while it loads: the chips and actions row, the lines
+ * card with its totals and the history on the left, the buyer and the
+ * delivery on the right.
+ */
+function DetailSkeleton({ T, t, isDesktop, gap }) {
+  const line = (font, w, style) => <div style={{ font, ...style }}><SkIn w={w} /></div>;
+  return (
+    <Skeleton label={t('orders.loading')} style={{ display: 'flex', flexDirection: 'column', gap }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+        <Sk w={96} h={26} r={13} />
+        <Sk w={80} h={26} r={13} />
+        <span style={{ flex: 1, minWidth: 200, font: `400 12.5px/1.45 ${T.font}` }}><SkIn w="45%" /></span>
+        <Sk w={150} h={38} r="var(--k-r-btn)" />
+      </div>
+      <div style={{
+        display: 'grid', gap: 20, alignItems: 'start',
+        gridTemplateColumns: isDesktop ? 'minmax(0, 1.6fr) minmax(0, 1fr)' : 'minmax(0, 1fr)',
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+          <div style={list(T)}>
+            {[0, 1].map((i) => (
+              <div key={i} style={li(T)}>
+                <Sk w={52} h={52} r={10} />
+                <div style={{ flex: 1, minWidth: 0 }}>{line(`600 12.5px/1.4 ${T.font}`, '55%')}</div>
+                <span style={{ font: `400 12.5px ${T.font}` }}><SkIn w={22} /></span>
+                <span style={{ font: `600 14px ${T.font}` }}><SkIn w={60} /></span>
+              </div>
+            ))}
+            <div style={{ ...li(T, true), flexDirection: 'column', alignItems: 'stretch', gap: 2 }}>
+              {[[12.5, '40%'], [12.5, '50%'], [14, '35%']].map(([size, w]) => (
+                <div key={w} style={{ ...kv, font: `400 ${size}px ${T.font}` }}>
+                  <span style={{ flex: 1 }}><SkIn w={w} /></span><span><SkIn w={56} /></span>
+                </div>
+              ))}
+              {line(`400 12px/1.45 ${T.font}`, '70%', { padding: '5px 0' })}
+            </div>
+          </div>
+          <div style={{ ...card(T, 16), display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {line(`600 16px/1.3 ${T.font}`, '30%')}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} style={{ display: 'flex', gap: 14, paddingBottom: i === 2 ? 0 : 22 }}>
+                  <Sk w={24} h={24} r={12} />
+                  {line(`600 12.5px/1.45 ${T.font}`, i ? '35%' : '50%', { flex: 1 })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+          <div style={{ ...card(T, 16), display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Sk w={34} h={34} r={17} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {line(`600 12.5px/1.4 ${T.font}`, '50%')}
+                {line(`400 12px/1.45 ${T.font}`, '70%')}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Sk w={96} h={38} r="var(--k-r-btn)" />
+              <Sk w={120} h={38} r="var(--k-r-btn)" />
+            </div>
+          </div>
+          <div style={{ ...card(T, 16), display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {line(`600 11.5px/1.2 ${T.font}`, '40%')}
+            {line(`600 12.5px/1.45 ${T.font}`, '80%')}
+          </div>
+        </div>
+      </div>
+    </Skeleton>
+  );
+}
+
 export default function ManagerOrderDetail() {
   const { T } = useTK();
   const { t, i18n } = useTranslation('manager');
@@ -141,45 +224,55 @@ export default function ManagerOrderDetail() {
   const { isStoreOwner } = useAuth();
   const { isMobile, isDesktop } = useDevice();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { orderId } = useParams();
   const [params] = useSearchParams();
   const sub = params.get('tenant') || undefined;
   const q = sub ? `?tenant=${encodeURIComponent(sub)}` : '';
 
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const read = useQuery(storeOrderQuery(orderId));
+  const order = read.data ?? null;
+  // What the cancel dialog had to report: the cancellation went through but
+  // its refund did not.
+  const [problem, setProblem] = useState('');
   // Which dialog is open: 'step' (ship, out, delivered), 'cancel' or 'refund'.
   const [dialog, setDialog] = useState(null);
 
-  const load = useCallback(() => {
-    let alive = true;
-    setLoading(true);
-    setError('');
-    tenantApi.order(orderId, sub)
-      .then((o) => { if (alive) setOrder(o); })
-      .catch((e) => { if (alive) setError(handleApiError(e, t('orders.error'))); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, [orderId, sub, t]);
-
-  useEffect(load, [load]);
-
   // The status and refund calls answer with the order's list shape, without
-  // its lines and detail figures, so they are merged over what is on screen.
-  const merge = (updated) => setOrder((prev) => ({ ...prev, ...updated, lines: prev.lines }));
+  // its lines and detail figures, so they are merged over what is on screen
+  // (the write has already sent the order to be read again behind it). Being
+  // the list's shape, the answer is also the order's row in the orders list,
+  // so going back to the list shows the move at once.
+  const merge = (updated) => {
+    qc.setQueryData(
+      storeOrderQuery(orderId).queryKey,
+      (prev) => (prev ? { ...prev, ...updated, lines: prev.lines } : prev),
+    );
+    if (updated?.id == null) return;
+    const { queryKey } = storeOrdersQuery();
+    qc.setQueryData(queryKey, (rows) => rows?.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)));
+    // Still read again when next shown: the rest of the list may have moved too.
+    qc.invalidateQueries({ queryKey, exact: true, refetchType: 'none' });
+  };
 
   const back = () => navigate(`/orders${q}`);
   const gap = isMobile ? 14 : isDesktop ? 20 : 18;
 
-  if (loading && !order) {
-    return <div role="status" style={{ font: `500 13px ${T.font}`, color: T.textDim }}>{t('orders.loading')}</div>;
+  if (read.isPending) {
+    // The bar keeps its back button; the order's number and line are on their way.
+    const wait = (w) => <span className="esy-sk-wait" aria-hidden="true"><SkIn w={w} /></span>;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap }}>
+        <PageHead T={T} mobile={isMobile} onBack={back} backLabel={t('order.back')} title={wait(150)} sub={wait(220)} />
+        <DetailSkeleton T={T} t={t} isDesktop={isDesktop} gap={gap} />
+      </div>
+    );
   }
   if (!order) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap }}>
         <PageHead T={T} title={t('orders.title')} onBack={back} backLabel={t('order.back')} />
-        <Alert T={T} tone="bad" role="alert">{error}</Alert>
+        <Alert T={T} tone="bad" role="alert">{handleApiError(read.error, t('orders.error'))}</Alert>
       </div>
     );
   }
@@ -325,7 +418,7 @@ export default function ManagerOrderDetail() {
           <b>{t('order.pendingLead', { amount: money(refunded) })}</b> {t('order.pendingBody')}
         </Alert>
       )}
-      {error && <Alert T={T} tone="bad" role="alert">{error}</Alert>}
+      {problem && <Alert T={T} tone="bad" role="alert">{problem}</Alert>}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
         <Chip T={T} name={STATUS_HUE[status]}>{t(`orders.status.${status.toLowerCase()}`, { defaultValue: status })}</Chip>
@@ -432,7 +525,7 @@ export default function ManagerOrderDetail() {
         <CancelOrderDialog
           T={T} order={order} refundable={refundable} isOwner={isStoreOwner}
           isMobile={isMobile} sub={sub}
-          onDone={(updated, problem) => { merge(updated); setError(problem || ''); }}
+          onDone={(updated, why) => { merge(updated); setProblem(why || ''); }}
           onClose={() => setDialog(null)}
         />
       )}

@@ -12,25 +12,20 @@
 //   - Nothing is invoiced and nothing is paid out: the platform only records
 //     what has accrued, and the screen says so instead of drawing an invoice
 //     list with nothing behind it. Every row's status is therefore "accrued".
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { adminApi, handleApiError } from '../utils/api';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { handleApiError } from '../utils/api';
+import { adminBillingQuery, billingMonth } from '../core/query/adminQueries';
 import { useAdminTokens } from './adminTokens';
 import { useDevice } from '../contexts/DeviceContext';
 import { useAdminHead } from './adminHead';
-import { Empty, Failed, Loading, count, lari } from './AdminUI';
+import { Empty, Failed, count, lari } from './AdminUI';
 import { Alert, Glyph, KitBtn, KitChip, Kpi, List, Seg } from './AdminKit';
+import { BillingSkeleton } from './AdminSkeletons';
 
 const PAGE = 20;
-
-/** 'YYYY-MM' for a month `back` months before today, on this browser's clock. */
-function monthId(back) {
-  const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() - back);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
 
 /** The fee rate as the design writes it: "2%", "2,5%" in Georgian, "2.5%" in English. */
 function percent(rate, lang) {
@@ -54,38 +49,21 @@ export default function AdminBilling() {
   const lang = i18n.language;
   const { isMobile, isDesktop } = useDevice();
 
-  // The design offers this month and the one before it.
-  const months = useMemo(() => [monthId(1), monthId(0)], []);
+  // The design offers this month and the one before it. It opens on this
+  // month, which the route's loader has fetched (router/adminLoaders.js).
+  const months = useMemo(() => [billingMonth(1), billingMonth(0)], []);
   const [month, setMonth] = useState(months[1]);
   const [page, setPage] = useState(0);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const abortRef = useRef(null);
 
-  const load = useCallback(async (m) => {
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-    setLoading(true);
-    setError('');
-    try {
-      const res = await adminApi.getBilling({ month: m, signal: ac.signal });
-      if (ac.signal.aborted) return;
-      setData(res);
-    } catch (e) {
-      if (ac.signal.aborted || e?.name === 'AbortError') return;
-      setData(null);
-      setError(handleApiError(e, t('billing.loadFailed')));
-    } finally {
-      if (!ac.signal.aborted) setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    load(month);
-    return () => abortRef.current?.abort();
-  }, [load, month]);
+  // The month from the query cache. Switching months keeps the figures on
+  // screen, dimmed, until the other month's are in.
+  const billing = useQuery({ ...adminBillingQuery(month), placeholderData: keepPreviousData });
+  // A failed read shows no figures: next to an error they would read as current.
+  const data = billing.isError ? null : (billing.data ?? null);
+  const error = billing.isError ? handleApiError(billing.error, t('billing.loadFailed')) : '';
+  // A retry after a failure draws the skeleton again, as the first load did.
+  const pending = billing.isPending || (billing.isError && billing.isFetching);
+  const refreshing = billing.isPlaceholderData;
 
   const monthName = (id) => t(`billing.month.${Number(id.slice(5, 7))}`);
   const period = `${monthName(month)} ${month.slice(0, 4)}`;
@@ -161,14 +139,14 @@ export default function AdminBilling() {
   // the table too narrow for its three columns.
   const wrap = { maxWidth: 1040, margin: '0 auto' };
 
-  if (loading && !data) {
-    return <div style={wrap}>{head}<Loading T={T} /></div>;
+  if (pending) {
+    return <div style={wrap}>{head}<BillingSkeleton /></div>;
   }
   if (error || !data) {
     return (
       <div style={wrap}>
         {head}
-        <Failed T={T} message={error || t('billing.loadFailed')} onRetry={() => load(month)} />
+        <Failed T={T} message={error || t('billing.loadFailed')} onRetry={() => billing.refetch()} />
       </div>
     );
   }
@@ -193,7 +171,7 @@ export default function AdminBilling() {
     <div style={wrap}>
       {head}
 
-      <div style={{ opacity: loading ? 0.55 : 1, display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : 16 }}>
+      <div className={refreshing ? 'esy-refreshing' : 'esy-settled'} style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : 16 }}>
         <div style={{
           display: 'grid', gap: isMobile ? 12 : 16,
           gridTemplateColumns: `repeat(${isMobile ? 2 : 3}, minmax(0, 1fr))`,

@@ -18,6 +18,7 @@ import { useThemeMode } from '../../contexts/ThemeModeContext';
 import { alpha } from '../../core/tokens';
 import { Icon, langInfo } from '../glow/GlowPrimitives';
 import { useStoreNav } from './storeChrome';
+import { useIndicator } from '../../core/useIndicator';
 import { StoreName } from './VerifiedTick';
 import StoreSocials from './StoreSocials';
 
@@ -54,7 +55,7 @@ function Badge({ n, style }) {
  * `ibtn float`): a link when it has `to`, otherwise a button. `plain` drops
  * the surface, for a control that already sits on one.
  */
-export function HeadButton({ to, label, badge, plain = false, children, ref, style, ...rest }) {
+export function HeadButton({ to, label, badge, plain = false, children, ref, style, className = 'esy-press', ...rest }) {
   const { T } = useGlow();
   const look = {
     position: 'relative', width: 44, height: 44, flex: 'none', boxSizing: 'border-box', padding: 0,
@@ -73,8 +74,8 @@ export function HeadButton({ to, label, badge, plain = false, children, ref, sty
     </>
   );
   return to
-    ? <Link ref={ref} to={to} aria-label={label} style={look} {...rest}>{body}</Link>
-    : <button ref={ref} type="button" aria-label={label} style={look} {...rest}>{body}</button>;
+    ? <Link ref={ref} to={to} aria-label={label} className={className} style={look} {...rest}>{body}</Link>
+    : <button ref={ref} type="button" aria-label={label} className={className} style={look} {...rest}>{body}</button>;
 }
 
 /** The store's logo, or its initial on the store colour. */
@@ -180,6 +181,9 @@ export function StoreTabs({ fixed = false }) {
   const pinned = usePinned(holder, !fixed) || fixed;
   const gutter = isMobile ? 16 : 40;
   const current = items.find((it) => it.active)?.key;
+  // The underline slides from tab to tab rather than jumping.
+  const ind = useIndicator(row, current ?? null, gutter);
+  const line = ind.rect;
 
   // Five Georgian labels do not fit a narrow phone, so the row scrolls; keep
   // the current tab in view (sideways only, never moving the page).
@@ -199,21 +203,28 @@ export function StoreTabs({ fixed = false }) {
       style={pinned ? {
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: Z.strip,
         background: 'var(--k-fl-bg)', backdropFilter: 'var(--k-fl-blur)', WebkitBackdropFilter: 'var(--k-fl-blur)',
+        ...(fixed ? { viewTransitionName: 'esy-dock' } : null),
       } : { position: 'relative' }}
     >
       <div ref={row} style={{
-        display: 'flex', gap: 22, overflowX: 'auto', scrollbarWidth: 'none',
+        position: 'relative', display: 'flex', gap: 22, overflowX: 'auto', scrollbarWidth: 'none',
         padding: `0 ${gutter}px`, boxShadow: `inset 0 -1px 0 ${T.border}`,
       }}>
+        <span
+          aria-hidden="true" className="esy-ind" data-still={ind.still || undefined}
+          style={line
+            ? { width: line.w, height: 2, transform: `translate(${line.x}px, ${line.y + line.h - 2}px)`, background: T.accent, borderRadius: 2 }
+            : { width: 0, height: 0, opacity: 0 }}
+        />
         {items.map((it) => (
           <Link
-            key={it.key} to={it.to} aria-current={it.active ? 'page' : undefined}
+            key={it.key} to={it.to} aria-current={it.active ? 'page' : undefined} data-ind={it.key}
+            className="esy-press-soft"
             style={{
               flex: 'none', minHeight: TABS_H, minWidth: 44, boxSizing: 'border-box',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               textDecoration: 'none', whiteSpace: 'nowrap',
               color: it.active ? T.text : T.textDim, font: `${it.active ? 600 : 500} 14px ${T.font}`,
-              boxShadow: it.active ? `inset 0 -2px 0 ${T.accent}` : 'none',
             }}
           >
             {it.label}
@@ -238,22 +249,31 @@ function SideMenu({ id, open, onClose, backRef }) {
   useModal(open, panel, closer, backRef, onClose);
 
   const dur = still ? '0s' : '.28s';
+  const langWell = useRef(null);
+  const modeWell = useRef(null);
+  const langInd = useIndicator(langWell, language);
+  const modeInd = useIndicator(modeWell, mode);
   // Hidden only once the slide-out has finished, shown at once on the way in.
   const hide = `visibility 0s linear ${open ? '0s' : dur}`;
   const pickMode = (m) => {
     if (setMode) setMode(m);
     else if (m !== mode) toggle();
   };
-  // The canvas's segmented control: the chosen half lifts out of the well.
+  // The canvas's segmented control: the chosen half lifts out of the well,
+  // as one thumb that slides to the half chosen.
   const segOn = dark ? `color-mix(in oklab, ${T.text} 16%, ${T.surface2})` : T.surface;
-  const well = { display: 'flex', gap: 4, padding: 4, margin: '0 8px', borderRadius: 'var(--k-r-btn)', background: T.surface2 };
+  const well = { position: 'relative', display: 'flex', gap: 4, padding: 4, margin: '0 8px', borderRadius: 'var(--k-r-btn)', background: T.surface2 };
+  const thumb = (ind) => ({
+    ...ind.style, borderRadius: 'calc(var(--k-r-btn) - 4px)', background: segOn,
+    boxShadow: dark ? 'none' : '0 1px 4px rgba(0,0,0,.14)',
+  });
   const seg = (on) => ({
+    position: 'relative', zIndex: 1,
     flex: 1, minWidth: 0, minHeight: 44, padding: '0 10px', border: 0, cursor: 'pointer',
     borderRadius: 'calc(var(--k-r-btn) - 4px)',
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    background: on ? segOn : 'transparent', color: on ? T.text : T.textDim,
-    font: `${on ? 600 : 500} 14px ${T.font}`, whiteSpace: 'nowrap',
-    boxShadow: on && !dark ? '0 1px 4px rgba(0,0,0,.14)' : 'none',
+    background: 'transparent', color: on ? T.text : T.textDim,
+    font: `${on ? 600 : 500} 14px ${T.font}`, whiteSpace: 'nowrap', transition: 'color var(--m-base) ease',
   });
 
   return (
@@ -299,6 +319,7 @@ function SideMenu({ id, open, onClose, backRef }) {
           {items.map((it) => (
             <Link
               key={it.key} to={it.to} onClick={onClose} aria-current={it.active ? 'page' : undefined}
+              className="esy-press-soft"
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, minHeight: 46, padding: '0 12px',
                 borderRadius: 'var(--k-r-in)', textDecoration: 'none', color: T.text,
@@ -317,21 +338,23 @@ function SideMenu({ id, open, onClose, backRef }) {
 
         {/* The language and light/dark controls the phone header carries,
             here because the side menu's header has search and the bag. */}
-        <div role="group" aria-label={t('menu.language')} style={well}>
+        <div ref={langWell} role="group" aria-label={t('menu.language')} style={well}>
+          <span aria-hidden="true" className="esy-ind" data-still={langInd.still || undefined} style={thumb(langInd)} />
           {['ka', 'en'].map((code) => (
             <button
-              key={code} type="button" lang={code} aria-pressed={language === code}
+              key={code} type="button" lang={code} aria-pressed={language === code} data-ind={code}
               onClick={() => setLanguage(code)} style={seg(language === code)}
             >{langInfo(code).native}</button>
           ))}
         </div>
-        <div role="group" aria-label={t('menu.appearance')} style={{ ...well, marginTop: 8 }}>
+        <div ref={modeWell} role="group" aria-label={t('menu.appearance')} style={{ ...well, marginTop: 8 }}>
+          <span aria-hidden="true" className="esy-ind" data-still={modeInd.still || undefined} style={thumb(modeInd)} />
           {[
             { m: 'light', Glyph: Icon.sun, label: t('menu.light') },
             { m: 'dark', Glyph: Icon.moon, label: t('menu.dark') },
           ].map((o) => (
             <button
-              key={o.m} type="button" aria-pressed={mode === o.m}
+              key={o.m} type="button" aria-pressed={mode === o.m} data-ind={o.m}
               onClick={() => pickMode(o.m)} style={seg(mode === o.m)}
             ><o.Glyph width={16} height={16} />{o.label}</button>
           ))}
@@ -433,6 +456,7 @@ export function ActionButton() {
         <button
           ref={fab} type="button" aria-label={label} aria-expanded={open} aria-controls={id}
           onClick={() => setOpen((v) => !v)}
+          className="esy-press"
           style={{
             position: 'relative', width: 60, height: 60, padding: 0, border: 0, cursor: 'pointer',
             borderRadius: 'var(--k-r-ibtn)', display: 'grid', placeItems: 'center',
@@ -480,6 +504,7 @@ export function MenuStrip({ kind }) {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: Z.strip, height, boxSizing: 'border-box',
+      viewTransitionName: 'esy-dock',
       display: 'flex', alignItems: 'center', gap: 6, padding: `0 ${isMobile ? 8 : 32}px`,
       background: 'var(--k-fl-bg)', backdropFilter: 'var(--k-fl-blur)', WebkitBackdropFilter: 'var(--k-fl-blur)',
       boxShadow: `inset 0 -1px 0 ${T.border}`,

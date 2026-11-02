@@ -20,13 +20,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCart, lineKey } from '../contexts/CartContext';
 import { useOrders } from '../contexts/OrdersContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useGlow } from '../styles/glow';
-import { paymentApi, addressApi, deliveryApi, handleApiError } from '../utils/api';
+import { paymentApi, handleApiError } from '../utils/api';
+import { addressesQuery, publicDeliveryQuery } from '../core/query/queries';
 import { money } from '../core/money';
 import { alpha } from '../core/tokens';
 import { useBottomClearance, useDesign } from '../core/design/useDesign';
@@ -259,6 +261,10 @@ export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCart();
   const { createOrder } = useOrders();
   const { user, loading: authLoading } = useAuth();
+  // The routes and the address book come from the query cache, where the
+  // route loader has usually put them before the page opened: the form fills
+  // in with the page instead of a moment after it.
+  const qc = useQueryClient();
   // Raw tenant (useGlow().tenant is the derived brand and has no
   // bogConfigured). Drives card-redirect vs the free-order fallback.
   const { tenant: store } = useTenant();
@@ -301,7 +307,7 @@ export default function Checkout() {
   // to see what the shop offers before deciding to sign in.
   useEffect(() => {
     const ac = new AbortController();
-    deliveryApi.listPublic(undefined, { signal: ac.signal })
+    qc.fetchQuery(publicDeliveryQuery())
       .then((res) => {
         if (ac.signal.aborted) return;
         const list = Array.isArray(res?.routes) ? res.routes : [];
@@ -317,7 +323,7 @@ export default function Checkout() {
       .catch(() => { /* falls back to PICKUP, which every store offers */ })
       .finally(() => { if (!ac.signal.aborted) setRoutesReady(true); });
     return () => ac.abort();
-  }, []);
+  }, [qc]);
 
   // Signed out, there is no address book to wait for.
   useEffect(() => {
@@ -331,7 +337,7 @@ export default function Checkout() {
     setBookReady(false);
     if (!recipient) setRecipient([user.firstName, user.lastName].filter(Boolean).join(' '));
     if (!phone && user.phoneNumber) setPhone(user.phoneNumber);
-    addressApi.list()
+    qc.fetchQuery(addressesQuery())
       .then((list) => {
         const def = (list || []).find((a) => a.isDefault) || (list || [])[0];
         if (def) {

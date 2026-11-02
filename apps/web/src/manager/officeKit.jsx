@@ -308,7 +308,8 @@ export function PageHead({ T, title, sub, onBack, backLabel, right, mobile }) {
 /**
  * The kit's .dialog: centred on a wide screen, a bottom sheet with a grab
  * handle on a phone. Escape and a tap outside close it, focus moves in and
- * comes back to where it was.
+ * comes back to where it was. It opens over a fading scrim, rising from the
+ * bottom on a phone and growing in elsewhere (styles/motion.css).
  */
 export function Sheet({ T, isMobile, titleId, label, onClose, children }) {
   const box = useRef(null);
@@ -332,6 +333,7 @@ export function Sheet({ T, isMobile, titleId, label, onClose, children }) {
     <div
       role="presentation"
       onMouseDown={(e) => { if (e.target === e.currentTarget) close.current(); }}
+      className="esy-scrim" data-state="open"
       style={{
         position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(8,8,12,0.44)',
         display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center',
@@ -345,6 +347,7 @@ export function Sheet({ T, isMobile, titleId, label, onClose, children }) {
         aria-labelledby={titleId}
         aria-label={titleId ? undefined : label}
         tabIndex={-1}
+        className={isMobile ? 'esy-sheet' : 'esy-pop-in'} data-state="open"
         style={{
           width: '100%', maxWidth: isMobile ? 'none' : 520, boxSizing: 'border-box',
           maxHeight: isMobile ? '88vh' : 'calc(100vh - 48px)', overflowY: 'auto', outline: 'none',

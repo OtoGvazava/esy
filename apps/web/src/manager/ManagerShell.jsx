@@ -12,6 +12,10 @@
 // admin.esy.ge (D6) and the back office deliberately has no entry point into
 // it — no tab, no route, no link.
 //
+// The shell is the layout route of the host's table (router/manager.jsx): it
+// decides whether a store's screens may be drawn at all, and the screen the
+// address names arrives through its <Outlet />.
+//
 // The chrome is the design's Shell board, and changes shape with the width:
 // a 256px sidebar on desktop (the store at the top, the account at the
 // bottom), an 84px icon rail on tablet, and a four-slot tab bar on a phone.
@@ -19,26 +23,26 @@
 // there (a portal into the bar), so every page gets the same header without
 // knowing which shape it is in. The board's bell is not drawn: the back
 // office has no notifications to show behind it.
+//
+// Each of the three marks the current place with one marker that slides from
+// entry to entry, as Instagram's tabs do, the moment an entry is tapped
+// (core/useIndicator.js): the router may still be fetching the next screen,
+// but the tap is answered.
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Routes, Route, Navigate, useSearchParams, Link, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useSearchParams, Link, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
-import { tenantApi } from '../utils/api';
+import { newOrderCountQuery } from '../core/query/managerQueries';
+import { useIndicator, usePendingLocation } from '../core/useIndicator';
+import { usePresence } from '../core/usePresence';
 import { useTK } from '../core/useTK';
 import { Icons } from '../core/icons';
 import { MNAV, MDOCK, MMORE, OWNER_ONLY } from './nav';
 import { BxIcon, initialsOf, useBx } from './officeBx';
-import ManagerHome, { ManagerCallback } from './ManagerHome';
-import ManagerOverview from './ManagerOverview';
-import ManagerProducts from './ManagerProducts';
-import ManagerSettings from './ManagerSettings';
-import ManagerTeam from './ManagerTeam';
-import ManagerStats from './ManagerStats';
-import ManagerMoney from './ManagerMoney';
-import ManagerOrders from './ManagerOrders';
-import ManagerOrderDetail from './ManagerOrderDetail';
+import ManagerHome from './ManagerHome';
 
 function storeUrlFor(sub) {
   const { hostname, port, protocol } = window.location;
@@ -69,6 +73,15 @@ function StoreAv({ store, size = 'sm', style }) {
   );
 }
 
+/** A nav entry's icon. It gives a small pop when its entry is the one just chosen. */
+function NavIcon({ name, pop, style }) {
+  return (
+    <span className={pop ? 'esy-pop' : undefined} style={{ display: 'inline-flex', flex: 'none' }}>
+      <BxIcon name={name} style={style} />
+    </span>
+  );
+}
+
 /** The account under the sidebar (desktop) or in the header (phone), with sign-out. */
 function Account({ t, user, roleLabel, variant }) {
   const { logout } = useAuth();
@@ -84,12 +97,18 @@ function Account({ t, user, roleLabel, variant }) {
   }, [open]);
   const name = user?.name || user?.email || '';
   const initials = initialsOf(name, user?.email);
+  // It opens out of the button: upwards from the sidebar's foot, downwards
+  // from the phone's header.
   const menu = open && (
-    <div className="bx-menu" role="menu" style={variant === 'side'
-      ? { left: 0, right: 0, bottom: 'calc(100% + 8px)' }
-      : { right: 0, top: 'calc(100% + 8px)' }}
+    <div
+      className={`bx-menu ${variant === 'side' ? 'esy-menu-up' : 'esy-menu-in'}`} role="menu"
+      style={variant === 'side'
+        ? { left: 0, right: 0, bottom: 'calc(100% + 8px)', '--esy-origin': 'bottom center' }
+        : { right: 0, top: 'calc(100% + 8px)' }}
     >
-      <a role="menuitem" href="/"><BxIcon name="swap" />{t('nav.switchStore')}</a>
+      {/* Both leave for the store picker with a full load (see above), so
+          nothing is fetched ahead for them. */}
+      <a role="menuitem" href="/" data-no-prefetch=""><BxIcon name="swap" />{t('nav.switchStore')}</a>
       <button role="menuitem" type="button" onClick={() => { setOpen(false); logout(); }}>
         <BxIcon name="signOut" />{t('nav.signOut')}
       </button>
@@ -98,7 +117,7 @@ function Account({ t, user, roleLabel, variant }) {
   if (variant === 'side') {
     return (
       <div ref={box} style={{ position: 'relative' }}>
-        <button type="button" className="bx-user" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <button type="button" className="bx-user esy-press-soft" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
           <span className="bx-av sm u" aria-hidden="true">{initials}</span>
           <span className="bx-st-name"><b>{name}</b><span>{roleLabel}</span></span>
           <BxIcon name="chevDs" size="s" className="bx-dim" />
@@ -110,7 +129,7 @@ function Account({ t, user, roleLabel, variant }) {
   return (
     <div ref={box} style={{ position: 'relative', flex: 'none' }}>
       <button
-        type="button" className="bx-av sm u" aria-haspopup="menu" aria-expanded={open}
+        type="button" className="bx-av sm u esy-press" aria-haspopup="menu" aria-expanded={open}
         aria-label={name} onClick={() => setOpen((v) => !v)} style={{ border: 0, cursor: 'pointer', padding: 0 }}
       >{initials}</button>
       {menu}
@@ -119,11 +138,16 @@ function Account({ t, user, roleLabel, variant }) {
 }
 
 function Side({ t, store, user, roleLabel, active, q, isOwner, newOrders }) {
+  const box = useRef(null);
+  const ind = useIndicator(box, active);
   return (
-    <nav className="bx-side" aria-label={t('shell.nav')}>
+    // Chrome: it stays where it is while the page beside it cross-fades.
+    <nav ref={box} className="bx-side" aria-label={t('shell.nav')} style={{ viewTransitionName: 'esy-side' }}>
+      {/* The current entry's ground, behind the entries (office.css .bx-ind). */}
+      <span aria-hidden="true" className="esy-ind bx-ind" data-still={ind.still || undefined} style={ind.style} />
       {/* A full load on purpose: back to the store picker, which clears ?tenant
           and refreshes the permission snapshot the app is rendered against. */}
-      <a href="/" className="bx-store" title={t('nav.switchStore')}>
+      <a href="/" className="bx-store" title={t('nav.switchStore')} data-no-prefetch="">
         <StoreAv store={store} />
         <span className="bx-st-name"><b>{store.name}</b><span>{`${store.sub}.esy.ge`}</span></span>
         <BxIcon name="chevD" size="s" className="bx-dim" />
@@ -133,7 +157,7 @@ function Side({ t, store, user, roleLabel, active, q, isOwner, newOrders }) {
         const label = t(`nav.${k}`);
         const body = (
           <>
-            <BxIcon name={k} />
+            <NavIcon name={k} pop={!locked && ind.popped === k} />
             <span className="bx-grow">{label}</span>
             {/* New orders are the one thing a merchant opens the back office
                 for, so the count rides the nav rather than waiting on the page. */}
@@ -145,7 +169,12 @@ function Side({ t, store, user, roleLabel, active, q, isOwner, newOrders }) {
         // exists without offering a screen the API would refuse.
         return locked
           ? <div key={k} className="bx-nav lock" aria-disabled="true">{body}</div>
-          : <Link key={k} to={`${route}${q}`} className={`bx-nav${k === active ? ' on' : ''}`} aria-current={k === active ? 'page' : undefined}>{body}</Link>;
+          : (
+            <Link
+              key={k} to={`${route}${q}`} data-ind={k} className={`bx-nav esy-press-soft${k === active ? ' on' : ''}`}
+              aria-current={k === active ? 'page' : undefined}
+            >{body}</Link>
+          );
       })}
       <span style={{ flex: 1 }} />
       <Account t={t} user={user} roleLabel={roleLabel} variant="side" />
@@ -154,10 +183,16 @@ function Side({ t, store, user, roleLabel, active, q, isOwner, newOrders }) {
 }
 
 function Rail({ t, store, user, active, q, isOwner, newOrders }) {
+  const box = useRef(null);
+  const ind = useIndicator(box, active);
   const name = user?.name || user?.email || '';
   return (
-    <nav className="bx-rail" aria-label={t('shell.nav')}>
-      <a href="/" title={t('nav.switchStore')} aria-label={`${store.name} · ${t('nav.switchStore')}`} style={{ marginBottom: 10, display: 'inline-flex', textDecoration: 'none' }}>
+    <nav ref={box} className="bx-rail" aria-label={t('shell.nav')} style={{ viewTransitionName: 'esy-side' }}>
+      <span aria-hidden="true" className="esy-ind bx-ind" data-still={ind.still || undefined} style={ind.style} />
+      <a
+        href="/" title={t('nav.switchStore')} aria-label={`${store.name} · ${t('nav.switchStore')}`} data-no-prefetch=""
+        style={{ marginBottom: 10, display: 'inline-flex', textDecoration: 'none' }}
+      >
         <StoreAv store={store} />
       </a>
       {/* Icons only, named for assistive tech and on hover. */}
@@ -167,25 +202,36 @@ function Rail({ t, store, user, active, q, isOwner, newOrders }) {
         const label = t(`nav.${k}`);
         const inner = (
           <>
-            <BxIcon name={k} />
+            <NavIcon name={k} pop={!locked && ind.popped === k} />
             {k === 'orders' && newOrders > 0 && <span className="bx-badge">{newOrders}</span>}
           </>
         );
         return locked
           ? <div key={k} className="bx-nav lock" aria-disabled="true" aria-label={label} title={label}>{inner}</div>
-          : <Link key={k} to={`${route}${q}`} className={`bx-nav${on ? ' on' : ''}`} aria-label={label} title={label} aria-current={on ? 'page' : undefined}>{inner}</Link>;
+          : (
+            <Link
+              key={k} to={`${route}${q}`} data-ind={k} className={`bx-nav esy-press${on ? ' on' : ''}`}
+              aria-label={label} title={label} aria-current={on ? 'page' : undefined}
+            >{inner}</Link>
+          );
       })}
       <span className="bx-av sm u" style={{ marginTop: 'auto' }} title={name} aria-label={name}>{initialsOf(name, user?.email)}</span>
     </nav>
   );
 }
 
-/** Behind the tab bar's "More" slot: the destinations a phone has no room for. */
-function MoreSheet({ T, t, active, q, isOwner, onClose }) {
+/**
+ * Behind the tab bar's "More" slot: the destinations a phone has no room for.
+ * It rises over a fading scrim and sinks back (styles/motion.css), staying on
+ * screen, inert, while it goes.
+ */
+function MoreSheet({ T, t, open, active, q, isOwner, onClose }) {
+  const { mounted, state } = usePresence(open);
+  if (!mounted) return null;
   return (
-    <div role="dialog" aria-modal="true" aria-label={t('nav.more')} style={{ position: 'fixed', inset: 0, zIndex: 60 }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.42)' }} />
-      <div style={{
+    <div role="dialog" aria-modal="true" aria-label={t('nav.more')} inert={!open} style={{ position: 'fixed', inset: 0, zIndex: 60 }}>
+      <div className="esy-scrim" data-state={state} onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.42)' }} />
+      <div className="esy-sheet" data-state={state} style={{
         position: 'absolute', left: 0, right: 0, bottom: 0, background: T.surface,
         borderRadius: '24px 24px 0 0', padding: '10px 16px 24px', boxShadow: T.shadow,
       }}>
@@ -213,43 +259,61 @@ function MoreSheet({ T, t, active, q, isOwner, onClose }) {
           );
           return locked
             ? <div key={k} style={css} aria-disabled="true">{inner}</div>
-            : <Link key={k} to={`${route}${q}`} style={css} onClick={onClose} aria-current={on ? 'page' : undefined}>{inner}</Link>;
+            : <Link key={k} to={`${route}${q}`} className="esy-press-soft" style={css} onClick={onClose} aria-current={on ? 'page' : undefined}>{inner}</Link>;
         })}
       </div>
     </div>
   );
 }
 
+// The phone's marker is a pill behind the icon, a little wider than it. The
+// negative margin gives the pill its room without moving the icon or label.
+const DOCK_MARK = { display: 'inline-flex', padding: '3px 14px', margin: '-3px -14px', borderRadius: 14 };
+
 function Dock({ T, t, active, q, isOwner, newOrders }) {
   const [more, setMore] = useState(false);
+  const box = useRef(null);
+  // The slot the current place belongs to: its own, or "More" for the ones
+  // behind it.
+  const current = MDOCK.includes(active) ? active : MMORE.includes(active) ? 'more' : null;
+  const ind = useIndicator(box, current);
   // Four equal slots with a label under every icon; the active one is told
-  // apart by its tint alone, as the design draws it.
+  // apart by its tint, as the design draws it, over the sliding marker.
   const slot = (on) => ({
-    position: 'relative', minWidth: 0, display: 'flex', flexDirection: 'column',
+    position: 'relative', zIndex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
     alignItems: 'center', justifyContent: 'center', gap: 3, padding: 0,
     textDecoration: 'none', background: 'none', border: 0, cursor: 'pointer',
     color: on ? T.accentFg : T.textDim, font: `${on ? 600 : 500} 11px/13px ${T.font}`,
-    whiteSpace: 'nowrap',
+    whiteSpace: 'nowrap', transition: 'color var(--m-base) ease, transform var(--m-quick) var(--m-ease)',
   });
+  const icon = (k) => (
+    <span data-ind={k} style={DOCK_MARK}>
+      <NavIcon name={k} pop={ind.popped === k} style={{ width: 22, height: 22 }} />
+    </span>
+  );
   return (
     <>
-      {more && <MoreSheet T={T} t={t} active={active} q={q} isOwner={isOwner} onClose={() => setMore(false)} />}
-      <nav aria-label={t('shell.nav')} style={{
+      <MoreSheet T={T} t={t} open={more} active={active} q={q} isOwner={isOwner} onClose={() => setMore(false)} />
+      <nav ref={box} aria-label={t('shell.nav')} style={{
         position: 'sticky', bottom: 0, zIndex: 40, margin: '0 12px 12px',
         height: 66, borderRadius: 22, display: 'grid',
         gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', padding: '0 4px',
         background: T.dark ? 'rgba(18,18,28,0.88)' : 'rgba(255,255,255,0.92)',
         backdropFilter: 'blur(20px)', border: `1px solid ${T.border}`,
-        boxShadow: T.shadow,
+        boxShadow: T.shadow, viewTransitionName: 'esy-mdock',
       }}>
+        <span
+          aria-hidden="true" className="esy-ind" data-still={ind.still || undefined}
+          style={{ ...ind.style, borderRadius: 14, background: T.accentBg }}
+        />
         {MDOCK.map((k) => {
           const entry = MNAV.find((n) => n[0] === k);
           if (!entry) return null;
           const [, , route] = entry;
           const on = k === active;
           return (
-            <Link key={k} to={`${route}${q}`} style={slot(on)} aria-current={on ? 'page' : undefined}>
-              <BxIcon name={k} style={{ width: 22, height: 22 }} />
+            <Link key={k} to={`${route}${q}`} className="esy-press" style={slot(on)} aria-current={on ? 'page' : undefined}>
+              {icon(k)}
               {t(`nav.${k}`)}
               {k === 'orders' && newOrders > 0 && (
                 <span style={{
@@ -261,8 +325,8 @@ function Dock({ T, t, active, q, isOwner, newOrders }) {
             </Link>
           );
         })}
-        <button type="button" onClick={() => setMore((v) => !v)} aria-expanded={more} style={slot(more || MMORE.includes(active))}>
-          <BxIcon name="more" style={{ width: 22, height: 22 }} />
+        <button type="button" onClick={() => setMore((v) => !v)} aria-expanded={more} className="esy-press" style={slot(more || MMORE.includes(active))}>
+          {icon('more')}
           {t('nav.more')}
         </button>
       </nav>
@@ -333,6 +397,13 @@ export function useInShell() {
   return Boolean(useContext(TopSlots));
 }
 
+/** To the store's first screen, keeping the store chosen (?tenant=). */
+export function ToStoreStart() {
+  const [params] = useSearchParams();
+  const sub = params.get('tenant');
+  return <Navigate to={`/${sub ? `?tenant=${encodeURIComponent(sub)}` : ''}`} replace />;
+}
+
 /** The header bar across the content; MTop fills its slots. */
 function TopBar({ t, bx, store, user, sub, active, setSlots }) {
   const titleRef = useRef(null);
@@ -342,13 +413,14 @@ function TopBar({ t, bx, store, user, sub, active, setSlots }) {
     setSlots({ bx, title: titleRef.current, sub: subRef.current, right: rightRef.current });
   }, [bx, setSlots]);
   return (
-    <header className="bx-top">
+    // It stays put across a page change; only what is written in it cross-fades.
+    <header className="bx-top" style={{ viewTransitionName: 'esy-topbar' }}>
       <div className="bx-top-title">
         <div ref={titleRef} className="bx-top-t" />
         <b className="bx-h2 bx-top-fallback">{t(`nav.${active}`)}</b>
         {bx === 'ph' ? (
           // The store this is, and the way to another: the picker (a full load).
-          <a href="/" className="bx-switch bx-sm" aria-label={`${store.name} · ${t('nav.switchStore')}`}>
+          <a href="/" className="bx-switch bx-sm" aria-label={`${store.name} · ${t('nav.switchStore')}`} data-no-prefetch="">
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{store.name}</span>
             <BxIcon name="chevD" style={{ width: 14, height: 14 }} />
           </a>
@@ -358,7 +430,7 @@ function TopBar({ t, bx, store, user, sub, active, setSlots }) {
       </div>
       {bx !== 'ph' && <div ref={rightRef} className="bx-row" style={{ flex: 'none', gap: 10 }} />}
       {bx === 'desk' && (
-        <a href={storeUrlFor(sub)} target="_blank" rel="noreferrer" className="bx-btn bx-btn-g bx-btn-sm">
+        <a href={storeUrlFor(sub)} target="_blank" rel="noreferrer" className="bx-btn bx-btn-g bx-btn-sm esy-press-soft">
           <BxIcon name="external" />{t('nav.viewStore')}
         </a>
       )}
@@ -372,26 +444,21 @@ export default function ManagerShell() {
   const { t } = useTranslation('manager');
   const { user, isStoreOwner, canManageStore, isAuthenticated, loading: authLoading } = useAuth();
   const { tenant } = useTenant();
-  // Unread orders, for the nav badge. Failure is silent: a missing count
-  // should cost the merchant a badge, never the whole back office.
-  const [newOrders, setNewOrders] = useState(0);
   const [slots, setSlots] = useState({ bx: null, title: null, sub: null, right: null });
   const bx = useBx();
   const [params] = useSearchParams();
   const { pathname } = useLocation();
+  // Where the app is going while the router fetches the next screen: the nav
+  // marks the entry tapped at once, the header keeps naming the page shown.
+  const going = usePendingLocation().pathname;
 
   const sub = params.get('tenant');
   const q = sub ? `?tenant=${encodeURIComponent(sub)}` : '';
-  useEffect(() => {
-    if (!sub || !canManageStore) return undefined;
-    const ac = new AbortController();
-    tenantApi.newOrderCount(sub, { signal: ac.signal })
-      .then((n) => { if (!ac.signal.aborted) setNewOrders(Number(n?.count ?? n ?? 0) || 0); })
-      .catch(() => {});
-    return () => ac.abort();
-  }, [sub, canManageStore]);
+  // Unread orders, for the nav badge. Failure is silent: a missing count
+  // should cost the merchant a badge, never the whole back office.
+  const { data: newOrders = 0 } = useQuery({ ...newOrderCountQuery(), enabled: !!sub && canManageStore });
 
-  const active = activeKey(pathname);
+  const active = activeKey(going);
   const roleLabel = t(`role.${isStoreOwner ? 'OWNER' : 'MANAGER'}`);
   // The store's own name, as its shoppers see it; the address until it loads.
   const mine = tenant && tenant.subdomain === sub ? tenant : null;
@@ -401,10 +468,6 @@ export default function ManagerShell() {
     logoUrl: mine?.logoUrl || null,
   };
 
-  // The OAuth round-trip lands here before any chrome renders, and goes back
-  // to the page the sign-in started from.
-  if (pathname.startsWith('/auth/callback')) return <ManagerCallback />;
-
   // Restoring the session: draw nothing rather than flash the sign-in.
   if (authLoading) return <div style={{ minHeight: '100vh', background: T.bg }} />;
 
@@ -413,23 +476,6 @@ export default function ManagerShell() {
   // to move around inside a store would have nothing to point at, and its
   // pages would only collect 403s from the API.
   if (!isAuthenticated || !sub || !canManageStore) return <ManagerHome />;
-
-  // Signed in already: the old sign-in path leads to the store's first screen.
-  if (pathname.startsWith('/signin')) return <Navigate to={`/${q}`} replace />;
-
-  const pages = (
-    <Routes>
-      <Route path="/" element={<ManagerOverview />} />
-      <Route path="/products" element={<ManagerProducts />} />
-      <Route path="/orders" element={<ManagerOrders />} />
-      <Route path="/orders/:orderId" element={<ManagerOrderDetail />} />
-      <Route path="/stats" element={<ManagerStats />} />
-      <Route path="/money" element={<ManagerMoney />} />
-      <Route path="/team" element={<ManagerTeam />} />
-      <Route path="/settings/*" element={<ManagerSettings />} />
-      <Route path="*" element={<Navigate to={`/${q}`} replace />} />
-    </Routes>
-  );
 
   // The slots are only handed out once the bar that owns them is the one on
   // screen, so a resize never portals into a bar that has gone.
@@ -445,8 +491,8 @@ export default function ManagerShell() {
           <Rail t={t} store={store} user={user} active={active} q={q} isOwner={isStoreOwner} newOrders={newOrders} />
         )}
         <div className="bx-body" style={bx === 'ph' ? { minHeight: '100vh', display: 'flex', flexDirection: 'column' } : undefined}>
-          <TopBar t={t} bx={bx} store={store} user={user} sub={sub} active={active} setSlots={setSlots} />
-          <main className="bx-main" style={bx === 'ph' ? { flex: 1, paddingBottom: 20 } : undefined}>{pages}</main>
+          <TopBar t={t} bx={bx} store={store} user={user} sub={sub} active={activeKey(pathname)} setSlots={setSlots} />
+          <main className="bx-main" style={bx === 'ph' ? { flex: 1, paddingBottom: 20 } : undefined}><Outlet /></main>
           {bx === 'ph' && <Dock T={T} t={t} active={active} q={q} isOwner={isStoreOwner} newOrders={newOrders} />}
         </div>
       </div>

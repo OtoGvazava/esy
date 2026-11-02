@@ -27,6 +27,24 @@ export class ApiError extends Error {
 // instead of a stray error on whatever screen tried to write.
 export const PHONE_REQUIRED_EVENT = 'esy:phone-required';
 
+// Told after every write the server accepted, so the query cache
+// (core/query/client.js) can drop what the write may have changed. Writes
+// that change nothing a screen reads are left out: the display settings are
+// saved on every tap of a switch, and refetching the page for each would
+// redraw it under the shopper's finger.
+const writeListeners = new Set();
+const QUIET_WRITES = ['/api/account/display-prefs', '/api/auth/logout', '/api/account/phone/send-code'];
+
+export function onApiWrite(fn) {
+  writeListeners.add(fn);
+  return () => writeListeners.delete(fn);
+}
+
+function wrote(endpoint) {
+  if (QUIET_WRITES.some((p) => endpoint.startsWith(p))) return;
+  writeListeners.forEach((fn) => fn(endpoint));
+}
+
 // Store scoping applies to the back office only. The admin host is deliberately
 // excluded: administration is cross-store and names its target explicitly in
 // the /api/admin/** namespace, and the backend ignores ?tenant there.
@@ -67,6 +85,15 @@ class ApiClient {
       credentials: 'include',
     });
 
+    // A signed-out call to a store's or admin's own endpoint is not refused
+    // with a 401 by the server: Spring answers it with a redirect to its
+    // sign-in page, which the browser follows to a 200 HTML page. Read as the
+    // refusal it is, so the query cache does not retry it as a hiccup and a
+    // screen shows "sign in", not a JSON parse error.
+    if (response.redirected && new URL(response.url).pathname === '/login') {
+      throw new ApiError('Sign-in required', 401);
+    }
+
     if (!response.ok) {
       let message = `Request failed (${response.status})`;
       let code;
@@ -85,9 +112,15 @@ class ApiClient {
       throw new ApiError(message, response.status, code, details);
     }
 
-    if (response.status === 204) return null;
+    const method = (options.method || 'GET').toUpperCase();
+    if (response.status === 204) {
+      if (method !== 'GET') wrote(endpoint);
+      return null;
+    }
     const text = await response.text();
-    return text ? JSON.parse(text) : null;
+    const body = text ? JSON.parse(text) : null;
+    if (method !== 'GET') wrote(endpoint);
+    return body;
   }
 
   get(endpoint, options = {}) {
@@ -229,7 +262,9 @@ export const productApi = {
       } catch { /* no JSON body */ }
       throw new ApiError(message, res.status);
     }
-    return mapDetail(await res.json());
+    const product = mapDetail(await res.json());
+    wrote('/api/products');
+    return product;
   },
 
   // Bulk import (D7). Multipart, so it bypasses the JSON client for the same
@@ -264,7 +299,9 @@ export const productApi = {
       err.details = details || {};
       throw err;
     }
-    return res.json();
+    const result = await res.json();
+    if (!dryRun) wrote('/api/products/import');
+    return result;
   },
 
   importTemplateUrl() {
@@ -497,11 +534,11 @@ export const tenantApi = {
   // `devTenant` forwards ?tenant=<sub> so a single localhost host can switch
   // tenants in dev (the backend only honors it for localhost; prod resolves
   // by Host). No-op in production where there's no ?tenant= in the URL.
-  current(devTenant) {
+  current(devTenant, opts) {
     const path = devTenant
       ? `/api/tenant/current?tenant=${encodeURIComponent(devTenant)}`
       : '/api/tenant/current';
-    return api.get(path);
+    return api.get(path, opts || {});
   },
   create(payload) {
     return api.post('/api/tenant', payload);
@@ -532,7 +569,9 @@ export const tenantApi = {
       } catch { /* no JSON body */ }
       throw new ApiError(message, res.status);
     }
-    return res.json();
+    const store = await res.json();
+    wrote('/api/tenant/logo');
+    return store;
   },
   // Quick setup's logo, sent right after the store is created (store plan,
   // Phase 5). Opening a store happens on the platform host, which resolves no
@@ -554,7 +593,9 @@ export const tenantApi = {
       } catch { /* no JSON body */ }
       throw new ApiError(message, res.status);
     }
-    return res.json();
+    const store = await res.json();
+    wrote('/api/tenant/logo');
+    return store;
   },
   // Owner-only: drop the store logo (clears logoUrl + the stored bytes).
   deleteLogo(devTenant) {
@@ -584,7 +625,9 @@ export const tenantApi = {
       } catch { /* no JSON body */ }
       throw new ApiError(message, res.status, code);
     }
-    return res.json();
+    const store = await res.json();
+    wrote('/api/tenant/cover');
+    return store;
   },
   // Owner-only: drop the cover photo; answers the store with coverUrl null.
   deleteCover(devTenant) {
@@ -601,11 +644,11 @@ export const tenantApi = {
     return api.get(`/api/tenant/orders/new-count${q}`, opts || {});
   },
 
-  stats(devTenant) {
+  stats(devTenant, opts) {
     const path = devTenant
       ? `/api/tenant/stats?tenant=${encodeURIComponent(devTenant)}`
       : '/api/tenant/stats';
-    return api.get(path);
+    return api.get(path, opts || {});
   },
   // Analytics (X1): one window of 7, 30 or 90 days, or all time with no
   // `days` — revenue, orders, the average, refunds, the window before, a day
@@ -625,11 +668,11 @@ export const tenantApi = {
   },
   // Owner/admin: orders placed against the current store, newest first.
   // Same @storeAccess gate as stats().
-  orders(devTenant) {
+  orders(devTenant, opts) {
     const path = devTenant
       ? `/api/tenant/orders?tenant=${encodeURIComponent(devTenant)}`
       : '/api/tenant/orders';
-    return api.get(path);
+    return api.get(path, opts || {});
   },
   // One order with its line items. The list endpoint returns a line COUNT,
   // which is all a table row needs; the detail screen needs the lines.
@@ -729,13 +772,13 @@ export const tenantApi = {
 // them has to say so rather than let the figure read as gross takings.
 export const adminApi = {
   // { serviceFeeRate, bogEnv, bogAuthUrl, bogBaseUrl, publicBaseUrl, storeReady }
-  getConfig() {
-    return api.get('/api/admin/config');
+  getConfig({ signal } = {}) {
+    return api.get('/api/admin/config', { signal });
   },
   // Outbound channels (SMS today). The response reports whether an API key is
   // set but never its value — see AdminIntegrationsController.
-  getIntegrations() {
-    return api.get('/api/admin/integrations');
+  getIntegrations({ signal } = {}) {
+    return api.get('/api/admin/integrations', { signal });
   },
   // Partial: send only { sender } or only { templates: { key: text } }.
   updateIntegrations(patch) {

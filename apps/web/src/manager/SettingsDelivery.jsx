@@ -11,12 +11,16 @@
 // express is an upgrade on either courier (not "Tbilisi" only), and its
 // second field is its promised time like every other route's — there is no
 // order cut-off time to set, so the board's "orders until 15:00" is not drawn.
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useTenant } from '../contexts/TenantContext';
 import { deliveryApi, handleApiError } from '../utils/api';
+import { deliveryQuery } from '../core/query/managerQueries';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { Alert, BxIcon, Fld, SaveBar, Switch } from './officeBx';
+import { SkField, SkIn } from './officeSk';
 
 const ICON = { pickup: 'pin', tbilisi: 'truck', express: 'clock', georgia: 'globe' };
 // The currency sign after a price, as money() writes it.
@@ -37,24 +41,57 @@ export default function DeliveryTab() {
   const q = sub ? `?tenant=${encodeURIComponent(sub)}` : '';
   const etaKey = String(i18n.language || '').startsWith('ka') ? 'etaKa' : 'etaEn';
 
-  const [rows, setRows] = useState(null);
+  // The routes as the server has them. What the owner types is kept apart
+  // (edits), over them, so a read that lands while they type changes nothing
+  // they typed.
+  const qc = useQueryClient();
+  const routes = useQuery(deliveryQuery());
+  const rows = routes.data ?? (routes.isError ? [] : null);
+  const setRows = (fn) => qc.setQueryData(deliveryQuery().queryKey, (prev) => (prev ? fn(prev) : prev));
   const [edits, setEdits] = useState({});
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const error = saveError || (routes.isError ? handleApiError(routes.error, tOwner('delivery.loadFailed')) : '');
   const [saved, setSaved] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await deliveryApi.list(sub);
-      setRows(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setError(handleApiError(e, tOwner('delivery.loadFailed')));
-      setRows((r) => r || []);
-    }
-  }, [sub, tOwner]);
-  useEffect(() => { load(); }, [load]);
+  // Without card payments a courier order is still taken, with payment
+  // arranged by the store (checkout says so); the owner hears it here.
+  const noCard = tenant && !tenant.bogConfigured && (
+    <Alert tone="warn" icon="warn">
+      <span className="bx-sm"><b>{t('settingsTabs.delivery.noCardLead')}</b> {t('settingsTabs.delivery.noCard')}</span>
+      <Link to={`/settings/integrations${q}`} className="bx-link bx-sm" style={{ alignSelf: 'flex-start' }}>{t('settingsTabs.delivery.toPayments')}</Link>
+    </Alert>
+  );
 
-  if (!rows) return <div className="bx-sm bx-dim">{t('settingsTabs.loading')}</div>;
+  // The four route cards in the board's two columns, each with its switch,
+  // until the routes are in; the save bar is already at the foot.
+  if (!rows) {
+    const cardSk = (on) => (
+      <div className="bx-card bx-pad bx-stk" style={{ gap: 12 }}>
+        <div className="bx-row" style={{ gap: 12 }}>
+          <Sk w={34} h={34} r="var(--k-r-in)" />
+          <b className="bx-grow"><SkIn w="40%" /></b>
+          <Sk w={46} h={28} r={14} />
+        </div>
+        {on && (
+          <div className="bx-row" style={{ gap: 12, alignItems: 'flex-start' }}>
+            <SkField className="bx-grow" />
+            <SkField className="bx-grow" />
+          </div>
+        )}
+      </div>
+    );
+    return (
+      <>
+        {noCard}
+        <Skeleton label={t('settingsTabs.loading')} className="bx-two even">
+          <div className="bx-stk" style={{ gap: 14 }}>{cardSk(true)}{cardSk(true)}</div>
+          <div className="bx-stk" style={{ gap: 14 }}>{cardSk(false)}{cardSk(false)}</div>
+        </Skeleton>
+        <SaveBar t={t} dirty={false} busy={false} saved={false} onSave={() => {}} onCancel={() => {}} />
+      </>
+    );
+  }
 
   const row = (route) => rows.find((r) => r.route === route);
   const original = (route, field) => {
@@ -86,7 +123,7 @@ export default function DeliveryTab() {
   const save = async () => {
     if (busy || !dirty) return;
     setBusy(true);
-    setError('');
+    setSaveError('');
     setSaved(false);
     // Switched on first, switched off last; field edits in between.
     const rank = (route) => {
@@ -108,19 +145,19 @@ export default function DeliveryTab() {
     } catch (e) {
       // The refusal names the rule that was hit; what was already written
       // stays written, and the rest waits on screen for another try.
-      setError(handleApiError(e, tOwner('delivery.saveFailed')));
+      setSaveError(handleApiError(e, tOwner('delivery.saveFailed')));
       setEdits((p) => {
         const next = { ...p };
         written.forEach((r) => { delete next[r]; });
         return next;
       });
-      await load();
+      await routes.refetch();
     } finally {
       setBusy(false);
     }
   };
 
-  const cancel = () => { setEdits({}); setError(''); };
+  const cancel = () => { setEdits({}); setSaveError(''); };
 
   const money = (route, field, label, placeholder) => (
     <Fld label={label} className="bx-grow">
@@ -183,14 +220,7 @@ export default function DeliveryTab() {
 
   return (
     <>
-      {/* Without card payments a courier order is still taken, with payment
-          arranged by the store (checkout says so); the owner hears it here. */}
-      {tenant && !tenant.bogConfigured && (
-        <Alert tone="warn" icon="warn">
-          <span className="bx-sm"><b>{t('settingsTabs.delivery.noCardLead')}</b> {t('settingsTabs.delivery.noCard')}</span>
-          <Link to={`/settings/integrations${q}`} className="bx-link bx-sm" style={{ alignSelf: 'flex-start' }}>{t('settingsTabs.delivery.toPayments')}</Link>
-        </Alert>
-      )}
+      {noCard}
       {error && <Alert tone="bad" icon="warn"><span className="bx-sm">{error}</span></Alert>}
       <div className="bx-two even">
         {COLUMNS.map((col) => (

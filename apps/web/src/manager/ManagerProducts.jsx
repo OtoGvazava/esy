@@ -1,18 +1,24 @@
 // Product management in the back office. Reuses the same editor/delete
 // dialogs the storefront owner tools used — the API client appends the
 // ?tenant selection, so every call here is scoped to the chosen store.
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { productApi, handleApiError } from '../utils/api';
+import { handleApiError } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useTK } from '../core/useTK';
+import { productQuery } from '../core/query/queries';
+import { editVariantsQuery, storeProductsQuery } from '../core/query/managerQueries';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 import { money } from '../components/glow/GlowChrome';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import ProductEditorDialog from '../components/owner/ProductEditorDialog';
 import DeleteProductDialog from '../components/owner/DeleteProductDialog';
 import ImportProductsDialog from '../components/owner/ImportProductsDialog';
 import { MTop } from './ManagerShell';
+import { SkIn } from './officeSk';
 
 export default function ManagerProducts() {
   const { t } = useTranslation('manager');
@@ -20,8 +26,13 @@ export default function ManagerProducts() {
   const { canManageStore, loading: authLoading } = useAuth();
   const { T } = useTK();
   const { isMobile, isDesktop } = useDevice();
-  const [products, setProducts] = useState(null);
+  const qc = useQueryClient();
+  // The list follows every save, delete and import on its own: each write
+  // marks the cache stale and the list on display is read again.
+  const list = useQuery({ ...storeProductsQuery(), enabled: !authLoading && canManageStore });
+  const products = list.data?.products ?? null;
   const [error, setError] = useState(null);
+  const shownError = error || (list.isError ? handleApiError(list.error) : null);
   const [editing, setEditing] = useState(null);   // product | 'new' | null
   const [deleting, setDeleting] = useState(null); // product | null
   // The import is a page of its own (P3), so it lives in the URL: a phone's
@@ -30,36 +41,38 @@ export default function ManagerProducts() {
   const location = useLocation();
   const navigate = useNavigate();
   const importing = params.get('import') === '1';
+  // Only the search changes, so the window stays where it is, as it always
+  // did (ScrollRestoration would otherwise take it to the top).
   const setImporting = (on) => {
     if (on) {
-      setParams((p) => { const n = new URLSearchParams(p); n.set('import', '1'); return n; }, { state: { fromList: true } });
+      setParams((p) => { const n = new URLSearchParams(p); n.set('import', '1'); return n; }, { state: { fromList: true }, preventScrollReset: true });
     } else if (location.state?.fromList) {
       navigate(-1);
     } else {
-      setParams((p) => { const n = new URLSearchParams(p); n.delete('import'); return n; }, { replace: true });
+      setParams((p) => { const n = new URLSearchParams(p); n.delete('import'); return n; }, { replace: true, preventScrollReset: true });
     }
   };
 
-  const load = useCallback(() => {
-    productApi.list({ size: 100 })
-      .then((r) => setProducts(r.products))
-      .catch((e) => setError(handleApiError(e)));
-  }, []);
-
   // Always hydrate the full detail before opening the editor: list rows carry
   // only id/title/price/thumbnail, and initializing the dialog from one would
-  // save description:'' — silently erasing the real description.
+  // save description:'' — silently erasing the real description. The editor
+  // opens with its variants already read, so it arrives whole.
   const edit = async (p) => {
     try {
-      setEditing(await productApi.get(p.id));
+      const [detail] = await Promise.all([
+        qc.fetchQuery(productQuery(p.id)),
+        qc.prefetchQuery(editVariantsQuery(p.id)),
+      ]);
+      setEditing(detail);
     } catch (e) {
       setError(handleApiError(e));
     }
   };
-
-  useEffect(() => {
-    if (!authLoading && canManageStore) load();
-  }, [authLoading, canManageStore, load]);
+  // Both are fetched as the pointer comes to the button, so the click finds them in.
+  const ready = (p) => {
+    qc.prefetchQuery(productQuery(p.id));
+    qc.prefetchQuery(editVariantsQuery(p.id));
+  };
 
   if (!authLoading && !canManageStore) {
     // Wrong store, or no membership: the API would 403 anyway; say it plainly.
@@ -71,7 +84,7 @@ export default function ManagerProducts() {
   }
 
   if (importing) {
-    return <ImportProductsDialog onClose={() => setImporting(false)} onImported={load} />;
+    return <ImportProductsDialog onClose={() => setImporting(false)} />;
   }
 
   // The editor is a page too (P2), drawn in place of the list.
@@ -81,7 +94,7 @@ export default function ManagerProducts() {
         open
         product={editing === 'new' ? null : editing}
         onClose={() => setEditing(null)}
-        onSaved={() => { setEditing(null); load(); }}
+        onSaved={() => setEditing(null)}
       />
     );
   }
@@ -97,7 +110,7 @@ export default function ManagerProducts() {
     return (
       <div>
         <MTop T={T} mode={isMobile ? 'mobile' : isDesktop ? 'desktop' : 'tablet'} title={t('products.title')} sub={tOwner('import.empty.sub')} />
-        {error && <div style={{ marginBottom: 14, font: `500 13px ${T.font}`, color: T.danger }}>{error}</div>}
+        {shownError && <div style={{ marginBottom: 14, font: `500 13px ${T.font}`, color: T.danger }}>{shownError}</div>}
         <div style={{
           background: T.surface, border: 'var(--k-card-bd)', boxShadow: 'var(--k-card-sh)',
           borderRadius: 'var(--k-r-card)', padding: 22,
@@ -125,7 +138,7 @@ export default function ManagerProducts() {
           open={editing !== null}
           product={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); load(); }}
+          onSaved={() => setEditing(null)}
         />
       </div>
     );
@@ -135,6 +148,16 @@ export default function ManagerProducts() {
     padding: '10px 18px', borderRadius: 999, border: 'none', cursor: 'pointer',
     background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`,
   };
+  // A product's row, the same box for the real one and its stand-in.
+  const row = {
+    display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px',
+    background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14,
+  };
+  const rowBtn = (color) => ({
+    padding: '7px 14px', borderRadius: 999, cursor: 'pointer',
+    border: `1px solid ${T.border}`, background: 'transparent',
+    color, font: `600 12px ${T.font}`,
+  });
 
   // Import sits beside Add as the secondary of the pair: adding one product is
   // the common act, uploading a catalogue the occasional one.
@@ -151,21 +174,42 @@ export default function ManagerProducts() {
         T={T} title={t('products.title')}
         right={(
           <>
-            <button onClick={() => setImporting(true)} style={ghost}>{t('products.importCta')}</button>
-            <button onClick={() => setEditing('new')} style={btn}>{t('products.add')}</button>
+            <button onClick={() => setImporting(true)} className="esy-press" style={ghost}>{t('products.importCta')}</button>
+            <button onClick={() => setEditing('new')} className="esy-press" style={btn}>{t('products.add')}</button>
           </>
         )}
       />
 
-      {error && <div style={{ font: `500 13px ${T.font}`, color: T.danger }}>{error}</div>}
+      {shownError && <div style={{ font: `500 13px ${T.font}`, color: T.danger }}>{shownError}</div>}
+
+      {/* Rows of the list's own box until the catalogue is in. */}
+      {list.isPending && (
+        <Skeleton label={t('loading.products', { ns: 'common' })} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} style={row}>
+              <Sk w={44} h={44} r={10} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ font: `700 14px ${T.font}` }}><SkIn w="50%" /></div>
+                <div style={{ font: `500 12px ${T.font}` }}><SkIn w="22%" /></div>
+              </div>
+              <span style={{ font: `700 14px ${T.mono}` }}><SkIn w={56} /></span>
+              <Sk w={64} h={30} r={999} />
+              <Sk w={64} h={30} r={999} />
+            </div>
+          ))}
+        </Skeleton>
+      )}
 
       {products && products.map((p) => (
-        <div key={p.id} style={{
-          display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px',
-          background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14,
-        }}>
+        <div key={p.id} style={row}>
           {p.thumbnail ? (
-            <img src={p.thumbnail} alt="" width={44} height={44} style={{ borderRadius: 10, objectFit: 'cover' }} />
+            // The photo fades in on its own tile once it has decoded.
+            <span style={{ width: 44, height: 44, flex: 'none', borderRadius: 10, overflow: 'hidden', background: T.surface2 }}>
+              <img
+                src={p.thumbnail} alt="" width={44} height={44} className="esy-img" ref={markIfComplete} onLoad={markLoaded}
+                style={{ display: 'block', borderRadius: 10, objectFit: 'cover' }}
+              />
+            </span>
           ) : (
             <div style={{ width: 44, height: 44, borderRadius: 10, background: T.surface2 }} />
           )}
@@ -180,16 +224,11 @@ export default function ManagerProducts() {
             </div>
           </div>
           <div style={{ font: `700 14px ${T.mono}`, color: T.text }}>{money(p.price)}</div>
-          <button onClick={() => edit(p)} style={{
-            padding: '7px 14px', borderRadius: 999, cursor: 'pointer',
-            border: `1px solid ${T.border}`, background: 'transparent',
-            color: T.text, font: `600 12px ${T.font}`,
-          }}>{t('products.edit')}</button>
-          <button onClick={() => setDeleting(p)} style={{
-            padding: '7px 14px', borderRadius: 999, cursor: 'pointer',
-            border: `1px solid ${T.border}`, background: 'transparent',
-            color: T.danger, font: `600 12px ${T.font}`,
-          }}>{t('products.delete')}</button>
+          <button
+            onClick={() => edit(p)} onPointerEnter={() => ready(p)} onFocus={() => ready(p)}
+            className="esy-press" style={rowBtn(T.text)}
+          >{t('products.edit')}</button>
+          <button onClick={() => setDeleting(p)} className="esy-press" style={rowBtn(T.danger)}>{t('products.delete')}</button>
         </div>
       ))}
 
@@ -197,13 +236,13 @@ export default function ManagerProducts() {
         open={editing !== null}
         product={editing === 'new' ? null : editing}
         onClose={() => setEditing(null)}
-        onSaved={() => { setEditing(null); load(); }}
+        onSaved={() => setEditing(null)}
       />
       <DeleteProductDialog
         open={deleting !== null}
         product={deleting}
         onClose={() => setDeleting(null)}
-        onDeleted={() => { setDeleting(null); load(); }}
+        onDeleted={() => setDeleting(null)}
       />
     </div>
   );

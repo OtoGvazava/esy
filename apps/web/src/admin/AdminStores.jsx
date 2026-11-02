@@ -6,10 +6,12 @@
 // orders (decision D2) and the screen says so out loud: a revenue number that
 // quietly means something other than "what the store took" is worse than no
 // number at all.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi, handleApiError } from '../utils/api';
+import { adminStoreLists, adminStoresQuery } from '../core/query/adminQueries';
 import { useDebounce } from '../hooks/useDebounce';
 import { useAdminTokens } from './adminTokens';
 import { Btn, Card, Chip, Field, Note } from '../core/primitives';
@@ -18,9 +20,10 @@ import { Mark } from '../core/domain';
 import { Icons } from '../core/icons';
 import { useDevice } from '../contexts/DeviceContext';
 import {
-  Empty, Failed, Loading, Stat, StoreStatus, SuspendDialog,
+  Empty, Failed, Stat, StoreStatus, SuspendDialog,
   count, dateTime, isSuspended, lari,
 } from './AdminUI';
+import { StoresSkeleton } from './AdminSkeletons';
 
 function StoreRow({ T, store, lang, t, onSuspend, onReactivate, busy, error }) {
   const off = isSuspended(store);
@@ -179,51 +182,39 @@ export default function AdminStores() {
   const lang = i18n.language;
   const { isDesktop } = useDevice();
 
+  const qc = useQueryClient();
   const [query, setQuery] = useState('');
   const debounced = useDebounce(query, 300);
-  const [stores, setStores] = useState(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const q = debounced.trim();
   const [suspending, setSuspending] = useState(null);
   const [busy, setBusy] = useState('');
   const [rowError, setRowError] = useState({});
-  const abortRef = useRef(null);
 
-  const load = useCallback(async (q) => {
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-    setLoading(true);
-    setError('');
-    try {
-      const data = await adminApi.listStores(q, { signal: ac.signal });
-      if (ac.signal.aborted) return;
-      setStores(Array.isArray(data) ? data : []);
-    } catch (e) {
-      if (ac.signal.aborted || e?.name === 'AbortError') return;
-      // Drop the stale list: an error next to rows would read as "still current".
-      setStores(null);
-      setError(handleApiError(e, t('stores.loadFailed')));
-    } finally {
-      if (!ac.signal.aborted) setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    load(debounced.trim());
-    return () => abortRef.current?.abort();
-  }, [debounced, load]);
+  // The list from the query cache, so coming back to it draws it at once. A
+  // new search keeps the rows on screen, dimmed, until its own answer is in.
+  const list = useQuery({ ...adminStoresQuery(q), placeholderData: keepPreviousData });
+  // Drop the stale list: an error next to rows would read as "still current".
+  const stores = list.isError ? null : (list.data ?? null);
+  const failed = list.isError && !list.isFetching;
+  const error = failed ? handleApiError(list.error, t('stores.loadFailed')) : '';
+  const refreshing = list.isPlaceholderData;
+  // The search the rows on screen answer. While a new one is on its way the
+  // figures, the count and the empty state stay with the rows they describe,
+  // and change with them once the answer lands.
+  const [shownQ, setShownQ] = useState(q);
+  if (!refreshing && list.data !== undefined && shownQ !== q) setShownQ(q);
 
   // Both writes return the updated store, so the row is replaced from the
-  // server's answer rather than guessed at locally. If the answer is not a
-  // store, the list is re-read rather than patched from a guess — a row that
-  // disagrees with the server is worse than a second round-trip.
+  // server's answer rather than guessed at locally, in every list it is in.
+  // The write has also set the list refetching (core/query/client.js): an
+  // answer that is not a store is left to that read rather than patched in
+  // from a guess — a row that disagrees with the server is worse than a
+  // second round-trip.
   const replace = (updated) => {
-    if (!updated?.subdomain) {
-      load(debounced.trim());
-      return;
-    }
-    setStores((prev) => (prev || []).map((s) => (s.subdomain === updated.subdomain ? updated : s)));
+    if (!updated?.subdomain) return;
+    qc.setQueriesData({ queryKey: adminStoreLists }, (prev) => (
+      prev && prev.map((s) => (s.subdomain === updated.subdomain ? updated : s))
+    ));
   };
 
   const reactivate = async (store) => {
@@ -238,7 +229,8 @@ export default function AdminStores() {
     }
   };
 
-  const searching = debounced.trim().length > 0;
+  const searching = shownQ.length > 0;
+  const dim = refreshing ? 'esy-refreshing' : 'esy-settled';
   useAdminHead({ title: t('stores.title'), sub: t('stores.head') });
 
   return (
@@ -281,7 +273,7 @@ export default function AdminStores() {
 
       {/* The platform's figures across the top, before a search narrows the list. */}
       {stores && stores.length > 0 && !searching && (
-        <div style={{
+        <div className={dim} style={{
           display: 'grid', gridTemplateColumns: `repeat(${isDesktop ? 4 : 2}, minmax(0, 1fr))`,
           gap: 12, marginBottom: 14,
         }}>
@@ -299,22 +291,25 @@ export default function AdminStores() {
         </div>
       )}
 
-      {loading && !stores && <Loading T={T} />}
+      {/* A retry after a failure draws the skeleton again, as the first load did. */}
+      {(list.isPending || (list.isError && list.isFetching)) && <StoresSkeleton />}
 
-      {error && !loading && (
-        <Failed T={T} message={error} onRetry={() => load(debounced.trim())} />
+      {failed && (
+        <Failed T={T} message={error} onRetry={() => list.refetch()} />
       )}
 
-      {stores && stores.length === 0 && !loading && !error && (
-        <Empty
-          T={T}
-          title={searching ? t('stores.emptyQuery') : t('stores.empty')}
-          body={searching ? t('stores.emptyQueryBody') : t('stores.emptyBody')}
-        />
+      {stores && stores.length === 0 && (
+        <div className={dim}>
+          <Empty
+            T={T}
+            title={searching ? t('stores.emptyQuery') : t('stores.empty')}
+            body={searching ? t('stores.emptyQueryBody') : t('stores.emptyBody')}
+          />
+        </div>
       )}
 
       {stores && stores.length > 0 && isDesktop && (
-        <div style={{ opacity: loading ? 0.55 : 1 }}>
+        <div className={dim}>
           <StoreTable
             T={T} t={t} lang={lang} stores={stores} busy={busy} rowError={rowError}
             onSuspend={setSuspending} onReactivate={reactivate}
@@ -323,10 +318,7 @@ export default function AdminStores() {
       )}
 
       {stores && stores.length > 0 && !isDesktop && (
-        <div style={{
-          display: 'flex', flexDirection: 'column', gap: 12,
-          opacity: loading ? 0.55 : 1,
-        }}>
+        <div className={dim} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {stores.map((s) => (
             <StoreRow
               key={s.subdomain}

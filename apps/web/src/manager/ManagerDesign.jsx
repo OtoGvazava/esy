@@ -18,23 +18,28 @@
 // them, so they never change unannounced.
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useTK } from '../core/useTK';
-import { safeAccent } from '../core/tokens';
+import { useIndicator } from '../core/useIndicator';
+import { MOB, safeAccent } from '../core/tokens';
 import { Btn, Card, Note, Toggle } from '../core/primitives';
 import { Icons } from '../core/icons';
 import schema from '../core/design/schema.json';
 import { normalizeDesign } from '../core/design/normalize';
 import { lookById } from '../core/design/looks';
+import { designQuery, previewProductsQuery } from '../core/query/managerQueries';
 import LookPicker from '../components/design/LookPicker';
 import StorePreview from '../components/design/StorePreview';
-import { productApi, tenantApi } from '../utils/api';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
+import { tenantApi } from '../utils/api';
 import { designChanges, designJson, liveDesign, sameDesign, savedDesign } from './designDraft';
 import { DiscardDialog, PreviewDialog, PublishDialog } from './DesignDialogs';
 import { DesignCoverSection, DesignShowRows } from './DesignSections';
+import { SkIn } from './officeSk';
 
 // The design draws Soft first; the ids themselves are the schema's.
 const THEMES = ['soft', 'glow', 'neon'].filter((id) => schema.options.theme.includes(id));
@@ -119,7 +124,7 @@ function Group({ T, label, children }) {
 function Tile({ T, on, onClick, label, children }) {
   return (
     <button
-      type="button" aria-pressed={on} onClick={onClick}
+      type="button" aria-pressed={on} onClick={onClick} className="esy-press-soft"
       style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 0,
         padding: '10px 6px', borderRadius: 16, cursor: 'pointer', textAlign: 'center',
@@ -134,21 +139,31 @@ function Tile({ T, on, onClick, label, children }) {
   );
 }
 
-/** A segmented control: one of a few, all visible (the design's `seg`). */
+/**
+ * A segmented control: one of a few, all visible (the design's `seg`). The
+ * chosen option's ground is one marker that slides to the option tapped
+ * (core/useIndicator.js), under the options.
+ */
 function Seg({ T, options, value, label, onChange }) {
+  const box = useRef(null);
+  const ind = useIndicator(box, value);
   return (
-    <div style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 13, background: T.surface2 }}>
+    <div ref={box} style={{ position: 'relative', display: 'flex', gap: 4, padding: 4, borderRadius: 13, background: T.surface2 }}>
+      <span aria-hidden="true" className="esy-ind" data-still={ind.still || undefined} style={{
+        ...ind.style, borderRadius: 9, boxShadow: '0 1px 4px rgba(0,0,0,0.14)',
+        background: T.dark ? 'color-mix(in oklab, var(--k-fg) 16%, var(--k-sf2))' : T.surface,
+      }} />
       {options.map((id) => {
         const on = value === id;
         return (
           <button
-            key={id} type="button" aria-pressed={on} onClick={() => onChange(id)}
+            key={id} type="button" aria-pressed={on} onClick={() => onChange(id)} data-ind={id} className="esy-press"
             style={{
+              position: 'relative', zIndex: 1,
               flex: '1 1 0', minWidth: 0, minHeight: 38, padding: '4px 6px', borderRadius: 9,
-              border: 'none', cursor: 'pointer', overflowWrap: 'break-word',
-              background: on ? (T.dark ? 'color-mix(in oklab, var(--k-fg) 16%, var(--k-sf2))' : T.surface) : 'transparent',
-              boxShadow: on ? '0 1px 4px rgba(0,0,0,0.14)' : 'none',
+              border: 'none', cursor: 'pointer', overflowWrap: 'break-word', background: 'transparent',
               color: on ? T.text : T.textDim, font: `${on ? 600 : 500} 13px/1.25 ${T.font}`,
+              transition: 'color var(--m-base) ease, transform var(--m-quick) var(--m-ease)',
             }}
           >{label(id)}</button>
         );
@@ -205,6 +220,77 @@ const floating = {
   background: 'var(--k-fl-bg)', border: 'var(--k-fl-bd)', boxShadow: 'var(--k-fl-sh)',
 };
 
+/**
+ * The editor's shape while the design loads, in its own boxes: the status
+ * card, the looks row, the options card with its tiles and segments, and the
+ * phone preview beside them where the screen is wide enough for it.
+ */
+function DesignSkeleton({ T, t, isMobile, width }) {
+  const side = !isMobile && width >= 640;
+  const previewW = width >= 860 ? 300 : 240;
+  const group = (key, body) => (
+    <div key={key}>
+      <div style={{ ...labelStyle(T), marginBottom: 10 }}><SkIn w="22%" /></div>
+      {body}
+    </div>
+  );
+  const tiles = (h) => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+      {[0, 1, 2].map((i) => <Sk key={i} h={h} r={16} />)}
+    </div>
+  );
+  return (
+    <Skeleton label={t('editor.loading')}>
+      <Card T={T} pad={16} style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Sk w={10} h={10} r={5} />
+          <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+            <div style={{ font: `700 13.5px/1.35 ${T.font}` }}><SkIn w="45%" /></div>
+            <div style={{ marginTop: 2, font: `400 12.5px/1.45 ${T.font}` }}><SkIn w="65%" /></div>
+          </div>
+          {!isMobile && (
+            <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+              <Sk w={84} h={36} r={13} />
+              <Sk w={96} h={36} r={13} />
+            </div>
+          )}
+        </div>
+      </Card>
+      <div style={{ display: 'flex', gap: width >= 860 ? 28 : 18, alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0, maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* LookPicker: its heading, three look cards (a 0.58 thumbnail and
+              two lines each) and the "more looks" button. */}
+          <Card T={T} pad="18px 18px 0">
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ font: `700 16px ${T.font}`, marginBottom: 4 }}><SkIn w="30%" /></div>
+              <div style={{ font: `400 13px/1.5 ${T.font}`, marginBottom: 12 }}><SkIn w="55%" /></div>
+              <div style={{ display: 'flex', gap: 8, overflow: 'hidden', paddingBottom: 4 }}>
+                {[0, 1, 2].map((i) => <Sk key={i} w={136} h={310} r={20} />)}
+              </div>
+              <Sk w={150} h={44} r={22} style={{ marginTop: 10 }} />
+            </div>
+          </Card>
+          <Card T={T} pad={18}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {group('theme', tiles(79))}
+              {group('menu', tiles(81))}
+              {[0, 1, 2, 3].map((i) => group(i, <Sk h={46} r={13} />))}
+            </div>
+          </Card>
+        </div>
+        {side && (
+          <div style={{ width: previewW + 16, flex: 'none' }}>
+            <div style={{ ...labelStyle(T), marginBottom: 12 }}><SkIn w="45%" /></div>
+            <div style={{ padding: 8 }}>
+              <Sk w={previewW} h={(previewW * MOB.h) / MOB.w} r={(46 * previewW) / MOB.w} />
+            </div>
+          </div>
+        )}
+      </div>
+    </Skeleton>
+  );
+}
+
 export default function ManagerDesign() {
   const { T, dark, accent } = useTK();
   const { t } = useTranslation('design');
@@ -223,8 +309,6 @@ export default function ManagerDesign() {
   const [view, setView] = useState(null); // { draft, published }, normalised
   const [edit, setEdit] = useState(null); // the design on screen
   const [history, setHistory] = useState([]); // earlier edits, for undo
-  const [phase, setPhase] = useState('loading'); // loading | ready | failed | denied
-  const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState(''); // '' | save | publish | discard
   const [error, setError] = useState('');
   const [dialogError, setDialogError] = useState('');
@@ -233,52 +317,56 @@ export default function ManagerDesign() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [switchedOff, setSwitchedOff] = useState(false);
 
+  // The design as the server has it, from the query cache. The editor takes
+  // it up into its own state (view, edit) and from then on keeps that state
+  // itself, from what each save, publish and delete answers.
+  const read = useQuery({ ...designQuery(), enabled: !authLoading && isStoreOwner });
+  // The read the editor took up (when it came), and whose the design on
+  // screen is since: the read's alone (''), edits brought back from before a
+  // tab switch ('kept'), or changed here ('own'). A newer read — a cached
+  // design drawn at once and refreshed behind it, with colours changed on the
+  // Brand tab, say — is taken up too unless the design is 'own': an edit is
+  // never swapped out under the owner's hand, and kept edits are measured
+  // against the newer read as they were against the first.
+  const [taken, setTaken] = useState(0);
+  const held = useRef('');
+
+  // Before paint, so a design already in the cache is drawn in the first frame.
+  useLayoutEffect(() => {
+    if (!read.dataUpdatedAt || read.dataUpdatedAt === taken || held.current === 'own') return;
+    const next = toView(read.data);
+    const kept = unsaved.get(cacheKey);
+    const fresh = kept && kept.base === designJson(savedDesign(next));
+    if (!fresh) unsaved.delete(cacheKey);
+    setView(next);
+    setEdit(fresh ? kept.edit : savedDesign(next));
+    setHistory([]);
+    setTaken(read.dataUpdatedAt);
+    held.current = fresh ? 'kept' : '';
+  }, [read.data, read.dataUpdatedAt, taken, cacheKey]);
+
+  // loading | ready | failed | denied
+  let phase = 'loading';
+  if (!authLoading && !isStoreOwner) phase = 'denied';
+  else if (view && edit) phase = 'ready';
+  else if (read.isError && !read.isFetching) phase = read.error?.status === 403 ? 'denied' : 'failed';
+
   // A publish or delete answers with the new state; editing restarts from it.
   const applyView = (raw) => {
     const next = toView(raw);
+    held.current = 'own';
     setView(next);
     setEdit(savedDesign(next));
     setHistory([]);
   };
 
-  useEffect(() => {
-    if (authLoading) return undefined;
-    if (!isStoreOwner) {
-      setPhase('denied');
-      return undefined;
-    }
-    const ac = new AbortController();
-    setPhase('loading');
-    tenantApi.design(sub, { signal: ac.signal })
-      .then((raw) => {
-        if (ac.signal.aborted) return;
-        const next = toView(raw);
-        const kept = unsaved.get(cacheKey);
-        const fresh = kept && kept.base === designJson(savedDesign(next));
-        if (!fresh) unsaved.delete(cacheKey);
-        setView(next);
-        setEdit(fresh ? kept.edit : savedDesign(next));
-        setHistory([]);
-        setPhase('ready');
-      })
-      .catch((e) => {
-        if (ac.signal.aborted || e?.name === 'AbortError') return;
-        setPhase(e?.status === 403 ? 'denied' : 'failed');
-      });
-    return () => ac.abort();
-  }, [authLoading, isStoreOwner, sub, cacheKey, reloadKey]);
-
   // The preview draws the store's own products: the first page buyers see.
   // A store without any, or a list that fails to load, gets example products.
-  const [catalogue, setCatalogue] = useState(null); // { items, total }; null while loading
-  useEffect(() => {
-    const ac = new AbortController();
-    setCatalogue(null);
-    productApi.list({ page: 0, size: 12, signal: ac.signal })
-      .then((r) => { if (!ac.signal.aborted) setCatalogue({ items: r.products, total: r.totalElements }); })
-      .catch((e) => { if (!ac.signal.aborted && e?.name !== 'AbortError') setCatalogue({ items: [], total: 0 }); });
-    return () => ac.abort();
-  }, [sub]);
+  const firstPage = useQuery(previewProductsQuery());
+  const catalogue = useMemo(() => {
+    if (firstPage.data) return { items: firstPage.data.products, total: firstPage.data.totalElements };
+    return firstPage.isError ? { items: [], total: 0 } : null; // null while loading
+  }, [firstPage.data, firstPage.isError]);
 
   const saved = useMemo(() => (view ? savedDesign(view) : null), [view]);
   const live = useMemo(() => (view ? liveDesign(view) : null), [view]);
@@ -341,6 +429,7 @@ export default function ManagerDesign() {
   const change = (raw) => {
     const next = normalizeDesign(raw);
     if (!edit || sameDesign(next, edit)) return;
+    held.current = 'own';
     setHistory((h) => [...h.slice(-49), edit]);
     setEdit(next);
     setNotice('');
@@ -360,6 +449,7 @@ export default function ManagerDesign() {
   const undo = () => {
     setMenuOpen(false);
     if (!history.length) return;
+    held.current = 'own';
     setEdit(history[history.length - 1]);
     setHistory(history.slice(0, -1));
     setNotice('');
@@ -381,6 +471,7 @@ export default function ManagerDesign() {
       // normalizeDesign does, and an edit made while this was in flight must
       // not be overwritten by the answer.
       const stored = await tenantApi.saveDesignDraft(edit, sub);
+      held.current = 'own';
       setView((v) => ({ ...v, draft: normalizeDesign(stored) }));
       setNotice('saved');
     } catch (e) {
@@ -447,12 +538,10 @@ export default function ManagerDesign() {
         {phase === 'failed' && (
           <Card T={T} pad={18}>
             <div style={{ font: `600 13.5px ${T.font}`, color: T.text, marginBottom: 12 }}>{t('editor.loadFailed')}</div>
-            <Btn T={T} kind="ghost" size="sm" onClick={() => setReloadKey((n) => n + 1)}>{t('editor.retry')}</Btn>
+            <Btn T={T} kind="ghost" size="sm" onClick={() => read.refetch()}>{t('editor.retry')}</Btn>
           </Card>
         )}
-        {phase === 'loading' && (
-          <div style={{ font: `500 13px ${T.font}`, color: T.textMute }}>{t('editor.loading')}</div>
-        )}
+        {phase === 'loading' && <DesignSkeleton T={T} t={t} isMobile={isMobile} width={width} />}
       </div>
     );
   }
@@ -638,7 +727,8 @@ export default function ManagerDesign() {
       {isMobile && (
         <div ref={menuRef} style={{ position: 'sticky', bottom: 90, zIndex: 30, marginTop: 16 }}>
           {menuOpen && (
-            <div role="menu" aria-label={t('editor.more')} style={{
+            // Opens upwards, out of the "…" under it.
+            <div role="menu" aria-label={t('editor.more')} className="esy-menu-up" style={{
               position: 'absolute', left: 0, bottom: 'calc(100% + 8px)', minWidth: 240, maxWidth: '100%',
               padding: 6, borderRadius: 16, background: 'var(--k-fl-bg)', border: 'var(--k-fl-bd)',
               boxShadow: '0 18px 40px -16px rgba(0,0,0,0.4)',
@@ -662,7 +752,7 @@ export default function ManagerDesign() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button
                 type="button" aria-label={t('editor.more')} aria-haspopup="menu" aria-expanded={menuOpen}
-                onClick={() => setMenuOpen((v) => !v)}
+                onClick={() => setMenuOpen((v) => !v)} className="esy-press"
                 style={{
                   width: 40, height: 40, flex: 'none', borderRadius: 12, border: 'none', cursor: 'pointer',
                   display: 'inline-grid', placeItems: 'center',

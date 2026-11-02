@@ -8,7 +8,8 @@
 // Copy never lives here: every label arrives from the caller's t().
 import { useEffect, useRef, useState } from 'react';
 import { useDevice } from '../../contexts/DeviceContext';
-import { contactApi } from '../../utils/api';
+import { usePublicContacts } from '../../hooks/useStoreContacts';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 import '../../styles/shop-kit.css';
 
 /** The design's three frames: ph ≤ 768 px, tab ≤ 1024 px, desk beyond. */
@@ -148,7 +149,12 @@ export function Thumb({ src, i = 0, size = 52, radius = 12, alt = '' }) {
   useEffect(() => { setOk(Boolean(src)); }, [src]);
   return (
     <span className={`ph t${(i % 4) + 1}`} style={{ width: size, borderRadius: radius }}>
-      {ok ? <img src={src} alt={alt} loading="lazy" onError={() => setOk(false)} /> : <G name="bag" cls="" />}
+      {ok ? (
+        <img
+          src={src} alt={alt} loading="lazy" onError={() => setOk(false)}
+          className="esy-img" ref={markIfComplete} onLoad={markLoaded}
+        />
+      ) : <G name="bag" cls="" />}
     </span>
   );
 }
@@ -195,15 +201,7 @@ export function Otp({ value, onChange, length = 4, invalid = false, label, autoF
  * list cannot be read) — callers then draw no contact button at all.
  */
 export function useStoreChannels(enabled = true) {
-  const [rows, setRows] = useState([]);
-  useEffect(() => {
-    if (!enabled) return undefined;
-    const ac = new AbortController();
-    contactApi.listPublic(undefined, { signal: ac.signal })
-      .then((r) => { if (!ac.signal.aborted) setRows(Array.isArray(r) ? r : []); })
-      .catch(() => {});
-    return () => ac.abort();
-  }, [enabled]);
+  const { channels: rows } = usePublicContacts(enabled);
   const pick = (type) => rows.filter((c) => c.type === type && c.value)
     .sort((a, b) => Number(!!b.isPrimary) - Number(!!a.isPrimary))[0] || null;
   return { whatsapp: pick('whatsapp'), phone: pick('phone') };

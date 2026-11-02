@@ -6,8 +6,9 @@
 //
 // Everything here is public: no sign-in, no store data that a shopper could
 // not already see on the storefront.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
 import { useTenant } from '../contexts/TenantContext';
@@ -16,31 +17,26 @@ import { Icon } from '../components/glow/GlowPrimitives';
 import { Card, Chip, Note } from '../core/primitives';
 import { Mark } from '../core/domain';
 import { StoreContacts } from '../components/store/ContactChannels';
-import { deliveryApi, productApi } from '../utils/api';
+import { productPageQuery, publicDeliveryQuery } from '../core/query/queries';
 import { money } from '../core/money';
 import { alpha } from '../core/tokens';
+
+const NO_ROUTES = [];
 
 export default function StoreAbout() {
   const { T, tenant } = useGlow();
   const { tenant: store } = useTenant();
   const { t, i18n } = useTranslation('storefront');
   const navigate = useNavigate();
-  const [routes, setRoutes] = useState([]);
-  // The chip row states how much the shop sells, so it needs the real count.
-  const [productCount, setProductCount] = useState(null);
-
   // How a shopper receives goods is part of what they want to know about a
   // shop, so the About page states it rather than saving it for checkout.
-  useEffect(() => {
-    const ac = new AbortController();
-    deliveryApi.listPublic(undefined, { signal: ac.signal })
-      .then((res) => { if (!ac.signal.aborted) setRoutes(Array.isArray(res?.routes) ? res.routes : []); })
-      .catch(() => { if (!ac.signal.aborted) setRoutes([]); });
-    productApi.list({ page: 0, size: 1, signal: ac.signal })
-      .then((r) => { if (!ac.signal.aborted) setProductCount(r.totalElements ?? null); })
-      .catch(() => {});
-    return () => ac.abort();
-  }, []);
+  // Both reads are cached and fetched by the route loader before the page
+  // opens, so the cards are there with the page rather than after it.
+  const { data: delivery } = useQuery(publicDeliveryQuery());
+  const routes = Array.isArray(delivery?.routes) ? delivery.routes : NO_ROUTES;
+  // The chip row states how much the shop sells, so it needs the real count.
+  const { data: countPage } = useQuery(productPageQuery({ page: 0, size: 1 }));
+  const productCount = countPage?.totalElements ?? null;
 
   const pad = 18;
   const label = { font: `700 14px ${T.font}`, color: T.text, marginBottom: 12 };

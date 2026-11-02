@@ -10,11 +10,15 @@
 // The board also has TikTok and e-mail. The channel list has no such types
 // (ContactChannel.TYPES is phone, WhatsApp, Facebook, Instagram), so they are
 // not drawn until it does.
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { contactApi, handleApiError } from '../utils/api';
+import { contactsQuery } from '../core/query/managerQueries';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { Alert, BxIcon, Fld, SaveBar } from './officeBx';
+import { SkField, SkIn } from './officeSk';
 
 // The board's order. Phone numbers carry Georgia's code as a prefix.
 const TYPES = ['phone', 'whatsapp', 'instagram', 'facebook'];
@@ -42,24 +46,43 @@ export default function ContactTab() {
   const { t: tOwner } = useTranslation('owner');
   const [params] = useSearchParams();
   const sub = params.get('tenant') || undefined;
-  const [rows, setRows] = useState(null);
+  // The channels as the server has them; what the owner types is kept apart
+  // (edits), over them, so a read that lands while they type changes nothing
+  // they typed.
+  const channels = useQuery(contactsQuery());
+  const rows = channels.data ?? (channels.isError ? [] : null);
   const [edits, setEdits] = useState({});
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const error = saveError || (channels.isError ? handleApiError(channels.error, tOwner('contacts.loadFailed')) : '');
   const [saved, setSaved] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await contactApi.list(sub);
-      setRows(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setError(handleApiError(e, tOwner('contacts.loadFailed')));
-      setRows((r) => r || []);
-    }
-  }, [sub, tOwner]);
-  useEffect(() => { load(); }, [load]);
-
-  if (!rows) return <div className="bx-sm bx-dim">{t('settingsTabs.loading')}</div>;
+  // A field for each of the four kinds and the sample beside them, until the
+  // channels are in; the save bar is already at the foot.
+  if (!rows) {
+    return (
+      <>
+        <Skeleton label={t('settingsTabs.loading')} className="bx-two">
+          <div className="bx-card bx-pad bx-stk" style={{ gap: 14 }}>
+            <p className="bx-sm"><SkIn w="80%" /></p>
+            {[0, 1, 2, 3].map((i) => <SkField key={i} w={i % 2 ? '22%' : '28%'} />)}
+          </div>
+          <div className="bx-card bx-pad bx-stk" style={{ gap: 12 }}>
+            <div className="bx-rowb">
+              <span className="bx-lbl bx-grow"><SkIn w="40%" /></span>
+              <Sk w={64} h={26} r={13} />
+            </div>
+            <div className="bx-row" style={{ gap: 10 }}>
+              <Sk w={44} h={44} r="var(--k-r-ibtn)" />
+              <Sk w={44} h={44} r="var(--k-r-ibtn)" />
+              <Sk w={44} h={44} r="var(--k-r-ibtn)" />
+            </div>
+          </div>
+        </Skeleton>
+        <SaveBar t={t} dirty={false} busy={false} saved={false} onSave={() => {}} onCancel={() => {}} />
+      </>
+    );
+  }
 
   // Every entry of a type gets a field; a type with none gets an empty one.
   const fields = TYPES.flatMap((type) => {
@@ -76,8 +99,9 @@ export default function ContactTab() {
   const save = async () => {
     if (busy || !dirty) return;
     setBusy(true);
-    setError('');
+    setSaveError('');
     setSaved(false);
+    let done = false;
     try {
       for (const f of pending) {
         const next = stored(f.type, edits[f.id]);
@@ -85,12 +109,17 @@ export default function ContactTab() {
         else if (f.channel) await contactApi.update(f.channel.id, { value: next }, sub);
         else await contactApi.create({ type: f.type, value: next, isPublic: true }, sub);
       }
-      setEdits({});
-      setSaved(true);
+      done = true;
     } catch (e) {
-      setError(handleApiError(e, tOwner('contacts.saveFailed')));
+      setSaveError(handleApiError(e, tOwner('contacts.saveFailed')));
     } finally {
-      await load();
+      // The list is read again either way. The typed values give way to it
+      // only once it is in, so the fields never show the old values between.
+      await channels.refetch();
+      if (done) {
+        setEdits({});
+        setSaved(true);
+      }
       setBusy(false);
     }
   };
@@ -146,7 +175,7 @@ export default function ContactTab() {
           {!icons.length && !filled('whatsapp') && <span className="bx-sm bx-dim">{t('settingsTabs.contact.sampleEmpty')}</span>}
         </div>
       </div>
-      <SaveBar t={t} dirty={dirty} busy={busy} saved={saved} onSave={save} onCancel={() => { setEdits({}); setError(''); }} />
+      <SaveBar t={t} dirty={dirty} busy={busy} saved={saved} onSave={save} onCancel={() => { setEdits({}); setSaveError(''); }} />
     </>
   );
 }

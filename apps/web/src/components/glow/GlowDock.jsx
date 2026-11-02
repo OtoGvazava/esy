@@ -9,6 +9,11 @@
 // App.jsx mounts only this component and it branches here. Top tabs and the
 // side menu belong to the store header, so on the home page Home draws them
 // in its header and every other page gets them in a strip at the top.
+//
+// The current place is marked by one marker that slides from tab to tab, as
+// Instagram's tab bar does, the moment a tab is tapped (core/useIndicator.js):
+// the router may still be fetching the next screen, but the tap is answered.
+import { useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './GlowPrimitives';
@@ -17,6 +22,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useDesign } from '../../core/design/useDesign';
 import { useStoreNav, useStoreBarShown } from '../store/storeChrome';
 import { ActionButton, MenuStrip } from '../store/StoreMenus';
+import { useIndicator } from '../../core/useIndicator';
 
 export default function GlowDock() {
   const { T } = useGlow();
@@ -27,11 +33,14 @@ export default function GlowDock() {
   const { isAuthenticated, user } = useAuth();
   const { items: places } = useStoreNav();
   const barShown = useStoreBarShown();
+  const box = useRef(null);
 
   const menu = design.menu;
   // The design's "menu labels" switch: off, the tab bar and the capsule draw
   // icons only, and each item keeps its name for screen readers.
   const labels = design.show.labels;
+  const current = places.find((it) => it.active)?.key ?? null;
+  const ind = useIndicator(box, current, `${menu}|${labels}`);
   // The action button floats on every page the dock would.
   if (menu === 'fab') return <ActionButton />;
   if (menu === 'top' || menu === 'drawer') {
@@ -85,16 +94,17 @@ export default function GlowDock() {
     const iconBtn = (it) => (
       <button
         key={it.key} type="button" onClick={() => navigate(it.to)} aria-label={it.label}
-        aria-current={it.active ? 'page' : undefined}
+        aria-current={it.active ? 'page' : undefined} data-ind={it.key} data-prefetch={it.to}
+        className="esy-press"
         style={{
-          position: 'relative', height: 44, minWidth: 44, padding: it.active && capsule && labels ? '0 14px' : 0,
+          position: 'relative', zIndex: 1, height: 44, minWidth: 44, padding: it.active && capsule && labels ? '0 14px' : 0,
           borderRadius: 999, border: 'none', cursor: 'pointer', display: 'inline-flex',
           alignItems: 'center', justifyContent: 'center', gap: 6,
-          background: it.active ? T.accentBg : 'transparent', color: it.active ? T.accentFg : T.textDim,
+          background: 'transparent', color: it.active ? T.accentFg : T.textDim,
           font: `600 12px ${T.font}`, whiteSpace: 'nowrap',
         }}
       >
-        {it.icon}
+        <span className={ind.popped === it.key ? 'esy-pop' : undefined} style={{ display: 'inline-flex' }}>{it.icon}</span>
         {it.active && capsule && labels && <span>{it.label}</span>}
         {it.badge ? (
           <span style={{
@@ -107,25 +117,29 @@ export default function GlowDock() {
     );
     return (
       <>
-        <nav aria-label={t('menu.tabs')} style={{
+        <nav ref={box} aria-label={t('menu.tabs')} style={{
           ...glass, height: 56, borderRadius: 999, padding: '0 6px', display: 'flex', alignItems: 'center', gap: 2,
+          viewTransitionName: 'esy-dock',
           ...(capsule ? { left: 16, right: 84, justifyContent: 'space-between' } : { left: '50%', transform: 'translateX(-50%)' }),
         }}>
+          <span aria-hidden="true" className="esy-ind" data-still={ind.still || undefined} style={{ ...ind.style, borderRadius: 999, background: T.accentBg }} />
           {shown.map(iconBtn)}
         </nav>
         {capsule && search && (
           <button
-            type="button" onClick={() => navigate(search.to)} aria-label={search.label}
+            type="button" onClick={() => navigate(search.to)} aria-label={search.label} data-prefetch={search.to}
+            className="esy-press"
             style={{ ...glass, right: 16, width: 56, height: 56, borderRadius: '50%', cursor: 'pointer', display: 'grid', placeItems: 'center', color: search.active ? T.accentFg : T.text }}
-          >{search.icon}</button>
+          ><span className={ind.popped === 'search' ? 'esy-pop' : undefined} style={{ display: 'inline-flex' }}>{search.icon}</span></button>
         )}
       </>
     );
   }
 
   return (
-    <nav aria-label={t('menu.tabs')} style={{
+    <nav ref={box} aria-label={t('menu.tabs')} style={{
       position: 'fixed', left: 16, right: 16, bottom: 18, maxWidth: 520, margin: '0 auto',
+      viewTransitionName: 'esy-dock',
       // The theme's floating-control recipe — glass on Liquid Glass, solid on
       // Soft, a lit edge on Neon — rather than one hard-coded frosted white.
       height: 66, borderRadius: 'var(--k-r-dock)', zIndex: 1200,
@@ -136,6 +150,8 @@ export default function GlowDock() {
       boxShadow: 'var(--k-fl-sh)',
       display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 14px',
     }}>
+      {/* The marker sits behind the current tab's icon and slides to the next. */}
+      <span aria-hidden="true" className="esy-ind" data-still={ind.still || undefined} style={{ ...ind.style, borderRadius: 12, background: T.accentBg }} />
       {items.map((it) => (
         <button
           key={it.key}
@@ -143,19 +159,21 @@ export default function GlowDock() {
           onClick={() => navigate(it.to)}
           aria-current={it.active ? 'page' : undefined}
           aria-label={labels ? undefined : it.label}
+          data-prefetch={it.to}
+          className="esy-press"
           style={{
+            position: 'relative', zIndex: 1,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             color: it.active ? T.accentFg : T.textDim, cursor: 'pointer',
             background: 'none', border: 0, padding: 0, margin: 0, font: 'inherit',
           }}
         >
-          <span style={{
+          <span data-ind={it.key} style={{
             // Icons alone get the whole 44 px target the label used to share.
             width: labels ? 36 : 44, height: labels ? 36 : 44, borderRadius: 12, position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: it.active ? T.accentBg : 'transparent',
           }}>
-            {it.icon}
+            <span className={ind.popped === it.key ? 'esy-pop' : undefined} style={{ display: 'inline-flex' }}>{it.icon}</span>
             {it.badge ? (
               <span style={{
                 position: 'absolute', top: -3, right: -5, minWidth: 18, height: 18, padding: '0 5px',

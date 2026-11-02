@@ -16,16 +16,19 @@
 // The reserved-subdomain list is read-only and comes from the server
 // (TenantService.RESERVED): an admin asking "why can't a store be called
 // `billing`?" has nowhere else to look.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { adminApi, handleApiError } from '../utils/api';
+import { adminConfigQuery } from '../core/query/adminQueries';
 import { useAdminTokens } from './adminTokens';
 import { useDevice } from '../contexts/DeviceContext';
 import { useAdminHead } from './adminHead';
-import { Failed, Loading } from './AdminUI';
+import { Failed } from './AdminUI';
 import {
   Alert, Dialog, DialogPoint, Glyph, KitBtn, KitChip, List, Mono, RowIcon, SourceChip, Switch,
 } from './AdminKit';
+import { ConfigSkeleton } from './AdminSkeletons';
 
 // The environment variable behind each value, as application.yml names it.
 const ENV_VARS = {
@@ -95,9 +98,6 @@ export default function AdminConfig() {
   const lang = i18n.language;
   const { isMobile, isDesktop } = useDevice();
 
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [editing, setEditing] = useState(null);   // a field name, while its row is open
   const [draft, setDraft] = useState('');
   const [touched, setTouched] = useState(false);
@@ -108,35 +108,30 @@ export default function AdminConfig() {
   const [advanced, setAdvanced] = useState(false);
   const later = useRef(null);
 
-  const load = useCallback(async () => {
-    setError('');
-    try {
-      setData(await adminApi.getConfig());
-    } catch (e) {
-      setError(handleApiError(e, t('config.loadFailed')));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+  // The values from the query cache. An open row's draft is its own state,
+  // filled from them when the row is opened, so a read that lands while
+  // someone is typing never changes what they typed.
+  const config = useQuery(adminConfigQuery());
+  const { refetch } = config;
+  const data = config.data ?? null;
 
-  useEffect(() => {
-    load();
-    return () => clearTimeout(later.current);
-  }, [load]);
+  useEffect(() => () => clearTimeout(later.current), []);
 
   /**
    * Write one key, then read back what is in effect. This server's own cache
    * forgets the key on write, so the first read is current; a second read a
    * little later catches any other instance whose cache had not expired.
+   * The first read is the one every write sets off (core/query/client.js):
+   * waiting for it, rather than starting another, keeps one request.
    */
   const write = async (field, value) => {
     setBusy(field);
     setRowError((p) => ({ ...p, [field]: '' }));
     try {
       await adminApi.updateConfig({ [field]: value });
-      await load();
+      await refetch({ cancelRefetch: false });
       clearTimeout(later.current);
-      later.current = setTimeout(load, 2500);
+      later.current = setTimeout(() => { refetch(); }, 2500);
       return true;
     } catch (e) {
       setRowError((p) => ({ ...p, [field]: handleApiError(e, t('config.saveFailed')) }));
@@ -160,8 +155,11 @@ export default function AdminConfig() {
     sub: data ? (data.storeReady ? t('config.sub') : t('config.subOffline')) : '',
   });
 
-  if (loading) return <Loading T={T} />;
-  if (error && !data) return <Failed T={T} message={error} onRetry={load} />;
+  // A retry after a failure draws the skeleton again, as the first load did.
+  if (config.isPending || (config.isError && !data && config.isFetching)) return <ConfigSkeleton />;
+  if (config.isError && !data) {
+    return <Failed T={T} message={handleApiError(config.error, t('config.loadFailed'))} onRetry={() => refetch()} />;
+  }
 
   const ready = !!data?.storeReady;
   const sources = data?.sources || {};
@@ -444,9 +442,17 @@ export default function AdminConfig() {
   );
 
   // ── Dialogs ─────────────────────────────────────────────────────────────
+  // Kept mounted with `open`, so each one animates out as well as in.
   const big = { font: `700 20px ${T.mono}`, fontVariantNumeric: 'tabular-nums' };
-  const feeDialog = dialog === 'fee' && feeTo != null && (
-    <Dialog T={T} phone={isMobile} title={t('config.feeDialogTitle')} onClose={() => setDialog(null)} busy={busy === 'serviceFeeRate'}>
+  const feeDialog = (
+    <Dialog
+      T={T}
+      phone={isMobile}
+      open={dialog === 'fee' && feeTo != null}
+      title={t('config.feeDialogTitle')}
+      onClose={() => setDialog(null)}
+      busy={busy === 'serviceFeeRate'}
+    >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '4px 0' }}>
         <span style={{ ...big, color: T.textDim }}>{pctText(rate, lang)}%</span>
         <span style={{ color: T.textDim }}>→</span>
@@ -476,8 +482,15 @@ export default function AdminConfig() {
   );
 
   const typedOk = typed.trim().toLowerCase() === bank;
-  const bankDialog = dialog === 'bank' && (
-    <Dialog T={T} phone={isMobile} title={t('config.bankDialogTitle')} onClose={() => setDialog(null)} busy={busy === 'bogEnv'}>
+  const bankDialog = (
+    <Dialog
+      T={T}
+      phone={isMobile}
+      open={dialog === 'bank'}
+      title={t('config.bankDialogTitle')}
+      onClose={() => setDialog(null)}
+      busy={busy === 'bogEnv'}
+    >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '4px 0' }}>
         <span style={{ ...big, color: T.text }}>{shown(bank)}</span>
         <span style={{ color: T.textDim }}>→</span>

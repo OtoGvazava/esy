@@ -12,18 +12,22 @@
 //
 // The board also says when each person was last in ("ბოლოს: დღეს"). Nothing
 // records that, so it is not shown rather than guessed.
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { useTK } from '../core/useTK';
+import { teamQuery } from '../core/query/managerQueries';
 import { teamApi } from '../utils/api';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import InviteDialog from './InviteDialog';
 import {
   Alert, Avatar, Chip, G, Glyph, PageHead, Sheet, SheetHead, btn, card, fullName, ibtn, initials, kv,
   li, list, teamProblem, type,
 } from './officeKit';
+import { SkIn } from './officeSk';
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 
@@ -54,7 +58,8 @@ function RowMenu({ T, t, member, busy, onRole, onRemove }) {
         onClick={() => setOpen((v) => !v)} style={ibtn(T, 'transparent')}
       ><Glyph>{G.more}</Glyph></button>
       {open && (
-        <div id={menuId} role="menu" style={{
+        // Opens out of the "⋯" that opened it.
+        <div id={menuId} role="menu" className="esy-menu-in" style={{
           position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 20, minWidth: 210, padding: 6,
           borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`,
           boxShadow: '0 18px 44px -18px rgba(0,0,0,.4)', boxSizing: 'border-box',
@@ -79,42 +84,30 @@ export default function ManagerTeam() {
   const [params] = useSearchParams();
   const devTenant = params.get('tenant') || undefined;
 
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const qc = useQueryClient();
+  const team = useQuery(teamQuery());
+  // A list that failed to load is shown as no one, with the reason above it.
+  const rows = team.data ?? [];
+  const loading = team.isPending;
+  const [writeError, setWriteError] = useState('');
+  const error = writeError || (team.isError ? teamProblem(t, team.error, 'team.loadFailed') : '');
   const [busy, setBusy] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState(null);
   const removeTitle = useId();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await teamApi.list(devTenant);
-      setRows(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setRows([]);
-      setError(teamProblem(t, e, 'team.loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  }, [devTenant, t]);
-
-  useEffect(() => { load(); }, [load]);
-
   // Every write answers with the refreshed list, so the table is the server's
   // answer rather than a local guess — promoting a second owner changes what
   // is allowed for the first.
+  const setRows = (next) => qc.setQueryData(teamQuery().queryKey, Array.isArray(next) ? next : []);
   const write = async (fn, fallbackKey) => {
     setBusy(true);
-    setError('');
+    setWriteError('');
     try {
-      const next = await fn();
-      setRows(Array.isArray(next) ? next : []);
+      setRows(await fn());
       return true;
     } catch (e) {
-      setError(teamProblem(t, e, fallbackKey));
+      setWriteError(teamProblem(t, e, fallbackKey));
       return false;
     } finally {
       setBusy(false);
@@ -149,7 +142,21 @@ export default function ManagerTeam() {
               the rows paint no background, so the corners stay round. */}
           <div style={{ ...list(T), overflow: 'visible' }}>
             {loading ? (
-              <div role="status" style={{ ...li(T, true), font: `400 13px ${T.font}`, color: T.textDim }}>{t('team.loading')}</div>
+              // People rows as the list draws them: the avatar, the name and
+              // address, the role chip and the "⋯".
+              <Skeleton label={t('team.loading')}>
+                {[0, 1].map((i) => (
+                  <div key={i} style={li(T, i === 1)}>
+                    <Sk w={34} h={34} r={17} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ font: `600 12.5px/1.4 ${T.font}` }}><SkIn w="45%" /></div>
+                      <div style={{ font: `400 12px/1.4 ${T.font}` }}><SkIn w="60%" /></div>
+                    </div>
+                    <Sk w={72} h={26} r={13} />
+                    <Sk w={44} h={44} r="var(--k-r-ibtn)" />
+                  </div>
+                ))}
+              </Skeleton>
             ) : sorted.length === 0 ? (
               <div style={{ ...li(T, true), font: `400 13px ${T.font}`, color: T.textDim }}>{t('team.empty')}</div>
             ) : sorted.map((m, i) => {

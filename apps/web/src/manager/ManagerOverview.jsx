@@ -13,7 +13,7 @@
 // has to move next — placed ones to ship, shipped ones to hand to the courier,
 // oldest first. A row leads into its order, where the transition is made with
 // the order's details in view; the list itself changes nothing.
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useDevice } from '../contexts/DeviceContext';
@@ -21,11 +21,14 @@ import { useTK } from '../core/useTK';
 import { Btn, Card, Note } from '../core/primitives';
 import { Icons } from '../core/icons';
 import { money, FEE_PERCENT } from '../core/money';
-import { handleApiError, tenantApi } from '../utils/api';
+import { storeOrdersQuery } from '../core/query/managerQueries';
+import { handleApiError } from '../utils/api';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { MTop } from './ManagerShell';
-import { StatCard } from './ManagerStats';
+import { StatCard, StatCardSk } from './ManagerStats';
 import { useStoreStats } from './useStoreStats';
 import { gcols } from './nav';
+import { SkIn } from './officeSk';
 import FirstVisit from './FirstVisit';
 
 // The API sends status lower-cased with spaces ("out for delivery").
@@ -109,6 +112,32 @@ function Waiting({ T, t, lang, orders, q, isMobile }) {
   );
 }
 
+/** The to-do card's stand-in: its heading and three order rows, in the same card. */
+function WaitingSk({ T, isMobile }) {
+  return (
+    <Card T={T} pad={isMobile ? 16 : 18} style={{ marginTop: isMobile ? 14 : 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <span style={{ flex: 1, font: `700 16px ${T.font}` }}><SkIn w="40%" /></span>
+        <span style={{ font: `600 13px ${T.font}` }}><SkIn w={64} /></span>
+      </div>
+      {[0, 1, 2].map((i) => (
+        <div key={i} style={{
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: isMobile ? 'wrap' : 'nowrap',
+          padding: '14px 0', borderTop: i ? `1px solid ${T.border}` : 'none',
+        }}>
+          <Sk w={36} h={36} r={18} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ font: `600 14px ${T.font}` }}><SkIn w="55%" /></div>
+            <div style={{ marginTop: 2, font: `400 12px ${T.font}` }}><SkIn w="35%" /></div>
+          </div>
+          <span style={{ font: `700 14px ${T.font}` }}><SkIn w={56} /></span>
+          <Sk w={isMobile ? '100%' : 120} h={36} r={13} style={isMobile ? { flex: '1 0 100%' } : undefined} />
+        </div>
+      ))}
+    </Card>
+  );
+}
+
 export default function ManagerOverview() {
   const { T } = useTK();
   const { t, i18n } = useTranslation('manager');
@@ -116,19 +145,13 @@ export default function ManagerOverview() {
   const [params] = useSearchParams();
   const sub = params.get('tenant');
   const q = sub ? `?tenant=${encodeURIComponent(sub)}` : '';
-  const { data, loading, error } = useStoreStats(sub || undefined);
-  const [orders, setOrders] = useState(null);
-
+  const { data, loading, error } = useStoreStats();
   // The to-do list is a convenience: if it cannot load, the figures still show.
-  useEffect(() => {
-    let alive = true;
-    tenantApi.orders(sub || undefined)
-      .then((o) => { if (alive) setOrders(Array.isArray(o) ? o : []); })
-      .catch(() => { if (alive) setOrders([]); });
-    return () => { alive = false; };
-  }, [sub]);
+  const waiting = useQuery(storeOrdersQuery());
+  const orders = waiting.isError ? [] : waiting.data ?? null;
 
   const mode = isDesktop ? 'desktop' : isMobile ? 'mobile' : 'tablet';
+  const tiles = { display: 'grid', gridTemplateColumns: gcols(mode, 4, 2, 2), gap: isMobile ? 10 : 14 };
 
   // M1b: a live store that has never had an order (the count includes
   // cancelled ones) opens on what is left to do before it can take one. Its
@@ -148,8 +171,20 @@ export default function ManagerOverview() {
         sub={sub ? `${sub}.esy.ge` : undefined}
       />
 
+      {/* The four figures in their own grid, the note under them, the to-do
+          card and the link to the statistics, until the figures are in. */}
       {loading && (
-        <div style={{ font: `500 13px ${T.font}`, color: T.textMute }}>{t('overview.loading')}</div>
+        <Skeleton label={t('overview.loading')}>
+          <div style={tiles}>
+            <StatCardSk T={T} />
+            <StatCardSk T={T} />
+            <StatCardSk T={T} hint />
+            <StatCardSk T={T} />
+          </div>
+          <div style={{ marginTop: 10, font: `400 12px/1.5 ${T.font}` }}><SkIn w="62%" /></div>
+          <WaitingSk T={T} isMobile={isMobile} />
+          <Sk w={150} h={36} r={13} style={{ marginTop: 18 }} />
+        </Skeleton>
       )}
       {error && !loading && (
         <Note T={T} tone="danger">{handleApiError(error, t('overview.loadFailed'))}</Note>
@@ -157,7 +192,7 @@ export default function ManagerOverview() {
 
       {data && !loading && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: gcols(mode, 4, 2, 2), gap: isMobile ? 10 : 14 }}>
+          <div style={tiles}>
             <StatCard T={T} label={t('overview.revenue')} value={money(data.revenue)} />
             <StatCard T={T} label={t('overview.orders')} value={String(data.orders ?? 0)} />
             <StatCard
@@ -171,8 +206,10 @@ export default function ManagerOverview() {
             {t('overview.excludes')}
           </div>
 
-          {orders && (
+          {orders ? (
             <Waiting T={T} t={t} lang={i18n.language} orders={orders} q={q} isMobile={isMobile} />
+          ) : (
+            <Skeleton label={t('overview.loading')}><WaitingSk T={T} isMobile={isMobile} /></Skeleton>
           )}
 
           <div style={{ marginTop: 18 }}>

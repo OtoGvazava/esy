@@ -8,15 +8,18 @@
 // Older grants made from this screen (source "db") may still exist. They stay
 // visible, marked as such, and can still be taken back here — that is the one
 // write left, so a grant from before this rule is never stranded.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi, handleApiError } from '../utils/api';
+import { adminAdminsQuery } from '../core/query/adminQueries';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdminTokens } from './adminTokens';
 import { useAdminHead } from './adminHead';
 import { useDevice } from '../contexts/DeviceContext';
-import { Empty, Failed, Loading, dateTime } from './AdminUI';
+import { Empty, Failed, dateTime } from './AdminUI';
 import { KitBtn, KitChip, List, Mono } from './AdminKit';
+import { AdminsSkeleton } from './AdminSkeletons';
 
 const isEnv = (row) => String(row?.source || '').toLowerCase() === 'env';
 
@@ -91,47 +94,28 @@ export default function AdminAdmins() {
   const lang = i18n.language;
   const { user } = useAuth();
   const { isDesktop } = useDevice();
+  const qc = useQueryClient();
 
-  const [admins, setAdmins] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [confirming, setConfirming] = useState('');
   const [busy, setBusy] = useState('');
   const [rowError, setRowError] = useState({});
-  const abortRef = useRef(null);
 
   useAdminHead({ title: t('admins.title'), sub: t('admins.sub') });
 
-  const load = useCallback(async () => {
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-    setLoading(true);
-    setError('');
-    try {
-      const data = await adminApi.listAdmins({ signal: ac.signal });
-      if (ac.signal.aborted) return;
-      setAdmins(Array.isArray(data) ? data : []);
-    } catch (e) {
-      if (ac.signal.aborted || e?.name === 'AbortError') return;
-      setAdmins(null);
-      setError(handleApiError(e, t('admins.loadFailed')));
-    } finally {
-      if (!ac.signal.aborted) setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    load();
-    return () => abortRef.current?.abort();
-  }, [load]);
+  // The list from the query cache. A failed read shows no rows at all.
+  const list = useQuery(adminAdminsQuery());
+  const admins = list.isError ? null : (list.data ?? null);
+  // A retry after a failure draws the skeleton again, as the first load did.
+  const pending = list.isPending || (list.isError && list.isFetching);
+  const error = list.isError && !pending ? handleApiError(list.error, t('admins.loadFailed')) : '';
 
   const remove = async (target) => {
     setBusy(target);
     setRowError((p) => ({ ...p, [target]: '' }));
     try {
       await adminApi.removeAdmin(target);
-      setAdmins((prev) => (prev || []).filter((a) => a.email !== target));
+      // Off the list at once; the re-read the write sets off confirms it.
+      qc.setQueryData(adminAdminsQuery().queryKey, (prev) => prev && prev.filter((a) => a.email !== target));
       setConfirming('');
     } catch (e) {
       // An 'env' row answers 400; the server's message is shown as it is.
@@ -174,9 +158,9 @@ export default function AdminAdmins() {
       gridTemplateColumns: isDesktop ? 'minmax(0, 1.6fr) minmax(0, 1fr)' : 'minmax(0, 1fr)',
     }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-        {loading && !admins && <Loading T={T} />}
-        {error && !loading && <Failed T={T} message={error} onRetry={load} />}
-        {admins && rows.length === 0 && !loading && !error && (
+        {pending && <AdminsSkeleton />}
+        {error && <Failed T={T} message={error} onRetry={() => list.refetch()} />}
+        {admins && rows.length === 0 && (
           <Empty T={T} title={t('admins.empty')} body={t('admins.emptyBody')} />
         )}
         {rows.length > 0 && (
