@@ -15,12 +15,61 @@
 //    page's language, start loading beside the app's entry, rather than once
 //    the entry has run;
 //  - the store's own faces start loading at once (a design's from Google
-//    Fonts; esy's own are preloaded by index.html), and its name is the title.
+//    Fonts; esy's own are preloaded by index.html), and its name and icon are
+//    the tab's (applyTab, below).
 //
-// ThemeRoot (App.jsx) and DisplayPrefsContext take over on mount and draw the
-// same attributes from the same data, so nothing changes when the app starts.
-// Every step is guarded: a failure leaves index.html's defaults, which is
-// what the page looked like before this existed.
+// ThemeRoot (App.jsx), DisplayPrefsContext and TenantContext take over on
+// mount and draw the same from the same data, so nothing changes when the app
+// starts. Every step is guarded: a failure leaves index.html's defaults, which
+// is what the page looked like before this existed.
+
+// esy's own tab, the one index.html ships, kept for the platform host. The
+// platform host resolves to the seeded "main" store, whose name is a
+// placeholder that a persisted database keeps, so it is never the title.
+const PLATFORM_TITLE = 'esy.ge';
+const PLATFORM_ICON = '/favicon.svg';
+
+const escapeXml = (s) => s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+// A store with no logo gets the same badge the storefront header draws: its
+// initial on its accent colour. Latin initials are capitalised; a Georgian
+// one stays as it is (its "capital" is Mtavruli, which the design never uses).
+const initialIcon = (name, color) => {
+  const initial = (Array.from(name.trim())[0] || '?').replace(/[a-z]/, (c) => c.toUpperCase());
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+    + `<rect width="64" height="64" rx="16" fill="${escapeXml(color || '#6366f1')}"/>`
+    + '<text x="32" y="44" text-anchor="middle" font-family="system-ui,-apple-system,\'Segoe UI\',sans-serif" '
+    + `font-size="36" font-weight="800" fill="#fff">${escapeXml(initial)}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+};
+
+const setIcon = (href) => {
+  let link = document.querySelector('link[rel="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  if (link.getAttribute('href') === href) return;
+  // Logos are uploaded as PNG/JPEG/WebP; let the browser sniff the type
+  // rather than keep index.html's svg declaration on a raster file.
+  link.removeAttribute('type');
+  link.href = href;
+};
+
+/** The tab's title and icon for the page's store (or esy's, on the platform). */
+export function applyTab(tenant) {
+  if (!tenant || tenant.isPlatform) {
+    document.title = PLATFORM_TITLE;
+    setIcon(PLATFORM_ICON);
+    return;
+  }
+  const title = tenant.displayName || tenant.name;
+  if (title) document.title = title;
+  if (tenant.logoUrl) setIcon(tenant.logoUrl);
+  else if (title) setIcon(initialIcon(title, tenant.primaryColor));
+}
+
 export default function paint(cfg) {
   const html = document.documentElement;
   const stored = (key) => {
@@ -117,6 +166,5 @@ export default function paint(cfg) {
     if (own('saver', saveData || matches('(prefers-reduced-data: reduce)'))) html.setAttribute('data-saver', '');
   }
 
-  const title = tenant && (tenant.displayName || tenant.name);
-  if (title) document.title = title;
+  applyTab(tenant);
 }

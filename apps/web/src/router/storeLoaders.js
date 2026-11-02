@@ -65,6 +65,13 @@ export const checkoutLoader = prime(({ qc }) => Promise.all([
 
 export const ordersLoader = prime(({ qc }) => ensure(qc, myOrdersQuery()));
 
+// The account board: the orders decide its shape (its figures, the recent
+// ones); the address book only fills in a count at the end of its row.
+export const accountLoader = prime(({ qc }) => {
+  behind(ensure(qc, addressesQuery()));
+  return ensure(qc, myOrdersQuery());
+});
+
 export const orderLoader = prime(({ params, qc }) => Promise.all([
   ensure(qc, myOrderQuery(params.orderNumber)),
   ensure(qc, publicDeliveryQuery()),

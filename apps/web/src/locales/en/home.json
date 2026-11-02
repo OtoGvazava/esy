@@ -1,5 +1,4 @@
 {
-  "noMore": "No more products",
   "failedToLoad": "Failed to load products",
   "established": "est {{year}}",
   "sortNewest": "Sort: Newest",
@@ -7,7 +6,6 @@
   "productCount_other": "{{count}} products",
   "shown": "{{count}} shown",
   "noProducts": "This store has no products yet.",
-  "noProductsQuery": "No products found for “{{query}}”.",
   "reachedEnd": "You’ve reached the end",
   "loadingMore": "loading more…",
   "loadingMoreN": "loading {{count}} more…",

@@ -13,7 +13,7 @@ import ProductDetails from '../pages/ProductDetails';
 import SearchOverlay from '../pages/SearchOverlay';
 import Cart from '../pages/Cart';
 import {
-  aboutLoader, checkoutLoader, homeLoader, orderLoader, ordersLoader, productLoader,
+  aboutLoader, accountLoader, checkoutLoader, homeLoader, orderLoader, ordersLoader, productLoader,
 } from './storeLoaders';
 import { lazyScreen, searchStays } from './prime';
 
@@ -38,7 +38,7 @@ export const routes = [{
     { path: 'checkout', lazy: lazyScreen(() => import('../pages/Checkout')), loader: checkoutLoader, shouldRevalidate: searchStays },
     { path: 'pay/return', lazy: lazyScreen(() => import('../pages/PayReturn')) },
     { path: 'success', lazy: lazyScreen(() => import('../pages/OrderSuccess')) },
-    { path: 'account', lazy: lazyScreen(() => import('../pages/Account')), loader: ordersLoader },
+    { path: 'account', lazy: lazyScreen(() => import('../pages/Account')), loader: accountLoader },
     { path: 'account/personal', lazy: lazyScreen(() => import('../pages/PersonalDetails')) },
     { path: 'orders', lazy: lazyScreen(() => import('../pages/Orders')), loader: ordersLoader },
     { path: 'orders/:orderNumber', lazy: lazyScreen(() => import('../pages/OrderDetail')), loader: orderLoader },

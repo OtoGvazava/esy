@@ -11,12 +11,14 @@ import { useDevice } from '../contexts/DeviceContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useDisplayPrefs } from '../contexts/DisplayPrefsContext';
-import { useBottomClearance, useDesign } from '../core/design/useDesign';
+import { useBottomClearance } from '../core/design/useDesign';
 import { LANGS, TEXT_SIZES, VIEWS } from '../core/display/prefs';
 import { HeadButton } from '../components/store/StoreMenus';
 import { langInfo } from '../components/glow/GlowPrimitives';
 import { useIndicator } from '../core/useIndicator';
 import { GlowScreen } from '../components/glow/GlowChrome';
+import { VIEW_PATHS } from '../components/store/ViewSwitch';
+import { useSegLook } from '../components/glow/useSegLook';
 
 // The design's glyphs for this screen, drawn at the theme's stroke weight.
 const PATHS = {
@@ -24,10 +26,7 @@ const PATHS = {
   light: <><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" /></>,
   dark: <path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z" />,
   auto: <><rect x="3.5" y="5" width="17" height="11.5" rx="2" /><path d="M9 20h6M12 16.5V20" /></>,
-  store: <path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0M5.5 12.5V20h13v-7.5" />,
-  grid2: <><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></>,
-  grid3: <><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" /><circle cx="9" cy="9.5" r="1.6" /><path d="m4 17 5-4.5 4 3.5 2.5-2 4.5 4" /></>,
-  list: <><rect x="4" y="5" width="5" height="5" rx="1.2" /><rect x="4" y="14" width="5" height="5" rx="1.2" /><path d="M12 7.5h8M12 16.5h8" /></>,
+  ...VIEW_PATHS,
 };
 
 function Glyph({ name, size = 16 }) {
@@ -37,32 +36,6 @@ function Glyph({ name, size = 16 }) {
       style={{ flex: 'none', fill: 'none', stroke: 'currentColor', strokeWidth: 'var(--k-ic-w, 1.8)', strokeLinecap: 'round', strokeLinejoin: 'round' }}
     >{PATHS[name]}</svg>
   );
-}
-
-// The theme's segmented control (the kit's .seg): the chosen option lifts out
-// of the well; Neon lights it instead. The lifted part is one thumb that
-// slides to the option chosen, rather than each option lighting on its own.
-function useSegLook() {
-  const { T, dark } = useGlow();
-  const { theme } = useDesign();
-  const neon = theme === 'neon';
-  return {
-    well: { position: 'relative', display: 'flex', gap: 4, padding: 4, borderRadius: 'var(--k-r-btn)', background: T.surface2 },
-    thumb: {
-      borderRadius: 'calc(var(--k-r-btn) - 4px)',
-      background: neon ? 'var(--k-neon)' : dark ? (theme === 'glow' ? '#3a3a3e' : `color-mix(in oklab, ${T.text} 16%, ${T.surface2})`) : T.surface,
-      boxShadow: neon ? '0 0 22px -4px var(--k-neon)'
-        : dark ? `0 0 0 1px color-mix(in oklab, ${T.text} 18%, transparent)` : '0 1px 4px rgba(0,0,0,.14)',
-    },
-    button: (on) => ({
-      position: 'relative', zIndex: 1,
-      flex: 1, minWidth: 0, minHeight: 40, padding: neon ? '0 8px' : '0 10px', border: 0, cursor: 'pointer',
-      borderRadius: 'calc(var(--k-r-btn) - 4px)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-      font: `${on ? 600 : 500} 13.5px ${neon ? 'var(--k-font-m)' : T.font}`, whiteSpace: 'nowrap',
-      color: on ? (neon ? 'var(--k-on-neon)' : T.text) : T.textDim,
-      background: 'transparent',
-    }),
-  };
 }
 
 /**

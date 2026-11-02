@@ -55,32 +55,6 @@
     "errorTitle": "Sign-in did not finish",
     "errorBody": "The window may have closed, or the connection dropped. Try again — nothing was lost."
   },
-  "createStore": {
-    "errNameRequired": "Store name is required",
-    "errSubShort": "Subdomain must be at least 3 characters",
-    "errCreate": "Could not create the store",
-    "liveTitle": "{{name}} is live",
-    "liveBody": "Your store responds at this address.",
-    "backToStorefront": "Back to storefront",
-    "title": "Open your store",
-    "subtitle": "Pick a name and a subdomain. Your storefront goes live on esy instantly.",
-    "storeName": "Store name",
-    "storeNamePlaceholder": "Acme Goods",
-    "subdomain": "Subdomain",
-    "subdomainPlaceholder": "acme",
-    "subdomainHint": "lowercase letters, numbers, hyphens · 3–30 chars",
-    "description": "Description",
-    "descriptionPlaceholder": "What you sell, in a sentence",
-    "addressStreet": "Street address",
-    "addressStreetPlaceholder": "123 Market St",
-    "addressCity": "City",
-    "addressCountry": "Country",
-    "addressPostal": "Postal code",
-    "established": "Established year",
-    "brandAccent": "Brand accent",
-    "creating": "Creating…",
-    "create": "Create store"
-  },
   "checkout": {
     "title": "Checkout",
     "flow": {
@@ -328,24 +302,25 @@
   "account": {
     "title": "Account",
     "memberFallback": "Member",
-    "roleOwner": "Shop owner",
-    "roleMember": "Member",
+    "phoneVerified": "Number verified",
     "statOrders": "Orders",
     "statSpent": "Spent",
     "recentOrders": "Recent orders",
     "seeAll": "See all",
+    "status": {
+      "placed": "Received",
+      "shipped": "Shipped",
+      "out_for_delivery": "On its way",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
     "itemCount_one": "{{count}} item",
     "itemCount_other": "{{count}} items",
-    "setLanguage": "Language",
-    "setAppearance": "Appearance",
-    "appearanceDark": "Dark",
-    "appearanceLight": "Light",
     "setAddresses": "Addresses",
-    "setPayments": "Payment methods",
-    "setDashboard": "Shop dashboard",
-    "dashboardValue": "Admin",
-    "setConfig": "Platform config",
-    "configValue": "Live",
+    "setDashboard": "Store dashboard",
+    "chipOwner": "Owner",
+    "chipManager": "Manager",
+    "settings": "Settings",
     "setHelp": "Help & support",
     "signOut": "Sign out",
     "personal": {
@@ -399,17 +374,6 @@
   "settings": {
     "cancel": "Cancel",
     "done": "Done"
-  },
-  "languageSettings": {
-    "title": "Choose language",
-    "note": "We translate the storefront UI. Seller content (product titles, bios) stays in its source language."
-  },
-  "appearanceSettings": {
-    "title": "Choose appearance",
-    "note": "Pick how the storefront looks. System follows your device setting.",
-    "light": "Light",
-    "dark": "Dark",
-    "system": "System · Auto"
   },
   "profileGate": {
     "backToStore": "Back to the store",

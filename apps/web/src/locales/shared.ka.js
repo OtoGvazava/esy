@@ -2,10 +2,11 @@
 // chunk: i18n.js loads it whole on a Georgian page.
 import common from './ka/common.json';
 import design from './ka/design.json';
+import display from './ka/display.json';
 import home from './ka/home.json';
 import navbar from './ka/navbar.json';
 import owner from './ka/owner.json';
 import product from './ka/product.json';
 import storefront from './ka/storefront.json';
 
-export default { common, design, home, navbar, owner, product, storefront };
+export default { common, design, display, home, navbar, owner, product, storefront };

@@ -154,7 +154,8 @@ function paintScript() {
         hosts: hostChunks(ctx.bundle, base),
         locales: localeChunks(ctx.bundle, base),
       };
-      const source = readFileSync(file, 'utf8').replace('export default function paint', 'function paint');
+      // A plain script, not a module: its exports (TenantContext imports one) are plain declarations here.
+      const source = readFileSync(file, 'utf8').replace(/^export (default )?/gm, '');
       const { code } = await transformWithEsbuild(`${source}\ntry { paint(${JSON.stringify(cfg)}); } catch (e) { /* index.html's defaults stand */ }`, file, {
         minify: true, format: 'iife', target: 'es2017',
       });

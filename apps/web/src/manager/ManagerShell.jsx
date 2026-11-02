@@ -429,7 +429,13 @@ function TopBar({ t, bx, store, user, sub, active, setSlots }) {
         )}
       </div>
       {bx !== 'ph' && <div ref={rightRef} className="bx-row" style={{ flex: 'none', gap: 10 }} />}
-      {bx === 'desk' && (
+      {bx === 'ph' ? (
+        // No room for the label on a phone: the icon alone, named for readers.
+        <a href={storeUrlFor(sub)} target="_blank" rel="noreferrer" className="bx-ibtn esy-press"
+          aria-label={t('nav.viewStore')} title={t('nav.viewStore')}>
+          <BxIcon name="external" />
+        </a>
+      ) : (
         <a href={storeUrlFor(sub)} target="_blank" rel="noreferrer" className="bx-btn bx-btn-g bx-btn-sm esy-press-soft">
           <BxIcon name="external" />{t('nav.viewStore')}
         </a>

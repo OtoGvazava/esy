@@ -262,39 +262,6 @@
     "signIn": "Sign in",
     "openStore": "Open your store"
   },
-  "footer": {
-    "tagline": "The home of independent shops on the web. Open yours in minutes, keep 98% of every sale.",
-    "taglineShort": "The home of independent shops on the web.",
-    "status": "All systems operational",
-    "rights": "© 2026 esy ge llc · Tbilisi, Georgia",
-    "rightsShort": "© 2026 esy ge",
-    "langs": "English · ქართული",
-    "version": "v0.42.1",
-    "col": {
-      "esy": "esy.ge",
-      "sellers": "For sellers",
-      "shoppers": "For shoppers",
-      "resources": "Resources"
-    },
-    "link": {
-      "about": "About",
-      "brand": "Brand",
-      "careers": "Careers",
-      "press": "Press",
-      "openStore": "Open a store",
-      "pricing": "Pricing",
-      "sellerDocs": "Seller docs",
-      "api": "API",
-      "browseStores": "Browse stores",
-      "giftCards": "Gift cards",
-      "orderStatus": "Order status",
-      "refunds": "Refunds",
-      "helpCenter": "Help center",
-      "status": "Status",
-      "terms": "Terms",
-      "privacy": "Privacy"
-    }
-  },
   "landing": {
     "heroEyebrow": "A place for makers",
     "heroTitlePre": "Open your store on ",
@@ -303,8 +270,6 @@
     "heroBodyPost": " — from the first sale to the millionth.",
     "browseStores": "Browse stores",
     "live": "live",
-    "exampleStore": "An example esy store",
-    "orderPing": "+48 ₾ order · 32s ago",
     "looksLabel": "Three of the ready-made looks",
     "lookOpen": "Open a store in the {{name}} look",
     "howItWorks": "How it works",
@@ -392,15 +357,6 @@
     "continueGmail": "Continue with Gmail",
     "encrypted": "Encrypted end-to-end. esy never sees your Google password.",
     "newNote": "New to esy? Just sign in — we'll create your account."
-  },
-  "notFound": {
-    "tag": "404 · no such store",
-    "title": "That subdomain doesn't exist yet.",
-    "bodyPre": "But it could — ",
-    "bodyPost": " is available. Want to claim it?",
-    "claim": "Claim it",
-    "browse": "← Browse stores",
-    "home": "Home"
   },
   "cat": {
     "fashion": "Fashion",

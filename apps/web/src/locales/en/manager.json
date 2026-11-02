@@ -21,7 +21,7 @@
       "team": "Team and roles"
     },
     "both": "Both",
-    "note": "A store always needs at least one owner. A manager sees the owner's pages but cannot change them."
+    "note": "A store always needs at least one owner. A manager runs products and orders; the team and the settings stay with the owner."
   },
   "invite": {
     "title": "Give someone a role",
@@ -172,12 +172,7 @@
     "failed": "The refund could not be sent."
   },
   "title": "esy manager",
-  "pickStore": "Choose a store to manage",
-  "noStores": "No stores yet",
-  "noStoresBody": "Create your first store on esy.ge and it will appear here.",
-  "createStore": "Create a store",
   "roleOwner": "Owner",
-  "roleManager": "Manager",
   "statusLive": "Live",
   "statusDraft": "Draft",
   "access": {
@@ -270,7 +265,6 @@
     "restricted": "Platform admins only",
     "config": "Live configuration"
   },
-  "signInRequired": "Sign in to manage your stores",
   "signIn": "Continue with Google",
   "role": {
     "OWNER": "Owner",

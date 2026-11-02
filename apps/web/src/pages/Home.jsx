@@ -26,6 +26,7 @@ import { useStoreBarShown } from '../components/store/storeChrome';
 import { alpha } from '../core/tokens';
 import CategoryPills from '../components/store/CategoryPills';
 import { SortMenu } from '../components/store/CollectionFilters';
+import ViewSwitch, { ViewSwitchSkeleton } from '../components/store/ViewSwitch';
 import { useStoreCategories } from '../hooks/useStoreCategories';
 import Collection from './Collection';
 import { NoResults } from '../components/shop/EmptyStates';
@@ -111,7 +112,8 @@ function ShopHome() {
   const shown = picked ? picked.items : products;
 
   // The sort control: on the category row's end when the store has categories
-  // (an icon on a phone, as A1 draws it), otherwise on the count row.
+  // (an icon on a phone, as A1 draws it), otherwise on the count row (an icon
+  // there too on a phone, so the count, view and sort pin as one line).
   const pillsShown = !query && categories.length > 0;
   const sortOptions = Object.entries(SORTS).map(([id, s]) => ({ id, label: ts(`collection.sort.${s.key}`) }));
   const sortMenu = (iconOnly) => (
@@ -218,12 +220,16 @@ function ShopHome() {
               <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 8, overflow: 'hidden' }}>
                 {[64, 88, 74, 70, 80].map((w, i) => <Sk key={i} w={w} h={40} r="var(--k-r-pill)" />)}
               </div>
+              <ViewSwitchSkeleton />
               <Sk w={isMobile ? 40 : 150} h={40} r="var(--k-r-pill)" />
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: `${sp(14)} ${gutter}px ${sp(6)}` }}>
               <Sk w={90} h={13} r={6} />
-              <Sk w={150} h={40} r="var(--k-r-pill)" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ViewSwitchSkeleton />
+                <Sk w={isMobile ? 40 : 150} h={40} r="var(--k-r-pill)" />
+              </div>
             </div>
           )}
           <div style={{ padding: `${sp(4)} ${gutter}px ${sp(8)}` }}>
@@ -268,7 +274,12 @@ function ShopHome() {
       )}
 
       {/* The store's categories (A1), each opening its collection. */}
-      {pillsShown && <CategoryPills gutter={gutter} categories={categories} trailing={sortMenu(isMobile)} />}
+      {pillsShown && (
+        <CategoryPills
+          gutter={gutter} categories={categories}
+          trailing={<><ViewSwitch />{sortMenu(isMobile)}</>}
+        />
+      )}
 
       {/* result meta — the sort control sits here, on the row it describes,
           unless the category row above already carries it. A store with no
@@ -294,7 +305,10 @@ function ShopHome() {
             {t('productCount', { count: story ? shown.length : total })}
           </div>
         )}
-        {sortMenu(false)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ViewSwitch />
+          {sortMenu(isMobile)}
+        </div>
       </div>}
 
       {error && (

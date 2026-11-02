@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { tenantQuery } from '../core/query/queries';
+import { applyTab } from '../boot/paint';
 
 // The backend resolves the tenant from the request Host header, so a single
 // build serves every wildcard subdomain — this just surfaces that tenant's
@@ -17,18 +18,14 @@ export const useTenant = () => useContext(TenantContext);
 
 export { TenantContext };
 
-const applyTitle = (t) => {
-  const title = t?.displayName || t?.name;
-  if (title) document.title = title;
-};
-
 export const TenantProvider = ({ children }) => {
   const qc = useQueryClient();
   // No endpoint, or no network: keep the default branding rather than retry.
   const { data, isPending } = useQuery({ ...tenantQuery(), retry: false });
   const tenant = data || null;
 
-  useEffect(() => { applyTitle(tenant); }, [tenant]);
+  // The tab's title and icon (the page's first frame drew the same).
+  useEffect(() => { applyTab(tenant); }, [tenant]);
 
   // Re-pull branding after the owner edits the store so the UI (header, glow
   // accent, title) reflects the change without a full reload.

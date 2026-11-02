@@ -244,7 +244,9 @@ function ProductView({ id }) {
           { id: 'price', k: t('rowPrice'), v: money(product.price) },
           { id: 'availability', k: t('rowAvailability'), v: inStock ? t('availabilityInStock', { count: product.quantity ?? product.stock }) : t('outOfStock') },
           { id: 'ships', k: t('shipsFrom'), v: tenant.location },
-        ].map(({ id: rowId, k, v }, i, arr) => (
+        // A store that hasn't given its city has nothing to say here, and an
+        // empty row reads as a broken page.
+        ].filter((row) => row.v).map(({ id: rowId, k, v }, i, arr) => (
           <div key={rowId} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', borderBottom: i === arr.length - 1 ? 'none' : `1px solid ${T.border}` }}>
             <span style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>{k}</span>
             <span style={{ font: `600 12.5px ${T.font}`, color: T.text }}>{v}</span>

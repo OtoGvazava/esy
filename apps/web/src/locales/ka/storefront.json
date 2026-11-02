@@ -55,32 +55,6 @@
     "errorTitle": "შესვლა ვერ დასრულდა",
     "errorBody": "შესაძლოა ფანჯარა დაიხურა ან კავშირი გაწყდა. სცადე თავიდან — არაფერი დაკარგულა."
   },
-  "createStore": {
-    "errNameRequired": "მაღაზიის სახელი სავალდებულოა",
-    "errSubShort": "ქვედომენი უნდა იყოს მინიმუმ 3 სიმბოლო",
-    "errCreate": "მაღაზიის შექმნა ვერ მოხერხდა",
-    "liveTitle": "{{name}} აქტიურია",
-    "liveBody": "შენი მაღაზია ხელმისაწვდომია ამ მისამართზე.",
-    "backToStorefront": "მაღაზიაში დაბრუნება",
-    "title": "შენი მაღაზიის გახსნა",
-    "subtitle": "აირჩიე სახელი და ქვედომენი. შენი მაღაზია esy-ზე მაშინვე ეთერში გადის.",
-    "storeName": "მაღაზიის სახელი",
-    "storeNamePlaceholder": "Acme Goods",
-    "subdomain": "ქვედომენი",
-    "subdomainPlaceholder": "acme",
-    "subdomainHint": "პატარა ასოები, ციფრები, დეფისები · 3–30 სიმბოლო",
-    "description": "აღწერა",
-    "descriptionPlaceholder": "რას ყიდი, ერთ წინადადებად",
-    "addressStreet": "ქუჩის მისამართი",
-    "addressStreetPlaceholder": "მთავარი ქ. 123",
-    "addressCity": "ქალაქი",
-    "addressCountry": "ქვეყანა",
-    "addressPostal": "საფოსტო ინდექსი",
-    "established": "დაარსების წელი",
-    "brandAccent": "ბრენდის აქცენტი",
-    "creating": "იქმნება…",
-    "create": "მაღაზიის შექმნა"
-  },
   "checkout": {
     "title": "გადახდა",
     "flow": {
@@ -328,24 +302,25 @@
   "account": {
     "title": "ანგარიში",
     "memberFallback": "მომხმარებელი",
-    "roleOwner": "მაღაზიის მფლობელი",
-    "roleMember": "მომხმარებელი",
+    "phoneVerified": "ნომერი დადასტურებულია",
     "statOrders": "შეკვეთები",
     "statSpent": "დახარჯული",
     "recentOrders": "ბოლო შეკვეთები",
     "seeAll": "ყველას ნახვა",
+    "status": {
+      "placed": "მიღებულია",
+      "shipped": "გაიგზავნა",
+      "out_for_delivery": "გზაშია",
+      "delivered": "მიწოდებულია",
+      "cancelled": "გაუქმდა"
+    },
     "itemCount_one": "{{count}} ნივთი",
     "itemCount_other": "{{count}} ნივთი",
-    "setLanguage": "ენა",
-    "setAppearance": "გარეგნობა",
-    "appearanceDark": "მუქი",
-    "appearanceLight": "ღია",
     "setAddresses": "მისამართები",
-    "setPayments": "გადახდის მეთოდები",
     "setDashboard": "მაღაზიის პანელი",
-    "dashboardValue": "ადმინი",
-    "setConfig": "პლატფორმის კონფიგურაცია",
-    "configValue": "ცოცხალი",
+    "chipOwner": "მფლობელი",
+    "chipManager": "მენეჯერი",
+    "settings": "პარამეტრები",
     "setHelp": "დახმარება და მხარდაჭერა",
     "signOut": "გასვლა",
     "personal": {
@@ -399,17 +374,6 @@
   "settings": {
     "cancel": "გაუქმება",
     "done": "მზადაა"
-  },
-  "languageSettings": {
-    "title": "აირჩიე ენა",
-    "note": "ჩვენ ვთარგმნით მაღაზიის ინტერფეისს. გამყიდველის კონტენტი (პროდუქტების სახელები, აღწერები) რჩება ორიგინალ ენაზე."
-  },
-  "appearanceSettings": {
-    "title": "აირჩიე გარეგნობა",
-    "note": "აირჩიე როგორ გამოიყურება მაღაზია. სისტემური მიჰყვება შენი მოწყობილობის პარამეტრს.",
-    "light": "ღია",
-    "dark": "მუქი",
-    "system": "სისტემური · ავტო"
   },
   "profileGate": {
     "backToStore": "მაღაზიაში დაბრუნება",

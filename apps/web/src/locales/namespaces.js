@@ -8,19 +8,19 @@
 // than showing its raw keys.
 
 /** Read on every host: one chunk per language (shared.<lang>.js). */
-export const SHARED_NS = ['common', 'design', 'home', 'navbar', 'owner', 'product', 'storefront'];
+export const SHARED_NS = ['common', 'design', 'display', 'home', 'navbar', 'owner', 'product', 'storefront'];
 
 /** Each host's own, beside the shared ones: a chunk per namespace and language. */
 export const HOST_NS = {
-  store: ['account', 'cart', 'display'],
-  platform: ['display', 'platform'],
+  store: ['account', 'cart'],
+  platform: ['platform'],
   manager: ['manager'],
   admin: ['admin', 'cart'],
 };
 
 /** Every namespace there is (the design-sync previews load them all). */
 export const ALL_NS = [
-  ...SHARED_NS, 'account', 'admin', 'auth', 'cart', 'display', 'manager', 'orders', 'platform',
+  ...SHARED_NS, 'account', 'admin', 'auth', 'cart', 'manager', 'orders', 'platform',
 ];
 
 /** What a host loads: the shared namespaces and its own. */

@@ -33,6 +33,7 @@ import {
   CheckRow, FilterChip, FilterSheet, Glyph, LinkButton, OptionPills, PATHS, PriceFilter,
   SectionTitle, SortMenu, pillStyle,
 } from '../components/store/CollectionFilters';
+import ViewSwitch from '../components/store/ViewSwitch';
 
 // The filters as the URL states them, and back (shopQuery.js, which the
 // route loader reads too).
@@ -179,7 +180,8 @@ export default function Collection() {
   const sort = (
     <SortMenu
       T={T} value={f.sort} options={sortOptions} align={isDesktop ? 'right' : 'left'}
-      pillLabel={(label) => t('collection.sortLabel', { option: label })}
+      // A phone draws the icon, so filter, sort and view share one row (A3).
+      iconOnly={isMobile} pillLabel={(label) => t('collection.sortLabel', { option: label })}
       menuLabel={t('collection.sortMenu')} onChange={(id) => apply({ sort: id })}
     />
   );
@@ -274,7 +276,10 @@ export default function Collection() {
               {name}
               {counted && <span style={{ color: T.textDim, fontWeight: 400 }}>{` · ${total}`}</span>}
             </h1>
-            {sort}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ViewSwitch />
+              {sort}
+            </div>
           </div>
         </div>
       )}
@@ -291,6 +296,7 @@ export default function Collection() {
               {filtered ? t('collection.filterCount', { count: chips.length }) : t('collection.filter')}
             </button>
             {sort}
+            <ViewSwitch />
             {isTablet && counted && (
               <span style={{ marginLeft: 'auto', font: `400 12.5px ${T.font}`, color: T.textDim, whiteSpace: 'nowrap' }}>{countText}</span>
             )}

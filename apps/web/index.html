@@ -4,17 +4,18 @@
 <html lang="ka" data-th="esy" data-md="light">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>esy.ge</title>
     <!-- The theme tokens key off <html>'s attributes. They are drawn before the
          first paint: the server puts the store this page belongs to in place
          of the first mark (SpaIndex.java), and the build puts the script that
          draws it in place of the second (src/boot/paint.js) — light or dark,
-         the store's theme, colour, style and display settings, so a store's
-         first frame is already its own. ThemeRoot takes over on mount. -->
+         the store's theme, colour, style and display settings, and its name
+         and icon on the tab, so a store's first frame is already its own.
+         ThemeRoot and TenantContext take over on mount. -->
     <!--esy:boot-->
     <!--esy:paint-->
-    <title>esy</title>
   </head>
   <body>
     <div id="root"></div>

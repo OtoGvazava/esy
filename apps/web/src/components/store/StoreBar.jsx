@@ -24,6 +24,7 @@ import { useCart } from '../../contexts/CartContext';
 import { useGlow } from '../../styles/glow';
 import { useThemeMode } from '../../contexts/ThemeModeContext';
 import { Icon } from '../glow/GlowPrimitives';
+import { LangPill } from '../glow/GlowPills';
 import { Icons } from '../../core/icons';
 import { usePublicContacts } from '../../hooks/useStoreContacts';
 import { CHANNELS, channelHref } from '../../core/channels';
@@ -140,10 +141,9 @@ export default function StoreBar({ compact }) {
         );
       })}
 
-      {/* Both languages named, the current one first, as on every esy header. */}
-      <span style={{ ...pill }}>
-        <Icon.globe /> {language === 'ka' ? 'ქა · EN' : 'EN · ქა'}
-      </span>
+      {/* A gear and the current language: it opens Language and display
+          (where the language and the look are both chosen), not a switch. */}
+      <LangPill T={T} lang={language} to="/settings/display" label={t('title', { ns: 'display' })} compact={false} />
 
       <Link to="/cart" className="esy-press" style={{
         ...pill,

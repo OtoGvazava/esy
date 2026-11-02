@@ -1,184 +1,231 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { useOrders } from '../contexts/OrdersContext';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { useGlow } from '../styles/glow';
-import { managerUrl } from '../hooks/usePlatformHost';
-import { Icon, PoweredBy, langInfo } from '../components/glow/GlowPrimitives';
-import { GlowScreen, GlowTopNav, money } from '../components/glow/GlowChrome';
+import { useBottomClearance } from '../core/design/useDesign';
+import { addressesQuery } from '../core/query/queries';
+import { langInfo } from '../components/glow/GlowPrimitives';
+import { money } from '../components/glow/GlowChrome';
+import { G, Sk, Thumb, initials, useDev } from '../components/shop/kit';
+import { Sk as SkBlock, Skeleton } from '../components/skeleton/Skeleton';
+import { managerUrl, platformUrl } from '../utils/hosts';
 import SignIn from './SignIn';
-import { dayTime } from '../components/shop/kit';
-import { alpha } from '../core/tokens';
-import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 
-export default function Account() {
-  const { T } = useGlow();
-  const navigate = useNavigate();
-  const { t } = useTranslation('storefront');
-  const { user, isAuthenticated, isAdmin, logout, loading } = useAuth();
-  const { orders, pending, getTotalOrders, getTotalSpent } = useOrders();
-  const { appearance, language } = useThemeMode();
+// An order's chip, in the board's tones: on its way is "ship", cancelled is "ref".
+const TONE = { placed: 'c-pend', shipped: 'c-ship', out_for_delivery: 'c-ship', delivered: 'c-done', cancelled: 'c-ref' };
 
-  // While the session is restored the page is drawn in its own shape, rather
-  // than the sign-in screen flashing up first for a shopper who is signed in.
-  if (loading) {
-    return (
-      <GlowScreen T={T}>
-        <GlowTopNav T={T} title={t('account.title')} />
-        <Skeleton label={t('common:loading.profile')} style={{ maxWidth: 620, margin: '0 auto' }}>
-          <div style={{ padding: '6px 16px 16px' }}>
-            <div style={{ padding: '18px 16px', borderRadius: 18, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 14 }}>
-              <Sk w={56} h={56} r="50%" />
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <Sk h={15} w="48%" r={7} />
-                <Sk h={11} w="62%" r={6} />
-                <Sk h={18} w={70} r={999} />
-              </div>
+// The design's frames (D1): one column on a phone and a tablet; on a desktop
+// the profile and recent orders on the left, the settings in a 460 px column
+// (narrower below 1200 px, so the two still fit).
+const FRAME = {
+  ph: { wrap: { padding: '6px 16px 0' }, cols: { display: 'flex', flexDirection: 'column', gap: 16 }, left: { gap: 16 }, right: { gap: 10 } },
+  tab: { wrap: { padding: '8px 28px 0' }, cols: { display: 'flex', flexDirection: 'column', gap: 20 }, left: { gap: 18 }, right: { gap: 10 } },
+  desk: {
+    // The title sits in the same centred column as the cards, so they share one left edge.
+    wrap: { display: 'flex', flexDirection: 'column', gap: 20, padding: '32px var(--gut) 0', maxWidth: 1200, margin: '0 auto', boxSizing: 'content-box' },
+    cols: { display: 'flex', gap: 32, alignItems: 'flex-start' },
+    left: { gap: 20, flex: 1, minWidth: 0 },
+    right: { gap: 10, width: 'min(460px, 42%)', flex: 'none' },
+  },
+};
+
+// The board while the session is restored and the orders are first read: the
+// profile card, its two figures and the settings in their own places, each
+// block the height of its line, so the board lands without moving. What is
+// always there is drawn; the recent orders, there only for some, are not.
+function AccountSkeleton({ t, f }) {
+  const line = (h, w, box) => <SkBlock h={h} w={w} r={Math.min(8, h / 2)} style={{ margin: `${(box - h) / 2}px 0` }} />;
+  return (
+    <Skeleton label={t('common:loading.profile')} style={f.cols}>
+      <div className="stk" style={f.left}>
+        <div className="card padl stk" style={{ gap: 14 }}>
+          <div className="row" style={{ gap: 14 }}>
+            <SkBlock w={76} h={76} r="50%" />
+            <div className="grow">
+              {line(18, '46%', 24)}
+              {line(11, '62%', 18)}
             </div>
           </div>
-          <div style={{ padding: '0 16px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-            {[0, 1].map((i) => (
-              <div key={i} style={{ padding: '12px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <Sk h={18} w="60%" r={7} />
-                <Sk h={9} w="70%" r={5} />
-              </div>
-            ))}
+          {/* The figures' boxes are the kit's grey already: the box is the block. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+            <SkBlock h={66} r="var(--k-r-in)" />
+            <SkBlock h={66} r="var(--k-r-in)" />
           </div>
-          <div style={{ padding: '6px 16px 24px', display: 'flex', flexDirection: 'column' }}>
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 6px', borderBottom: i === 4 ? 'none' : `1px solid ${T.border}` }}>
-                <Sk h={12} w={`${44 - i * 4}%`} r={6} />
-                <Sk h={12} w={12} r={4} />
+        </div>
+      </div>
+      <div className="stk" style={f.right}>
+        <span className="lbl no-desk">{t('account.settings')}</span>
+        <div className="list">
+          {/* the address book, Language and display (two lines), personal details, help */}
+          {[['40%'], ['52%', '38%'], ['46%'], ['30%']].map((widths, i) => (
+            <div key={i} className="li">
+              <SkBlock w={34} h={34} r="var(--k-r-in)" />
+              <div className="grow">
+                {line(12, widths[0], 20)}
+                {widths[1] && line(10, widths[1], 17)}
               </div>
-            ))}
-          </div>
-        </Skeleton>
-      </GlowScreen>
-    );
-  }
+            </div>
+          ))}
+        </div>
+        <SkBlock h={48} r="var(--k-r-btn)" />
+      </div>
+    </Skeleton>
+  );
+}
 
-  if (!isAuthenticated) return <SignIn />;
+// /account — the shopper's account tab (the design's D1).
+export default function Account() {
+  const { tenant } = useGlow();
+  const dev = useDev();
+  const bottom = useBottomClearance();
+  const navigate = useNavigate();
+  const { t } = useTranslation('storefront');
+  const { user, isAuthenticated, isStoreOwner, canManageStore, logout, loading } = useAuth();
+  const { orders, pending, getTotalOrders, getTotalSpent } = useOrders();
+  const { appearance, language } = useThemeMode();
+  // The address book's size, beside its row; nothing until it answers.
+  const addresses = useQuery({ ...addressesQuery(), enabled: isAuthenticated && !loading });
+  const addressCount = addresses.data ? addresses.data.length : null;
+
+  // Not a sign-in screen flashing up for a shopper who is signed in, nor a 0
+  // that turns into their count: the board's own shape until both are known.
+  const waiting = loading || pending;
+  if (!waiting && !isAuthenticated) return <SignIn />;
 
   const name = user?.name || user?.email || t('account.memberFallback');
-  const initial = (name || 'M').charAt(0).toUpperCase();
-  const recent = (orders || []).slice(0, 3);
+  const recent = (orders || []).slice(0, 2);
+  const f = FRAME[dev];
+  const openOrder = (o) => o.orderNumber && navigate(`/orders/${encodeURIComponent(o.orderNumber)}`);
 
   const settings = [
+    // The address book has no screen of its own yet: checkout keeps it.
+    { id: 'addresses', icon: 'pin', k: t('account.setAddresses'), v: addressCount ?? null },
     // Language, appearance and the rest of the display settings are one screen (D1 → D3).
     {
       id: 'display',
+      icon: 'screen',
       k: t('displayRow', { ns: 'account' }),
       sub: t('displaySummary', {
         ns: 'account',
         language: langInfo(language).native,
         appearance: t(`appearance.${appearance || 'auto'}`, { ns: 'display' }),
       }),
-      v: null,
       onClick: () => navigate('/settings/display'),
     },
     // Personal details are their own screen (D1 → D2).
-    { id: 'personal', k: t('account.personal.title'), v: null, onClick: () => navigate('/account/personal') },
-    { id: 'addresses', k: t('account.setAddresses'), v: null, onClick: null },
-    { id: 'payments', k: t('account.setPayments'), v: null, onClick: null },
-    ...(isAdmin ? [{ id: 'dashboard', k: t('account.setDashboard'), v: t('account.dashboardValue'), onClick: () => navigate('/admin') }] : []),
-    ...(isAdmin ? [{ id: 'config', k: t('account.setConfig'), v: t('account.configValue'), onClick: () => { window.location.href = managerUrl('/admin/config'); } }] : []),
-    { id: 'help', k: t('account.setHelp'), v: null, onClick: null },
-    { id: 'signout', k: t('account.signOut'), v: null, danger: true, onClick: () => { logout(); navigate('/'); } },
+    { id: 'personal', icon: 'user', k: t('account.personal.title'), onClick: () => navigate('/account/personal') },
+    // Only to the store's own team: platform ADMIN grants no authority inside a store.
+    ...(canManageStore ? [{
+      id: 'dashboard',
+      icon: 'store',
+      k: t('account.setDashboard'),
+      chip: isStoreOwner ? t('account.chipOwner') : t('account.chipManager'),
+      href: managerUrl(`/?tenant=${encodeURIComponent(tenant?.subdomain || '')}`),
+    }] : []),
+    { id: 'help', icon: 'info', k: t('account.setHelp'), href: platformUrl('/help') },
   ];
 
+  const row = (s) => {
+    const body = (
+      <>
+        <span className="li-ic"><G name={s.icon} cls="" /></span>
+        {s.sub
+          ? <div className="grow"><span>{s.k}</span><div className="xs dim">{s.sub}</div></div>
+          : <span className="grow">{s.k}</span>}
+        {s.v != null && <span className="sm dim">{s.v}</span>}
+        {s.chip && <span className="chip nd c-conf">{s.chip}</span>}
+        {(s.onClick || s.href) && <G name="chevR" cls="ic s dim" />}
+      </>
+    );
+    if (s.href) return <a key={s.id} href={s.href} className="li esy-press-soft">{body}</a>;
+    if (s.onClick) return <button key={s.id} type="button" className="li esy-press-soft" onClick={s.onClick}>{body}</button>;
+    return <div key={s.id} className="li">{body}</div>;
+  };
+
   return (
-    <GlowScreen T={T}>
-      <GlowTopNav T={T} title={t('account.title')} />
-      <div style={{ maxWidth: 620, margin: '0 auto' }}>
-        {/* profile */}
-        <div style={{ padding: '6px 16px 16px' }}>
-          <div style={{ padding: '18px 16px', borderRadius: 18, background: `linear-gradient(135deg, ${alpha(T.accent, 0.11)}, transparent 70%), ${T.surface}`, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', position: 'relative', overflow: 'hidden', background: T.grad, color: T.onAccent, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `800 22px ${T.font}`, flexShrink: 0 }}>
-              {initial}
-              {user?.avatar && (
-                <img
-                  src={user.avatar}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+    <Sk style={{ paddingBottom: (dev === 'desk' ? 0 : bottom) + 40 }}>
+      {dev !== 'desk' && (
+        <div className="st-top" style={{ paddingBottom: 10, paddingTop: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}>
+          <h1 className="h1 grow">{t('account.title')}</h1>
+        </div>
+      )}
+      <div style={f.wrap}>
+        {dev === 'desk' && <h1 className="h1">{t('account.title')}</h1>}
+        {waiting ? <AccountSkeleton t={t} f={f} /> : (
+          <div style={f.cols}>
+            <div className="stk" style={f.left}>
+              {/* profile, with the two numbers inside it */}
+              <div className="card padl stk" style={{ gap: 14 }}>
+                <div className="row" style={{ gap: 14 }}>
+                  <span className="av lg u">
+                    {initials(name)}
+                    {user?.avatar && (
+                      <img src={user.avatar} alt="" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    )}
+                  </span>
+                  <div className="grow" style={{ minWidth: 0 }}>
+                    <b className="h2" style={{ display: 'block', overflowWrap: 'anywhere' }}>{name}</b>
+                    {user?.email && <span className="sm dim" style={{ overflowWrap: 'anywhere' }}>{user.email}</span>}
+                    {user?.phoneVerified && (
+                      <div className="row" style={{ gap: 6, marginTop: 4 }}><span className="chip c-done">{t('account.phoneVerified')}</span></div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+                  {[
+                    { id: 'orders', k: t('account.statOrders'), v: String(getTotalOrders()) },
+                    { id: 'spent', k: t('account.statSpent'), v: money(getTotalSpent()) },
+                  ].map((s) => (
+                    <div key={s.id} style={{ background: 'var(--k-sf2)', borderRadius: 'var(--k-r-in)', padding: '12px 14px' }}>
+                      <span className="xs dim">{s.k}</span>
+                      <b className="h2 num" style={{ display: 'block' }}>{s.v}</b>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {recent.length > 0 && (
+                <div className="stk" style={{ gap: 10 }}>
+                  <div className="rowb">
+                    <span className="lbl">{t('account.recentOrders')}</span>
+                    <button type="button" className="link sm" onClick={() => navigate('/orders')} data-prefetch="/orders">{t('account.seeAll')}</button>
+                  </div>
+                  <div className="list">
+                    {recent.map((o, i) => {
+                      const id = String(o.orderNumber || o.id || '').toUpperCase();
+                      const key = o.statusKey || 'placed';
+                      return (
+                        <button
+                          key={o.id || i} type="button" className="li esy-press-soft" onClick={() => openOrder(o)}
+                          data-prefetch={o.orderNumber ? `/orders/${encodeURIComponent(o.orderNumber)}` : undefined}
+                        >
+                          <Thumb i={i + 1} size={44} radius={10} />
+                          <div className="grow">
+                            <b className="sm num">#{id}</b>
+                            <div className="xs dim">{`${t('account.itemCount', { count: o.count ?? 0 })} · ${money(o.total)}`}</div>
+                          </div>
+                          <span className={`chip ${TONE[key] || 'c-pend'}`}>{t(`account.status.${key}`, { defaultValue: t(`orders.status.${key}`, { defaultValue: key }) })}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ font: `700 17px ${T.font}`, color: T.text, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-              <div style={{ font: `400 12px ${T.font}`, color: T.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
-              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `600 11px ${T.font}`, letterSpacing: '0.04em' }}><Icon.star width="10" height="10" /> {isAdmin ? t('account.roleOwner') : t('account.roleMember')}</span>
-              </div>
+
+            <div className="stk" style={f.right}>
+              <span className="lbl no-desk">{t('account.settings')}</span>
+              <div className="list">{settings.map(row)}</div>
+              <button type="button" className="btn btn-d btn-b esy-press" onClick={() => { logout(); navigate('/'); }}>
+                <G name="signOut" cls="" />{t('account.signOut')}
+              </button>
             </div>
           </div>
-        </div>
-
-        {/* stats */}
-        <div style={{ padding: '0 16px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          {[
-            { id: 'orders', v: String(getTotalOrders()), k: t('account.statOrders') },
-            { id: 'spent', v: money(getTotalSpent()), k: t('account.statSpent') },
-          ].map(({ id, v, k }) => (
-            <div key={id} style={{ padding: '12px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* Until the orders are known a figure is a placeholder of its
-                  height, never a 0 that turns into the real count. */}
-              {pending
-                ? <Sk h={18} w="60%" r={7} style={{ margin: '2px 0 3px' }} />
-                : <span style={{ font: `800 18px ${T.font}`, color: T.text, letterSpacing: '-0.02em' }}>{v}</span>}
-              <span style={{ font: `500 11px ${T.font}`, color: T.textMute, letterSpacing: '0.04em' }}>{k}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* recent orders */}
-        {recent.length > 0 && (
-          <>
-            <div style={{ padding: '4px 22px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ font: `600 11.5px ${T.font}`, color: T.textDim, letterSpacing: '0.08em' }}>{t('account.recentOrders')}</div>
-              <span onClick={() => navigate('/orders')} style={{ font: `600 12px ${T.font}`, color: T.accentFg, cursor: 'pointer' }}>{t('account.seeAll')}</span>
-            </div>
-            <div style={{ padding: '0 16px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {recent.map((o, idx) => {
-                const id = (o.orderNumber || o.id || `ESY-${idx}`).toString().toUpperCase();
-                // "1 ნოე.": the locale's month names, not the browser's (it printed "Nov 1" in Georgian)
-                const date = dayTime(t, o.createdAt, { time: false }) || '—';
-                const n = o.count ?? (Array.isArray(o.items) ? o.items.length : '—');
-                const delivered = o.status === 'delivered';
-                return (
-                  <div key={o.id || idx} style={{ padding: '12px 14px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ width: 38, height: 38, borderRadius: 10, background: T.accentBg, color: T.accentFg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon.bag /></span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ font: `700 13px ${T.mono}`, color: T.text }}>#{id}</div>
-                      <div style={{ font: `400 11.5px ${T.font}`, color: T.textMute }}>{date} · {t('account.itemCount', { count: n })}</div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                      <span style={{ font: `700 13.5px ${T.font}`, color: T.text }}>{money(o.total)}</span>
-                      <span style={{ font: `600 11px ${T.font}`, color: delivered ? T.success : T.accentFg, letterSpacing: '0.06em' }}>{t(`orders.status.${o.statusKey || 'placed'}`, { defaultValue: o.status || 'placed' })}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
         )}
-
-        {/* settings */}
-        <div style={{ padding: '6px 16px 24px', display: 'flex', flexDirection: 'column' }}>
-          {settings.map((s, i, arr) => (
-            <div key={s.id} onClick={s.onClick || undefined} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 6px', borderBottom: i === arr.length - 1 ? 'none' : `1px solid ${T.border}`, cursor: s.onClick ? 'pointer' : 'default' }}>
-              <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                <span style={{ font: `600 13.5px ${T.font}`, color: s.danger ? T.danger : T.text }}>{s.k}</span>
-                {s.sub && <span style={{ font: `400 12px ${T.font}`, color: T.textDim }}>{s.sub}</span>}
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: T.textMute, font: `500 12.5px ${T.font}` }}>{s.v}<Icon.arrowR /></span>
-            </div>
-          ))}
-        </div>
-        <div style={{ padding: '0 22px 8px' }}><PoweredBy T={T} /></div>
       </div>
-    </GlowScreen>
+    </Sk>
   );
 }
