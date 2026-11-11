@@ -11,18 +11,19 @@ import LookThumb from '../components/design/LookThumb';
 import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 
 // The hero's three looks (the design's O1), one per theme, each in the colour
-// the board draws it with. A tap opens quick setup on that look.
+// the board draws it with and with the photos of the kind of store it shows,
+// three different ones. A tap opens quick setup on that look.
 const HERO_LOOKS = [
-  { id: 'studio', brand: '#d9480f', mode: 'light' },
-  { id: 'social', brand: '#db2777', mode: 'light' },
-  { id: 'sneaker', brand: '#00b3ff', mode: 'dark' },
+  { id: 'studio', brand: '#d9480f', mode: 'light', group: 'food' },
+  { id: 'social', brand: '#db2777', mode: 'light', group: 'fashion' },
+  { id: 'sneaker', brand: '#00b3ff', mode: 'dark', group: 'tech' },
 ];
 
 function HeroLooks({ t, scale, count, onPick }) {
   const { t: td } = useTranslation('design');
   return (
     <div role="group" aria-label={t('landing.looksLabel')} style={{ display: 'flex', justifyContent: 'center', gap: scale < 1 ? 16 : 24 }}>
-      {HERO_LOOKS.slice(0, count).map(({ id, brand, mode }) => {
+      {HERO_LOOKS.slice(0, count).map(({ id, brand, mode, group }) => {
         const name = td(`names.${id}`);
         return (
           <button
@@ -30,7 +31,7 @@ function HeroLooks({ t, scale, count, onPick }) {
             aria-label={t('landing.lookOpen', { name })} title={name}
             style={{ display: 'block', padding: 0, border: 0, background: 'none', cursor: 'pointer', borderRadius: 28 * scale }}
           >
-            <LookThumb design={lookById(id).design} brand={brand} mode={mode} scale={scale} />
+            <LookThumb design={lookById(id).design} brand={brand} mode={mode} scale={scale} group={group} />
           </button>
         );
       })}

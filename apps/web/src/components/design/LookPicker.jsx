@@ -1,15 +1,16 @@
 // Quick setup's "pick a look" (the design's O5), with "more looks" (O6) as a
 // sheet. Three looks suit what the seller said they sell; the sheet has all of
 // them. Every thumbnail is drawn in the seller's own colour, because a look
-// carries none. The choice is a look id; registration sends that look's
-// design object with the new store.
+// carries none. The row's three show photos of what the store sells; the
+// sheet's each show the photos of the group the look was made for. The choice
+// is a look id; registration sends that look's design object with the new store.
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LookThumb from './LookThumb';
 import { LOOKS, groupOf, lookById, suggestedLooks } from '../../core/design/looks';
 import { usePresence } from '../../core/usePresence';
 
-function LookCard({ T, t, look, on, brand, mode, scale, onPick, showGroup, flex }) {
+function LookCard({ T, t, look, on, brand, mode, scale, group, onPick, showGroup, flex }) {
   const d = look.design;
   return (
     <button
@@ -24,7 +25,7 @@ function LookCard({ T, t, look, on, brand, mode, scale, onPick, showGroup, flex 
       }}
     >
       <span style={{ position: 'relative', display: 'block' }}>
-        <LookThumb design={d} brand={brand} mode={mode} scale={scale} />
+        <LookThumb design={d} brand={brand} mode={mode} scale={scale} group={group} />
         {/* The choice sits on the thumbnail, so the name keeps the card's width. */}
         {on && (
           <span style={{
@@ -68,7 +69,7 @@ export default function LookPicker({ T, category, categoryLabel, value, onChange
         {three.map((look) => (
           <LookCard
             key={look.id} T={T} t={t} look={look} on={value === look.id} brand={brand}
-            mode={mode} scale={0.58} onPick={onChange} flex="0 0 136px"
+            mode={mode} scale={0.58} group={groupOf(category)} onPick={onChange} flex="0 0 136px"
           />
         ))}
       </div>

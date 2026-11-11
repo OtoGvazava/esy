@@ -1,0 +1,49 @@
+Photos for the previews that draw a store before it has products of its own:
+the look thumbnails (components/design/LookThumb.jsx) and the design preview's
+sample catalogue (components/design/StorePreview.jsx). components/design/photos.js
+says which preview draws which.
+
+All are from Unsplash, under the Unsplash License (https://unsplash.com/license):
+free to use, commercially or not, without asking permission or giving credit.
+The licence does not allow selling them unaltered or using them to build a
+similar or competing photo service.
+
+Each was centre-cropped and resized from the source below and saved as WebP
+(quality 80): 360 x 360 for a tile, 600 x 200 for a cover band.
+
+file                size       source
+beauty-1.webp       360 x 360  https://images.unsplash.com/photo-1580870069867-74c57ee1bb07
+beauty-2.webp       360 x 360  https://images.unsplash.com/photo-1608571423902-eed4a5ad8108
+beauty-3.webp       360 x 360  https://images.unsplash.com/photo-1785581778868-79100f7fe56c
+beauty-4.webp       360 x 360  https://images.unsplash.com/photo-1583209814683-c023dd293cc6
+bowl-3.webp         360 x 360  https://images.unsplash.com/photo-1601859785003-1b9760be7cd3
+cloth-2.webp        360 x 360  https://images.unsplash.com/photo-1596433904493-c7ae3d6d179f
+cloth-4.webp        360 x 360  https://images.unsplash.com/photo-1762539747176-5d8f166346de
+cover-beauty.webp   600 x 200  https://images.unsplash.com/photo-1583209814683-c023dd293cc6
+cover-fashion.webp  600 x 200  https://images.unsplash.com/photo-1495121605193-b116b5b9c5fe
+cover-food.webp     600 x 200  https://images.unsplash.com/photo-1608198093002-ad4e005484ec
+cover-home.webp     600 x 200  https://images.unsplash.com/photo-1777451440787-3f5bc84b8834
+cover-kids.webp     600 x 200  https://images.unsplash.com/photo-1777351396220-9a3801de44df
+cover-tech.webp     600 x 200  https://images.unsplash.com/photo-1609081219090-a6d81d3085bf
+fashion-1.webp      360 x 360  https://images.unsplash.com/photo-1523381294911-8d3cead13475
+fashion-2.webp      360 x 360  https://images.unsplash.com/photo-1495121605193-b116b5b9c5fe
+fashion-3.webp      360 x 360  https://images.unsplash.com/photo-1576188973526-0e5d7047b0cf
+fashion-4.webp      360 x 360  https://images.unsplash.com/photo-1479064555552-3ef4979f8908
+food-1.webp         360 x 360  https://images.unsplash.com/photo-1509440159596-0249088772ff
+food-2.webp         360 x 360  https://images.unsplash.com/photo-1769138886135-93d1dd8ac06a
+food-3.webp         360 x 360  https://images.unsplash.com/photo-1598022186152-1b66e6c38245
+food-4.webp         360 x 360  https://images.unsplash.com/photo-1608198093002-ad4e005484ec
+kids-1.webp         360 x 360  https://images.unsplash.com/photo-1777351396220-9a3801de44df
+kids-2.webp         360 x 360  https://images.unsplash.com/photo-1568828668638-b1b4014d91a2
+kids-3.webp         360 x 360  https://images.unsplash.com/photo-1536293182766-c9c0c4133b55
+kids-4.webp         360 x 360  https://images.unsplash.com/photo-1560859251-d563a49c5e4a
+mug-1.webp          360 x 360  https://images.unsplash.com/photo-1495100497150-fe209c585f50
+mug-3.webp          360 x 360  https://images.unsplash.com/photo-1536936812504-0e77dc3f0b40
+plate-2.webp        360 x 360  https://images.unsplash.com/photo-1711294545563-3b7fe2816603
+plate-4.webp        360 x 360  https://images.unsplash.com/photo-1675328657878-194029e7ccbc
+tech-1.webp         360 x 360  https://images.unsplash.com/photo-1505740420928-5e560c06d30e
+tech-2.webp         360 x 360  https://images.unsplash.com/photo-1491933382434-500287f9b54b
+tech-3.webp         360 x 360  https://images.unsplash.com/photo-1609081219090-a6d81d3085bf
+tech-4.webp         360 x 360  https://images.unsplash.com/photo-1468495244123-6c6c332eeece
+vase-1.webp         360 x 360  https://images.unsplash.com/photo-1631125915902-d8abe9225ff2
+vase-2.webp         360 x 360  https://images.unsplash.com/photo-1613424777445-f93a2a48e285

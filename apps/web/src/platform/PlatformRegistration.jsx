@@ -244,7 +244,7 @@ export default function PlatformRegistration() {
     case 'look':
       return (
         <SellLook
-          dev={dev} top={stepTop('look')} three={three} look={look} designOf={designOf} colour={colour} own={own} groupLabel={groupLabel}
+          dev={dev} top={stepTop('look')} three={three} look={look} designOf={designOf} colour={colour} own={own} group={group} groupLabel={groupLabel}
           onSelect={selectLook} onRemix={remixLook} onColour={setColour} onShuffle={shuffle} onMore={() => go('more')} onNext={() => go('brand')}
         />
       );
@@ -260,7 +260,7 @@ export default function PlatformRegistration() {
       return (
         <SellBrand
           dev={dev} top={stepTop('brand')} logo={logo} logoHex={logo?.hex || null} onLogo={chooseLogo} onRemoveLogo={removeLogo}
-          colour={colour} onColour={setColour} lookId={lookOn ? look.id : null} design={design} own={own} onNext={() => go('check')}
+          colour={colour} onColour={setColour} lookId={lookOn ? look.id : null} design={design} own={own} group={group} onNext={() => go('check')}
         />
       );
     case 'check':

@@ -51,8 +51,9 @@ export function SellSignIn({ dev, setup, onGoogle, onHome }) {
         <div className="sl-panel" style={{ minHeight: 760 }}>
           <Logo onBrand />
           <div aria-hidden="true" style={{ position: 'absolute', left: 56, right: 56, top: 156, display: 'flex', gap: 36, justifyContent: 'center', transform: 'rotate(-6deg)' }}>
-            <LookThumb design={lookById('social').design} brand="#db2777" />
-            <LookThumb design={lookById('studio').design} brand="#16a34a" />
+            {/* A clothes shop and a food shop, as the board draws them. */}
+            <LookThumb design={lookById('social').design} brand="#db2777" group="fashion" />
+            <LookThumb design={lookById('studio').design} brand="#16a34a" group="food" />
           </div>
           <div className="sl-stk" style={{ gap: 10, maxWidth: 360, position: 'relative' }}>
             <h2 className="sl-h1" style={{ color: '#fff' }}>{t('open.signin.panelTitle')}</h2>

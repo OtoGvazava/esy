@@ -47,7 +47,7 @@ export function SellCheck({ dev, top, name, host, group, groupLabel, lookId, des
         dev={dev} side gap={{ ph: 18, tab: 30 }} top={{ ph: 18 }}
         aside={dev !== 'ph' && (
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div role="img" aria-label={t('open.check.preview')}><LookThumb design={design} brand={colour} scale={dev === 'desk' ? 1.2 : 1} {...own} /></div>
+            <div role="img" aria-label={t('open.check.preview')}><LookThumb design={design} brand={colour} scale={dev === 'desk' ? 1.2 : 1} group={group} {...own} /></div>
           </div>
         )}
       >
@@ -57,7 +57,7 @@ export function SellCheck({ dev, top, name, host, group, groupLabel, lookId, des
               <h1 className="sl-h1">{t('open.check.title')}</h1>
               <p className="sl-p">{t('open.check.body')}</p>
             </div>
-            {dev === 'ph' && <div role="img" aria-label={t('open.check.preview')}><LookThumb design={design} brand={colour} scale={0.4} {...own} /></div>}
+            {dev === 'ph' && <div role="img" aria-label={t('open.check.preview')}><LookThumb design={design} brand={colour} scale={0.4} group={group} {...own} /></div>}
           </div>
 
           <div className="sl-list">

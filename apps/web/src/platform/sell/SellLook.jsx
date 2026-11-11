@@ -104,8 +104,11 @@ function QuickChanges({ t, td, design, colour, onRemix, onColour, align = 'cente
   );
 }
 
-/** O5 — three looks, one picked, each drawn as the seller's store. */
-export function SellLook({ dev, top, three, look, designOf, colour, own, groupLabel, onSelect, onRemix, onColour, onShuffle, onMore, onNext }) {
+/**
+ * O5 — three looks, one picked, each drawn as the seller's store: with photos
+ * of what they sell (`group`), whichever group the look was made for.
+ */
+export function SellLook({ dev, top, three, look, designOf, colour, own, group, groupLabel, onSelect, onRemix, onColour, onShuffle, onMore, onNext }) {
   const { t } = useTranslation('platform');
   const { t: td } = useTranslation('design');
   const d = designOf(look);
@@ -148,7 +151,7 @@ export function SellLook({ dev, top, three, look, designOf, colour, own, groupLa
             >
               <button type="button" className="sl-ibtn" aria-label={t('open.look.prev')} onClick={() => step(-1)}><Ic name="back" /></button>
               <div role="img" aria-label={`${td(`names.${look.id}`)} · ${lookLine(td, d)}`}>
-                <LookThumb design={d} brand={colour} scale={0.74} {...own} />
+                <LookThumb design={d} brand={colour} scale={0.74} group={group} {...own} />
               </div>
               <button type="button" className="sl-ibtn" aria-label={t('open.look.next')} onClick={() => step(1)}><Ic name="next" /></button>
             </div>
@@ -169,7 +172,7 @@ export function SellLook({ dev, top, three, look, designOf, colour, own, groupLa
                 const ld = designOf(l);
                 return (
                   <button key={l.id} type="button" className={`sl-opt ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => onSelect(l.id)} style={{ padding: dev === 'desk' ? 20 : 12 }}>
-                    <LookThumb design={ld} brand={colour} scale={dev === 'desk' ? 0.92 : 0.72} {...own} />
+                    <LookThumb design={ld} brand={colour} scale={dev === 'desk' ? 0.92 : 0.72} group={group} {...own} />
                     <span className="sl-rowb" style={{ width: '100%', alignItems: 'flex-start' }}>
                       <span style={{ minWidth: 0 }}>
                         <b className="sl-h3" style={{ display: 'block' }}>{td(`names.${l.id}`)}</b>
@@ -199,7 +202,11 @@ const WALL = ['social', 'studio', 'sneaker', 'bakery', 'gallerywall', 'nightdrop
 // Any look the order above forgot still shows.
 LOOKS.forEach((l) => { if (!WALL.includes(l)) WALL.push(l); });
 
-/** O6 — every look, filtered by what it is made for; a tap picks it and goes back. */
+/**
+ * O6 — every look, filtered by what it is made for; a tap picks it and goes
+ * back. Each look shows the photos of the group it was made for, so the wall
+ * reads as a set of real shops.
+ */
 export function SellMoreLooks({ dev, top, current, designOf, colour, own, onPick }) {
   const { t } = useTranslation('platform');
   const { t: td } = useTranslation('design');

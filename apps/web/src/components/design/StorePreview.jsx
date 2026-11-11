@@ -42,6 +42,7 @@ import { addedRecently, bannerShown } from '../../core/design/show';
 import GlowDock from '../glow/GlowDock';
 import GlowProductCard from '../glow/GlowProductCard';
 import { PoweredBy } from '../glow/GlowPrimitives';
+import { SAMPLE_PHOTOS } from './photos';
 
 const none = () => {};
 const nothing = async () => null;
@@ -71,32 +72,18 @@ const PHONE = {
 const BEZEL = '0 0 0 7px #19191d, 0 0 0 8px #3b3b42, 0 36px 70px -30px rgba(0, 0, 0, 0.45)';
 
 // The sample catalogue (the design's own A1Home products), for a store with no
-// products yet. Its photos are neutral grounds with the kit's object shapes,
-// drawn as SVG so they need no request.
-const SHAPES = {
-  mug: '<path d="M18 30h48v40c0 10-8 16-18 16H36c-10 0-18-6-18-16z"/><path d="M66 40h6c8 0 12 5 12 12s-4 12-12 12h-6" fill="none" stroke="#fff" stroke-width="7"/>',
-  vase: '<path d="M40 12h20v8c0 6 14 12 14 34 0 22-10 34-24 34S26 76 26 54c0-22 14-28 14-34z"/>',
-  bowl: '<path d="M10 42h80c0 23-17 40-40 40S10 65 10 42z"/><rect x="37" y="82" width="26" height="6" rx="2"/>',
-  plate: '<path fill-rule="evenodd" d="M50 34c24 0 42 9 42 20s-18 20-42 20S8 65 8 54s18-20 42-20zm0 8c-16 0-28 5-28 12s12 12 28 12 28-5 28-12-12-12-28-12z"/>',
-  cloth: '<rect x="18" y="22" width="64" height="15"/><rect x="18" y="40" width="64" height="15"/><rect x="18" y="58" width="64" height="20"/>',
-};
-const photo = (ground, shape) => `data:image/svg+xml,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
-  + '<defs><linearGradient id="l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity=".08"/></linearGradient></defs>'
-  + `<rect width="100" height="100" fill="${ground}"/><rect width="100" height="100" fill="url(#l)"/>`
-  + `<g fill="#fff" transform="translate(25 25) scale(.5)">${SHAPES[shape]}</g></svg>`,
-)}`;
+// products yet, each with the photo the canvas gives it (./photos.js).
 // A quantity of 3 marks the low-stock one, as the product list does (≤ 5 left).
 const SAMPLES = [
-  { key: 'mug', price: 38, photo: photo('#cbbfb0', 'mug') },
-  { key: 'vase', price: 95, photo: photo('#b9c5b6', 'vase') },
-  { key: 'bowl', price: 42, photo: photo('#bfc9d3', 'bowl') },
-  { key: 'napkins', price: 54, photo: photo('#d6c3b4', 'cloth') },
-  { key: 'espresso', price: 24, photo: photo('#c7c2d4', 'mug') },
-  { key: 'tallVase', price: 120, photo: photo('#d3c6ad', 'vase'), left: 3 },
-  { key: 'plate', price: 36, photo: photo('#bccbc7', 'plate') },
-  { key: 'towel', price: 28, photo: photo('#d2c3cc', 'cloth') },
-];
+  { key: 'mug', price: 38 },
+  { key: 'vase', price: 95 },
+  { key: 'bowl', price: 42 },
+  { key: 'napkins', price: 54 },
+  { key: 'espresso', price: 24 },
+  { key: 'tallVase', price: 120, left: 3 },
+  { key: 'plate', price: 36 },
+  { key: 'towel', price: 28 },
+].map((s) => ({ ...s, photo: SAMPLE_PHOTOS[s.key] }));
 
 // Families already asked for. A stylesheet is added once and kept, so going
 // back and forth between fonts neither refetches nor flashes.

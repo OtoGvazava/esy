@@ -34,8 +34,8 @@ export function LookSpec({ t, td, lookId, design }) {
   );
 }
 
-/** O7 — an optional logo, and the store colour. */
-export function SellBrand({ dev, top, logo, logoHex, onLogo, onRemoveLogo, colour, onColour, lookId, design, own, onNext }) {
+/** O7 — an optional logo, and the store colour, on the seller's store with photos of what they sell (`group`). */
+export function SellBrand({ dev, top, logo, logoHex, onLogo, onRemoveLogo, colour, onColour, lookId, design, own, group, onNext }) {
   const { t } = useTranslation('platform');
   const { t: td } = useTranslation('design');
   const [err, setErr] = useState('');
@@ -67,7 +67,7 @@ export function SellBrand({ dev, top, logo, logoHex, onLogo, onRemoveLogo, colou
     <>
       <span className="sl-lbl">{t('open.brand.yourStore')}</span>
       <div className="sl-row" style={{ gap: 18, alignItems: 'flex-start' }}>
-        <LookThumb design={design} brand={colour} scale={dev === 'ph' ? 0.48 : dev === 'tab' ? 0.9 : 1} {...own} />
+        <LookThumb design={design} brand={colour} scale={dev === 'ph' ? 0.48 : dev === 'tab' ? 0.9 : 1} group={group} {...own} />
         <div className="sl-stk sl-grow" style={{ gap: 12 }}>
           <LookSpec t={t} td={td} lookId={lookId} design={design} />
           <p className="sl-xs sl-dim" style={{ margin: 0 }}>{t('open.brand.later')}</p>
