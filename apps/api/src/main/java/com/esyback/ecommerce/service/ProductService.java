@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -125,6 +126,26 @@ public class ProductService {
     @Transactional(readOnly = true)
     public List<CategoryCount> getCategories() {
         return productRepository.countCategories(tenantContextService.getCurrentTenant());
+    }
+
+    /** How many of each store's product photos a card in the store directory shows. */
+    public static final int DIRECTORY_PHOTOS = 3;
+
+    /**
+     * The photos of each store's newest photographed products, at most
+     * {@link #DIRECTORY_PHOTOS} a store and newest first, by store id: the row
+     * on the store directory's cards (GET /api/tenant). A store with no
+     * photographed product has no entry. Not scoped to the request's store: the
+     * directory is the platform's own page and lists every store, in one query.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, List<String>> directoryPhotos(Collection<Long> tenantIds) {
+        Map<Long, List<String>> photos = new LinkedHashMap<>();
+        if (tenantIds == null || tenantIds.isEmpty()) return photos;
+        for (Object[] row : productRepository.findPreviewImages(tenantIds, DIRECTORY_PHOTOS)) {
+            photos.computeIfAbsent(((Number) row[0]).longValue(), k -> new ArrayList<>()).add((String) row[1]);
+        }
+        return photos;
     }
 
     /**

@@ -10,6 +10,7 @@ import com.esyback.ecommerce.entity.TenantCover;
 import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.service.MembershipService;
 import com.esyback.ecommerce.service.OrderService;
+import com.esyback.ecommerce.service.ProductService;
 import com.esyback.ecommerce.service.TenantContextService;
 import com.esyback.ecommerce.service.TenantCoverService;
 import com.esyback.ecommerce.service.TenantDesignService;
@@ -50,6 +51,7 @@ public class TenantController {
     private final MembershipService membershipService;
     private final OrderService orderService;
     private final ProductRepository productRepository;
+    private final ProductService productService;
     private final TenantDesignService tenantDesignService;
     private final TenantCoverService tenantCoverService;
     private final TenantViewService tenantViewService;
@@ -60,10 +62,21 @@ public class TenantController {
         return ResponseEntity.ok(tenantViewService.current());
     }
 
+    // The store directory (esy.ge/stores, and the landing's featured stores).
+    // Each store carries `productPhotos`: the photos of its newest products, at
+    // most three, which its card draws in a row ([] for a store with none).
+    // They are the products' own image URLs, which load from the platform's
+    // host as well as the store's (ProductImageService.getForServing).
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> listStores() {
-        return ResponseEntity.ok(tenantService.listActiveStores().stream()
-            .map(TenantMapper::toMap)
+        List<Tenant> stores = tenantService.listActiveStores();
+        Map<Long, List<String>> photos = productService.directoryPhotos(stores.stream().map(Tenant::getId).toList());
+        return ResponseEntity.ok(stores.stream()
+            .map(t -> {
+                Map<String, Object> m = TenantMapper.toMap(t);
+                m.put("productPhotos", photos.getOrDefault(t.getId(), List.of()));
+                return m;
+            })
             .collect(Collectors.toList()));
     }
 

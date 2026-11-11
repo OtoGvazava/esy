@@ -89,6 +89,12 @@ image builds the SPA itself.
   /api/tenant/cover`, `GET /api/tenant/cover/{id}`. **Verified tick**:
   `Tenant.verifiedAt`, set by an admin (`POST`/`DELETE
   /api/admin/stores/{sub}/verify`).
+- **Product photos load on any host**: `GET /api/products/{id}/images/{imageId}`
+  checks only that the image belongs to the product, like logos and covers,
+  because the back office and the platform's directory draw them from hosts
+  that name no store. Uploads and deletes stay store-scoped. The directory
+  (`GET /api/tenant`) gives each store `productPhotos`, the photos of its three
+  newest photographed products, from one window-function query for all stores.
 - **Shopper display settings**: `GET`/`PUT /api/account/display-prefs`
   (`users.display_prefs`). It sits under `/api/account/`, so an account
   without a verified phone can still save them.

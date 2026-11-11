@@ -83,10 +83,17 @@ public class ProductImageService {
         }
     }
 
-    /** Bytes for the public serve endpoint, scoped to the current store. */
+    /**
+     * Bytes for the public serve endpoint, on any host: the image must belong to the product, but
+     * the product need not belong to the store the request's host names. A
+     * product's photos are public wherever its store is, and two pages draw
+     * them from hosts that name no store: the back office (one host for every
+     * store, whose {@code <img>} requests carry no {@code ?tenant=}) and the
+     * platform's store directory. Store logos and covers are served the same
+     * way. Writes stay scoped to the store (addImages, deleteImage).
+     */
     @Transactional(readOnly = true)
     public ProductImage getForServing(Long productId, Long imageId) {
-        ownedProduct(productId); // 404s if the product isn't in this store
         return imageRepository.findByIdAndProduct_Id(imageId, productId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Image not found"));
     }

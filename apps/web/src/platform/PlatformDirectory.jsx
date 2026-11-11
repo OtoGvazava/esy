@@ -6,6 +6,32 @@ import { CATEGORIES, storeInitials, storeUrl } from './platformData';
 import { alpha } from '../core/tokens';
 import { Skeleton } from '../components/skeleton/Skeleton';
 
+// The card's product photos (the design's L1 card): at most three, each up to
+// 56 px square and shrinking to fit a phone's narrow card.
+const PHOTO_ROW = { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 56px))', gap: 8 };
+
+/**
+ * The store's own products in a row: the photos of its newest photographed
+ * products, as the directory lists them (productPhotos, newest first). One that
+ * does not load drops out, and a store with none left draws no row at all.
+ */
+function StorePhotos({ T, photos }) {
+  const [failed, setFailed] = useState(() => new Set());
+  const shown = (Array.isArray(photos) ? photos : []).filter((src) => src && !failed.has(src)).slice(0, 3);
+  if (!shown.length) return null;
+  return (
+    <div aria-hidden="true" style={PHOTO_ROW}>
+      {shown.map((src, i) => (
+        <img
+          key={`${i}:${src}`} src={src} alt="" loading="lazy" decoding="async"
+          onError={() => setFailed((f) => new Set(f).add(src))}
+          style={{ display: 'block', width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 10, background: T.surface2 }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function StoreCard({ T, t, store, onOpen, layout = 'tall' }) {
   return (
     <div onClick={onOpen} style={{
@@ -27,9 +53,10 @@ function StoreCard({ T, t, store, onOpen, layout = 'tall' }) {
       <div style={{ font: `400 12.5px/1.45 ${T.font}`, color: T.textDim, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden', minHeight: 36 }}>
         {store.tagline || store.description || t('directory.anIndependentShop')}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
-        <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.06em' }}>{store.category ? t(`directory.cat.${store.category}`) : t('directory.shop')}</div>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, font: `700 11.5px ${T.font}`, color: store.primaryColor }}>
+      <StorePhotos T={T} photos={store.productPhotos} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 'auto', paddingTop: 4 }}>
+        <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.06em' }}>{store.category ? t(`directory.cat.${store.category}`) : t('directory.shop')}</div>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none', font: `700 11.5px ${T.font}`, color: store.primaryColor }}>
           {t('directory.visit')}
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
         </span>
@@ -51,6 +78,9 @@ function CardSkeleton({ T, layout = 'tall' }) {
       </div>
       <div style={{ width: '92%', height: 10, borderRadius: 6, background: T.surface2 }} />
       <div style={{ width: '70%', height: 10, borderRadius: 6, background: T.surface2 }} />
+      <div style={PHOTO_ROW}>
+        {[0, 1, 2].map((i) => <div key={i} style={{ aspectRatio: '1 / 1', borderRadius: 10, background: T.surface2 }} />)}
+      </div>
       <style>{'@keyframes pfpulse{0%,100%{opacity:1}50%{opacity:.45}}'}</style>
     </div>
   );
@@ -123,6 +153,10 @@ export default function PlatformDirectory() {
   const open = subdomain ? list.find((s) => s.subdomain === subdomain) : null;
   const isEmpty = !loading && filtered.length === 0;
   const cols = isDesktop ? 4 : 2;
+  // Columns that may be narrower than a card's longest line (its name, its
+  // address): a plain 1fr cannot, so on a phone two cards came out wider than
+  // the screen and the second was cut off. The card truncates those lines.
+  const gridCols = `repeat(${cols}, minmax(0, 1fr))`;
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}` }}>
@@ -177,14 +211,14 @@ export default function PlatformDirectory() {
           // Shown only once the wait has lasted a moment (Skeleton), so a
           // directory already in the cache never flashes one.
           <Skeleton>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: isDesktop ? 18 : 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: isDesktop ? 18 : 12 }}>
               {Array.from({ length: cols * 2 }).map((_, i) => <CardSkeleton key={i} T={T} layout={isDesktop ? 'tall' : 'short'} />)}
             </div>
           </Skeleton>
         )}
 
         {!loading && !isEmpty && (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: isDesktop ? 18 : 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: isDesktop ? 18 : 12 }}>
             {filtered.map((s) => (
               <StoreCard key={s.subdomain} T={T} t={t} store={s} layout={isDesktop ? 'tall' : 'short'} onOpen={() => navigate(`/stores/${s.subdomain}`)} />
             ))}

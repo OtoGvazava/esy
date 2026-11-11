@@ -277,8 +277,9 @@ public class ProductController {
             .orElse(ResponseEntity.notFound().build());
     }
 
-    // Public: streams the bytes for an <img src>. Long-cached + ETag (image
-    // ids are immutable — a new upload is a new id).
+    // Public: streams the bytes for an <img src>, on any host (the back office
+    // and the store directory draw them too; see getForServing). Long-cached +
+    // ETag (image ids are immutable — a new upload is a new id).
     @GetMapping("/{id}/images/{imageId}")
     public ResponseEntity<byte[]> serveImage(@PathVariable Long id,
                                              @PathVariable Long imageId) {
