@@ -258,7 +258,28 @@
     "outOfStock": "Out of stock",
     "edit": "Edit",
     "delete": "Delete",
-    "importCta": "Import CSV"
+    "importCta": "Import CSV",
+    "search": "Search products",
+    "stockFilter": "Stock filter",
+    "stock": {
+      "all": "All · {{count}}",
+      "in": "In stock · {{count}}",
+      "low": "Running low · {{count}}",
+      "out": "Sold out · {{count}}"
+    },
+    "colProduct": "Product",
+    "colCategory": "Category",
+    "colPrice": "Price",
+    "colStock": "Stock",
+    "colAction": "Actions",
+    "left_one": "{{count}} left",
+    "left_other": "{{count}} left",
+    "editOne": "Edit {{name}}",
+    "range": "{{from}}–{{to}} of {{total}}",
+    "prev": "Previous",
+    "next": "Next",
+    "showMore": "Show more",
+    "noMatch": "No products match."
   },
   "admin": {
     "title": "Platform administration",

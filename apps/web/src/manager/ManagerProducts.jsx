@@ -1,6 +1,7 @@
-// Product management in the back office. Reuses the same editor/delete
-// dialogs the storefront owner tools used — the API client appends the
-// ?tenant selection, so every call here is scoped to the chosen store.
+// Product management in the back office (the design's P1): a search, stock
+// filters, then a table on a wide screen and cards on a phone. A product
+// opens in its editor (P2), which is also where it is deleted. The API client
+// appends the ?tenant selection, so every call here is scoped to the store.
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -15,10 +16,25 @@ import { markIfComplete, markLoaded } from '../core/imgFade';
 import { money } from '../components/glow/GlowChrome';
 import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import ProductEditorDialog from '../components/owner/ProductEditorDialog';
-import DeleteProductDialog from '../components/owner/DeleteProductDialog';
 import ImportProductsDialog from '../components/owner/ImportProductsDialog';
+import { Card } from '../core/primitives';
 import { MTop } from './ManagerShell';
+import { Glyph, ibtn, input } from './officeKit';
 import { SkIn } from './officeSk';
+
+// The stock filters the list can tell apart (P1). The design also counts
+// hidden products, but a product has no visibility switch yet.
+const LOW = 4;
+const stockOf = (p) => Number(p.stock ?? p.quantity ?? 0);
+const STOCK = {
+  all: () => true,
+  in: (p) => stockOf(p) > LOW,
+  low: (p) => stockOf(p) > 0 && stockOf(p) <= LOW,
+  out: (p) => stockOf(p) === 0,
+};
+// A table page on a wide screen; a phone shows this many cards at a time.
+const PAGE = 20;
+const SR_ONLY = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' };
 
 export default function ManagerProducts() {
   const { t } = useTranslation('manager');
@@ -34,7 +50,10 @@ export default function ManagerProducts() {
   const [error, setError] = useState(null);
   const shownError = error || (list.isError ? handleApiError(list.error) : null);
   const [editing, setEditing] = useState(null);   // product | 'new' | null
-  const [deleting, setDeleting] = useState(null); // product | null
+  const [query, setQuery] = useState('');
+  const [stock, setStock] = useState('all');
+  const [page, setPage] = useState(0);
+  const [more, setMore] = useState(PAGE);
   // The import is a page of its own (P3), so it lives in the URL: a phone's
   // back gesture returns to the list instead of leaving the products screen.
   const [params, setParams] = useSearchParams();
@@ -148,17 +167,6 @@ export default function ManagerProducts() {
     padding: '10px 18px', borderRadius: 999, border: 'none', cursor: 'pointer',
     background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`,
   };
-  // A product's row, the same box for the real one and its stand-in.
-  const row = {
-    display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px',
-    background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14,
-  };
-  const rowBtn = (color) => ({
-    padding: '7px 14px', borderRadius: 999, cursor: 'pointer',
-    border: `1px solid ${T.border}`, background: 'transparent',
-    color, font: `600 12px ${T.font}`,
-  });
-
   // Import sits beside Add as the secondary of the pair: adding one product is
   // the common act, uploading a catalogue the occasional one.
   const ghost = {
@@ -167,69 +175,215 @@ export default function ManagerProducts() {
     color: T.textDim, font: `600 13px ${T.font}`,
   };
 
+  // P1: a search, the stock filters, then a table on a wide screen and two
+  // columns of cards on a phone. A row opens the product's editor, which is
+  // also where a product is deleted.
+  const needle = query.trim().toLowerCase();
+  const matches = (products || []).filter((p) => !needle
+    || String(p.title || '').toLowerCase().includes(needle)
+    || String(p.category || '').toLowerCase().includes(needle));
+  const counts = Object.fromEntries(Object.entries(STOCK).map(([k, test]) => [k, matches.filter(test).length]));
+  const shown = matches.filter(STOCK[stock]);
+  const pages = Math.max(1, Math.ceil(shown.length / PAGE));
+  const at = Math.min(page, pages - 1);
+  const rows = isMobile ? shown.slice(0, more) : shown.slice(at * PAGE, at * PAGE + PAGE);
+  const stockText = (p) => {
+    const n = stockOf(p);
+    return n > 0 && n <= LOW ? t('products.left', { count: n }) : String(n);
+  };
+  const stockColor = (p) => {
+    const n = stockOf(p);
+    return n === 0 ? T.dangerFg : n <= LOW ? T.warnFg : T.text;
+  };
+
+  const th = { font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.07em', textAlign: 'left', padding: '12px 14px' };
+  const td = { padding: '12px 14px', font: `500 13px ${T.font}`, color: T.text, borderTop: `1px solid ${T.border}` };
+  const tdNum = { ...td, textAlign: 'right', whiteSpace: 'nowrap' };
+  const pill = (on) => ({
+    padding: '8px 13px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap', flex: 'none',
+    font: `600 12.5px ${T.font}`, background: on ? T.text : T.surface, color: on ? T.bg : T.textDim,
+    border: `1px solid ${on ? T.text : T.border}`,
+    transition: 'background-color var(--m-base) ease, color var(--m-base) ease, border-color var(--m-base) ease, transform var(--m-quick) var(--m-ease)',
+  });
+  const thumb = (p, size) => (
+    // The photo fades in on its own tile once it has decoded.
+    <span style={{
+      display: 'block', flex: 'none', overflow: 'hidden', background: T.surface2,
+      ...(size ? { width: size, height: size, borderRadius: 10 } : { aspectRatio: '4 / 3', borderRadius: 'var(--k-r-img, 12px)' }),
+    }}>
+      {p.thumbnail && (
+        <img
+          src={p.thumbnail} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded}
+          style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      )}
+    </span>
+  );
+  const ellipsis = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+  const pagerBtn = (off) => ({
+    height: 36, padding: '0 12px', borderRadius: 999, cursor: off ? 'default' : 'pointer',
+    border: `1px solid ${T.border}`, background: T.surface, color: off ? T.textMute : T.text,
+    font: `600 12.5px ${T.font}`, display: 'inline-flex', alignItems: 'center', gap: 4, opacity: off ? 0.6 : 1,
+  });
+  const head = (
+    <thead>
+      <tr>
+        <th style={th}>{t('products.colProduct')}</th>
+        {isDesktop && <th style={th}>{t('products.colCategory')}</th>}
+        <th style={{ ...th, textAlign: 'right' }}>{t('products.colPrice')}</th>
+        <th style={{ ...th, textAlign: 'right' }}>{t('products.colStock')}</th>
+        <th style={{ ...th, width: 1 }}><span style={SR_ONLY}>{t('products.colAction')}</span></th>
+      </tr>
+    </thead>
+  );
+
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div>
       {/* The title is the shell's header bar; the two actions sit at its end. */}
       <MTop
         T={T} title={t('products.title')}
         right={(
           <>
-            <button onClick={() => setImporting(true)} className="esy-press" style={ghost}>{t('products.importCta')}</button>
+            {!isMobile && <button onClick={() => setImporting(true)} className="esy-press" style={ghost}>{t('products.importCta')}</button>}
             <button onClick={() => setEditing('new')} className="esy-press" style={btn}>{t('products.add')}</button>
           </>
         )}
       />
 
-      {shownError && <div style={{ font: `500 13px ${T.font}`, color: T.danger }}>{shownError}</div>}
+      {shownError && <div style={{ marginBottom: 12, font: `500 13px ${T.font}`, color: T.danger }}>{shownError}</div>}
 
-      {/* Rows of the list's own box until the catalogue is in. */}
+      <label style={{ position: 'relative', display: 'flex', alignItems: 'center', maxWidth: isMobile ? 'none' : 380, marginBottom: 12 }}>
+        <span style={{ position: 'absolute', left: 14, display: 'inline-flex', color: T.textMute, pointerEvents: 'none' }}>
+          <Glyph size={18}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></Glyph>
+        </span>
+        <input
+          value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); setMore(PAGE); }}
+          placeholder={t('products.search')} aria-label={t('products.search')}
+          style={{ ...input(T), width: '100%', paddingLeft: 42 }}
+        />
+      </label>
+
+      <div role="group" aria-label={t('products.stockFilter')} style={{ display: 'flex', gap: 7, marginBottom: 14, overflowX: 'auto', scrollbarWidth: 'none' }}>
+        {Object.keys(STOCK).map((k) => (
+          <button
+            key={k} type="button" aria-pressed={stock === k} className="esy-press" style={pill(stock === k)}
+            onClick={() => { setStock(k); setPage(0); setMore(PAGE); }}
+          >{t(`products.stock.${k}`, { count: products ? counts[k] : 0 })}</button>
+        ))}
+      </div>
+
+      {/* The list's own shape until the catalogue is in. */}
       {list.isPending && (
-        <Skeleton label={t('loading.products', { ns: 'common' })} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} style={row}>
-              <Sk w={44} h={44} r={10} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ font: `700 14px ${T.font}` }}><SkIn w="50%" /></div>
-                <div style={{ font: `500 12px ${T.font}` }}><SkIn w="22%" /></div>
-              </div>
-              <span style={{ font: `700 14px ${T.mono}` }}><SkIn w={56} /></span>
-              <Sk w={64} h={30} r={999} />
-              <Sk w={64} h={30} r={999} />
+        <Skeleton label={t('loading.products', { ns: 'common' })}>
+          {isMobile ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <Sk h={undefined} r={12} style={{ aspectRatio: '4 / 3', height: 'auto' }} />
+                  <SkIn w="70%" /><SkIn w="45%" />
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                {head}
+                <tbody>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <tr key={i}>
+                      <td style={td}><div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Sk w={44} h={44} r={10} /><SkIn w={140} /></div></td>
+                      {isDesktop && <td style={td}><SkIn w={80} /></td>}
+                      <td style={tdNum}><SkIn w={56} /></td>
+                      <td style={tdNum}><SkIn w={24} /></td>
+                      <td style={{ ...td, width: 1 }}><Sk w={36} h={36} r={10} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
         </Skeleton>
       )}
 
-      {products && products.map((p) => (
-        <div key={p.id} style={row}>
-          {p.thumbnail ? (
-            // The photo fades in on its own tile once it has decoded.
-            <span style={{ width: 44, height: 44, flex: 'none', borderRadius: 10, overflow: 'hidden', background: T.surface2 }}>
-              <img
-                src={p.thumbnail} alt="" width={44} height={44} className="esy-img" ref={markIfComplete} onLoad={markLoaded}
-                style={{ display: 'block', borderRadius: 10, objectFit: 'cover' }}
-              />
-            </span>
-          ) : (
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: T.surface2 }} />
-          )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ font: `700 14px ${T.font}`, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {p.title}
-            </div>
-            <div style={{ font: `500 12px ${T.font}`, color: (p.stock ?? p.quantity ?? 0) > 0 ? T.textMute : T.danger }}>
-              {(p.stock ?? p.quantity ?? 0) > 0
-                ? t('products.inStock', { count: p.stock ?? p.quantity })
-                : t('products.outOfStock')}
-            </div>
-          </div>
-          <div style={{ font: `700 14px ${T.mono}`, color: T.text }}>{money(p.price)}</div>
-          <button
-            onClick={() => edit(p)} onPointerEnter={() => ready(p)} onFocus={() => ready(p)}
-            className="esy-press" style={rowBtn(T.text)}
-          >{t('products.edit')}</button>
-          <button onClick={() => setDeleting(p)} className="esy-press" style={rowBtn(T.danger)}>{t('products.delete')}</button>
+      {products && shown.length === 0 && (
+        <div style={{ padding: '32px 16px', textAlign: 'center', font: `500 14px ${T.font}`, color: T.textDim }}>
+          {t('products.noMatch')}
         </div>
+      )}
+
+      {products && shown.length > 0 && (isMobile ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+            {rows.map((p) => (
+              <button
+                key={p.id} type="button" className="esy-press" aria-label={t('products.editOne', { name: p.title })}
+                onClick={() => edit(p)} onPointerEnter={() => ready(p)} onFocus={() => ready(p)}
+                style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 0, border: 0, background: 'none', color: T.text, textAlign: 'left', cursor: 'pointer', minWidth: 0 }}
+              >
+                {thumb(p)}
+                <span style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '0 4px', minWidth: 0 }}>
+                  <span style={{ font: `600 13px/1.3 ${T.font}`, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.title}</span>
+                  <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                    <b style={{ font: `700 13px ${T.font}`, whiteSpace: 'nowrap' }}>{money(p.price)}</b>
+                    <span style={{ font: `500 12px ${T.font}`, color: stockColor(p), ...ellipsis }}>{stockText(p)}</span>
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+          {shown.length > more && (
+            <button type="button" className="esy-press" onClick={() => setMore((m) => m + PAGE)} style={{ ...ghost, width: '100%', height: 48, color: T.text }}>
+              {t('products.showMore')}
+            </button>
+          )}
+        </div>
+      ) : (
+        <Card T={T} pad={0} style={{ overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              {head}
+              <tbody>
+                {rows.map((p) => (
+                  <tr key={p.id}>
+                    <td style={td}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                        {thumb(p, 44)}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ font: `600 13.5px ${T.font}`, color: T.text, ...ellipsis }}>{p.title}</div>
+                          {/* A tablet has no category column, so the line under the name carries it. */}
+                          {!isDesktop && p.category && <div style={{ font: `400 12px ${T.font}`, color: T.textDim, ...ellipsis }}>{p.category}</div>}
+                        </div>
+                      </div>
+                    </td>
+                    {isDesktop && <td style={{ ...td, color: T.textDim }}>{p.category || '—'}</td>}
+                    <td style={{ ...tdNum, fontWeight: 700 }}>{money(p.price)}</td>
+                    <td style={{ ...tdNum, color: stockColor(p) }}>{stockText(p)}</td>
+                    <td style={{ ...td, width: 1, paddingLeft: 4, textAlign: 'right' }}>
+                      <button
+                        type="button" className="esy-press" aria-label={t('products.editOne', { name: p.title })}
+                        onClick={() => edit(p)} onPointerEnter={() => ready(p)} onFocus={() => ready(p)}
+                        style={{ ...ibtn(T), width: 36, height: 36 }}
+                      >
+                        <Glyph size={18}><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></Glyph>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {shown.length > PAGE && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 16px', borderTop: `1px solid ${T.border}` }}>
+              <span style={{ font: `500 12.5px ${T.font}`, color: T.textDim }}>
+                {t('products.range', { from: at * PAGE + 1, to: Math.min(shown.length, at * PAGE + PAGE), total: shown.length })}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" disabled={at === 0} onClick={() => setPage(at - 1)} style={pagerBtn(at === 0)}>{t('products.prev')}</button>
+                <button type="button" disabled={at >= pages - 1} onClick={() => setPage(at + 1)} style={pagerBtn(at >= pages - 1)}>{t('products.next')}</button>
+              </div>
+            </div>
+          )}
+        </Card>
       ))}
 
       <ProductEditorDialog
@@ -237,12 +391,6 @@ export default function ManagerProducts() {
         product={editing === 'new' ? null : editing}
         onClose={() => setEditing(null)}
         onSaved={() => setEditing(null)}
-      />
-      <DeleteProductDialog
-        open={deleting !== null}
-        product={deleting}
-        onClose={() => setDeleting(null)}
-        onDeleted={() => setDeleting(null)}
       />
     </div>
   );

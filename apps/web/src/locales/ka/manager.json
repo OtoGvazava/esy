@@ -258,7 +258,28 @@
     "outOfStock": "ამოწურულია",
     "edit": "რედაქტირება",
     "delete": "წაშლა",
-    "importCta": "CSV-ის შემოტანა"
+    "importCta": "CSV-ის შემოტანა",
+    "search": "პროდუქტის ძებნა",
+    "stockFilter": "მარაგის ფილტრი",
+    "stock": {
+      "all": "ყველა · {{count}}",
+      "in": "მარაგშია · {{count}}",
+      "low": "იწურება · {{count}}",
+      "out": "ამოიწურა · {{count}}"
+    },
+    "colProduct": "პროდუქტი",
+    "colCategory": "კატეგორია",
+    "colPrice": "ფასი",
+    "colStock": "მარაგი",
+    "colAction": "მოქმედება",
+    "left_one": "{{count}} ცალი დარჩა",
+    "left_other": "{{count}} ცალი დარჩა",
+    "editOne": "რედაქტირება: {{name}}",
+    "range": "{{from}}–{{to}} / {{total}}",
+    "prev": "წინა",
+    "next": "შემდეგი",
+    "showMore": "მეტის ჩვენება",
+    "noMatch": "ასეთი პროდუქტი ვერ მოიძებნა."
   },
   "admin": {
     "title": "პლატფორმის ადმინისტრირება",
