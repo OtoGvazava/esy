@@ -34,6 +34,7 @@ import { alpha } from '../core/tokens';
 import { useBottomClearance, useDesign } from '../core/design/useDesign';
 import { platformUrl } from '../utils/hosts';
 import PhoneVerifyBox from '../components/PhoneVerifyBox';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 const devTenant = () => {
   try { return new URLSearchParams(window.location.search).get('tenant') || undefined; }
@@ -193,7 +194,7 @@ function Thumb({ item }) {
       display: 'grid', placeItems: 'center', background: 'var(--k-ph2)', color: 'var(--k-ph2f)',
     }}>
       {src && ok ? (
-        <img src={src} alt="" onError={() => setOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <img src={src} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} onError={() => setOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
       ) : (
         <G name="bag" size={24} />
       )}

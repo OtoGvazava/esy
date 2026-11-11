@@ -13,6 +13,7 @@ import { G, Sk, Thumb, initials, useDev } from '../components/shop/kit';
 import { Sk as SkBlock, Skeleton } from '../components/skeleton/Skeleton';
 import { managerUrl, platformUrl } from '../utils/hosts';
 import SignIn from './SignIn';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 // An order's chip, in the board's tones: on its way is "ship", cancelled is "ref".
 const TONE = { placed: 'c-pend', shipped: 'c-ship', out_for_delivery: 'c-ship', delivered: 'c-done', cancelled: 'c-ref' };
@@ -163,7 +164,7 @@ export default function Account() {
                   <span className="av lg u">
                     {initials(name)}
                     {user?.avatar && (
-                      <img src={user.avatar} alt="" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      <img src={user.avatar} alt="" referrerPolicy="no-referrer" className="esy-img" ref={markIfComplete} onLoad={markLoaded} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     )}
                   </span>
                   <div className="grow" style={{ minWidth: 0 }}>

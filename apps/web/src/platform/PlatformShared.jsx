@@ -14,6 +14,7 @@ import { directoryQuery } from '../core/query/queries';
 import { managerUrl } from '../utils/hosts';
 import { PLATFORM_ACCENT, storeInitials } from './platformData';
 import { Av, Btn, Glyph, IconBtn, Logo, initialsOf, miStyle, usePDevice } from './PlatformKit';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 export { shiftHue };
 
@@ -69,6 +70,7 @@ export function StoreMark({ store, size = 40, radius = 12, ring = false }) {
     return (
       <img
         src={store.logoUrl} alt={store.displayName || store.name || ''}
+        className="esy-img" ref={markIfComplete} onLoad={markLoaded} decoding="async"
         style={{
           width: size, height: size, borderRadius: radius, objectFit: 'cover',
           display: 'block', boxShadow: shadow, flexShrink: 0,

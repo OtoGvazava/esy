@@ -21,6 +21,7 @@ import { useStoreNav } from './storeChrome';
 import { useIndicator } from '../../core/useIndicator';
 import { StoreName } from './VerifiedTick';
 import StoreSocials from './StoreSocials';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 
 // Above the dock (1200) and below MUI's dialogs (1300) and the profile gate.
 const Z = { strip: 1150, scrim: 1290, layer: 1295 };
@@ -92,7 +93,7 @@ export function StoreAvatar({ size = 44, ring = false }) {
       boxShadow: ring ? `0 0 0 3px ${T.bg}` : undefined,
     }}>
       {tenant.logoUrl
-        ? <img src={tenant.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ? <img src={tenant.logoUrl} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         : tenant.initials}
     </span>
   );

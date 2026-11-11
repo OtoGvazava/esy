@@ -3,6 +3,8 @@
 // design preview's sample catalogue (StorePreview). They are Unsplash photos
 // (assets/photos/SOURCES.txt), 360 px squares and 600 × 200 cover bands, and a
 // page fetches only the ones it draws.
+import { lookById } from '../../core/design/looks';
+
 const FILES = import.meta.glob('../../assets/photos/*.webp', { eager: true, query: '?url', import: 'default' });
 const src = (name) => FILES[`../../assets/photos/${name}.webp`];
 
@@ -40,6 +42,18 @@ export function groupPhotos(group) {
     cover: src(`cover-${g}`),
     hero: src(set.hero),
   };
+}
+
+/**
+ * The photos a look's thumbnail (LookThumb) draws: those of `group` when it has
+ * photos of its own, else those of the group the look was made for. `urls`
+ * lists each photo the thumbnail shows once: its tiles, and its cover band or
+ * its hero band's photo, whichever its header draws.
+ */
+export function thumbPhotos(design, group) {
+  const photos = groupPhotos(hasPhotos(group) ? group : lookById(design.look)?.group);
+  const band = design.header === 'cover' ? photos.cover : photos.hero;
+  return { ...photos, urls: [...new Set([...photos.tiles, band])].filter(Boolean) };
 }
 
 /** The sample catalogue's photos by StorePreview's sample keys: the canvas's store home, product by product. */

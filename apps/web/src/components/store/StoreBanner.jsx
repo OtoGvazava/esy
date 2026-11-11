@@ -15,6 +15,7 @@ import { productQuery } from '../../core/query/queries';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useDesign } from '../../core/design/useDesign';
 import { bannerShown } from '../../core/design/show';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 
 // The kit's hero at its three sizes: padding, least height, heading size.
 const SIZE = {
@@ -74,6 +75,7 @@ export default function StoreBanner({ products } = {}) {
           // band, so the heading on the left stays on the hero's own ground.
           <img
             src={photo} alt="" onError={() => setPhotoFailed(photo)}
+            className="esy-img" ref={markIfComplete} onLoad={markLoaded}
             style={{
               position: 'absolute', top: 0, right: 0, bottom: 0, width: '44%', height: '100%',
               objectFit: 'cover', display: 'block',

@@ -33,6 +33,7 @@ import { useStoreBarMounted } from './storeChrome';
 import { useTenant } from '../../contexts/TenantContext';
 import { useDesign } from '../../core/design/useDesign';
 import { StoreName } from './VerifiedTick';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 
 /** The channels worth a one-tap button up here: the ones you can talk on. */
 const QUICK = ['phone', 'whatsapp', 'instagram', 'facebook'];
@@ -78,7 +79,7 @@ export default function StoreBar({ compact }) {
     }}>
       <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
         {tenant?.logoUrl ? (
-          <img src={tenant.logoUrl} alt="" style={{ width: 38, height: 38, borderRadius: 11, objectFit: 'cover' }} />
+          <img src={tenant.logoUrl} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} style={{ width: 38, height: 38, borderRadius: 11, objectFit: 'cover' }} />
         ) : (
           <span style={{
             width: 38, height: 38, borderRadius: 11, background: T.grad, color: T.onAccent,
@@ -177,6 +178,7 @@ export default function StoreBar({ compact }) {
         }}>
           <img
             src={cover} alt="" onError={() => setCoverFailed(cover)}
+            className="esy-img" ref={markIfComplete} onLoad={markLoaded}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         </div>

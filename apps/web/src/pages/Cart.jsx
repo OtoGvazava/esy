@@ -6,6 +6,7 @@ import { useGlow } from '../styles/glow';
 import { Placeholder } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
 import { EmptyBag } from '../components/shop/EmptyStates';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 // No free-shipping threshold and no flat rate live here any more.
 //
@@ -26,7 +27,7 @@ function Thumb({ T, item, tenant }) {
   return (
     <div style={{ width: 76, height: 76, borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}>
       {src && ok ? (
-        <img src={src} alt={item.title} onError={() => setOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={src} alt={item.title} className="esy-img" ref={markIfComplete} onLoad={markLoaded} onError={() => setOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         <Placeholder label={item.title} hue={tenant.hue} dark={T.dark} />
       )}

@@ -5,6 +5,7 @@ import { usePlatform, useStores, PTopBar, PFooter, StoreMark, StoreArtStrip, Sta
 import { CATEGORIES, storeInitials, storeUrl } from './platformData';
 import { alpha } from '../core/tokens';
 import { Skeleton } from '../components/skeleton/Skeleton';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 // The card's product photos (the design's L1 card): at most three, each up to
 // 56 px square and shrinking to fit a phone's narrow card.
@@ -24,6 +25,7 @@ function StorePhotos({ T, photos }) {
       {shown.map((src, i) => (
         <img
           key={`${i}:${src}`} src={src} alt="" loading="lazy" decoding="async"
+          className="esy-img" ref={markIfComplete} onLoad={markLoaded}
           onError={() => setFailed((f) => new Set(f).add(src))}
           style={{ display: 'block', width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 10, background: T.surface2 }}
         />

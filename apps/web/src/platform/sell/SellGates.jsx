@@ -12,7 +12,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePhoneVerify } from '../../hooks/usePhoneVerify';
 import DateOfBirthPicker from '../../components/DateOfBirthPicker';
 import LookThumb from '../../components/design/LookThumb';
+import { thumbPhotos } from '../../components/design/photos';
 import { lookById } from '../../core/design/looks';
+import { usePhotosReady } from '../../core/usePhotosReady';
 import { Btn, GoogleG, Ic, Logo, SellScreen, Wrap, maskedNumber } from './kit';
 
 // The server keeps a code for ten minutes (PhoneVerificationService.TTL_SECONDS).
@@ -45,15 +47,19 @@ function AheadCard({ t, setup }) {
 /** O2 — open a store starts with Google. */
 export function SellSignIn({ dev, setup, onGoogle, onHome }) {
   const { t } = useTranslation('platform');
+  // The desktop panel's two stores: their photos fade in together once all are in.
+  const panelReady = usePhotosReady(dev === 'desk'
+    ? [...thumbPhotos(lookById('social').design, 'fashion').urls, ...thumbPhotos(lookById('studio').design, 'food').urls]
+    : []);
   return (
     <div className="sl" style={{ flexDirection: 'row' }}>
       {dev === 'desk' && (
         <div className="sl-panel" style={{ minHeight: 760 }}>
           <Logo onBrand />
           <div aria-hidden="true" style={{ position: 'absolute', left: 56, right: 56, top: 156, display: 'flex', gap: 36, justifyContent: 'center', transform: 'rotate(-6deg)' }}>
-            {/* A clothes shop and a food shop, as the board draws them. */}
-            <LookThumb design={lookById('social').design} brand="#db2777" group="fashion" />
-            <LookThumb design={lookById('studio').design} brand="#16a34a" group="food" />
+            {/* A clothes shop and a food shop, as the board draws them, lit up together. */}
+            <LookThumb design={lookById('social').design} brand="#db2777" group="fashion" ready={panelReady} />
+            <LookThumb design={lookById('studio').design} brand="#16a34a" group="food" ready={panelReady} />
           </div>
           <div className="sl-stk" style={{ gap: 10, maxWidth: 360, position: 'relative' }}>
             <h2 className="sl-h1" style={{ color: '#fff' }}>{t('open.signin.panelTitle')}</h2>

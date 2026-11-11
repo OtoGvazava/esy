@@ -23,6 +23,7 @@ import { ThemePill, LangPill } from '../glow/GlowPills';
 import { HeadButton, MenuButton, StoreAvatar } from './StoreMenus';
 import { useStoreNav } from './storeChrome';
 import { StoreName } from './VerifiedTick';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 
 const ellipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
@@ -32,6 +33,7 @@ function GlowLogo({ T, tenant, size = 20 }) {
       {tenant.logoUrl ? (
         <img
           src={tenant.logoUrl} alt={tenant.name}
+          className="esy-img" ref={markIfComplete} onLoad={markLoaded}
           style={{ width: size * 1.1, height: size * 1.1, borderRadius: 10, objectFit: 'cover', display: 'block' }}
         />
       ) : (
@@ -142,6 +144,7 @@ export default function StoreHead() {
             }}>
               <img
                 src={photo} alt="" onError={() => setCoverFailed(photo)}
+                className="esy-img" ref={markIfComplete} onLoad={markLoaded}
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
             </div>

@@ -432,7 +432,7 @@ export function DesignCoverSection({ T, design, sub }) {
               position: 'relative', overflow: 'hidden', borderRadius: 14, background: T.surface2,
               aspectRatio: '16 / 5', minHeight: 90,
             }}>
-              <img src={url} alt={t('editor.cover.current')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <img src={url} alt={t('editor.cover.current')} className="esy-img" ref={markIfComplete} onLoad={markLoaded} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
             <div style={{ position: 'relative', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {fileInput}

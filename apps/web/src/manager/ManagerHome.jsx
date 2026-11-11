@@ -25,6 +25,7 @@ import { accountQuery } from '../core/query/queries';
 import { platformUrl } from '../utils/hosts';
 import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { SkIn } from './officeSk';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 // Where AuthContext's signInWithGoogle keeps the path to come back to. The
 // shared AuthCallback only restores ?tenant= and lands on /account, which the
@@ -136,6 +137,7 @@ function StoreMark({ T, store }) {
   if (store.logoUrl) {
     return (
       <img src={store.logoUrl} alt="" width={34} height={34}
+        className="esy-img" ref={markIfComplete} onLoad={markLoaded}
         style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flex: 'none' }} />
     );
   }

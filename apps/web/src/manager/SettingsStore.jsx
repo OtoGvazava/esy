@@ -22,6 +22,7 @@ import { storeOrdersQuery } from '../core/query/managerQueries';
 import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { Alert, BxIcon, Fld, SaveBar, Select, initialsOf, useBx } from './officeBx';
 import { SkField, SkIn } from './officeSk';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 // Server-allowed store categories (mirrors TenantService.CATEGORIES).
 const CATEGORIES = ['fashion', 'electronics', 'home', 'food', 'art', 'sport', 'wear'];
@@ -289,7 +290,7 @@ function LogoCard({ store, sub, refresh }) {
       <b className="bx-h3">{t('settingsTabs.brand.logo')}</b>
       <div className="bx-row" style={{ gap: 16 }}>
         <span className="bx-av lg" style={{ borderRadius: 22 }} aria-hidden="true">
-          {url ? <img src={url} alt="" /> : initialsOf(store.displayName || store.name, store.subdomain)}
+          {url ? <img src={url} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} /> : initialsOf(store.displayName || store.name, store.subdomain)}
         </span>
         <div className="bx-stk" style={{ gap: 6 }}>
           <span className="bx-xs bx-dim">{t('settingsTabs.brand.logoHint')}</span>
@@ -379,7 +380,7 @@ function CoverCard({ store, sub, refresh }) {
       {url ? (
         <>
           <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-in)', background: 'var(--k-sf2)', aspectRatio: '16 / 5', minHeight: 90 }}>
-            <img src={url} alt={tDesign('editor.cover.current')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <img src={url} alt={tDesign('editor.cover.current')} className="esy-img" ref={markIfComplete} onLoad={markLoaded} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           </div>
           <div className="bx-row bx-wrap" style={{ gap: 8, position: 'relative' }}>
             {fileInput}

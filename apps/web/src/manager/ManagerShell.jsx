@@ -43,6 +43,7 @@ import { Icons } from '../core/icons';
 import { MNAV, MDOCK, MMORE, OWNER_ONLY } from './nav';
 import { BxIcon, initialsOf, useBx } from './officeBx';
 import ManagerHome from './ManagerHome';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 function storeUrlFor(sub) {
   const { hostname, port, protocol } = window.location;
@@ -68,7 +69,7 @@ const TopSlots = createContext(null);
 function StoreAv({ store, size = 'sm', style }) {
   return (
     <span className={`bx-av ${size}`} style={style} aria-hidden="true">
-      {store.logoUrl ? <img src={store.logoUrl} alt="" /> : initialsOf(store.name, store.sub)}
+      {store.logoUrl ? <img src={store.logoUrl} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} /> : initialsOf(store.name, store.sub)}
     </span>
   );
 }
