@@ -15,6 +15,7 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserOrderByCreatedAtDesc(User user);
+    List<Order> findByUserAndTenantOrderByCreatedAtDesc(User user, Tenant tenant);
     List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant);
     long countByTenant(Tenant tenant);
     long countByTenantAndStatus(Tenant tenant, Order.Status status);

@@ -737,8 +737,14 @@ public class OrderService {
         };
     }
 
+    /** Everything this account ordered, at every store: the esy account's list. */
     public List<Order> ordersForUser(User user) {
         return orderRepository.findByUserOrderByCreatedAtDesc(user);
+    }
+
+    /** What this account ordered at one store: the list a storefront shows. */
+    public List<Order> ordersForUser(User user, Tenant tenant) {
+        return orderRepository.findByUserAndTenantOrderByCreatedAtDesc(user, tenant);
     }
 
     public List<Order> ordersForTenant(Tenant tenant) {
