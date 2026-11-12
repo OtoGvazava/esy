@@ -9,6 +9,7 @@
 // `away`, and anything that leaves the app opens in a new tab.
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePresence } from '../core/usePresence';
@@ -265,6 +266,8 @@ export function Head({ T, desk, title, sub, action }) {
  * phone. Escape and the scrim close it unless `busy`. Kept mounted with `open`
  * it also goes out (styles/motion.css), inert and still showing what it showed,
  * since whatever closed it may already have changed what the caller would draw.
+ * It is drawn on <body>, over every app's own bars: a store's dock (1200)
+ * would otherwise cover a sheet's lower half and its button.
  */
 export function Dialog({ T, phone, title, closeLabel, onClose, busy, open = true, children }) {
   const titleId = useId();
@@ -289,12 +292,12 @@ export function Dialog({ T, phone, title, closeLabel, onClose, busy, open = true
     return () => { if (before instanceof HTMLElement) before.focus(); };
   }, [open, phone]);
   if (!mounted) return null;
-  return (
+  return createPortal(
     <div
       role="presentation"
       inert={!open}
       style={{
-        position: 'fixed', inset: 0, zIndex: 60,
+        position: 'fixed', inset: 0, zIndex: 1300,
         display: 'flex', alignItems: phone ? 'flex-end' : 'center', justifyContent: 'center',
         padding: phone ? 0 : 24,
       }}
@@ -317,7 +320,7 @@ export function Dialog({ T, phone, title, closeLabel, onClose, busy, open = true
           position: 'relative',
           width: '100%', maxWidth: phone ? 'none' : 520, background: T.surface, color: T.text,
           borderRadius: phone ? '24px 24px 0 0' : 24, boxShadow: '0 30px 80px -20px rgba(0,0,0,0.5)',
-          padding: phone ? '12px 16px 22px' : 26, display: 'flex', flexDirection: 'column', gap: 16,
+          padding: phone ? '12px 16px calc(22px + env(safe-area-inset-bottom, 0px))' : 26, display: 'flex', flexDirection: 'column', gap: 16,
           maxHeight: '92vh', overflowY: 'auto', boxSizing: 'border-box', font: `400 14px/1.45 ${T.font}`,
         }}
       >
@@ -341,6 +344,7 @@ export function Dialog({ T, phone, title, closeLabel, onClose, busy, open = true
         </div>
         {shown.current.children}
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
