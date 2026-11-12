@@ -42,6 +42,17 @@ const PATHS = {
   bank: <path d="M3.5 9.5 12 4.5l8.5 5M5 10v7M9.7 10v7M14.3 10v7M19 10v7M3.5 20h17" />,
   box: <><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z" /><path d="m4 7.5 8 4.5 8-4.5M12 12v9" /></>,
   globe: <><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5a13 13 0 0 1 0 17M12 3.5a13 13 0 0 0 0 17" /></>,
+  // The account boards (U2–U6, AcctNav).
+  back: <path d="M15 5 8 12l7 7" />,
+  grid: <><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></>,
+  receipt: <><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6" /></>,
+  pin: <><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z" /><circle cx="12" cy="10" r="2.3" /></>,
+  screen: <><rect x="3.5" y="5" width="17" height="11.5" rx="2" /><path d="M9 20h6M12 16.5V20" /></>,
+  bag: <><path d="M5 8h14l-1 12H6z" /><path d="M9 8V6.5a3 3 0 0 1 6 0V8" /></>,
+  swap: <path d="M4 8h14M15 5l3 3-3 3M20 16H6M9 13l-3 3 3 3" />,
+  team: <><circle cx="9" cy="9" r="3.5" /><path d="M3 19.5c1-3 3.3-4.5 6-4.5s5 1.5 6 4.5" /><circle cx="17" cy="8" r="2.6" /><path d="M17.5 13.5c2 .3 3.3 1.6 4 3.8" /></>,
+  shield: <><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z" /><path d="m9 12 2 2 4-4" /></>,
+  ext: <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />,
 };
 
 export function Glyph({ name, size = 20, style, label }) {

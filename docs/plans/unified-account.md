@@ -73,8 +73,9 @@ Phone and tablet: the overview carries the sections as rows, and each section ha
 
 ### Arriving from an app (U3)
 
-The menu's links carry where they came from: `?from=store&store=<sub>`,
-`?from=manager&store=<sub>` or `?from=admin`. The hub then shows one block on top of the
+The menu's links carry where they came from: `?from=store&sub=<sub>`,
+`?from=manager&sub=<sub>` or `?from=admin` (not `store=`: that name forces the storefront
+shell on any host). The hub then shows one block on top of the
 overview: that place, what the account has there, and a button back.
 
 - Store: the store, order count and spend there, the two latest orders, the back office
@@ -85,7 +86,7 @@ overview: that place, what the account has there, and a button back.
 Rules:
 
 - **The return link is built, never read.** `storeUrl`, `managerUrl` and `adminUrl` make
-  it from the subdomain; a URL in the query string is never followed. `store` must match
+  it from the subdomain; a URL in the query string is never followed. `sub` must match
   `^[a-z0-9-]+$`, and the block's facts come from the account's own data (its orders
   there, its role there), so a made-up subdomain shows nothing.
 - The origin is kept for the visit (session storage), so it survives moving between the
@@ -115,7 +116,12 @@ Each one ships alone, in this order.
   `/api/orders`; the platform account reads `/api/account`.
 - Not yet checked in the docker stack.
 
-### W2 — The hub on esy.ge
+### W2 — The hub on esy.ge — done 2026-11-12
+
+Checked in the docker stack at phone, tablet and desktop with a seeded test account:
+every section, the address book's add, edit, set-default and delete, and the origin block
+for a store, the back office and admin. Not checked: an account that is not an admin
+opening `?from=admin`, and light mode.
 
 New folder `apps/web/src/platform/account/`:
 
@@ -123,7 +129,7 @@ New folder `apps/web/src/platform/account/`:
   sign-in state now in `PlatformAccount`, and the origin block's state.
 - `AccountHome.jsx` (U2, U3), `AccountOrders.jsx` (U4), `AccountAddresses.jsx` (U5),
   `AccountStores.jsx` (U6, U6b), `AccountPersonal.jsx` (wraps `PersonalInfo`).
-- `origin.js`: reads and validates `from` / `store`, keeps it for the visit, builds the
+- `origin.js`: reads and validates `from` / `sub`, keeps it for the visit, builds the
   return link.
 
 `router/platform.jsx`: `account` becomes a parent route with these children, each
