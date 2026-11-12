@@ -1,6 +1,6 @@
 # Plan — one account everywhere (option A: the hub at esy.ge/account)
 
-Status: planned 2026-11-12. Nothing is built.
+Status: built 2026-11-12, W1–W5. Not pushed.
 Design: canvas **esy Full Design**, page **Account** — https://claude.ai/artifact/6ucTyRHjsgpMJdWQLjU6Rz
 (boards U1–U6b, components AcctMenu and AcctNav; drawn 2026-11-12, not yet reviewed
 against a render).
@@ -202,18 +202,23 @@ store (`storeUrl(store)/orders/<n>`), as now.
   the signed-out path. Not checked: a real Google sign-in returning to the shop, and
   pressing sign out.
 
-### W5 — Strings, checks, records
+### W5 — Strings, checks, records — done 2026-11-12
 
-- The menu's strings are read on every host, so they go in a shared namespace
-  (`locales/namespaces.js`: move `account` into `SHARED_NS`, or add the keys to
-  `navbar`); the hub's go in `platform` (`me.*`). English and Georgian for every key;
-  `npm run i18n:check`. The build's namespace check will fail a host that reads a
-  namespace it does not load.
-- `npm run up`, then by hand on `lvh.me:8092`: the menu on all four hosts at phone,
-  tablet and desktop; the hub opened directly and from each app; the return button; an
-  address added in the hub offered at checkout; a store's `/orders` showing only its own.
-- Canvas: retire L4 and D1 once the screens match U2 and U1. CLAUDE.md: one line that
-  the account lives at `esy.ge/account` and a store's order list is the store's.
+- Strings: the menu's are `navbar.acct.*` (shared), the hub's `platform.hub.*` beside
+  the `me.*` it kept. The ones whose only readers were the replaced screens are removed
+  in both languages: the store's `storefront.account.*` (all but `personal.*`, which the
+  personal details cards still read), `account.displayRow` / `displaySummary`, the back
+  office's `nav.signOut`, admin's `shell.toManager` / `shell.signOut`. Strings that
+  nothing read before this work are left as they were.
+- A store no longer loads the `account` namespace (`locales/namespaces.js`): nothing on
+  a store reads it.
+- Checks ran in the docker stack per workstream (see each above). Still by hand for
+  whoever has a Google session: signing in on a store and landing on the shop, signing
+  out from the menu, and an address added in the hub being offered at checkout (the
+  store's `GET /api/addresses` returns it; the checkout screen itself was not driven).
+- Canvas: L4 and D1 are kept and titled as retired, pointing at U2 and U1; deleting
+  them is the owner's call. CLAUDE.md records where the account lives, the `sub`
+  parameter and why it is not `store`, and that a store's order list is the store's.
 
 ## Out of scope
 

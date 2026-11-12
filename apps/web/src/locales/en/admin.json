@@ -226,8 +226,6 @@
     "home": "Stores",
     "account": "Account: {{name}}",
     "role": "Platform admin",
-    "toManager": "Back office",
-    "signOut": "Sign out",
     "host": "admin.esy.ge",
     "platform": "esy.ge",
     "back": "Back"
