@@ -6,6 +6,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- iOS Safari turns plain text that looks like a phone number, an email
+         or an address into links of its own, underlined and restyled (the
+         account menu's name broke over two lines). Links the app means to
+         make are real <a href="tel:/mailto:"> and are not affected. -->
+    <meta name="format-detection" content="telephone=no, email=no, address=no, date=no" />
     <title>esy.ge</title>
     <!-- The theme tokens key off <html>'s attributes. They are drawn before the
          first paint: the server puts the store this page belongs to in place
