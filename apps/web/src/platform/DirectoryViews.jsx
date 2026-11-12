@@ -17,6 +17,7 @@ import { StoreMark } from './PlatformShared';
 import { storeInitials } from './platformData';
 import { STORE_VIEWS } from '../core/display/prefs';
 import { useIndicator } from '../core/useIndicator';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 const ONE_LINE = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
@@ -103,10 +104,12 @@ function useShown(list) {
   return [shown, fail];
 }
 
+// Every photo fades in once it has decoded (core/imgFade.js).
 function Shot({ src, onFail, style }) {
   return (
     <img
       src={src} alt="" loading="lazy" decoding="async" onError={() => onFail(src)}
+      className="esy-img" ref={markIfComplete} onLoad={markLoaded}
       style={{ display: 'block', width: '100%', height: '100%', minWidth: 0, minHeight: 0, objectFit: 'cover', ...style }}
     />
   );

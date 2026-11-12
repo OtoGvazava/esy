@@ -12,7 +12,9 @@ export const SHARED_NS = ['common', 'design', 'display', 'home', 'navbar', 'owne
 
 /** Each host's own, beside the shared ones: a chunk per namespace and language. */
 export const HOST_NS = {
-  store: ['account', 'cart'],
+  // Not `account`: its last reader was the store's own account page, which is
+  // gone (the account lives on esy.ge, its strings in `platform` and `navbar`).
+  store: ['cart'],
   platform: ['platform'],
   manager: ['manager'],
   admin: ['admin', 'cart'],

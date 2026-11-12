@@ -3,17 +3,18 @@
    any products. Ported from the design kit; the root carries data-th, data-md and
    --k-brand, so each thumbnail shows its own theme whatever the page around it is,
    and --m-cover and --m-hero, the photos of its cover band and hero band
-   (components/design/photos.js). Each tile carries its own photo as --m-p. */
+   (components/design/photos.js). Each tile carries its own photo as --m-p, and
+   data-photos says they have all decoded. */
 .mini{position:relative;overflow:hidden;width:200px;height:412px;border-radius:28px;background:var(--k-page);color:var(--k-fg);font-family:var(--k-font);box-shadow:0 0 0 5px #19191d,0 18px 40px -18px rgba(0,0,0,.45);flex:none}
 .m-top{display:flex;align-items:center;gap:7px;padding:24px 12px 8px}
 .m-av{width:24px;height:24px;border-radius:50%;background:var(--k-pri);flex:none}
 [data-th="neon"] .m-av{border-radius:6px;box-shadow:0 0 10px -2px var(--k-neon)}
 .m-l1{height:7px;width:76px;border-radius:3px;background:var(--k-fg);opacity:.85}
 .m-l2{height:5px;width:48px;border-radius:3px;background:var(--k-dim);opacity:.6;margin-top:4px}
-/* Each photo is a layer of its own over the band's or the tile's ground, which a
-   theme may draw as a colour, a gradient or several layers, and which shows only
-   until the photo is in. */
-.m-cover{height:62px;margin:20px 10px 0;border-radius:calc(var(--k-r-card) * .55);background:var(--m-cover,none) center/cover no-repeat,var(--k-hero)}
+/* Each photo is a layer of its own (::after) over the band's or the tile's
+   ground, which a theme may draw as a colour, a gradient or several layers. */
+.m-cover{position:relative;overflow:hidden;height:62px;margin:20px 10px 0;border-radius:calc(var(--k-r-card) * .55);background:var(--k-hero)}
+.m-cover::after{content:"";position:absolute;inset:0;background:var(--m-cover,none) center/cover no-repeat}
 .m-hero{position:relative;overflow:hidden;margin:4px 10px 8px;height:66px;border-radius:calc(var(--k-r-card) * .55);background:var(--k-hero)}
 /* The hero band ends in a photo that fades into the band, as the store's own banner does (StoreBanner). */
 .m-hero::after{content:"";position:absolute;top:0;right:0;bottom:0;width:52%;background:var(--m-hero,none) center/cover no-repeat;-webkit-mask-image:linear-gradient(90deg,transparent,#000 45%);mask-image:linear-gradient(90deg,transparent,#000 45%)}
@@ -38,10 +39,18 @@
 .m-burger{display:none;width:18px;height:12px;border-top:2px solid var(--k-fg);border-bottom:2px solid var(--k-fg);position:relative;flex:none}
 .m-burger::after{content:"";position:absolute;left:0;right:0;top:3px;border-top:2px solid var(--k-fg)}
 .mini.n-drawer .m-burger{display:block}
-.m-ph{aspect-ratio:1/1;background:var(--m-p,none) center/cover no-repeat,var(--k-ph1);border-radius:calc(var(--k-r-img) * .55)}
-.m-ph.t2{background:var(--m-p,none) center/cover no-repeat,var(--k-ph2)}
-.m-ph.t3{background:var(--m-p,none) center/cover no-repeat,var(--k-ph3)}
-.m-ph.t4{background:var(--m-p,none) center/cover no-repeat,var(--k-ph4)}
+.m-ph{position:relative;overflow:hidden;aspect-ratio:1/1;background:var(--k-ph1);border-radius:calc(var(--k-r-img) * .55)}
+.m-ph.t2{background:var(--k-ph2)}.m-ph.t3{background:var(--k-ph3)}.m-ph.t4{background:var(--k-ph4)}
+.m-ph::after{content:"";position:absolute;inset:0;background:var(--m-p,none) center/cover no-repeat}
+/* The photos wait on the grounds until every one of the thumbnail's photos has
+   decoded (LookThumb sets data-photos), then fade in together, so a thumbnail
+   never fills in tile by tile. One whose photos are in already shows them at
+   once: data-photos is there from its first frame, so nothing transitions. */
+.mini :is(.m-ph,.m-cover,.m-hero)::after{opacity:0;transition:opacity var(--m-slow,340ms) ease}
+.mini[data-photos] :is(.m-ph,.m-cover,.m-hero)::after{opacity:1}
+@media (prefers-reduced-motion: reduce){
+  html:not([data-text]) .mini :is(.m-ph,.m-cover,.m-hero)::after{transition:none}
+}
 /* The seller's own store (quick setup): initials or logo, and the name, in place of the bars. */
 .m-own{display:grid;place-items:center;overflow:hidden;color:var(--k-on-pri);font:700 9.5px/1 var(--k-font);letter-spacing:.02em}
 .m-own img{width:100%;height:100%;object-fit:cover;display:block}

@@ -10,6 +10,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class TenantContextService {
@@ -73,6 +75,31 @@ public class TenantContextService {
         return DEFAULT_TENANT_SUBDOMAIN;
     }
     
+    /**
+     * The store this request is on, when a shopper's page is a store: a
+     * storefront host, or the local simulation (bare localhost with
+     * {@code ?tenant=}). Empty on esy.ge, the back office, admin and any host
+     * esy does not serve.
+     *
+     * <p>For answers that are the account's on the platform and the store's on
+     * a store, such as "my orders". It follows the rule {@link
+     * #getCurrentSubdomain} resolves a storefront by, so the store it names is
+     * the one an order placed on this host would belong to. {@link
+     * #getCurrentTenant} alone cannot answer this: on a platform host it falls
+     * back to the default store.
+     */
+    public Optional<Tenant> currentStorefront() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) return Optional.empty();
+        HttpServletRequest request = attributes.getRequest();
+        String host = request.getHeader("Host");
+        if (host == null) return Optional.empty();
+        String h = host.split(":")[0].toLowerCase();
+        boolean simulated = (h.equals("localhost") || h.equals("127.0.0.1")) && request.getParameter("tenant") != null;
+        if (PlatformHosts.storefrontSubdomain(h) == null && !simulated) return Optional.empty();
+        return Optional.of(getCurrentTenant());
+    }
+
     public boolean isCurrentTenantActive() {
         Tenant tenant = getCurrentTenant();
         return tenant.getIsActive();

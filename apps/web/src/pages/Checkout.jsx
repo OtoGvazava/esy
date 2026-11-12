@@ -33,7 +33,9 @@ import { money } from '../core/money';
 import { alpha } from '../core/tokens';
 import { useBottomClearance, useDesign } from '../core/design/useDesign';
 import { platformUrl } from '../utils/hosts';
+import { hubUrl } from '../components/account/hub';
 import PhoneVerifyBox from '../components/PhoneVerifyBox';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 const devTenant = () => {
   try { return new URLSearchParams(window.location.search).get('tenant') || undefined; }
@@ -193,7 +195,7 @@ function Thumb({ item }) {
       display: 'grid', placeItems: 'center', background: 'var(--k-ph2)', color: 'var(--k-ph2f)',
     }}>
       {src && ok ? (
-        <img src={src} alt="" onError={() => setOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <img src={src} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} onError={() => setOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
       ) : (
         <G name="bag" size={24} />
       )}
@@ -642,9 +644,9 @@ export default function Checkout() {
       ) : !user.phoneNumber ? (
         <>
           <span style={{ font: `500 12.5px/1.5 ${T.font}`, color: T.textDim }}>{t('checkout.needPhone')}</span>
-          <button type="button" onClick={() => navigate('/account')} style={{ height: 44, borderRadius: 'var(--k-r-btn)', font: `600 13.5px ${T.font}`, ...primary(false) }}>
+          <a href={hubUrl('/account/personal', 'store', store?.subdomain)} style={{ height: 44, borderRadius: 'var(--k-r-btn)', font: `600 13.5px ${T.font}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', boxSizing: 'border-box', ...primary(false) }}>
             {t('checkout.addPhone')}
-          </button>
+          </a>
         </>
       ) : (
         <>

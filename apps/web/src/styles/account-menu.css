@@ -1,0 +1,81 @@
+/* The account menu (the design's AcctMenu, U1): the same on a store, esy.ge,
+   the back office and admin. It is drawn on the theme's own tokens
+   (styles/themes.css), not on any one host's kit, so it wears whatever theme
+   the page it opens on has. A popover out of its control on a desktop, a
+   sheet from the bottom edge on a phone and a tablet. */
+
+.am, .am *, .am *::before, .am *::after { box-sizing: border-box; }
+.am {
+  font: 400 14px/1.45 var(--k-font);
+  color: var(--k-fg);
+  -webkit-font-smoothing: antialiased;
+  text-align: left;
+}
+
+/* Both forms sit above a store's floating menu (z 1200) and its filter sheet
+   (1295), and under the registration gate (3000). */
+
+/* ---- the popover -------------------------------------------------------- */
+.am-pop {
+  position: fixed; z-index: 1300; width: 340px; max-width: calc(100vw - 24px); padding: 8px;
+  background: var(--k-sf); border: 1px solid var(--k-line); border-radius: var(--k-r-card);
+  box-shadow: 0 18px 44px -16px rgba(0, 0, 0, .38);
+  max-height: calc(100vh - 24px); overflow-y: auto;
+}
+
+/* ---- the sheet ---------------------------------------------------------- */
+.am-layer { position: fixed; inset: 0; z-index: 1300; display: flex; align-items: flex-end; justify-content: center; }
+.am-scrim { position: absolute; inset: 0; background: rgba(8, 8, 12, .44); }
+.am-sheet {
+  position: relative; width: 100%; padding: 10px 16px calc(env(safe-area-inset-bottom, 0px) + 18px);
+  background: var(--k-sf); border-radius: var(--k-r-sheet) var(--k-r-sheet) 0 0;
+  box-shadow: 0 -14px 40px -10px rgba(0, 0, 0, .28);
+  max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+}
+/* On a tablet it floats, centred, clear of the bottom edge. */
+.am-layer[data-wide] { padding: 0 24px 24px; }
+.am-layer[data-wide] .am-sheet { max-width: 520px; border-radius: var(--k-r-sheet); padding: 10px 16px 16px; }
+.am-grab { width: 42px; height: 5px; border-radius: 3px; background: var(--k-line); align-self: center; flex: none; }
+
+/* ---- what is in it ------------------------------------------------------ */
+.am-list { display: flex; flex-direction: column; gap: 2px; }
+.am-head { display: flex; align-items: center; gap: 12px; padding: 8px 12px 12px; }
+.am-av {
+  width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: var(--k-ink); color: var(--k-on-ink); font: 700 15px var(--k-font); letter-spacing: .02em;
+}
+.am-who { flex: 1; min-width: 0; }
+.am-who b, .am-who span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.am-who span { font-size: 12.5px; color: var(--k-dim); }
+.am-sep { height: 1px; background: var(--k-line); flex: none; }
+.am-sep.gap { margin-top: 8px; }
+.am-lbl { font: 600 11.5px/1.2 var(--k-font-m); letter-spacing: .06em; color: var(--k-dim); padding: 12px 12px 4px; margin: 0; }
+
+.am-mi {
+  display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px; width: 100%;
+  border: 0; border-radius: var(--k-r-in); background: transparent; color: var(--k-fg);
+  font: 400 15px/1.3 var(--k-font); text-decoration: none; text-align: left; cursor: pointer;
+}
+.am-mi.two { padding-top: 8px; padding-bottom: 8px; }
+.am-mi:hover { background: color-mix(in oklab, var(--k-fg) 6%, transparent); }
+.am-mi:focus-visible { outline: 2px solid var(--k-acc); outline-offset: -2px; }
+.am-ic {
+  width: 34px; height: 34px; border-radius: var(--k-r-in); background: var(--k-sf2); color: var(--k-fg);
+  display: grid; place-items: center; flex: none;
+}
+.am svg {
+  width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
+  stroke-width: var(--k-ic-w, 1.8); stroke-linecap: round; stroke-linejoin: round;
+}
+.am svg.am-chev { width: 16px; height: 16px; color: var(--k-dim); }
+.am-txt { flex: 1; min-width: 0; }
+.am-txt small { display: block; font-size: 12px; color: var(--k-dim); }
+.am-meta { font-size: 12.5px; color: var(--k-dim); white-space: nowrap; font-variant-numeric: tabular-nums; flex: none; }
+.am-chip {
+  display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; flex: none;
+  font: 600 12px/1 var(--k-font); white-space: nowrap;
+  background: color-mix(in oklab, var(--k-pri) 15%, var(--k-sf)); color: var(--k-acc);
+}
+.am-chip.role { background: var(--k-info-bg); color: var(--k-info); }
+.am-mi.bad { color: var(--k-bad); margin-top: 6px; }
+.am-mi.bad .am-ic { background: var(--k-bad-bg); color: var(--k-bad); }

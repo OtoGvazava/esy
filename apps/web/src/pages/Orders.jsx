@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useOrders } from '../contexts/OrdersContext';
+import { useTenant } from '../contexts/TenantContext';
+import { hubUrl } from '../components/account/hub';
 import { useGlow } from '../styles/glow';
 import { Icon, PoweredBy } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, money } from '../components/glow/GlowChrome';
@@ -12,6 +14,8 @@ export default function Orders() {
   const navigate = useNavigate();
   const { t } = useTranslation('storefront');
   const { orders, pending } = useOrders();
+  const { tenant: store } = useTenant();
+  const allOrders = hubUrl('/account/orders', 'store', store?.subdomain);
 
   // The list's own shape until it is known: the heading and a few order rows.
   if (pending) {
@@ -70,6 +74,10 @@ export default function Orders() {
         <div style={{ padding: '6px 22px 14px' }}>
           <div style={{ font: `700 24px ${T.font}`, color: T.text, letterSpacing: '-0.03em' }}>{t('orders.heading')}</div>
           <div style={{ font: `400 12.5px ${T.font}`, color: T.textDim, marginTop: 4 }}>{t('orders.orderCount', { count: orders.length })}</div>
+          {/* These are this store's. Everything ordered anywhere is on the account. */}
+          <a href={allOrders} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32, marginTop: 6, font: `600 12.5px ${T.font}`, color: T.accentFg, textDecoration: 'none' }}>
+            {t('orders.allOnEsy')} <Icon.arrowR />
+          </a>
         </div>
 
         <div style={{ padding: '0 16px 6px', display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -12,8 +12,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { directoryQuery } from '../core/query/queries';
 import { managerUrl } from '../utils/hosts';
+import AccountMenu from '../components/account/AccountMenu';
 import { PLATFORM_ACCENT, storeInitials } from './platformData';
 import { Av, Btn, Glyph, IconBtn, Logo, initialsOf, miStyle, usePDevice } from './PlatformKit';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 export { shiftHue };
 
@@ -69,6 +71,7 @@ export function StoreMark({ store, size = 40, radius = 12, ring = false }) {
     return (
       <img
         src={store.logoUrl} alt={store.displayName || store.name || ''}
+        className="esy-img" ref={markIfComplete} onLoad={markLoaded} decoding="async"
         style={{
           width: size, height: size, borderRadius: radius, objectFit: 'cover',
           display: 'block', boxShadow: shadow, flexShrink: 0,
@@ -157,6 +160,7 @@ export function PTopBar({ current = 'none', cta = true }) {
   const { ph, desk, gut } = usePDevice();
   const { t } = useTranslation('platform');
   const { pathname, hash } = useLocation();
+  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [menu, setMenu] = useState(false);
   const barRef = useRef(null);
@@ -197,10 +201,22 @@ export function PTopBar({ current = 'none', cta = true }) {
     ? { as: Link, to: l.to }
     : { as: 'a', href: `/#${l.section}`, onClick: section(l.section) });
 
+  // The avatar opens the account menu, the same one every app has (U1): a
+  // popover under it on a desktop, a sheet on a tablet and a phone.
   const avatar = (
-    <Link to="/account" aria-label={t('chrome.account', { name: name || user?.email || '' })} style={{ textDecoration: 'none', display: 'inline-flex' }}>
-      <Av T={T} size="sm" ink>{initialsOf(name, user?.email)}</Av>
-    </Link>
+    <AccountMenu app="platform" sheet={!desk} wide={!ph} wrapStyle={{ display: 'inline-flex' }} onSignedOut={() => navigate('/')}>
+      {({ triggerProps }) => (
+        <button
+          type="button"
+          {...triggerProps}
+          aria-label={t('chrome.account', { name: name || user?.email || '' })}
+          className="esy-press"
+          style={{ border: 0, padding: 0, background: 'transparent', cursor: 'pointer', display: 'inline-flex', borderRadius: '50%' }}
+        >
+          <Av T={T} size="sm" ink>{initialsOf(name, user?.email)}</Av>
+        </button>
+      )}
+    </AccountMenu>
   );
 
   // Each page draws its own bar, so the bar is named for the page change

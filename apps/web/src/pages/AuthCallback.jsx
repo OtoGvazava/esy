@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
 import { alpha } from '../core/tokens';
 import { isPlatformHost } from '../hooks/usePlatformHost';
+import { hostKey } from '../core/hostKey';
 
 // Landing point after Google OAuth. The backend has already set the HttpOnly
 // esy_token cookie (Domain=esy.ge) before redirecting here; we only reach this
@@ -17,20 +18,23 @@ export default function AuthCallback() {
     // Return to the store the user signed in from. signInWithGoogle stashed
     // the path on this same origin; the dev store simulation lives in
     // ?tenant=, which the OAuth origin round-trip can't carry on its own.
-    let dest = '/account';
+    // esy.ge returns to the account; a store returns to the shop, since the
+    // account is no longer one of its pages (it would only forward to esy.ge).
+    const onStore = hostKey() === 'store';
+    let dest = onStore ? '/' : '/account';
     try {
       const saved = sessionStorage.getItem('esy_post_login');
       sessionStorage.removeItem('esy_post_login');
       const from = saved ? new URL(saved, window.location.origin) : null;
       const tenantParam = from && from.searchParams.get('tenant');
-      if (tenantParam) dest = `/account?tenant=${encodeURIComponent(tenantParam)}`;
+      if (tenantParam) dest = `/?tenant=${encodeURIComponent(tenantParam)}`;
       // Opening a store (esy.ge/sell) continues where it started, with the
       // look a landing-page link picked (?look=).
       else if (from && from.pathname === '/sell' && isPlatformHost()) {
         const look = from.searchParams.get('look');
         dest = look ? `/sell?look=${encodeURIComponent(look)}` : '/sell';
       }
-    } catch { /* keep default /account */ }
+    } catch { /* keep the default */ }
     window.location.replace(dest);
   }, []);
 

@@ -170,6 +170,7 @@
   },
   "orders": {
     "title": "Orders",
+    "allOnEsy": "All your orders on esy",
     "emptyTitle": "No orders yet",
     "emptyBody": "Your orders will show here after checkout.",
     "browse": "Browse {{name}}",
@@ -300,31 +301,7 @@
     "note": "Your esy account works in every esy store: all your orders in one place."
   },
   "account": {
-    "title": "Account",
-    "memberFallback": "Member",
-    "phoneVerified": "Number verified",
-    "statOrders": "Orders",
-    "statSpent": "Spent",
-    "recentOrders": "Recent orders",
-    "seeAll": "See all",
-    "status": {
-      "placed": "Received",
-      "shipped": "Shipped",
-      "out_for_delivery": "On its way",
-      "delivered": "Delivered",
-      "cancelled": "Cancelled"
-    },
-    "itemCount_one": "{{count}} item",
-    "itemCount_other": "{{count}} items",
-    "setAddresses": "Addresses",
-    "setDashboard": "Store dashboard",
-    "chipOwner": "Owner",
-    "chipManager": "Manager",
-    "settings": "Settings",
-    "setHelp": "Help & support",
-    "signOut": "Sign out",
     "personal": {
-      "title": "Personal information",
       "edit": "Change",
       "firstName": "First name",
       "lastName": "Last name",
@@ -335,7 +312,6 @@
       "saving": "Saving…",
       "cancel": "Cancel",
       "saveError": "Could not save. Please try again.",
-      "back": "Account",
       "email": "Email",
       "emailHint": "It comes from your Google account and cannot be changed here.",
       "saved": "Saved",

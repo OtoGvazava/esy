@@ -44,10 +44,26 @@ public class OrderController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toMap(order));
     }
 
+    /**
+     * The shopper's own orders.
+     *
+     * <p>On a store this is what they ordered at that store, the same store a
+     * new order placed on this host would belong to. It used to be every order
+     * the account had anywhere, so one store's "my orders" listed another
+     * store's parcels under its own name. On esy.ge, the back office and admin,
+     * where no store is the page, the list is still the whole account's.
+     *
+     * <p>{@code currentStorefront()} decides, not {@code getCurrentTenant()}
+     * alone: that falls back to the default store on a platform host, which
+     * would quietly narrow the platform's list to it.
+     */
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> myOrders(Authentication authentication) {
         User user = currentUser(authentication);
-        return ResponseEntity.ok(orderService.ordersForUser(user).stream()
+        List<Order> orders = tenantContextService.currentStorefront()
+            .map(store -> orderService.ordersForUser(user, store))
+            .orElseGet(() -> orderService.ordersForUser(user));
+        return ResponseEntity.ok(orders.stream()
             .map(OrderController::toMap).collect(Collectors.toList()));
     }
 

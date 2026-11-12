@@ -21,6 +21,7 @@ import { useStoreNav } from './storeChrome';
 import { useIndicator } from '../../core/useIndicator';
 import { StoreName } from './VerifiedTick';
 import StoreSocials from './StoreSocials';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 
 // Above the dock (1200) and below MUI's dialogs (1300) and the profile gate.
 const Z = { strip: 1150, scrim: 1290, layer: 1295 };
@@ -31,6 +32,17 @@ const REDUCED = '(prefers-reduced-motion: reduce)';
 const ellipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
 // The canvas's menu glyph: three lines, the last one short.
+/**
+ * The click of an item that opens something rather than going somewhere (the
+ * signed-in account item, storeChrome.js): the link stays a link, with its
+ * address, and the press is answered here instead of by the router.
+ */
+const pressed = (it, also) => (e) => {
+  e.preventDefault();
+  also?.();
+  it.press();
+};
+
 function MenuGlyph() {
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
@@ -92,7 +104,7 @@ export function StoreAvatar({ size = 44, ring = false }) {
       boxShadow: ring ? `0 0 0 3px ${T.bg}` : undefined,
     }}>
       {tenant.logoUrl
-        ? <img src={tenant.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ? <img src={tenant.logoUrl} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         : tenant.initials}
     </span>
   );
@@ -219,6 +231,7 @@ export function StoreTabs({ fixed = false }) {
         {items.map((it) => (
           <Link
             key={it.key} to={it.to} aria-current={it.active ? 'page' : undefined} data-ind={it.key}
+            onClick={it.press ? pressed(it) : undefined} data-no-prefetch={it.press ? '' : undefined}
             className="esy-press-soft"
             style={{
               flex: 'none', minHeight: TABS_H, minWidth: 44, boxSizing: 'border-box',
@@ -318,7 +331,8 @@ function SideMenu({ id, open, onClose, backRef }) {
         <nav aria-label={t('menu.drawer')} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {items.map((it) => (
             <Link
-              key={it.key} to={it.to} onClick={onClose} aria-current={it.active ? 'page' : undefined}
+              key={it.key} to={it.to} onClick={it.press ? pressed(it, onClose) : onClose}
+              aria-current={it.active ? 'page' : undefined} data-no-prefetch={it.press ? '' : undefined}
               className="esy-press-soft"
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, minHeight: 46, padding: '0 12px',
@@ -433,8 +447,8 @@ export function ActionButton() {
             const delay = open && !still ? (items.length - 1 - i) * 30 : 0;
             return (
               <Link
-                key={it.key} ref={i === 0 ? first : undefined} to={it.to} onClick={close}
-                aria-current={it.active ? 'page' : undefined}
+                key={it.key} ref={i === 0 ? first : undefined} to={it.to} onClick={it.press ? pressed(it, close) : close}
+                aria-current={it.active ? 'page' : undefined} data-no-prefetch={it.press ? '' : undefined}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 16px',
                   boxSizing: 'border-box', borderRadius: 'var(--k-r-pill)', textDecoration: 'none', whiteSpace: 'nowrap',

@@ -182,7 +182,7 @@ function ProductView({ id }) {
               border: i === imgIdx ? `2px solid ${T.accent}` : `1px solid ${T.border}`,
             }}
           >
-            <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={src} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </button>
         ))}
       </div>

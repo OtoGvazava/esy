@@ -27,11 +27,11 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { usePendingLocation, useIndicator } from '../core/useIndicator';
-import { usePresence } from '../core/usePresence';
-import { managerUrl, platformUrl } from '../utils/hosts';
+import { platformUrl } from '../utils/hosts';
 import { useAdminTokens } from './adminTokens';
 import { AdminHeadContext } from './adminHead';
 import AdminGate from './AdminGate';
+import AccountMenu from '../components/account/AccountMenu';
 import { LazyScreenSkeleton } from './AdminSkeletons';
 import { Dialog, EsyLogo, Glyph, KitChip, List } from './AdminKit';
 
@@ -88,84 +88,42 @@ function EntryIcon({ name, popped, size }) {
 }
 
 /**
- * Who is signed in, and the two ways out: the back office, and signing out.
- * `row` is the sidebar's full row; otherwise the avatar alone opens it.
+ * Who is signed in. `row` is the sidebar's full row; otherwise the avatar
+ * alone. It opens the account menu every app shares (U1b): the way to the
+ * back office and esy.ge, then the esy account and signing out. A popover
+ * above the sidebar's row on a desktop, a sheet below one (`wide` on a tablet).
  */
-function UserMenu({ T, t, user, row, place }) {
-  const { logout } = useAuth();
-  const [open, setOpen] = useState(false);
-  // Kept on screen while it fades out (core/usePresence.js).
-  const menu = usePresence(open, 140);
-  // In the sidebar and the rail it opens upward from the control, in the
-  // phone's top bar downward: either way out of the control itself.
-  const up = place?.bottom !== undefined;
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
+function UserMenu({ T, t, user, row, sheet, wide }) {
   const name = nameOf(user) || user?.email;
-  const item = {
-    display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, padding: '0 12px', borderRadius: 10,
-    color: T.text, textDecoration: 'none', font: `500 14px ${T.font}`, border: 0, background: 'transparent',
-    width: '100%', textAlign: 'left', cursor: 'pointer', boxSizing: 'border-box',
-  };
   return (
-    <div style={{ position: 'relative', ...(row ? { borderTop: `1px solid ${T.border}`, padding: '12px 0 0' } : null) }}>
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={row ? undefined : t('shell.account', { name })}
-        onClick={() => setOpen((v) => !v)}
-        className={row ? 'esy-press-soft' : 'esy-press'}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 10, border: 0, background: 'transparent', cursor: 'pointer',
-          color: T.text, padding: row ? '0 8px' : 0, width: row ? '100%' : undefined, textAlign: 'left', minHeight: 44,
-        }}
-      >
-        <Avatar T={T} user={user} />
-        {row && (
-          <>
-            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-              <b style={{ font: `700 13.5px/1.2 ${T.font}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</b>
-              <span style={{ font: `400 12px/1.3 ${T.font}`, color: T.textDim }}>{t('shell.role')}</span>
-            </span>
-            <Glyph name="chevD" size={16} style={{ color: T.textDim }} />
-          </>
-        )}
-      </button>
-      {open && <div aria-hidden="true" onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 70 }} />}
-      {menu.mounted && (
-        // While it fades out it is inert: a tap meant for what is underneath
-        // must not land on a menu that is already going.
-        <div
-          role="menu"
-          inert={!open}
-          data-state={menu.state}
-          className={open ? (up ? 'esy-menu-up' : 'esy-menu-in') : 'esy-pop-in'}
+    <AccountMenu
+      app="admin" sheet={sheet} wide={wide} anchor="above"
+      wrapStyle={row ? { borderTop: `1px solid ${T.border}`, padding: '12px 0 0' } : undefined}
+    >
+      {({ triggerProps }) => (
+        <button
+          type="button"
+          {...triggerProps}
+          aria-label={row ? undefined : t('shell.account', { name })}
+          className={row ? 'esy-press-soft' : 'esy-press'}
           style={{
-            position: 'absolute', zIndex: 71, minWidth: 230, padding: 6, boxSizing: 'border-box',
-            background: T.surface, border: 'var(--k-fl-bd)', borderRadius: 14,
-            boxShadow: '0 18px 40px -16px rgba(0,0,0,0.35)', ...place,
+            display: 'flex', alignItems: 'center', gap: 10, border: 0, background: 'transparent', cursor: 'pointer',
+            color: T.text, padding: row ? '0 8px' : 0, width: row ? '100%' : undefined, textAlign: 'left', minHeight: 44,
           }}
         >
-          {!row && (
-            <div style={{ padding: '8px 12px 10px', borderBottom: `1px solid ${T.border}`, marginBottom: 4 }}>
-              <b style={{ display: 'block', font: `700 13px ${T.font}` }}>{name}</b>
-              <span style={{ font: `400 12px ${T.font}`, color: T.textDim }}>{user?.email}</span>
-            </div>
+          <Avatar T={T} user={user} />
+          {row && (
+            <>
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                <b style={{ font: `700 13.5px/1.2 ${T.font}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</b>
+                <span style={{ font: `400 12px/1.3 ${T.font}`, color: T.textDim }}>{t('shell.role')}</span>
+              </span>
+              <Glyph name="chevD" size={16} style={{ color: T.textDim }} />
+            </>
           )}
-          <a role="menuitem" href={managerUrl('/')} style={item}>
-            <Glyph name="manager" size={18} />{t('shell.toManager')}
-          </a>
-          <button role="menuitem" type="button" onClick={() => { setOpen(false); logout(); }} style={{ ...item, color: 'var(--k-bad)' }}>
-            <Glyph name="logout" size={18} />{t('shell.signOut')}
-          </button>
-        </div>
+        </button>
       )}
-    </div>
+    </AccountMenu>
   );
 }
 
@@ -212,7 +170,7 @@ function Side({ T, t, active, user }) {
         );
       })}
       <span style={{ flex: 1 }} />
-      <UserMenu T={T} t={t} user={user} row place={{ left: 0, right: 0, bottom: 'calc(100% + 6px)' }} />
+      <UserMenu T={T} t={t} user={user} row />
     </nav>
   );
 }
@@ -255,7 +213,7 @@ function Rail({ T, t, active, user }) {
         );
       })}
       <span style={{ flex: 1 }} />
-      <UserMenu T={T} t={t} user={user} place={{ left: 'calc(100% + 8px)', bottom: 0 }} />
+      <UserMenu T={T} t={t} user={user} sheet wide />
     </nav>
   );
 }
@@ -361,7 +319,7 @@ function TopBar({ T, t, head, desk, tab, ph, user }) {
           {t('shell.platform')}
         </a>
       )}
-      {ph && <UserMenu T={T} t={t} user={user} place={{ right: 0, top: 'calc(100% + 6px)' }} />}
+      {ph && <UserMenu T={T} t={t} user={user} sheet />}
     </header>
   );
 }

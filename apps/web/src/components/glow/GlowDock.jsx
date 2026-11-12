@@ -23,6 +23,7 @@ import { useDesign } from '../../core/design/useDesign';
 import { useStoreNav, useStoreBarShown } from '../store/storeChrome';
 import { ActionButton, MenuStrip } from '../store/StoreMenus';
 import { useIndicator } from '../../core/useIndicator';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 
 export default function GlowDock() {
   const { T } = useGlow();
@@ -64,6 +65,7 @@ export default function GlowDock() {
           src={user.avatar}
           alt=""
           referrerPolicy="no-referrer"
+          className="esy-img" ref={markIfComplete} onLoad={markLoaded}
           onError={(e) => { e.currentTarget.style.display = 'none'; }}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
@@ -76,6 +78,9 @@ export default function GlowDock() {
   // Signed in → label the tab with the user's first name instead of "Account".
   const firstName = (user?.firstName || user?.name || '').trim().split(/\s+/)[0];
   const accountLabel = isAuthenticated && firstName ? firstName : t('dock.account');
+
+  // A place is gone to; the signed-in account item opens its menu instead.
+  const go = (it) => (it.press ? it.press() : navigate(it.to));
 
   const items = places.map((it) => (it.key === 'account'
     ? { ...it, icon: accountIcon, label: accountLabel }
@@ -93,8 +98,8 @@ export default function GlowDock() {
     const search = items.find((it) => it.key === 'search');
     const iconBtn = (it) => (
       <button
-        key={it.key} type="button" onClick={() => navigate(it.to)} aria-label={it.label}
-        aria-current={it.active ? 'page' : undefined} data-ind={it.key} data-prefetch={it.to}
+        key={it.key} type="button" onClick={() => go(it)} aria-label={it.label}
+        aria-current={it.active ? 'page' : undefined} data-ind={it.key} data-prefetch={it.press ? undefined : it.to}
         className="esy-press"
         style={{
           position: 'relative', zIndex: 1, height: 44, minWidth: 44, padding: it.active && capsule && labels ? '0 14px' : 0,
@@ -156,10 +161,10 @@ export default function GlowDock() {
         <button
           key={it.key}
           type="button"
-          onClick={() => navigate(it.to)}
+          onClick={() => go(it)}
           aria-current={it.active ? 'page' : undefined}
           aria-label={labels ? undefined : it.label}
-          data-prefetch={it.to}
+          data-prefetch={it.press ? undefined : it.to}
           className="esy-press"
           style={{
             position: 'relative', zIndex: 1,

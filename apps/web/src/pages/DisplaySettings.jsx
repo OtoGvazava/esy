@@ -19,6 +19,7 @@ import { useIndicator } from '../core/useIndicator';
 import { GlowScreen } from '../components/glow/GlowChrome';
 import { VIEW_PATHS } from '../components/store/ViewSwitch';
 import { useSegLook } from '../components/glow/useSegLook';
+import { hostKey } from '../core/hostKey';
 
 // The design's glyphs for this screen, drawn at the theme's stroke weight.
 const PATHS = {
@@ -114,8 +115,12 @@ export default function DisplaySettings() {
   if (!display) return null;
   const id = (name) => `${ids}-${name}`;
 
-  // Back where the shopper came from, or to the account on a first page.
-  const goBack = () => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate('/account'));
+  // On esy.ge this screen belongs to the account; on a store, whose account
+  // lives on esy.ge, it is reached from the shop.
+  const onStore = hostKey() === 'store';
+  const home = onStore ? '/' : '/account';
+  // Back where the shopper came from, or to that home on a first page.
+  const goBack = () => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate(home));
 
   const list = {
     background: T.surface, border: 'var(--k-card-bd)', boxShadow: 'var(--k-card-sh)',
@@ -213,8 +218,8 @@ export default function DisplaySettings() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', maxWidth: isMobile ? undefined : isTablet ? 600 : 1040 }}>
           {isDesktop && (
             <div>
-              <Link to="/account" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginBottom: 4, font: `600 12.5px ${T.font}`, color: T.accentFg, textDecoration: 'none' }}>
-                <Glyph name="back" size={12} />{t('toAccount')}
+              <Link to={home} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginBottom: 4, font: `600 12.5px ${T.font}`, color: T.accentFg, textDecoration: 'none' }}>
+                <Glyph name="back" size={12} />{onStore ? t('toShop') : t('toAccount')}
               </Link>
               <h1 style={{ margin: 0, font: `var(--k-w-t, 700) 30px/1.15 var(--k-font-d, ${T.font})`, letterSpacing: '-0.02em', color: T.text }}>
                 {t('title')}

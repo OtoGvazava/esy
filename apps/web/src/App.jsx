@@ -8,6 +8,7 @@ import StoreBar from './components/store/StoreBar';
 import { useDevice } from './contexts/DeviceContext';
 import { TenantContext } from './contexts/TenantContext';
 import ProfileGate from './components/ProfileGate';
+import StoreAccount from './components/account/StoreAccount';
 import { useAppTheme } from './hooks/useAppTheme';
 import { usePlatformHost, isManagerHost, isAdminHost } from './hooks/usePlatformHost';
 import { ThemeModeProvider } from './contexts/ThemeModeContext';
@@ -37,12 +38,12 @@ export function StoreLayout() {
   // A product page carries its own buy bar where the dock would sit.
   const { pathname } = useLocation();
   // The bank's return page asks the shopper to wait on it, so it is drawn
-  // with no store menus at all (A8). The placed order, one order, personal
-  // details and sign-in are pushed screens with their own way back: the design
-  // draws them without the tab bar (A9, C2, C3, D2, B1).
+  // with no store menus at all (A8). The placed order, one order and sign-in
+  // are pushed screens with their own way back: the design draws them without
+  // the tab bar (A9, C2, C3, B1).
   const focus = pathname === '/pay/return';
   const pushed = focus || pathname === '/success' || pathname === '/signin'
-    || pathname.startsWith('/orders/') || pathname === '/account/personal';
+    || pathname.startsWith('/orders/');
   const dock = !isDesktop && !pathname.startsWith('/product/') && !pushed;
 
   // Without the store inlined in the page (SpaIndex.java), its chrome waits for
@@ -66,6 +67,8 @@ export function StoreLayout() {
       <Outlet />
       </div>
       {dock && <GlowDock />}
+      {/* The account menu the bar's button and the store's menu both open (U1). */}
+      {!focus && <StoreAccount />}
       <ProfileGate />
     </>
   );

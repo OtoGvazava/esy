@@ -4,6 +4,8 @@ import { useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePendingLocation } from '../../core/useIndicator';
 import { useCart } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { toggleAccountMenu } from '../account/accountSheet';
 import { Icon } from '../glow/GlowPrimitives';
 
 /**
@@ -12,11 +14,17 @@ import { Icon } from '../glow/GlowPrimitives';
  * signed-in avatar and first name for the account item. `active` follows the
  * place being opened, not only the one on screen, so a menu answers the tap
  * while the next screen loads.
+ *
+ * Signed in, the account item is not a place any more: it carries `press`,
+ * which opens the account menu (components/account/StoreAccount.jsx). A menu
+ * calls it instead of navigating; `to` stays as the link's address, which a
+ * signed-out shopper follows to sign in.
  */
 export function useStoreNav() {
   const { pathname } = usePendingLocation();
   const { getTotalItems } = useCart();
   const { t } = useTranslation('navbar');
+  const { isAuthenticated } = useAuth();
   const count = getTotalItems();
   const items = [
     { key: 'shop', to: '/', label: t('dock.shop'), Icon: Icon.grid, active: pathname === '/' || pathname.startsWith('/product') },
@@ -25,7 +33,10 @@ export function useStoreNav() {
     // Orders is where a shopper goes back to, so it has its own place rather
     // than sitting under Account.
     { key: 'orders', to: '/orders', label: t('dock.orders'), Icon: Icon.check, active: pathname === '/orders' },
-    { key: 'account', to: '/account', label: t('dock.account'), Icon: Icon.user, active: pathname === '/account' },
+    {
+      key: 'account', to: '/account', label: t('dock.account'), Icon: Icon.user, active: pathname === '/account',
+      press: isAuthenticated ? () => toggleAccountMenu() : null,
+    },
   ];
   return { items, count };
 }
