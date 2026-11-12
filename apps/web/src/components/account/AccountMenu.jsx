@@ -276,11 +276,15 @@ export default function AccountMenu({
       <div className="am-sep gap" role="separator" />
       <p className="am-lbl" role="presentation">{t('acct.account')}</p>
       <Item icon="user" label={t('acct.manage')} sub={t('acct.manageSub')} chev {...inApp('/account')} onClick={close} />
-      {/* Orders from every store are esy.ge's: a new tab from any other app. */}
-      <Item
-        icon="receipt" label={t('acct.allOrders')} meta={orders ? orders.length : null} onClick={close}
-        {...(onPlatform ? inApp('/account/orders') : away(platformUrl('/account/orders')))}
-      />
+      {/* Orders from every store are esy.ge's: a new tab from the back office
+          and admin. A store's menu keeps to the store: its own orders are above,
+          and all of them are in the account (its side list and orders page). */}
+      {app !== 'store' && (
+        <Item
+          icon="receipt" label={t('acct.allOrders')} meta={orders ? orders.length : null} onClick={close}
+          {...(onPlatform ? inApp('/account/orders') : away(platformUrl('/account/orders')))}
+        />
+      )}
       <Item
         icon="screen" label={t('acct.display')} {...inApp('/account/display')} onClick={close}
         meta={t('acct.displayMeta', {

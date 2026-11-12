@@ -2,9 +2,9 @@
 // the stores you run or the offer to open one, the latest orders from every
 // store, and, below a desktop, the account's sections as rows: on a desktop
 // they are the list beside the page instead. Inside a store it is about that
-// store alone: what this account has there (HereBlock) and the sections that
-// stay in the store. Orders from every store and the stores you run are
-// esy.ge's, a new tab away in the side list and the account menu.
+// store alone: what this account has there (HereBlock) and its sections.
+// Orders from every store and the stores you run are esy.ge's: rows that open
+// esy.ge's account in a new tab, as in the side list beside it on a desktop.
 import { useTranslation } from 'react-i18next';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { langInfo } from '../components/glow/GlowPrimitives';
@@ -61,7 +61,14 @@ export default function AccountHome() {
               <Lbl T={T} as="h2">{t('hub.account')}</Lbl>
               <List T={T}>
                 {inStore ? (
-                  <Row T={T} icon="bag" to={link('/account/orders')} label={t('hub.hereOrders')} meta={hereCount} />
+                  <>
+                    <Row T={T} icon="bag" to={link('/account/orders')} label={t('hub.hereOrders')} meta={hereCount} />
+                    {/* Orders from every store are esy.ge's: a new tab. */}
+                    <Row
+                      T={T} icon="receipt" {...away('/account/orders')} label={t('hub.allOrders')} meta={orders.length}
+                      sub={from > 0 ? `${t('hub.onEsy')} · ${t('hub.fromStores', { count: from, n: from })}` : t('hub.onEsy')}
+                    />
+                  </>
                 ) : (
                   <Row
                     T={T} icon="receipt" {...away('/account/orders')} label={t('hub.allOrders')} meta={orders.length}
@@ -69,6 +76,10 @@ export default function AccountHome() {
                   />
                 )}
                 <Row T={T} icon="pin" to={link('/account/addresses')} label={t('hub.addresses')} meta={addressCount} />
+                {/* Inside a store, the stores you run are esy.ge's too; elsewhere they have their own block below. */}
+                {inStore && (
+                  <Row T={T} icon="store" {...away('/account/stores')} label={t('me.stores')} meta={stores.length || null} sub={t('hub.onEsy')} />
+                )}
                 <Row T={T} icon="user" to={link('/account/personal')} label={t('me.personal')} />
                 <Row
                   T={T} icon="screen" to={link('/account/display')} label={t('me.display')} last

@@ -10,6 +10,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useId, useRef } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { usePresence } from '../core/usePresence';
 import { money } from '../core/money';
 import { safeAccent } from '../core/tokens';
@@ -157,12 +158,16 @@ export function ShownRow({ T, t, ph, shown, total, onMore }) {
  * in place of the chevron.
  */
 export function Row({ T, icon, label, sub, meta, chip, to, href, target, rel, last, onClick }) {
+  const { t } = useTranslation('navbar');
+  const named = target === '_blank'
+    ? <>{label}<span style={srOnly}>{` (${t('acct.newTab')})`}</span></>
+    : label;
   const body = (
     <>
       <LiIc T={T} name={icon} />
       {sub
-        ? <div style={{ flex: 1, minWidth: 0 }}><span>{label}</span><div style={{ fontSize: 12, color: T.textDim }}>{sub}</div></div>
-        : <span style={{ flex: 1, minWidth: 0 }}>{label}</span>}
+        ? <div style={{ flex: 1, minWidth: 0 }}><span>{named}</span><div style={{ fontSize: 12, color: T.textDim }}>{sub}</div></div>
+        : <span style={{ flex: 1, minWidth: 0 }}>{named}</span>}
       {meta != null && <span style={{ fontSize: 12.5, color: T.textDim, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{meta}</span>}
       {chip}
       <Glyph name={target ? 'ext' : 'chevR'} size={16} style={{ color: T.textDim }} />

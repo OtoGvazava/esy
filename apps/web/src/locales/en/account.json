@@ -63,6 +63,7 @@
     "hereOrdersTitle": "Orders at this store",
     "hereOrdersSub": "What you ordered at {{store}}. Orders from every store are on esy.ge.",
     "allOrdersEsy": "All orders on esy.ge",
+    "onEsy": "On esy.ge",
     "officeRow": "The store's back office",
     "ordersTitle": "My orders",
     "ordersSub": "From every store, in one list. An order opens in the store it was placed at.",
