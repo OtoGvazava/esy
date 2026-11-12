@@ -42,6 +42,7 @@ import { useTK } from '../core/useTK';
 import { Icons } from '../core/icons';
 import { MNAV, MDOCK, MMORE, OWNER_ONLY } from './nav';
 import { BxIcon, initialsOf, useBx } from './officeBx';
+import AccountMenu from '../components/account/AccountMenu';
 import ManagerHome from './ManagerHome';
 
 function storeUrlFor(sub) {
@@ -82,58 +83,39 @@ function NavIcon({ name, pop, style }) {
   );
 }
 
-/** The account under the sidebar (desktop) or in the header (phone), with sign-out. */
-function Account({ t, user, roleLabel, variant }) {
-  const { logout } = useAuth();
-  const [open, setOpen] = useState(false);
-  const box = useRef(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const away = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
-    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', away);
-    document.addEventListener('keydown', esc);
-    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
-  }, [open]);
+/**
+ * The account, where this size of the back office carries it: the row at the
+ * sidebar's foot (desktop), the avatar at the rail's foot (tablet) or in the
+ * header (phone). It opens the account menu every app shares (U1b): switching
+ * store and the store itself, then the esy account and signing out.
+ */
+function Account({ user, roleLabel, variant, sub }) {
   const name = user?.name || user?.email || '';
   const initials = initialsOf(name, user?.email);
-  // It opens out of the button: upwards from the sidebar's foot, downwards
-  // from the phone's header.
-  const menu = open && (
-    <div
-      className={`bx-menu ${variant === 'side' ? 'esy-menu-up' : 'esy-menu-in'}`} role="menu"
-      style={variant === 'side'
-        ? { left: 0, right: 0, bottom: 'calc(100% + 8px)', '--esy-origin': 'bottom center' }
-        : { right: 0, top: 'calc(100% + 8px)' }}
-    >
-      {/* Both leave for the store picker with a full load (see above), so
-          nothing is fetched ahead for them. */}
-      <a role="menuitem" href="/" data-no-prefetch=""><BxIcon name="swap" />{t('nav.switchStore')}</a>
-      <button role="menuitem" type="button" onClick={() => { setOpen(false); logout(); }}>
-        <BxIcon name="signOut" />{t('nav.signOut')}
-      </button>
-    </div>
-  );
+  const store = sub ? { subdomain: sub } : null;
   if (variant === 'side') {
     return (
-      <div ref={box} style={{ position: 'relative' }}>
-        <button type="button" className="bx-user esy-press-soft" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          <span className="bx-av sm u" aria-hidden="true">{initials}</span>
-          <span className="bx-st-name"><b>{name}</b><span>{roleLabel}</span></span>
-          <BxIcon name="chevDs" size="s" className="bx-dim" />
-        </button>
-        {menu}
-      </div>
+      <AccountMenu app="manager" store={store} anchor="above">
+        {({ triggerProps }) => (
+          <button type="button" className="bx-user esy-press-soft" {...triggerProps}>
+            <span className="bx-av sm u" aria-hidden="true">{initials}</span>
+            <span className="bx-st-name"><b>{name}</b><span>{roleLabel}</span></span>
+            <BxIcon name="chevDs" size="s" className="bx-dim" />
+          </button>
+        )}
+      </AccountMenu>
     );
   }
+  // Below a desktop it is a sheet: floating on a tablet, edge to edge on a phone.
   return (
-    <div ref={box} style={{ position: 'relative', flex: 'none' }}>
-      <button
-        type="button" className="bx-av sm u esy-press" aria-haspopup="menu" aria-expanded={open}
-        aria-label={name} onClick={() => setOpen((v) => !v)} style={{ border: 0, cursor: 'pointer', padding: 0 }}
-      >{initials}</button>
-      {menu}
-    </div>
+    <AccountMenu app="manager" store={store} sheet wide={variant === 'rail'} wrapStyle={variant === 'rail' ? { marginTop: 'auto' } : { flex: 'none' }}>
+      {({ triggerProps }) => (
+        <button
+          type="button" className="bx-av sm u esy-press" {...triggerProps}
+          aria-label={name} title={name} style={{ border: 0, cursor: 'pointer', padding: 0 }}
+        >{initials}</button>
+      )}
+    </AccountMenu>
   );
 }
 
@@ -177,7 +159,7 @@ function Side({ t, store, user, roleLabel, active, q, isOwner, newOrders }) {
           );
       })}
       <span style={{ flex: 1 }} />
-      <Account t={t} user={user} roleLabel={roleLabel} variant="side" />
+      <Account user={user} roleLabel={roleLabel} variant="side" sub={store.sub} />
     </nav>
   );
 }
@@ -185,7 +167,6 @@ function Side({ t, store, user, roleLabel, active, q, isOwner, newOrders }) {
 function Rail({ t, store, user, active, q, isOwner, newOrders }) {
   const box = useRef(null);
   const ind = useIndicator(box, active);
-  const name = user?.name || user?.email || '';
   return (
     <nav ref={box} className="bx-rail" aria-label={t('shell.nav')} style={{ viewTransitionName: 'esy-side' }}>
       <span aria-hidden="true" className="esy-ind bx-ind" data-still={ind.still || undefined} style={ind.style} />
@@ -215,7 +196,7 @@ function Rail({ t, store, user, active, q, isOwner, newOrders }) {
             >{inner}</Link>
           );
       })}
-      <span className="bx-av sm u" style={{ marginTop: 'auto' }} title={name} aria-label={name}>{initialsOf(name, user?.email)}</span>
+      <Account user={user} variant="rail" sub={store.sub} />
     </nav>
   );
 }
@@ -440,7 +421,7 @@ function TopBar({ t, bx, store, user, sub, active, setSlots }) {
           <BxIcon name="external" />{t('nav.viewStore')}
         </a>
       )}
-      {bx === 'ph' && <Account t={t} user={user} variant="top" />}
+      {bx === 'ph' && <Account user={user} variant="top" sub={sub} />}
     </header>
   );
 }

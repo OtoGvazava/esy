@@ -32,5 +32,34 @@
     "appearance": "გარეგნობა",
     "light": "ღია",
     "dark": "მუქი"
+  },
+  "acct": {
+    "label": "ანგარიშის მენიუ",
+    "here": {
+      "store": "ამ მაღაზიაში",
+      "platform": "esy.ge",
+      "manager": "მაღაზიის პანელი",
+      "admin": "ადმინის პანელი"
+    },
+    "ordersHere": "ჩემი შეკვეთები აქ",
+    "office": "მაღაზიის პანელი",
+    "owner": "მფლობელი",
+    "manager": "მენეჯერი",
+    "myStores": "ჩემი მაღაზიები",
+    "newCount_one": "{{n}} ახალი",
+    "newCount_other": "{{n}} ახალი",
+    "openStore": "ახალი მაღაზიის გახსნა",
+    "switchStore": "მაღაზიის შეცვლა",
+    "viewStore": "მაღაზიის ნახვა",
+    "myOffice": "ჩემი მაღაზიების პანელი",
+    "toPlatform": "esy.ge",
+    "account": "esy ანგარიში",
+    "manage": "ანგარიშის მართვა",
+    "manageSub": "მისამართები, მაღაზიები, პირადი ინფორმაცია",
+    "allOrders": "ყველა შეკვეთა",
+    "display": "ენა და ჩვენება",
+    "displayMeta": "{{language}} · {{appearance}}",
+    "help": "დახმარება",
+    "signOut": "გასვლა"
   }
 }

@@ -32,5 +32,34 @@
     "appearance": "Appearance",
     "light": "Light",
     "dark": "Dark"
+  },
+  "acct": {
+    "label": "Account menu",
+    "here": {
+      "store": "At this store",
+      "platform": "esy.ge",
+      "manager": "Back office",
+      "admin": "Admin"
+    },
+    "ordersHere": "My orders here",
+    "office": "The store's back office",
+    "owner": "Owner",
+    "manager": "Manager",
+    "myStores": "My stores",
+    "newCount_one": "{{n}} new",
+    "newCount_other": "{{n}} new",
+    "openStore": "Open a new store",
+    "switchStore": "Switch store",
+    "viewStore": "View the store",
+    "myOffice": "My stores' back office",
+    "toPlatform": "esy.ge",
+    "account": "esy account",
+    "manage": "Manage account",
+    "manageSub": "Addresses, stores, personal details",
+    "allOrders": "All orders",
+    "display": "Language and display",
+    "displayMeta": "{{language}} · {{appearance}}",
+    "help": "Help",
+    "signOut": "Sign out"
   }
 }
