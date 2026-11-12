@@ -30,6 +30,7 @@ import ViewSwitch, { ViewSwitchSkeleton } from '../components/store/ViewSwitch';
 import { useStoreCategories } from '../hooks/useStoreCategories';
 import Collection from './Collection';
 import { NoResults } from '../components/shop/EmptyStates';
+import { markIfComplete, markLoaded } from '../core/imgFade';
 
 // The home page's sort is the same three as a collection's (A3), kept in the
 // URL as ?sort= so back and forward and a shared link keep it (shopQuery.js).
@@ -263,7 +264,7 @@ function ShopHome() {
                     display: 'block', width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden',
                     border: `2px solid ${T.page}`, background: T.surface2,
                   }}>
-                    {cover.image && <img src={cover.image} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+                    {cover.image && <img src={cover.image} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
                   </span>
                 </span>
                 <span style={{ font: `${on ? 600 : 500} 12px ${T.font}`, color: on ? T.text : T.textDim, whiteSpace: 'nowrap' }}>{s.label}</span>

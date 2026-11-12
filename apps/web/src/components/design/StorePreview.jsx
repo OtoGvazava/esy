@@ -43,6 +43,7 @@ import GlowDock from '../glow/GlowDock';
 import GlowProductCard from '../glow/GlowProductCard';
 import { PoweredBy } from '../glow/GlowPrimitives';
 import { SAMPLE_PHOTOS } from './photos';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 
 const none = () => {};
 const nothing = async () => null;
@@ -208,7 +209,7 @@ function PreviewHome({ products, total, sample }) {
                   display: 'block', width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden',
                   border: `2px solid ${T.page}`, background: T.surface2,
                 }}>
-                  {s.first.image && <img src={s.first.image} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+                  {s.first.image && <img src={s.first.image} alt="" className="esy-img" ref={markIfComplete} onLoad={markLoaded} onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
                 </span>
               </span>
               <span style={{ font: `500 12px ${T.font}`, color: T.textDim, whiteSpace: 'nowrap' }}>{s.label}</span>

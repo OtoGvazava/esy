@@ -23,6 +23,7 @@ import { useDesign } from '../../core/design/useDesign';
 import { useStoreNav, useStoreBarShown } from '../store/storeChrome';
 import { ActionButton, MenuStrip } from '../store/StoreMenus';
 import { useIndicator } from '../../core/useIndicator';
+import { markIfComplete, markLoaded } from '../../core/imgFade';
 
 export default function GlowDock() {
   const { T } = useGlow();
@@ -64,6 +65,7 @@ export default function GlowDock() {
           src={user.avatar}
           alt=""
           referrerPolicy="no-referrer"
+          className="esy-img" ref={markIfComplete} onLoad={markLoaded}
           onError={(e) => { e.currentTarget.style.display = 'none'; }}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />

@@ -10,27 +10,36 @@
 // without photos of its own, or none given, draws the photos of the look's own
 // group.
 //
+// The photos show all at once: until every one of the thumbnail's photos has
+// decoded, its tiles and bands keep the theme's own grounds, and then the
+// photos fade in together (mini.css, data-photos). A row of thumbnails that
+// should light up as one passes `ready` for the whole row (usePhotosReady over
+// every thumbnail's thumbPhotos(…).urls).
+//
 // Given a `name`, it is the seller's own store, as quick setup draws it: the
 // name and initials (or the chosen logo) in place of the placeholder bars.
 import '../../styles/mini.css';
 import { scopeAttrs } from '../../core/design/scope';
-import { lookById } from '../../core/design/looks';
-import { groupPhotos, hasPhotos } from './photos';
+import { usePhotosReady } from '../../core/usePhotosReady';
+import { thumbPhotos } from './photos';
 
 // The tiles' tones, as the canvas Mini draws them.
 const TONES = ['t1', 't2', 't3', 't4', 't2', 't1'];
 const url = (src) => (src ? `url("${src}")` : undefined);
 
-export default function LookThumb({ design, brand, mode = 'light', scale = 1, name, initials, logo, group }) {
+export default function LookThumb({ design, brand, mode = 'light', scale = 1, name, initials, logo, group, ready }) {
   const d = design;
   const scope = scopeAttrs(d, mode);
   const own = !!name;
-  const photos = groupPhotos(hasPhotos(group) ? group : lookById(d.look)?.group);
+  const photos = thumbPhotos(d, group);
+  const loaded = usePhotosReady(photos.urls);
+  const shown = ready ?? loaded;
   return (
     <div aria-hidden="true" style={{ width: 200 * scale, height: 412 * scale, flex: 'none' }}>
       <div
         {...scope}
         className={`mini ${scope.className} l-${d.productLayout} n-${d.menu}`}
+        data-photos={shown ? '' : undefined}
         style={{
           '--k-brand': brand, '--m-cover': url(photos.cover), '--m-hero': url(photos.hero),
           transform: scale === 1 ? undefined : `scale(${scale})`, transformOrigin: '0 0',
