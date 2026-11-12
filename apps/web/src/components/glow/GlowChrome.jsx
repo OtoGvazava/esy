@@ -4,6 +4,7 @@
 import { Icon } from './GlowPrimitives';
 import { alpha } from '../../core/tokens';
 import { useBottomClearance } from '../../core/design/useDesign';
+import { markerStyle, useStuck } from '../../core/useStuck';
 
 // Platform currency is GEL (₾) for every store.
 //
@@ -24,6 +25,7 @@ export function GlowScreen({ T, children, padBottom = 120 }) {
 }
 
 export function GlowTopNav({ T, title, onBack, right }) {
+  const [marker, stuck] = useStuck();
   // A tab's own screen (bag, orders, account) has no back button: the tab bar
   // is the way back, so it takes the design's large title instead (E3, C1).
   if (!onBack) {
@@ -34,7 +36,15 @@ export function GlowTopNav({ T, title, onBack, right }) {
       </div>
     );
   }
+  // The way back stays at the top while the page scrolls under it.
   return (
+    <>
+    <div ref={marker} aria-hidden="true" style={markerStyle} />
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 40,
+      background: stuck ? T.bg : 'transparent', boxShadow: stuck ? `0 1px 0 ${T.border}` : 'none',
+      transition: 'background-color .18s ease, box-shadow .18s ease',
+    }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 16px 8px', maxWidth: 1100, margin: '0 auto' }}>
       <button
         onClick={onBack}
@@ -47,6 +57,8 @@ export function GlowTopNav({ T, title, onBack, right }) {
       <div style={{ font: `600 14.5px ${T.font}`, color: T.text, letterSpacing: '-0.01em' }}>{title}</div>
       <div style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.text }}>{right}</div>
     </div>
+    </div>
+    </>
   );
 }
 

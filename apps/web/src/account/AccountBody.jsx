@@ -175,7 +175,7 @@ function Loading({ T, t, dev, padded }) {
 const same = (path) => path;
 
 export default function AccountBody({
-  app, T, here = null, link = same, showTitle = true, padded = true, crumb = false, signIn, onSignedOut,
+  app, T, here = null, link = same, showTitle = true, padded = true, signIn, onSignedOut,
 }) {
   const dev = usePDevice();
   const { desk, gut } = dev;
@@ -245,16 +245,6 @@ export default function AccountBody({
     <div style={wrapStyle(dev, padded)}>
       {desk && <SideNav T={T} t={t} user={user} items={items} onSignOut={signOut} />}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: dev.ph ? 16 : 20 }}>
-        {/* Where the app's own bar has no way back (esy.ge), the section says where it sits. */}
-        {crumb && !desk && section && (
-          <Link
-            to={link('/account')}
-            className="esy-press-soft"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginLeft: -4, font: `600 12.5px ${T.font}`, color: T.accentFg, textDecoration: 'none' }}
-          >
-            <Glyph name="back" size={16} />{t('hub.account')}
-          </Link>
-        )}
         <Outlet context={{
           ...base, guest: false, account: data, user, stores, ownedStores, managedStores, orders, addressCount, signOut,
         }} />

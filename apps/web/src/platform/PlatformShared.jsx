@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { directoryQuery } from '../core/query/queries';
 import { managerUrl } from '../utils/hosts';
 import AccountMenu from '../components/account/AccountMenu';
+import { markerStyle, useStuck } from '../core/useStuck';
 import { PLATFORM_ACCENT, storeInitials } from './platformData';
 import { Av, Btn, Glyph, IconBtn, Logo, initialsOf, miStyle, usePDevice } from './PlatformKit';
 import { markIfComplete, markLoaded } from '../core/imgFade';
@@ -155,7 +156,7 @@ function useSectionLink() {
 // avatar and "my store" take the place of sign-in and the open button.
 // `current` marks the link of the page you are on; `cta={false}` leaves the
 // open-a-store button out where the page is itself that offer (the landing).
-export function PTopBar({ current = 'none', cta = true }) {
+export function PTopBar({ current = 'none', cta = true, below = null }) {
   const { T } = usePlatform();
   const { ph, desk, gut } = usePDevice();
   const { t } = useTranslation('platform');
@@ -164,6 +165,11 @@ export function PTopBar({ current = 'none', cta = true }) {
   const { isAuthenticated, user } = useAuth();
   const [menu, setMenu] = useState(false);
   const barRef = useRef(null);
+  // Below a desktop the bar, and the way back a page puts under it, stay at
+  // the top while the page scrolls: a page opened in a new tab has no browser
+  // back, and a long one should not have to be scrolled to its top to leave.
+  const [marker, stuck] = useStuck();
+  const pin = !desk;
   // The scrim dims the page under the bar, not the bar itself: measured when the menu opens.
   const [scrimTop, setScrimTop] = useState(0);
   const toggleMenu = () => {
@@ -224,9 +230,16 @@ export function PTopBar({ current = 'none', cta = true }) {
   // and the current link's underline, named too, slides from the old link to
   // the new one rather than jumping.
   return (
+    <>
+    {pin && <div ref={marker} aria-hidden="true" style={markerStyle} />}
+    <div style={{
+      position: pin ? 'sticky' : 'relative', top: 0, zIndex: 30, flex: 'none',
+      background: pin && stuck ? T.bg : 'transparent', boxShadow: pin && stuck ? `0 1px 0 ${T.border}` : 'none',
+      transition: 'background-color .18s ease, box-shadow .18s ease',
+    }}>
     <header ref={barRef} style={{
       display: 'flex', alignItems: 'center', gap: 28, padding: `14px ${gut}px`,
-      position: 'relative', zIndex: 30, flex: 'none', viewTransitionName: 'esy-topbar',
+      position: 'relative', flex: 'none', viewTransitionName: 'esy-topbar',
     }}>
       {/* The bar's own controls sit above the open menu's panel (z 2); the scrim starts under the bar. */}
       <Link to="/" aria-label={t('chrome.home')} style={{ textDecoration: 'none', display: 'inline-flex', position: 'relative', zIndex: 3 }}>
@@ -332,6 +345,9 @@ export function PTopBar({ current = 'none', cta = true }) {
         </>
       )}
     </header>
+    {below}
+    </div>
+    </>
   );
 }
 

@@ -163,7 +163,8 @@ html[data-motion="reduce"] .sk .spin { animation-duration: 2.4s; }
 .sk .av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
 /* ---------- the store's own header, back variant (StoreTop back) ---------- */
-.sk .st-top { position: relative; z-index: 3; padding: calc(env(safe-area-inset-top, 0px) + 14px) var(--gut) 6px; display: flex; align-items: center; gap: 12px; flex: none; }
+/* The way back stays at the top while the page scrolls under it. */
+.sk .st-top { position: sticky; top: 0; z-index: 40; background: var(--k-page); padding: calc(env(safe-area-inset-top, 0px) + 14px) var(--gut) 6px; display: flex; align-items: center; gap: 12px; flex: none; }
 
 /* ---------- the platform's bar (PlatTop), on a suspended store's page ---------- */
 .sk .p-nav { display: flex; align-items: center; gap: 28px; padding: calc(env(safe-area-inset-top, 0px) + 14px) var(--gut) 14px; position: relative; z-index: 3; flex: none; }
