@@ -23,7 +23,7 @@ export const routes = [
   { path: 'create-store', lazy: lazyScreen(() => import('../platform/PlatformRegistration')) },
   // The esy account (U2–U7), in esy.ge's own frame. Every app mounts the same
   // sections (accountRoutes.jsx).
-  accountRoute(lazyScreen(() => import('../platform/account/AccountLayout'))),
+  accountRoute(lazyScreen(() => import('../platform/account/AccountLayout')), {}, { esy: true }),
   // Language and display became an account section; old links land there.
   { path: 'settings/display', element: <Navigate to="/account/display" replace /> },
   { path: 'signin', lazy: lazyScreen(() => import('../platform/PlatformAuth')) },

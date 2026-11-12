@@ -57,7 +57,7 @@ export default function AccountHome() {
               <Lbl T={T} as="h2">{t('hub.account')}</Lbl>
               <List T={T}>
                 <Row
-                  T={T} icon="receipt" to={link('/account/orders')} label={t('hub.allOrders')} meta={orders.length}
+                  T={T} icon="receipt" {...away('/account/orders')} label={t('hub.allOrders')} meta={orders.length}
                   sub={from > 0 ? t('hub.fromStores', { count: from, n: from }) : null}
                 />
                 <Row T={T} icon="pin" to={link('/account/addresses')} label={t('hub.addresses')} meta={addressCount} />
@@ -99,7 +99,7 @@ export default function AccountHome() {
             <section style={block}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <Lbl T={T} as="h2">{t('hub.recent')}</Lbl>
-                {orders.length > 0 && <Go to={link('/account/orders')} style={linkStyle}>{t('hub.seeAll')}</Go>}
+                {orders.length > 0 && <Go {...away('/account/orders')} style={linkStyle}>{t('hub.seeAll')}</Go>}
               </div>
               {orders.length ? (
                 <List T={T}>

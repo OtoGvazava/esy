@@ -9,8 +9,12 @@ import { ensure, lazyScreen, prime } from './prime';
 export const accountLoader = prime(({ qc }) => ensure(qc, accountQuery()));
 export const addressesLoader = prime(({ qc }) => ensure(qc, addressesQuery()));
 
-/** `/account` with its sections, under `frame` (a route's `lazy`). `extra` is merged into each route. */
-export function accountRoute(frame, extra = {}) {
+/**
+ * `/account` with its sections, under `frame` (a route's `lazy`). `extra` is
+ * merged into each route. Orders from every store and the stores you run are
+ * esy.ge's alone (`esy`): the other apps link there in a new tab instead.
+ */
+export function accountRoute(frame, extra = {}, { esy = false } = {}) {
   const section = (route) => ({ ...extra, ...route });
   return {
     ...extra,
@@ -19,11 +23,11 @@ export function accountRoute(frame, extra = {}) {
     loader: accountLoader,
     children: [
       section({ index: true, lazy: lazyScreen(() => import('../account/AccountHome')) }),
-      section({ path: 'orders', lazy: lazyScreen(() => import('../account/AccountOrders')) }),
+      esy && section({ path: 'orders', lazy: lazyScreen(() => import('../account/AccountOrders')) }),
       section({ path: 'addresses', lazy: lazyScreen(() => import('../account/AccountAddresses')), loader: addressesLoader }),
-      section({ path: 'stores', lazy: lazyScreen(() => import('../account/AccountStores')) }),
+      esy && section({ path: 'stores', lazy: lazyScreen(() => import('../account/AccountStores')) }),
       section({ path: 'personal', lazy: lazyScreen(() => import('../account/AccountPersonal')) }),
       section({ path: 'display', lazy: lazyScreen(() => import('../account/AccountDisplay')) }),
-    ],
+    ].filter(Boolean),
   };
 }

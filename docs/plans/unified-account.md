@@ -27,6 +27,11 @@ The owner's review of the hub, four points:
 4. **The store's Manage store button is gone** (bar and both headers, with the row the
    headers kept for it). The account menu's back office row replaces it.
 
+5. **All orders and my stores are esy.ge's** (follow-up, 2026-11-13): from a store, the
+   back office and admin, the menu's "All orders", the section list's orders and my stores,
+   the overview's "all orders" and "see all", and the store's orders screen open esy.ge's
+   account in a new tab. Those two sections are no longer drawn in the other apps.
+
 ### How it is built
 
 - **R1 — Sections without a host.** `apps/web/src/account/`: `AccountBody` (reads the

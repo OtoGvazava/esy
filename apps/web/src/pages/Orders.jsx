@@ -1,10 +1,11 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useOrders } from '../contexts/OrdersContext';
 import { useGlow } from '../styles/glow';
 import { Icon, PoweredBy } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, money } from '../components/glow/GlowChrome';
 import { alpha } from '../core/tokens';
+import { platformUrl } from '../utils/hosts';
 import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 
 export default function Orders() {
@@ -70,10 +71,16 @@ export default function Orders() {
         <div style={{ padding: '6px 22px 14px' }}>
           <div style={{ font: `700 24px ${T.font}`, color: T.text, letterSpacing: '-0.03em' }}>{t('orders.heading')}</div>
           <div style={{ font: `400 12.5px ${T.font}`, color: T.textDim, marginTop: 4 }}>{t('orders.orderCount', { count: orders.length })}</div>
-          {/* These are this store's. Everything ordered anywhere is on the account. */}
-          <Link to="/account/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32, marginTop: 6, font: `600 12.5px ${T.font}`, color: T.accentFg, textDecoration: 'none' }}>
-            {t('orders.allOnEsy')} <Icon.arrowR />
-          </Link>
+          {/* These are this store's. Everything ordered anywhere is esy.ge's, in a new tab. */}
+          <a
+            href={platformUrl('/account/orders')} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32, marginTop: 6, font: `600 12.5px ${T.font}`, color: T.accentFg, textDecoration: 'none' }}
+          >
+            {t('orders.allOnEsy')}
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style={{ fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }}>
+              <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+            </svg>
+          </a>
         </div>
 
         <div style={{ padding: '0 16px 6px', display: 'flex', flexDirection: 'column', gap: 8 }}>

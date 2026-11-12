@@ -22,6 +22,7 @@ import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { useAuth } from '../contexts/AuthContext';
 import { Av, Btn, Card, Glyph, cardStyle, initialsOf, miStyle, type, usePDevice } from '../platform/PlatformKit';
 import { sectionOf } from './sections';
+import { srOnly } from './parts';
 
 /** The body's measure: its own page on esy.ge and a store, the app's page in the back office and admin. */
 function wrapStyle({ ph, desk, gut }, padded) {
@@ -49,13 +50,30 @@ function SideNav({ T, t, user, items, onSignOut }) {
         </div>
       </div>
       <nav aria-label={t('hub.navLabel')} style={{ ...cardStyle(T), padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {items.map((it) => (
-          <NavLink key={it.to} to={it.to} end={it.end} className="esy-press-soft" style={({ isActive }) => miStyle(T, isActive)}>
-            <Glyph name={it.icon} />
-            <span style={{ flex: 1, minWidth: 0 }}>{it.label}</span>
-            {it.n != null && <span style={{ fontSize: 12.5, color: T.textDim, fontVariantNumeric: 'tabular-nums', fontWeight: 400 }}>{it.n}</span>}
-          </NavLink>
-        ))}
+        {items.map((it) => {
+          const count = it.n != null && <span style={{ fontSize: 12.5, color: T.textDim, fontVariantNumeric: 'tabular-nums', fontWeight: 400 }}>{it.n}</span>;
+          // One of esy.ge's own sections, from another app: a new tab, and the mark for it.
+          if (it.href) {
+            return (
+              <a key={it.href} href={it.href} target="_blank" rel="noopener noreferrer" className="esy-press-soft" style={miStyle(T, false)}>
+                <Glyph name={it.icon} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  {it.label}
+                  <span style={srOnly}>{` (${t('acct.newTab', { ns: 'navbar' })})`}</span>
+                </span>
+                {count}
+                <Glyph name="ext" size={16} style={{ color: T.textDim }} />
+              </a>
+            );
+          }
+          return (
+            <NavLink key={it.to} to={it.to} end={it.end} className="esy-press-soft" style={({ isActive }) => miStyle(T, isActive)}>
+              <Glyph name={it.icon} />
+              <span style={{ flex: 1, minWidth: 0 }}>{it.label}</span>
+              {count}
+            </NavLink>
+          );
+        })}
       </nav>
       <button type="button" onClick={onSignOut} className="esy-press-soft" style={{ ...miStyle(T, false), color: 'var(--k-bad)' }}>
         <Glyph name="logout" />
@@ -207,11 +225,14 @@ export default function AccountBody({
   const addressCount = addresses.data ? addresses.data.length : null;
   const signOut = () => { logout(); onSignedOut?.(); };
 
+  // Orders from every store and the stores you run are esy.ge's own sections:
+  // anywhere else they open esy.ge in a new tab (router/accountRoutes.jsx).
+  const esy = (path) => (out ? { href: platformUrl(path) } : { to: link(path) });
   const items = [
     { to: link('/account'), end: true, icon: 'grid', label: t('hub.overview') },
-    { to: link('/account/orders'), icon: 'receipt', label: t('hub.orders'), n: orders.length },
+    { ...esy('/account/orders'), icon: 'receipt', label: t('hub.orders'), n: orders.length },
     { to: link('/account/addresses'), icon: 'pin', label: t('hub.addresses'), n: addressCount },
-    { to: link('/account/stores'), icon: 'store', label: t('me.stores'), n: stores.length || null },
+    { ...esy('/account/stores'), icon: 'store', label: t('me.stores'), n: stores.length || null },
     { to: link('/account/personal'), icon: 'user', label: t('me.personal') },
     { to: link('/account/display'), icon: 'screen', label: t('me.display') },
   ];
