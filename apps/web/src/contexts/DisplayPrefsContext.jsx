@@ -16,6 +16,10 @@
 //    takes this browser's, and every later change in a store, from any
 //    screen (the header's language and light / dark buttons too), is saved
 //    back.
+//  - The store directory's view (esy.ge/stores: photos, compact, list or
+//    cover) is the one setting the platform keeps here. It is read from the
+//    account after sign-in and written back on its own, so nothing a store
+//    saved (the language, light / dark) is ever changed from esy.ge.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useMediaQuery } from '@mui/material';
 import { useAuth } from './AuthContext';
@@ -23,7 +27,7 @@ import { useThemeMode } from './ThemeModeContext';
 import { accountApi } from '../utils/api';
 import { isAdminHost, isManagerHost, isPlatformHost } from '../hooks/usePlatformHost';
 import {
-  localPart, normalizePrefs, prefsKey, readLocalPrefs, storeKey, withView, writeLocalPrefs,
+  STORE_VIEWS, localPart, normalizePrefs, prefsKey, readLocalPrefs, storeKey, withView, writeLocalPrefs,
 } from '../core/display/prefs';
 
 const DisplayPrefsContext = createContext(null);
@@ -96,6 +100,10 @@ export function DisplayPrefsProvider({ children }) {
   const setView = useCallback((view) => {
     if (shop) setPrefs((p) => normalizePrefs({ ...p, views: withView(p.views, shop, view) }));
   }, [shop]);
+  const setStoresView = useCallback(
+    (v) => setPref('stores', v === STORE_VIEWS[0] ? undefined : v),
+    [setPref],
+  );
 
   // ---- the account copy ----------------------------------------------------
   // Stores only: the platform, the back office and admin keep the language and
@@ -123,10 +131,16 @@ export function DisplayPrefsProvider({ children }) {
       // choice, so it goes up instead of being overwritten.
       if (saved && latest.current === before) {
         const n = normalizePrefs(saved);
-        setPrefs(localPart(n));
-        if (n.lang) setLanguage?.(n.lang);
-        if (n.appearance) setMode?.(n.appearance);
-        sent.current = prefsKey(n);
+        if (n.stores && Object.keys(n).length === 1) {
+          // Only esy.ge has written to this account (the directory's view),
+          // so for a store it has none yet: this browser's go up, with it.
+          setPrefs((p) => normalizePrefs({ ...p, stores: n.stores }));
+        } else {
+          setPrefs(localPart(n));
+          if (n.lang) setLanguage?.(n.lang);
+          if (n.appearance) setMode?.(n.appearance);
+          sent.current = prefsKey(n);
+        }
       }
       setSynced(userId);
     }).catch(() => {
@@ -164,6 +178,50 @@ export function DisplayPrefsProvider({ children }) {
     };
   }, [flush]);
 
+  // ---- esy.ge's one setting --------------------------------------------------
+  // The platform reads the account's directory view after sign-in (the
+  // account's wins, as in a store) and writes a change back over whatever the
+  // account holds, so every other setting there stays as a store left it.
+  const [platform] = useState(isPlatformHost);
+  const platformUser = platform ? user?.id ?? null : null;
+  const stores = prefs.stores || STORE_VIEWS[0];
+  const storesNow = useRef(stores);
+  useEffect(() => { storesNow.current = stores; }, [stores]);
+  const account = useRef(null); // the account's settings, as last read or written here
+  const [platformSynced, setPlatformSynced] = useState(null);
+
+  useEffect(() => {
+    account.current = null;
+    setPlatformSynced(null);
+    if (!platformUser) return undefined;
+    let alive = true;
+    const before = storesNow.current;
+    accountApi.getDisplayPrefs().then((saved) => {
+      if (!alive) return;
+      const n = normalizePrefs(saved);
+      account.current = n;
+      // A view picked while the account was being asked is the newest choice.
+      if (n.stores && storesNow.current === before) setPrefs((p) => normalizePrefs({ ...p, stores: n.stores }));
+      setPlatformSynced(platformUser);
+    }).catch(() => {
+      /* What the account holds is unknown, so nothing is written over it. */
+    });
+    return () => { alive = false; };
+  }, [platformUser]);
+
+  useEffect(() => {
+    if (!platformUser || platformSynced !== platformUser || !account.current) return;
+    if ((account.current.stores || STORE_VIEWS[0]) === stores) return;
+    // The view is always named, the first one too: an account esy.ge alone
+    // has written to then reads, in a store, as one with no settings of the
+    // store's yet, rather than as one whose every setting was put back.
+    const next = normalizePrefs({ ...account.current, stores });
+    account.current = next;
+    accountApi.putDisplayPrefs(next).catch(() => {
+      /* This browser still has the choice, and the next change sends it again. */
+    });
+  }, [platformUser, platformSynced, stores]);
+
   const value = useMemo(() => ({
     store,
     shop,
@@ -176,12 +234,14 @@ export function DisplayPrefsProvider({ children }) {
     // Data saver and reduce motion both keep video and moving things still until tapped.
     autoplay: !saver && !motion,
     view: shop ? prefs.views?.[shop] ?? null : null,
+    storesView: stores,
     setText,
     setSolid: (on) => setSwitch('solid', on),
     setMotion: (on) => setSwitch('motion', on),
     setSaver: (on) => setSwitch('saver', on),
     setView,
-  }), [store, shop, prefs, device, text, solid, motion, saver, setText, setSwitch, setView]);
+    setStoresView,
+  }), [store, shop, prefs, device, text, solid, motion, saver, stores, setText, setSwitch, setView, setStoresView]);
 
   return <DisplayPrefsContext.Provider value={value}>{children}</DisplayPrefsContext.Provider>;
 }

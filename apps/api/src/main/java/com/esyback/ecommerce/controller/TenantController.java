@@ -67,14 +67,19 @@ public class TenantController {
     // most three, which its card draws in a row ([] for a store with none).
     // They are the products' own image URLs, which load from the platform's
     // host as well as the store's (ProductImageService.getForServing).
+    // Each also carries `coverUrl`, its cover photo or null, for the
+    // directory's cover view: one id-only query for every store listed.
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> listStores() {
         List<Tenant> stores = tenantService.listActiveStores();
-        Map<Long, List<String>> photos = productService.directoryPhotos(stores.stream().map(Tenant::getId).toList());
+        List<Long> ids = stores.stream().map(Tenant::getId).toList();
+        Map<Long, List<String>> photos = productService.directoryPhotos(ids);
+        Map<Long, String> covers = tenantCoverService.coverUrls(ids);
         return ResponseEntity.ok(stores.stream()
             .map(t -> {
                 Map<String, Object> m = TenantMapper.toMap(t);
                 m.put("productPhotos", photos.getOrDefault(t.getId(), List.of()));
+                m.put("coverUrl", covers.get(t.getId()));
                 return m;
             })
             .collect(Collectors.toList()));

@@ -93,13 +93,14 @@ class DisplayPrefsTest {
     void saveThenLoad() throws Exception {
         account(VERIFIED, true);
         mvc.perform(as(VERIFIED, json(put(PREFS), """
-                {"lang":"en","appearance":"auto","text":"xl","solid":true,"motion":false,"saver":true,
+                {"lang":"en","appearance":"auto","text":"xl","stores":"cover","solid":true,"motion":false,"saver":true,
                  "views":{"studio-form":"grid3","bakery-7":"list"},
                  "theme":"neon","script":"<script>alert(1)</script>"}""")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.lang").value("en"))
             .andExpect(jsonPath("$.appearance").value("auto"))
             .andExpect(jsonPath("$.text").value("xl"))
+            .andExpect(jsonPath("$.stores").value("cover"))
             .andExpect(jsonPath("$.solid").value(true))
             .andExpect(jsonPath("$.motion").value(false))
             .andExpect(jsonPath("$.saver").value(true))
@@ -118,6 +119,7 @@ class DisplayPrefsTest {
             .andExpect(jsonPath("$.lang").value("en"))
             .andExpect(jsonPath("$.text").value("xl"))
             .andExpect(jsonPath("$.saver").value(true))
+            .andExpect(jsonPath("$.stores").value("cover"))
             .andExpect(jsonPath("$.views.studio-form").value("grid3"));
 
         // A PUT replaces the whole set: what it leaves out is no longer chosen,
@@ -149,6 +151,8 @@ class DisplayPrefsTest {
                 "{\"appearance\":\"system\"}",
                 "{\"text\":\"xxl\"}",
                 "{\"text\":\"L\"}",
+                "{\"stores\":\"grid\"}",
+                "{\"stores\":true}",
                 "{\"solid\":\"yes\"}",
                 "{\"motion\":1}",
                 "{\"views\":{\"studio-form\":\"feed\"}}",

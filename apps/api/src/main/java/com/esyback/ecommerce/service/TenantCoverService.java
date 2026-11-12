@@ -10,7 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Store cover photo storage in our own DB: {@link TenantLogoService}'s model
@@ -45,6 +48,21 @@ public class TenantCoverService {
         if (tenant == null || tenant.getId() == null) return null;
         List<Long> ids = coverRepository.findIdsByTenantId(tenant.getId());
         return ids.isEmpty() ? null : coverUrl(ids.get(0));
+    }
+
+    /**
+     * Where each of these stores' covers is served, by store id; a store
+     * without one has no entry. One id-only query for the whole store
+     * directory, which draws a cover on every card.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, String> coverUrls(Collection<Long> tenantIds) {
+        if (tenantIds == null || tenantIds.isEmpty()) return Map.of();
+        Map<Long, String> urls = new HashMap<>();
+        for (Object[] row : coverRepository.findIdsByTenantIds(tenantIds)) {
+            urls.put((Long) row[0], coverUrl((Long) row[1]));
+        }
+        return urls;
     }
 
     /** Replaces the current store's cover; answers the new cover's URL. */

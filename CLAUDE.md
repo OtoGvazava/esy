@@ -95,6 +95,13 @@ image builds the SPA itself.
   that name no store. Uploads and deletes stay store-scoped. The directory
   (`GET /api/tenant`) gives each store `productPhotos`, the photos of its three
   newest photographed products, from one window-function query for all stores.
+- **Store directory views** (`esy.ge/stores`): the shopper switches between
+  photos, compact, list and cover (`platform/DirectoryViews.jsx`). A store's
+  colour is drawn on its mark only. The directory also gives each store
+  `coverUrl` (or null) from one id-only query. The choice is the `stores` key
+  of the display settings: in the browser for a guest, on the account when
+  signed in. It is the only setting esy.ge writes there, merged over what the
+  account holds so a store's language and light / dark are left alone.
 - **Shopper display settings**: `GET`/`PUT /api/account/display-prefs`
   (`users.display_prefs`). It sits under `/api/account/`, so an account
   without a verified phone can still save them.
