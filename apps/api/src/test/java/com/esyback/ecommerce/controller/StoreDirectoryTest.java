@@ -187,4 +187,29 @@ class StoreDirectoryTest {
         mvc.perform(get("/api/products/" + other.getId() + "/images/" + imageId).header("Host", PLATFORM))
             .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("each store carries its cover photo's URL, null without one, and the cover loads on the platform's host")
+    void coverUrlPerStore() throws Exception {
+        entityManager.flush();
+        String body = mvc.perform(multipart("/api/tenant/cover")
+                .file(new MockMultipartFile("file", "cover.jpg", "image/jpeg", JPEG))
+                .header("Host", STORE)
+                .header("Authorization", "Bearer " + jwtUtil.generateToken(OWNER)))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        String url = objectMapper.readTree(body).path("coverUrl").asText();
+        assertThat(url).startsWith("/api/tenant/cover/");
+
+        assertThat(directoryEntry(SUB).path("coverUrl").asText()).isEqualTo(url);
+        // A store without a cover says so with null, not a missing field.
+        JsonNode plain = directoryEntry(NONE_SUB);
+        assertThat(plain.has("coverUrl")).isTrue();
+        assertThat(plain.path("coverUrl").isNull()).isTrue();
+
+        mvc.perform(get(url).header("Host", PLATFORM))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("image/jpeg"))
+            .andExpect(content().bytes(JPEG));
+    }
 }

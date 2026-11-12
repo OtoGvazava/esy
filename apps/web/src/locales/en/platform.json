@@ -312,6 +312,14 @@
     "clearSearch": "Clear search",
     "openAStore": "+ Open a store",
     "visitStore": "Visit {{host}}",
+    "verified": "Verified",
+    "view": {
+      "label": "Stores view",
+      "photos": "Photos",
+      "compact": "Compact",
+      "list": "List",
+      "cover": "Cover"
+    },
     "cat": {
       "all": "All stores",
       "fashion": "Fashion",

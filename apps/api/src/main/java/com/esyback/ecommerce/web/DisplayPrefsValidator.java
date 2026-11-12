@@ -24,6 +24,8 @@ import java.util.regex.Pattern;
  * <ul>
  *   <li>{@code lang} ka | en, {@code appearance} light | dark | auto,
  *       {@code text} s | m | l | xl;
+ *   <li>{@code stores}: how the store directory (esy.ge/stores) draws its
+ *       stores, photos | compact | list | cover. Absent is photos;
  *   <li>{@code solid} (reduce transparency), {@code motion} (reduce motion) and
  *       {@code saver} (data saver), each true or false;
  *   <li>{@code views}: the product view a shopper picked in a store, keyed by
@@ -60,6 +62,7 @@ public final class DisplayPrefsValidator {
         choices.put("lang", List.of("ka", "en"));
         choices.put("appearance", List.of("light", "dark", "auto"));
         choices.put("text", List.of("s", "m", "l", "xl"));
+        choices.put("stores", List.of("photos", "compact", "list", "cover"));
         CHOICES = Collections.unmodifiableMap(choices);
     }
 

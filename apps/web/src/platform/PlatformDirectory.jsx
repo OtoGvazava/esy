@@ -1,92 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { usePlatform, useStores, PTopBar, PFooter, StoreMark, StoreArtStrip, StatusPill } from './PlatformShared';
+import { usePlatform, useStores, PTopBar, PFooter, StatusPill } from './PlatformShared';
+import { usePDevice } from './PlatformKit';
 import { CATEGORIES, storeInitials, storeUrl } from './platformData';
+import { StoreList, StoreListSkeleton, StoresViewSwitch } from './DirectoryViews';
+import { useDisplayPrefs } from '../contexts/DisplayPrefsContext';
+import { STORE_VIEWS } from '../core/display/prefs';
 import { alpha } from '../core/tokens';
 import { Skeleton } from '../components/skeleton/Skeleton';
-import { markIfComplete, markLoaded } from '../core/imgFade';
-
-// The card's product photos (the design's L1 card): at most three, each up to
-// 56 px square and shrinking to fit a phone's narrow card.
-const PHOTO_ROW = { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 56px))', gap: 8 };
-
-/**
- * The store's own products in a row: the photos of its newest photographed
- * products, as the directory lists them (productPhotos, newest first). One that
- * does not load drops out, and a store with none left draws no row at all.
- */
-function StorePhotos({ T, photos }) {
-  const [failed, setFailed] = useState(() => new Set());
-  const shown = (Array.isArray(photos) ? photos : []).filter((src) => src && !failed.has(src)).slice(0, 3);
-  if (!shown.length) return null;
-  return (
-    <div aria-hidden="true" style={PHOTO_ROW}>
-      {shown.map((src, i) => (
-        <img
-          key={`${i}:${src}`} src={src} alt="" loading="lazy" decoding="async"
-          className="esy-img" ref={markIfComplete} onLoad={markLoaded}
-          onError={() => setFailed((f) => new Set(f).add(src))}
-          style={{ display: 'block', width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 10, background: T.surface2 }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function StoreCard({ T, t, store, onOpen, layout = 'tall' }) {
-  return (
-    <div onClick={onOpen} style={{
-      background: T.surface, borderRadius: 18, border: `1px solid ${T.border}`,
-      padding: 14, display: 'flex', flexDirection: 'column', gap: 12,
-      boxShadow: T.dark ? 'none' : '0 4px 18px rgba(20,20,60,0.04)', cursor: 'pointer',
-    }}>
-      <StoreArtStrip store={store} height={layout === 'short' ? 72 : 96} />
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <StoreMark store={store} size={36} radius={10} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ font: `700 14.5px ${T.font}`, color: T.text, letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{store.name}</span>
-            <span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: store.primaryColor, flexShrink: 0 }} />
-          </div>
-          <div style={{ font: `500 10.5px ${T.mono}`, color: T.textMute, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{store.subdomain}.esy.ge</div>
-        </div>
-      </div>
-      <div style={{ font: `400 12.5px/1.45 ${T.font}`, color: T.textDim, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden', minHeight: 36 }}>
-        {store.tagline || store.description || t('directory.anIndependentShop')}
-      </div>
-      <StorePhotos T={T} photos={store.productPhotos} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 'auto', paddingTop: 4 }}>
-        <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.06em' }}>{store.category ? t(`directory.cat.${store.category}`) : t('directory.shop')}</div>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none', font: `700 11.5px ${T.font}`, color: store.primaryColor }}>
-          {t('directory.visit')}
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14m-5-6 6 6-6 6" /></svg>
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function CardSkeleton({ T, layout = 'tall' }) {
-  return (
-    <div style={{ background: T.surface, borderRadius: 18, border: `1px solid ${T.border}`, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ height: layout === 'short' ? 72 : 96, borderRadius: 12, background: T.surface2, animation: 'pfpulse 1.6s ease-in-out infinite' }} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: T.surface2 }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ width: '60%', height: 12, borderRadius: 6, background: T.surface2 }} />
-          <div style={{ width: '40%', height: 8, borderRadius: 6, background: T.surface2, marginTop: 6 }} />
-        </div>
-      </div>
-      <div style={{ width: '92%', height: 10, borderRadius: 6, background: T.surface2 }} />
-      <div style={{ width: '70%', height: 10, borderRadius: 6, background: T.surface2 }} />
-      <div style={PHOTO_ROW}>
-        {[0, 1, 2].map((i) => <div key={i} style={{ aspectRatio: '1 / 1', borderRadius: 10, background: T.surface2 }} />)}
-      </div>
-      <style>{'@keyframes pfpulse{0%,100%{opacity:1}50%{opacity:.45}}'}</style>
-    </div>
-  );
-}
 
 function QuickView({ T, t, store, onClose }) {
   return (
@@ -154,11 +76,25 @@ export default function PlatformDirectory() {
 
   const open = subdomain ? list.find((s) => s.subdomain === subdomain) : null;
   const isEmpty = !loading && filtered.length === 0;
-  const cols = isDesktop ? 4 : 2;
-  // Columns that may be narrower than a card's longest line (its name, its
-  // address): a plain 1fr cannot, so on a phone two cards came out wider than
-  // the screen and the second was cut off. The card truncates those lines.
-  const gridCols = `repeat(${cols}, minmax(0, 1fr))`;
+  // How the stores are drawn: the shopper's choice (photos until they make
+  // one), kept in this browser and, signed in, on their esy account.
+  const dev = usePDevice();
+  const display = useDisplayPrefs();
+  const view = display?.storesView || STORE_VIEWS[0];
+  // A phone has no room for the sort's label beside the view switch, so it
+  // shows the order alone there and says the label to a screen reader.
+  const sortValue = sort === 'new' ? t('directory.sortNew') : t('directory.sortAZ');
+  const sortButton = (
+    <button
+      onClick={() => setSort(sort === 'new' ? 'az' : 'new')}
+      aria-label={dev.ph ? `${t('directory.sort')} ${sortValue}` : undefined}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0, height: 52, padding: '0 16px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, font: `600 13px ${T.font}`, color: T.text, cursor: 'pointer', whiteSpace: 'nowrap' }}
+    >
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ flex: 'none' }}><path d="M3 6h18M6 12h12M10 18h4" /></svg>
+      {!dev.ph && t('directory.sort')} <span style={{ color: T.textDim, overflow: 'hidden', textOverflow: 'ellipsis' }}>{sortValue}</span>
+    </button>
+  );
+  const viewSwitch = <StoresViewSwitch T={T} t={t} view={view} onPick={(v) => display?.setStoresView(v)} />;
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}` }}>
@@ -179,15 +115,15 @@ export default function PlatformDirectory() {
           )}
         </div>
 
-        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: isDesktop ? '1.4fr auto' : '1fr', gap: 12, alignItems: 'center' }}>
+        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: isDesktop ? 'minmax(0, 1fr) auto auto' : 'minmax(0, 1fr)', gap: 12, alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 52, padding: '0 14px 0 18px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}` }}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ color: T.textDim }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('directory.searchPlaceholder')} style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', color: T.text, font: `400 14px ${T.font}` }} />
           </div>
-          <button onClick={() => setSort(sort === 'new' ? 'az' : 'new')} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 52, padding: '0 16px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, font: `600 13px ${T.font}`, color: T.text, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 6h18M6 12h12M10 18h4" /></svg>
-            {t('directory.sort')} <span style={{ color: T.textDim }}>{sort === 'new' ? t('directory.sortNew') : t('directory.sortAZ')}</span>
-          </button>
+          {/* The sort and the view switch: beside the search on a desktop, on a row of their own below it elsewhere. */}
+          {isDesktop ? <>{sortButton}{viewSwitch}</> : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>{sortButton}{viewSwitch}</div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: isDesktop ? 'wrap' : 'nowrap', overflowX: isDesktop ? 'visible' : 'auto' }}>
@@ -213,19 +149,11 @@ export default function PlatformDirectory() {
           // Shown only once the wait has lasted a moment (Skeleton), so a
           // directory already in the cache never flashes one.
           <Skeleton>
-            <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: isDesktop ? 18 : 12 }}>
-              {Array.from({ length: cols * 2 }).map((_, i) => <CardSkeleton key={i} T={T} layout={isDesktop ? 'tall' : 'short'} />)}
-            </div>
+            <StoreListSkeleton T={T} view={view} dev={dev} />
           </Skeleton>
         )}
 
-        {!loading && !isEmpty && (
-          <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: isDesktop ? 18 : 12 }}>
-            {filtered.map((s) => (
-              <StoreCard key={s.subdomain} T={T} t={t} store={s} layout={isDesktop ? 'tall' : 'short'} onOpen={() => navigate(`/stores/${s.subdomain}`)} />
-            ))}
-          </div>
-        )}
+        {!loading && !isEmpty && <StoreList T={T} t={t} view={view} stores={filtered} dev={dev} />}
 
         {isEmpty && (
           <div style={{ margin: '40px auto 24px', maxWidth: 640, padding: isDesktop ? '48px 36px 44px' : '32px 22px 28px', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 22, textAlign: 'center' }}>

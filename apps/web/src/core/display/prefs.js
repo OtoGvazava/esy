@@ -6,7 +6,8 @@
 //   lang        ka | en               (kept by useAppTheme, synced from here)
 //   appearance  light | dark | auto   (kept by useAppTheme, synced from here)
 //   text        s | m | l | xl        absent: m
-//   solid       reduce transparency   absent: the device's own setting decides
+//   stores      photos | compact | list | cover   absent: photos (the store directory's view)
+//   solid      reduce transparency   absent: the device's own setting decides
 //   motion      reduce motion         absent: the device's own setting decides
 //   saver       data saver            absent: the device's own setting decides
 //   views       { <store subdomain>: grid2 | grid3 | list }   absent: the owner's layout
@@ -17,6 +18,8 @@ export const APPEARANCES = ['light', 'dark', 'auto'];
 export const TEXT_SIZES = ['s', 'm', 'l', 'xl'];
 export const SWITCHES = ['solid', 'motion', 'saver'];
 export const VIEWS = ['grid2', 'grid3', 'list'];
+// How esy.ge/stores draws its stores; the first is the one nobody has to pick.
+export const STORE_VIEWS = ['photos', 'compact', 'list', 'cover'];
 // The server refuses more; the oldest store's choice gives way first.
 export const MAX_VIEWS = 40;
 
@@ -35,6 +38,7 @@ export function normalizePrefs(input) {
   if (LANGS.includes(p.lang)) out.lang = p.lang;
   if (APPEARANCES.includes(p.appearance)) out.appearance = p.appearance;
   if (TEXT_SIZES.includes(p.text)) out.text = p.text;
+  if (STORE_VIEWS.includes(p.stores)) out.stores = p.stores;
   SWITCHES.forEach((k) => { if (typeof p[k] === 'boolean') out[k] = p[k]; });
   if (isObj(p.views)) {
     const views = Object.entries(p.views)
