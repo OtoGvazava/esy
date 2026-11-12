@@ -16,6 +16,7 @@ import {
   aboutLoader, checkoutLoader, homeLoader, orderLoader, ordersLoader, productLoader,
 } from './storeLoaders';
 import { lazyScreen, searchStays } from './prime';
+import { accountRoute } from './accountRoutes';
 
 // The home page and a collection share an address: a sort, a search or a
 // filter is a change within the page and never waits, but moving to another
@@ -25,12 +26,6 @@ const homeRevalidate = ({ currentUrl, nextUrl, defaultShouldRevalidate }) => (
   || currentUrl.searchParams.get('category') !== nextUrl.searchParams.get('category')
     ? defaultShouldRevalidate : false
 );
-
-// One screen with where it forwards to.
-const door = (to) => lazyScreen(() => import('../pages/AccountDoor').then((m) => {
-  const Door = m.default;
-  return { default: () => <Door to={to} /> };
-}));
 
 export const routes = [{
   element: <StoreLayout />,
@@ -44,18 +39,17 @@ export const routes = [{
     { path: 'checkout', lazy: lazyScreen(() => import('../pages/Checkout')), loader: checkoutLoader, shouldRevalidate: searchStays },
     { path: 'pay/return', lazy: lazyScreen(() => import('../pages/PayReturn')) },
     { path: 'success', lazy: lazyScreen(() => import('../pages/OrderSuccess')) },
-    // The account lives on esy.ge. Signed out, this is where the menu's account
-    // item signs in; signed in, an old link is forwarded there (AccountDoor).
-    { path: 'account', lazy: door('/account') },
-    { path: 'account/personal', lazy: door('/account/personal') },
+    // The esy account (S1–S5), inside the store: its bar, its menu, its theme.
+    // Signed out the overview signs in, and language and display still works.
+    accountRoute(lazyScreen(() => import('../pages/AccountPage'))),
     { path: 'orders', lazy: lazyScreen(() => import('../pages/Orders')), loader: ordersLoader },
     { path: 'orders/:orderNumber', lazy: lazyScreen(() => import('../pages/OrderDetail')), loader: orderLoader },
     { path: 'signin', lazy: lazyScreen(() => import('../pages/SignIn')) },
     { path: 'auth/callback', lazy: lazyScreen(() => import('../pages/AuthCallback')) },
-    { path: 'settings/display', lazy: lazyScreen(() => import('../pages/DisplaySettings')) },
-    // Language and appearance became the one display screen; old links land there.
-    { path: 'settings/language', element: <Navigate to="/settings/display" replace /> },
-    { path: 'settings/appearance', element: <Navigate to="/settings/display" replace /> },
+    // Language and display became an account section; old links land there.
+    { path: 'settings/display', element: <Navigate to="/account/display" replace /> },
+    { path: 'settings/language', element: <Navigate to="/account/display" replace /> },
+    { path: 'settings/appearance', element: <Navigate to="/account/display" replace /> },
     // /create-store was a real storefront route until the duplicate wizard was
     // removed. Bookmarks and old links still point at it, so it forwards to the
     // one flow that remains rather than dead-ending.

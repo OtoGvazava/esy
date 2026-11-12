@@ -56,6 +56,7 @@ function storeUrlFor(sub) {
 
 /** Which nav entry the current path belongs to. */
 function activeKey(pathname) {
+  if (pathname.startsWith('/account')) return null;
   const hit = MNAV.filter(([, , route]) => route !== '/')
     .find(([, , route]) => pathname.startsWith(route));
   return hit ? hit[0] : 'overview';

@@ -60,6 +60,7 @@
     "display": "ენა და ჩვენება",
     "displayMeta": "{{language}} · {{appearance}}",
     "help": "დახმარება",
-    "signOut": "გასვლა"
+    "signOut": "გასვლა",
+    "newTab": "იხსნება ახალ ჩანართში"
   }
 }

@@ -12,12 +12,11 @@ export const SHARED_NS = ['common', 'design', 'display', 'home', 'navbar', 'owne
 
 /** Each host's own, beside the shared ones: a chunk per namespace and language. */
 export const HOST_NS = {
-  // Not `account`: its last reader was the store's own account page, which is
-  // gone (the account lives on esy.ge, its strings in `platform` and `navbar`).
-  store: ['cart'],
-  platform: ['platform'],
-  manager: ['manager'],
-  admin: ['admin', 'cart'],
+  // `account` on all four: every app draws the account's sections (account/).
+  store: ['account', 'cart'],
+  platform: ['account', 'platform'],
+  manager: ['account', 'manager'],
+  admin: ['account', 'admin', 'cart'],
 };
 
 /** Every namespace there is (the design-sync previews load them all). */

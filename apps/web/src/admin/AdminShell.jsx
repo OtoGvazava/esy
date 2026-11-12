@@ -49,6 +49,7 @@ const MORE = ['admins', 'messages'];
 const NAV = Object.fromEntries(ANAV.map(([k, icon, route]) => [k, { icon, route }]));
 
 function activeKey(pathname) {
+  if (pathname.startsWith('/account')) return null;
   const hit = ANAV.find(([, , route]) => pathname.startsWith(route));
   return hit ? hit[0] : 'stores';
 }

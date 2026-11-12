@@ -98,16 +98,20 @@ image builds the SPA itself.
 - **Shopper display settings**: `GET`/`PUT /api/account/display-prefs`
   (`users.display_prefs`). It sits under `/api/account/`, so an account
   without a verified phone can still save them.
-- **The account lives on esy.ge alone** (`esy.ge/account`,
-  `apps/web/src/platform/account/`): overview, orders from every store, the
-  address book, my stores, personal details. A store, the back office and
-  admin have no account screens; each opens the one shared menu
-  (`components/account/AccountMenu.jsx`), whose links to the account say where
-  they came from (`?from=store&sub=<sub>`, `?from=manager&sub=<sub>`,
-  `?from=admin`) so it can offer the way back. The store is `sub`, never
-  `store`: `?store=`, `?manager=`, `?admin=` and `?platform=` force that app's
-  shell on any host (`utils/hosts.js` `overrides`). Plan:
-  `docs/plans/unified-account.md`.
+- **The account is drawn inside every app** (`apps/web/src/account/`):
+  overview, orders from every store, the address book, my stores, personal
+  details, language and display, at `/account/...` on esy.ge, a store, the back
+  office (keeping `?tenant=`) and admin, each in that app's own frame
+  (`platform/account/AccountLayout`, `pages/AccountPage`,
+  `manager/ManagerAccount`, `admin/AdminAccount`; routes in
+  `router/accountRoutes.jsx`). Nobody leaves the app to manage their account;
+  what does leave it (esy.ge's help, another app, another store's order) opens
+  in a new tab with the mark for it. Every app opens the one shared menu
+  (`components/account/AccountMenu.jsx`). The strings are the `account`
+  namespace, loaded on all four hosts. Signed out, `/account/display` still
+  works (kept in the browser). Never name a query parameter `store`,
+  `manager`, `admin` or `platform`: those force that app's shell on any host
+  (`utils/hosts.js` `overrides`). Plan: `docs/plans/unified-account.md`.
 - **"My orders" is the store's on a store**: `GET /api/orders` lists what the
   account ordered at that store on a storefront host and everything on esy.ge,
   the back office and admin (`TenantContextService.currentStorefront()`,

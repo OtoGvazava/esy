@@ -60,6 +60,7 @@
     "display": "Language and display",
     "displayMeta": "{{language}} · {{appearance}}",
     "help": "Help",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "newTab": "opens in a new tab"
   }
 }

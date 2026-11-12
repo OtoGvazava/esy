@@ -34,7 +34,7 @@ export function useStoreNav() {
     // than sitting under Account.
     { key: 'orders', to: '/orders', label: t('dock.orders'), Icon: Icon.check, active: pathname === '/orders' },
     {
-      key: 'account', to: '/account', label: t('dock.account'), Icon: Icon.user, active: pathname === '/account',
+      key: 'account', to: '/account', label: t('dock.account'), Icon: Icon.user, active: pathname === '/account' || pathname.startsWith('/account/'),
       press: isAuthenticated ? () => toggleAccountMenu() : null,
     },
   ];

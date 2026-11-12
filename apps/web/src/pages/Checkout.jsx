@@ -33,7 +33,6 @@ import { money } from '../core/money';
 import { alpha } from '../core/tokens';
 import { useBottomClearance, useDesign } from '../core/design/useDesign';
 import { platformUrl } from '../utils/hosts';
-import { hubUrl } from '../components/account/hub';
 import PhoneVerifyBox from '../components/PhoneVerifyBox';
 import { markIfComplete, markLoaded } from '../core/imgFade';
 
@@ -644,9 +643,9 @@ export default function Checkout() {
       ) : !user.phoneNumber ? (
         <>
           <span style={{ font: `500 12.5px/1.5 ${T.font}`, color: T.textDim }}>{t('checkout.needPhone')}</span>
-          <a href={hubUrl('/account/personal', 'store', store?.subdomain)} style={{ height: 44, borderRadius: 'var(--k-r-btn)', font: `600 13.5px ${T.font}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', boxSizing: 'border-box', ...primary(false) }}>
+          <button type="button" onClick={() => navigate('/account/personal')} style={{ height: 44, borderRadius: 'var(--k-r-btn)', font: `600 13.5px ${T.font}`, ...primary(false) }}>
             {t('checkout.addPhone')}
-          </a>
+          </button>
         </>
       ) : (
         <>

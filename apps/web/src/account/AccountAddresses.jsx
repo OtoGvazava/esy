@@ -9,10 +9,10 @@ import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { addressApi } from '../../utils/api';
-import { addressesQuery } from '../../core/query/queries';
-import { Sk, Skeleton } from '../../components/skeleton/Skeleton';
-import { Btn, Card, Chip, Glyph, LiIc, List, cardStyle, ingrpInput, ingrpStyle, liStyle } from '../PlatformKit';
+import { addressApi } from '../utils/api';
+import { addressesQuery } from '../core/query/queries';
+import { Sk, Skeleton } from '../components/skeleton/Skeleton';
+import { Btn, Card, Chip, Glyph, LiIc, List, cardStyle, ingrpInput, ingrpStyle, liStyle } from '../platform/PlatformKit';
 import { Dialog, Head, phoneText, useAccount } from './parts';
 
 const REQUIRED = ['recipient', 'phone', 'city', 'line'];
@@ -57,7 +57,7 @@ function Switch({ T, on, onChange, label }) {
 }
 
 /** The form for a new address or an existing one; mounted fresh for each, so it starts from that address. */
-function AddressForm({ T, t, ph, address, first, user, busy, error, onSave, onCancel }) {
+function AddressForm({ T, t, ph, address, first, user, busy, error, onSave, onCancel, personal }) {
   const [f, setF] = useState(() => ({
     recipient: address?.recipient ?? (user.name && user.name !== user.email ? user.name : ''),
     phone: address?.phone ?? (user.phoneVerified && user.phoneNumber ? phoneText(user.phoneNumber) : ''),
@@ -102,7 +102,7 @@ function AddressForm({ T, t, ph, address, first, user, busy, error, onSave, onCa
           {incomplete ? t('hub.addrRequired') : error === 'phone' ? (
             <>
               {t('hub.phoneNeeded')}{' '}
-              <Link to="/account/personal" style={{ color: 'inherit', fontWeight: 600 }}>{t('me.personal')}</Link>
+              <Link to={personal} style={{ color: 'inherit', fontWeight: 600 }}>{t('me.personal')}</Link>
             </>
           ) : error}
         </p>
@@ -116,9 +116,9 @@ function AddressForm({ T, t, ph, address, first, user, busy, error, onSave, onCa
 }
 
 export default function AccountAddresses() {
-  const { T, dev, user } = useAccount();
+  const { T, dev, user, link: section } = useAccount();
   const { ph, desk } = dev;
-  const { t } = useTranslation('platform');
+  const { t } = useTranslation('account');
   const book = useQuery(addressesQuery());
   // What is open: { address } for the form (address null for a new one), { remove } for the confirmation.
   const [open, setOpen] = useState(null);
@@ -250,7 +250,7 @@ export default function AccountAddresses() {
           <AddressForm
             key={open.address?.id ?? 'new'}
             T={T} t={t} ph={ph} address={open.address} first={!list.length} user={user}
-            busy={busy} error={error} onSave={save} onCancel={close}
+            busy={busy} error={error} onSave={save} onCancel={close} personal={section('/account/personal')}
           />
         )}
       </Dialog>

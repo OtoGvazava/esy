@@ -2,13 +2,12 @@
 // offer to open one when it runs none (U6b). A store you own carries its
 // orders and revenue; one you manage carries neither, because the account
 // summary sends a manager no money figures.
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { money } from '../../core/money';
-import { safeAccent } from '../../core/tokens';
-import { storeUrl } from '../platformData';
-import { Alert, Av, Btn, Card, Chip, Glyph, initialsOf, type } from '../PlatformKit';
-import { Head, NewChip, NewStoreLink, officeUrl, roleText, storeName, useAccount } from './parts';
+import { money } from '../core/money';
+import { safeAccent } from '../core/tokens';
+import { storeUrl } from '../platform/platformData';
+import { Alert, Av, Btn, Card, Chip, Glyph, initialsOf, type } from '../platform/PlatformKit';
+import { Go, Head, NewChip, NewStoreLink, officeUrl, outProps, roleText, storeName, useAccount } from './parts';
 
 function Stat({ T, label, value }) {
   return (
@@ -20,6 +19,8 @@ function Stat({ T, label, value }) {
 }
 
 function StoreCard({ T, t, ph, store }) {
+  // The back office and the store itself are other apps: a new tab, anywhere but esy.ge.
+  const { out } = useAccount();
   const name = storeName(store);
   const owner = store.myRole !== 'MANAGER';
   const open = store.status === 'live';
@@ -47,17 +48,17 @@ function StoreCard({ T, t, ph, store }) {
         <Alert T={T} style={{ padding: '12px 14px' }}>{t('hub.managerNote')}</Alert>
       )}
       <div style={{ display: 'flex', gap: 10 }}>
-        <Btn T={T} kind={owner ? 'p' : 's'} size="sm" ph={ph} href={officeUrl(store)} style={{ flex: 1 }}>{t('me.panel')}</Btn>
-        <Btn T={T} size="sm" ph={ph} href={storeUrl(store)} style={{ flex: 1 }}>{t('hub.viewStore')}</Btn>
+        <Btn T={T} kind={owner ? 'p' : 's'} size="sm" ph={ph} href={officeUrl(store)} {...outProps(out)} style={{ flex: 1 }}>{t('me.panel')}</Btn>
+        <Btn T={T} size="sm" ph={ph} href={storeUrl(store)} {...outProps(out)} style={{ flex: 1 }}>{t('hub.viewStore')}</Btn>
       </div>
     </Card>
   );
 }
 
 export default function AccountStores() {
-  const { T, dev, stores } = useAccount();
+  const { T, dev, stores, away } = useAccount();
   const { ph, desk } = dev;
-  const { t } = useTranslation('platform');
+  const { t } = useTranslation('account');
   const ty = type(T, desk);
 
   if (!stores.length) {
@@ -71,8 +72,8 @@ export default function AccountStores() {
             </span>
             <h2 style={ty.h2}>{t('hub.noStoreTitle')}</h2>
             <p style={{ ...ty.body, color: T.textDim, maxWidth: 400 }}>{t('hub.noStoreBody')}</p>
-            <Btn T={T} kind="p" to="/sell">{t('hub.noStoreCta')}</Btn>
-            <Link to="/#how" style={{ font: `600 12.5px ${T.font}`, color: T.accentFg, textDecoration: 'none' }}>{t('hub.how')}</Link>
+            <Btn T={T} kind="p" {...away('/sell')}>{t('hub.noStoreCta')}</Btn>
+            <Go {...away('/#how')} style={{ font: `600 12.5px ${T.font}`, color: T.accentFg, textDecoration: 'none' }}>{t('hub.how')}</Go>
           </div>
         </Card>
         <Alert T={T}>{t('hub.roleHint')}</Alert>

@@ -11,6 +11,7 @@ import {
   storeLoader, storesLoader,
 } from './adminLoaders';
 import { lazyScreen } from './prime';
+import { accountRoute } from './accountRoutes';
 
 // Every screen here keeps its state in the page, not the address, so only a
 // move to another path runs a screen's loader again. A query string that
@@ -27,8 +28,7 @@ export const routes = [
   {
     element: <AdminShell />,
     children: [
-      // The front door and every unknown path (the sign-in callback lands on
-      // /account) go on to the store list. Their loader starts its read with
+      // The front door and every unknown path go on to the store list. Their loader starts its read with
       // the page, so the move finds the list cached instead of waiting on it.
       { index: true, element: <Navigate to="/stores" replace />, loader: storesLoader },
       { path: 'stores', element: <AdminStores />, loader: storesLoader, shouldRevalidate: samePage },
@@ -37,6 +37,8 @@ export const routes = [
       { path: 'integrations', lazy: lazyScreen(integrationsScreen), loader: integrationsLoader, shouldRevalidate: samePage },
       { path: 'config', lazy: lazyScreen(configScreen), loader: configLoader, shouldRevalidate: samePage },
       { path: 'admins', lazy: lazyScreen(() => import('../admin/AdminAdmins')), loader: adminsLoader, shouldRevalidate: samePage },
+      // The esy account (S7), in admin's own frame.
+      accountRoute(lazyScreen(() => import('../admin/AdminAccount')), { shouldRevalidate: samePage }),
       { path: '*', element: <Navigate to="/stores" replace />, loader: storesLoader },
     ],
   },

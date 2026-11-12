@@ -14,7 +14,7 @@ const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 // because a new number needs its own code: the current one stays active, and
 // keeps receiving order notices and codes, until the new one is confirmed.
 //
-// Drawn inside a .sk root (platform/account/AccountPersonal).
+// Drawn inside a .sk root (account/AccountPersonal).
 export default function PersonalInfo() {
   const dev = useDev();
   const { t } = useTranslation('storefront');

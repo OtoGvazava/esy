@@ -1,19 +1,39 @@
-// What the account's screens share (the design's U2–U6): an order's row, a
+// What the account's sections share (the design's U2–U7): an order's row, a
 // store's row, the list row that opens a section, the dialog, and how an
 // order's status, items and day are written. No copy lives here; every label
 // arrives from the caller's t().
+//
+// The sections are drawn inside whichever app the person is in (esy.ge, a
+// store, the back office, admin), so nothing here assumes a host: a link to
+// another section goes through `link`, a page that only esy.ge has through
+// `away`, and anything that leaves the app opens in a new tab.
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useId, useRef } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { usePresence } from '../../core/usePresence';
-import { money } from '../../core/money';
-import { safeAccent } from '../../core/tokens';
-import { managerUrl } from '../../utils/hosts';
-import { storeUrl } from '../platformData';
-import { Av, Btn, Card, Chip, Glyph, LiIc, cardStyle, initialsOf, liStyle, type } from '../PlatformKit';
+import { usePresence } from '../core/usePresence';
+import { money } from '../core/money';
+import { safeAccent } from '../core/tokens';
+import { managerUrl } from '../utils/hosts';
+import { storeUrl } from '../platform/platformData';
+import { Av, Btn, Card, Chip, Glyph, LiIc, cardStyle, initialsOf, liStyle, type } from '../platform/PlatformKit';
 
-/** What AccountLayout hands every section: tokens, device, the account and where it was opened from. */
+/**
+ * What AccountBody hands every section: tokens and device; the app it is
+ * drawn in (`app`, and `here`, the store on a store); `link(path)` for
+ * another section of this app; `away(path)` for one of esy.ge's own pages;
+ * `out`, whether leaving the app opens a new tab; `showTitle`, whether the
+ * page draws its own heading or the app's bar does; and the account itself.
+ */
 export const useAccount = () => useOutletContext();
+
+/** A link's props for leaving the app: a new tab anywhere but esy.ge. */
+export const outProps = (out) => (out ? { target: '_blank', rel: 'noopener noreferrer' } : {});
+
+/** A router link (`to`) for this app, or a plain one (`href`) for another. */
+export function Go({ to, href, children, ...rest }) {
+  if (to) return <Link to={to} {...rest}>{children}</Link>;
+  return <a href={href} {...rest}>{children}</a>;
+}
 
 // A shopper's order status: one hue per status, as the design review settled
 // (placed amber, shipped indigo, out for delivery blue, delivered green,
@@ -43,7 +63,7 @@ export function orderWhat(t, order) {
   return n > 1 ? t('me.itemMore', { title: order.firstItem, count: n - 1, n: n - 1 }) : order.firstItem;
 }
 
-/** An order opens on the store it was placed at. */
+/** An order opens on the store it was placed at (on that store itself, its own page). */
 export const orderHref = (order) => (order.store?.subdomain
   ? `${storeUrl(order.store)}/orders/${encodeURIComponent(order.orderNumber)}`
   : undefined);
@@ -69,10 +89,18 @@ const clip = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap
  * is already about one store.
  */
 export function OrderRow({ T, t, order, last, day, bare }) {
+  const { app, here, out } = useAccount();
   const s = order.store || {};
   const name = storeName(s);
+  // On the store it was placed at, an order is that store's own page; any
+  // other store's order is another app.
+  const local = app === 'store' && !!s.subdomain && s.subdomain === here;
+  const go = local
+    ? { to: `/orders/${encodeURIComponent(order.orderNumber)}` }
+    : { href: orderHref(order), ...outProps(out) };
+  const leaves = !local && (out || day != null);
   return (
-    <a href={orderHref(order)} className="esy-press-soft" style={liStyle(T, last)}>
+    <Go {...go} className="esy-press-soft" style={liStyle(T, last)}>
       {bare
         ? <LiIc T={T} name="bag" />
         : <Av T={T} size="sm" color={safeAccent(s.primaryColor)}>{initialsOf(name)}</Av>}
@@ -93,17 +121,18 @@ export function OrderRow({ T, t, order, last, day, bare }) {
       </div>
       {day != null && <span style={{ width: 72, flex: 'none', fontSize: 12.5, color: T.textDim }}>{day}</span>}
       <StatusChip T={T} t={t} order={order} />
-      {day != null && <Glyph name="ext" size={16} style={{ color: T.textDim }} />}
-    </a>
+      {leaves && <Glyph name="ext" size={16} style={{ color: T.textDim }} />}
+    </Go>
   );
 }
 
 /**
  * A list row that goes somewhere: an icon, a label with an optional second
- * line, then a count or a chip, and a chevron. `to` stays in the account,
- * `href` leaves it.
+ * line, then a count or a chip, and a chevron. `to` stays in the app, `href`
+ * leaves it; with `target` it opens in a new tab and says so with its mark
+ * in place of the chevron.
  */
-export function Row({ T, icon, label, sub, meta, chip, to, href, last, onClick }) {
+export function Row({ T, icon, label, sub, meta, chip, to, href, target, rel, last, onClick }) {
   const body = (
     <>
       <LiIc T={T} name={icon} />
@@ -112,12 +141,12 @@ export function Row({ T, icon, label, sub, meta, chip, to, href, last, onClick }
         : <span style={{ flex: 1, minWidth: 0 }}>{label}</span>}
       {meta != null && <span style={{ fontSize: 12.5, color: T.textDim, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{meta}</span>}
       {chip}
-      <Glyph name="chevR" size={16} style={{ color: T.textDim }} />
+      <Glyph name={target ? 'ext' : 'chevR'} size={16} style={{ color: T.textDim }} />
     </>
   );
   const style = liStyle(T, last);
   if (to) return <Link to={to} className="esy-press-soft" style={style}>{body}</Link>;
-  return <a href={href} onClick={onClick} className="esy-press-soft" style={style}>{body}</a>;
+  return <a href={href} target={target} rel={rel} onClick={onClick} className="esy-press-soft" style={style}>{body}</a>;
 }
 
 /** "3 new" beside a store: its placed orders nobody has acted on yet. */
@@ -136,6 +165,7 @@ export const officeUrl = (store) => managerUrl(`/?tenant=${encodeURIComponent(st
 
 /** A store you run, as one line: its name, new orders, address and role, and the way into its back office. */
 export function StoreRow({ T, t, ph, store }) {
+  const { out } = useAccount();
   const name = storeName(store);
   const owner = store.myRole !== 'MANAGER';
   return (
@@ -147,22 +177,23 @@ export function StoreRow({ T, t, ph, store }) {
           <NewChip T={T} t={t} n={Number(store.newOrders) || 0} />
         </div>
         <div style={{ fontSize: 12, color: T.textDim }}>
-          <a href={storeUrl(store)} style={{ color: 'inherit', textDecoration: 'none' }}>{t('me.host', { sub: store.subdomain })}</a>
+          <a href={storeUrl(store)} {...outProps(out)} style={{ color: 'inherit', textDecoration: 'none' }}>{t('me.host', { sub: store.subdomain })}</a>
           {' · '}{roleText(t, store)}
         </div>
       </div>
-      <Btn T={T} kind={owner ? 'p' : 's'} size="sm" ph={ph} href={officeUrl(store)} style={ph ? { flex: '1 0 100%' } : undefined}>
+      <Btn T={T} kind={owner ? 'p' : 's'} size="sm" ph={ph} href={officeUrl(store)} {...outProps(out)} style={ph ? { flex: '1 0 100%' } : undefined}>
         {t('me.panel')}
       </Btn>
     </Card>
   );
 }
 
-/** The dashed card that opens another store. */
+/** The dashed card that opens another store: esy.ge's own page, so a new tab anywhere else. */
 export function NewStoreLink({ T, t, style }) {
+  const { away } = useAccount();
   return (
-    <Link
-      to="/sell"
+    <Go
+      {...away('/sell')}
       className="esy-press-soft"
       style={{
         ...cardStyle(T), border: `1.5px dashed ${T.dark ? '#66666e' : '#b8b8be'}`, boxShadow: 'none',
@@ -171,17 +202,28 @@ export function NewStoreLink({ T, t, style }) {
     >
       <LiIc T={T} name="plus" />
       <b style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>{t('me.openStore')}</b>
-    </Link>
+    </Go>
   );
 }
 
-/** A section's heading: the title, one line under it, and an action at the end of the line. */
+/** Kept for screen readers where the app's bar already shows the title. */
+export const srOnly = {
+  position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden',
+  clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+};
+
+/**
+ * A section's heading: the title, one line under it, and an action at the end
+ * of the line. Where the app's own bar shows the title (a store's phone header,
+ * the back office's and admin's bar) the page keeps it for screen readers only.
+ */
 export function Head({ T, desk, title, sub, action }) {
+  const { showTitle = true } = useAccount() || {};
   const ty = type(T, desk);
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
       <div style={{ minWidth: 0 }}>
-        <h1 style={ty.h1}>{title}</h1>
+        <h1 style={showTitle ? ty.h1 : srOnly}>{title}</h1>
         {sub && <p style={{ ...ty.body, color: T.textDim, margin: '6px 0 0' }}>{sub}</p>}
       </div>
       {action}

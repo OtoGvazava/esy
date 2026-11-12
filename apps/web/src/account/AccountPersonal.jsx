@@ -3,13 +3,13 @@
 // (components/PersonalInfo), so they sit inside its root here as they do on a
 // store.
 import { useTranslation } from 'react-i18next';
-import PersonalInfo from '../../components/PersonalInfo';
-import { Sk } from '../../components/shop/kit';
+import PersonalInfo from '../components/PersonalInfo';
+import { Sk } from '../components/shop/kit';
 import { Head, useAccount } from './parts';
 
 export default function AccountPersonal() {
   const { T, dev } = useAccount();
-  const { t } = useTranslation('platform');
+  const { t } = useTranslation('account');
   return (
     <>
       <Head T={T} desk={dev.desk} title={t('me.personal')} />

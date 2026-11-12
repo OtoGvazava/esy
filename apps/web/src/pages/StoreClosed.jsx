@@ -42,7 +42,7 @@ export default function StoreClosed() {
         {dev !== 'ph' && (
           <nav className="p-links" aria-label="esy">
             <a href={platformUrl('/stores')}>{t('closed.stores')}</a>
-            <a href={platformUrl('/help')}>{t('closed.help')}</a>
+            <a href={platformUrl('/help')} target="_blank" rel="noopener noreferrer">{t('closed.help')}</a>
           </nav>
         )}
         <div className="row" style={{ marginLeft: 'auto', gap: 10 }}>

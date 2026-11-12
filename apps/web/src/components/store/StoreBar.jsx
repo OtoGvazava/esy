@@ -28,7 +28,6 @@ import { LangPill } from '../glow/GlowPills';
 import { Icons } from '../../core/icons';
 import { usePublicContacts } from '../../hooks/useStoreContacts';
 import { CHANNELS, channelHref } from '../../core/channels';
-import ManageButton from '../ManageButton';
 import { useStoreBarMounted } from './storeChrome';
 import { useTenant } from '../../contexts/TenantContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -127,8 +126,6 @@ export default function StoreBar({ compact }) {
         </button>
       )}
 
-      <ManageButton />
-
       {/* One tap to reach the shop, in each channel's own colour. Rendered
           only where the store actually published a channel. */}
       {socials && channels.filter((c) => QUICK.includes(c.type)).slice(0, 2).map((c) => {
@@ -153,7 +150,7 @@ export default function StoreBar({ compact }) {
 
       {/* A gear and the current language: it opens Language and display
           (where the language and the look are both chosen), not a switch. */}
-      <LangPill T={T} lang={language} to="/settings/display" label={t('title', { ns: 'display' })} compact={false} />
+      <LangPill T={T} lang={language} to="/account/display" label={t('title', { ns: 'display' })} compact={false} />
 
       <Link to="/cart" className="esy-press" style={{
         ...pill,

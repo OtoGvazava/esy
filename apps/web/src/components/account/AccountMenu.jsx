@@ -3,9 +3,9 @@
 // One account, so one menu: a store, esy.ge, the back office and admin all
 // open this from the control that carries the account. Its first group
 // belongs to the place it was opened in; its second is the same everywhere and
-// leads to the account itself, which lives on esy.ge alone
-// (platform/account/). A link there says where it came from, so the account
-// can offer the way back (platform/account/origin.js).
+// leads to the account itself, whose sections every app draws in its own frame
+// (account/), so nobody leaves the app to reach them. What does leave the app
+// (esy.ge's help, another app) opens in a new tab and carries the mark for it.
 //
 // The host supplies the control and keeps its own look for it:
 //
@@ -36,7 +36,6 @@ import { accountQuery } from '../../core/query/queries';
 import { usePresence } from '../../core/usePresence';
 import { managerUrl, platformUrl } from '../../utils/hosts';
 import { storeUrl } from '../../platform/platformData';
-import { originQuery } from './hub';
 import '../../styles/account-menu.css';
 
 // The boards' own paths (AcctMenu), 24×24, stroked by account-menu.css.
@@ -51,6 +50,7 @@ const PATHS = {
   screen: <><rect x="3.5" y="5" width="17" height="11.5" rx="2" /><path d="M9 20h6M12 16.5V20" /></>,
   info: <><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5M12 8v.5" /></>,
   out: <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10" />,
+  globe: <><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5a13 13 0 0 1 0 17M12 3.5a13 13 0 0 0 0 17" /></>,
   chev: <path d="m9 5 7 7-7 7" />,
 };
 
@@ -72,20 +72,32 @@ function initialsOf(name, email) {
 }
 
 /** One row. `to` stays in this app, `href` leaves it, `onClick` alone is an action. */
-function Item({ icon, label, sub, meta, chip, chev, to, href, onClick, bad, noPrefetch }) {
+/**
+ * One row. `to` stays in this app, `href` leaves it, `onClick` alone is an
+ * action. `out` opens `href` in a new tab: its mark takes the chevron's
+ * place and the row says so to a screen reader (`outLabel`).
+ */
+function Item({ icon, label, sub, meta, chip, chev, to, href, onClick, bad, noPrefetch, out, outLabel }) {
   const cls = `am-mi${sub ? ' two' : ''}${bad ? ' bad' : ''}`;
   const body = (
     <>
       <span className="am-ic"><Ic name={icon} /></span>
-      <span className="am-txt">{label}{sub && <small>{sub}</small>}</span>
+      <span className="am-txt">{label}{sub && <small>{sub}</small>}{out && <span className="am-sr">{` (${outLabel})`}</span>}</span>
       {meta != null && <span className="am-meta">{meta}</span>}
       {chip}
-      {chev && <Ic name="chev" className="am-chev" />}
+      {out ? <Ic name="ext" className="am-chev" /> : chev && <Ic name="chev" className="am-chev" />}
     </>
   );
   const common = { className: cls, role: 'menuitem', 'data-am-item': '', onClick };
   if (to) return <Link to={to} {...common}>{body}</Link>;
-  if (href) return <a href={href} {...common} data-no-prefetch={noPrefetch ? '' : undefined}>{body}</a>;
+  if (href) {
+    return (
+      <a
+        href={href} {...common} data-no-prefetch={noPrefetch ? '' : undefined}
+        target={out ? '_blank' : undefined} rel={out ? 'noopener noreferrer' : undefined}
+      >{body}</a>
+    );
+  }
   return <button type="button" {...common}>{body}</button>;
 }
 
@@ -195,14 +207,14 @@ export default function AccountMenu({
   const fresh = stores.reduce((n, s) => n + (Number(s.newOrders) || 0), 0);
   const here = sub && orders ? orders.filter((o) => o.store?.subdomain === sub).length : null;
 
-  // On esy.ge the account is this app's own pages; from anywhere else it is a
-  // link to esy.ge that says where it came from.
+  // The account's sections are this app's own pages: the back office keeps
+  // the store chosen (?tenant=) on every link.
   const onPlatform = app === 'platform';
-  const from = originQuery(app, sub);
-  const hub = (path) => (onPlatform ? { to: path } : { href: platformUrl(`${path}${from}`) });
-  const page = (path) => (onPlatform ? { to: path } : { href: platformUrl(path) });
-  // A store has its own display settings (the product view is kept per store).
-  const display = app === 'store' ? { to: '/settings/display' } : page('/settings/display');
+  const inApp = (path) => ({ to: app === 'manager' && sub ? `${path}?tenant=${encodeURIComponent(sub)}` : path });
+  // Leaving the app: a new tab, with the mark for it.
+  const away = (href) => ({ href, out: true, outLabel: t('acct.newTab') });
+  // Help is esy.ge's own page: in place on esy.ge, a new tab from anywhere else.
+  const help = onPlatform ? { to: '/help' } : away(platformUrl('/help'));
 
   const signOut = () => {
     setOpen(false);
@@ -230,7 +242,7 @@ export default function AccountMenu({
               session), so the row is there from the first frame. */}
           {storeRole && sub && (
             <Item
-              icon="store" label={t('acct.office')} href={managerUrl(`/?tenant=${encodeURIComponent(sub)}`)} onClick={close}
+              icon="store" label={t('acct.office')} {...away(managerUrl(`/?tenant=${encodeURIComponent(sub)}`))} onClick={close}
               chip={<span className="am-chip role">{storeRole === 'MANAGER' ? t('acct.manager') : t('acct.owner')}</span>}
             />
           )}
@@ -251,28 +263,28 @@ export default function AccountMenu({
         <>
           {/* A full load on purpose: the store picker clears ?tenant and re-reads what this account may do. */}
           <Item icon="swap" label={t('acct.switchStore')} meta={stores.length > 1 ? stores.length : null} href="/" noPrefetch onClick={close} />
-          {sub && <Item icon="ext" label={t('acct.viewStore')} href={storeUrl({ subdomain: sub })} onClick={close} />}
+          {sub && <Item icon="store" label={t('acct.viewStore')} {...away(storeUrl({ subdomain: sub }))} onClick={close} />}
         </>
       )}
       {app === 'admin' && (
         <>
-          <Item icon="store" label={t('acct.myOffice')} href={managerUrl('/')} onClick={close} />
-          <Item icon="ext" label={t('acct.toPlatform')} href={platformUrl('/')} onClick={close} />
+          <Item icon="store" label={t('acct.myOffice')} {...away(managerUrl('/'))} onClick={close} />
+          <Item icon="globe" label={t('acct.toPlatform')} {...away(platformUrl('/'))} onClick={close} />
         </>
       )}
 
       <div className="am-sep gap" role="separator" />
       <p className="am-lbl" role="presentation">{t('acct.account')}</p>
-      <Item icon="user" label={t('acct.manage')} sub={t('acct.manageSub')} chev {...hub('/account')} onClick={close} />
-      <Item icon="receipt" label={t('acct.allOrders')} meta={orders ? orders.length : null} {...hub('/account/orders')} onClick={close} />
+      <Item icon="user" label={t('acct.manage')} sub={t('acct.manageSub')} chev {...inApp('/account')} onClick={close} />
+      <Item icon="receipt" label={t('acct.allOrders')} meta={orders ? orders.length : null} {...inApp('/account/orders')} onClick={close} />
       <Item
-        icon="screen" label={t('acct.display')} {...display} onClick={close}
+        icon="screen" label={t('acct.display')} {...inApp('/account/display')} onClick={close}
         meta={t('acct.displayMeta', {
           language: NATIVE[language] || NATIVE.ka,
           appearance: t(`appearance.${appearance || 'auto'}`, { ns: 'display' }),
         })}
       />
-      <Item icon="info" label={t('acct.help')} {...page('/help')} onClick={close} />
+      <Item icon="info" label={t('acct.help')} {...help} onClick={close} />
 
       <div className="am-sep gap" role="separator" />
       <Item icon="out" label={t('acct.signOut')} bad onClick={signOut} />

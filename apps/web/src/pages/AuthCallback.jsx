@@ -18,16 +18,13 @@ export default function AuthCallback() {
     // Return to the store the user signed in from. signInWithGoogle stashed
     // the path on this same origin; the dev store simulation lives in
     // ?tenant=, which the OAuth origin round-trip can't carry on its own.
-    // esy.ge returns to the account; a store returns to the shop, since the
-    // account is no longer one of its pages (it would only forward to esy.ge).
-    const onStore = hostKey() === 'store';
-    let dest = onStore ? '/' : '/account';
+    let dest = hostKey() === 'admin' ? '/' : '/account';
     try {
       const saved = sessionStorage.getItem('esy_post_login');
       sessionStorage.removeItem('esy_post_login');
       const from = saved ? new URL(saved, window.location.origin) : null;
       const tenantParam = from && from.searchParams.get('tenant');
-      if (tenantParam) dest = `/?tenant=${encodeURIComponent(tenantParam)}`;
+      if (tenantParam) dest = `/account?tenant=${encodeURIComponent(tenantParam)}`;
       // Opening a store (esy.ge/sell) continues where it started, with the
       // look a landing-page link picked (?look=).
       else if (from && from.pathname === '/sell' && isPlatformHost()) {

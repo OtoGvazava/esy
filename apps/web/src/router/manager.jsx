@@ -13,6 +13,7 @@ import {
   teamLoader,
 } from './managerLoaders';
 import { lazyScreen } from './prime';
+import { accountRoute } from './accountRoutes';
 
 // A change of the search alone (Analytics' ?days=, the products import's
 // ?import=) is a change within the page: the screen's own reads follow it,
@@ -39,6 +40,8 @@ export const routes = [
       // Its six tabs are its own routes (ManagerSettings); the loader reads
       // the tab from the path.
       screen({ path: 'settings/*', lazy: lazyScreen(() => import('../manager/ManagerSettings')), loader: settingsLoader }),
+      // The esy account (S6, S8), in the back office's own frame.
+      accountRoute(lazyScreen(() => import('../manager/ManagerAccount')), { shouldRevalidate: samePage }),
       // Signed in already: the old sign-in path leads to the store's first screen.
       { path: 'signin', element: <ToStoreStart /> },
       { path: '*', element: <ToStoreStart /> },

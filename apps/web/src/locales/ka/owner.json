@@ -100,7 +100,6 @@
   "storeSaveFailed": "მაღაზიის შენახვა ვერ მოხერხდა",
   "settingsSaved": "შენახულია",
   "subdomainLocked": "{{domain}} · ქვედომენი დაბლოკილია",
-  "manageStore": "მაღაზიის მართვა",
   "orderAdvance": {
     "shipped": "გაგზავნილად მონიშვნა",
     "out_for_delivery": "მიტანის პროცესში",

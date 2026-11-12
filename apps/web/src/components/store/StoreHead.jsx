@@ -15,9 +15,7 @@ import { useGlow } from '../../styles/glow';
 import { useDesign } from '../../core/design/useDesign';
 import { useDevice } from '../../contexts/DeviceContext';
 import { useThemeMode } from '../../contexts/ThemeModeContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import ManageButton from '../ManageButton';
 import { Icon, langInfo } from '../glow/GlowPrimitives';
 import { ThemePill, LangPill } from '../glow/GlowPills';
 import { HeadButton, MenuButton, StoreAvatar } from './StoreMenus';
@@ -70,7 +68,7 @@ function Controls({ drawer }) {
       <HeadButton label={t('toggleTheme')} onClick={toggle}>{mode === 'dark' ? <Icon.sun /> : <Icon.moon />}</HeadButton>
       {/* A gear and the language code, as on the compact header's pill. */}
       <HeadButton
-        to="/settings/display" label={t('title', { ns: 'display' })}
+        to="/account/display" label={t('title', { ns: 'display' })}
         style={{ width: 'auto', padding: '0 13px', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, letterSpacing: '0.02em' }}
       >
         <Icon.gear aria-hidden="true" /><span>{langInfo(language).short}</span>
@@ -85,21 +83,11 @@ export default function StoreHead() {
   const { isMobile } = useDevice();
   const { mode, toggle: toggleTheme, language } = useThemeMode();
   const { t } = useTranslation('home');
-  // ManageButton's own test. These headers give the owner's button a row of
-  // its own above them: beside a centred name or the cover's avatar it took
-  // the room the name needs, and a shopper never sees it either way.
-  const { canManageStore } = useAuth();
   const { tenant: store } = useTenant();
-  const canManage = !!canManageStore && !!store?.subdomain;
   const gutter = isMobile ? 16 : 40;
   const drawer = design.menu === 'drawer';
   // A cover photo that fails to load draws the band instead.
   const [coverFailed, setCoverFailed] = useState(null);
-  const ownerRow = canManage && (
-    <div style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end', padding: `14px ${gutter}px 0` }}>
-      <ManageButton />
-    </div>
-  );
 
   if (design.header === 'center') {
     // Three columns, the outer two equal, so the name sits on the screen's
@@ -107,10 +95,9 @@ export default function StoreHead() {
     // for that shortens with an ellipsis instead of pushing the controls off.
     return (
       <>
-        {ownerRow}
         <div style={{
           position: 'relative', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
-          columnGap: 8, padding: `${canManage ? 10 : 28}px ${gutter}px 0`,
+          columnGap: 8, padding: `28px ${gutter}px 0`,
         }}>
           <div style={{ justifySelf: 'start', display: 'flex' }}>{drawer && <MenuButton />}</div>
           <div style={{ minWidth: 0, overflow: 'hidden', textAlign: 'center', color: T.text }}>
@@ -135,8 +122,7 @@ export default function StoreHead() {
     const line = photo ? (store?.tagline || store?.description || tenant.domain) : tenant.domain;
     return (
       <>
-        {ownerRow}
-        <div style={{ position: 'relative', padding: `${canManage ? 10 : isMobile ? 14 : 24}px ${gutter}px 6px` }}>
+        <div style={{ position: 'relative', padding: `${isMobile ? 14 : 24}px ${gutter}px 6px` }}>
           {photo ? (
             <div style={{
               position: 'relative', overflow: 'hidden', borderRadius: 'var(--k-r-card)',
@@ -192,10 +178,9 @@ export default function StoreHead() {
   if (drawer) {
     return (
       <>
-        {ownerRow}
         <div style={{
           position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-          padding: `${canManage ? 10 : 28}px ${gutter}px 0`,
+          padding: `28px ${gutter}px 0`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             <MenuButton />
@@ -214,9 +199,8 @@ export default function StoreHead() {
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `28px ${gutter}px 0` }}>
       <GlowLogo T={T} tenant={tenant} size={20} />
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <ManageButton />
         <ThemePill T={T} dark={mode === 'dark'} onClick={toggleTheme} />
-        <LangPill T={T} lang={language} to="/settings/display" label={t('title', { ns: 'display' })} />
+        <LangPill T={T} lang={language} to="/account/display" label={t('title', { ns: 'display' })} />
       </div>
     </div>
   );

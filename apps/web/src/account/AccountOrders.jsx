@@ -1,12 +1,11 @@
 // /account/orders — everything this account ordered, at every store, in one
-// list (the design's U4). The pills narrow it to one store; opened from a
-// store, that store's pill is already chosen. A row opens the order on the
-// store it was placed at, where its tracking and the store's contacts are.
+// list (the design's U4). The pills narrow it to one store. A row opens the
+// order on the store it was placed at, where its tracking and the store's
+// contacts are: inside that store its own page, from anywhere else a new tab.
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Card, List, liStyle } from '../PlatformKit';
-import { Head, OrderRow, dayText, storeName, useAccount } from './parts';
+import { Card, List, liStyle } from '../platform/PlatformKit';
+import { Go, Head, OrderRow, dayText, storeName, useAccount } from './parts';
 
 /** The rows shown before "show more", and how many each press adds. */
 const STEP = 10;
@@ -34,9 +33,9 @@ function FilterPill({ T, on, onClick, children, count }) {
 }
 
 export default function AccountOrders() {
-  const { T, dev, orders, origin } = useAccount();
+  const { T, dev, orders, away } = useAccount();
   const { ph, desk } = dev;
-  const { t, i18n } = useTranslation('platform');
+  const { t, i18n } = useTranslation('account');
 
   // The stores bought from, in the order of their latest order, with how many each has.
   const shops = useMemo(() => {
@@ -51,8 +50,7 @@ export default function AccountOrders() {
     return [...seen.values()];
   }, [orders]);
 
-  const start = origin?.kind === 'store' && shops.some((s) => s.sub === origin.sub) ? origin.sub : ALL;
-  const [shop, setShop] = useState(start);
+  const [shop, setShop] = useState(ALL);
   const [limit, setLimit] = useState(STEP);
   const pick = (sub) => { setShop(sub); setLimit(STEP); };
 
@@ -66,7 +64,7 @@ export default function AccountOrders() {
         <Card T={T} pad={16}>
           <p style={{ margin: 0, fontSize: 12.5, color: T.textDim }}>
             {t('me.noOrders')}{' '}
-            <Link to="/stores" style={{ color: T.accentFg, fontWeight: 600, textDecoration: 'none' }}>{t('me.browse')}</Link>
+            <Go {...away('/stores')} style={{ color: T.accentFg, fontWeight: 600, textDecoration: 'none' }}>{t('me.browse')}</Go>
           </p>
         </Card>
       ) : (

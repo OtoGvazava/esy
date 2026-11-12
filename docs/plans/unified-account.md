@@ -1,9 +1,55 @@
-# Plan — one account everywhere (option A: the hub at esy.ge/account)
+# Plan — one account everywhere
 
-Status: built 2026-11-12, W1–W5. Not pushed.
+Status: W1–W5 built and pushed 2026-11-12 (the hub at esy.ge/account). **Revised
+2026-11-13: the account is drawn inside every app** (R1–R4 below); built, not pushed.
 Design: canvas **esy Full Design**, page **Account** — https://claude.ai/artifact/6ucTyRHjsgpMJdWQLjU6Rz
-(boards U1–U6b, components AcctMenu and AcctNav; drawn 2026-11-12, not yet reviewed
-against a render).
+(U1–U7 as esy.ge draws them, S1–S8 inside a store, the back office and admin; AcctMenu and
+AcctNav on the Components page. Not reviewed against a render.)
+
+## Revision 2026-11-13 — the account inside every app
+
+The owner's review of the hub, four points:
+
+1. **Nobody leaves the store to manage their account.** The hub on esy.ge forwarded a
+   shopper out of the shop. Now the same sections are drawn inside every app, in its own
+   frame: `/account/...` on esy.ge, a store (its bar, its menu, its theme), the back
+   office (keeping `?tenant=`) and admin. The `?from=` return mechanism is gone with
+   the need for it.
+2. **Language and display is an account section** (`/account/display`), in the same
+   style as the others. `/settings/display` (and the store's older `language` and
+   `appearance` paths) forward to it. Signed out it still works, kept in the browser,
+   with the offer to sign in; every other section asks to sign in first.
+3. **Help opens in a new tab** from a store, the back office and admin: it is esy.ge's
+   page. The same rule holds for everything that leaves the app, so nothing else
+   navigates a person away: the back office from a store, the store from the back
+   office, esy.ge and the back office from admin, another store's order, "open a store".
+   Each carries the new-tab mark.
+4. **The store's Manage store button is gone** (bar and both headers, with the row the
+   headers kept for it). The account menu's back office row replaces it.
+
+### How it is built
+
+- **R1 — Sections without a host.** `apps/web/src/account/`: `AccountBody` (reads the
+  account once, the section list beside the page on a desktop, the guest state) and the
+  sections (`AccountHome`, `AccountOrders`, `AccountAddresses`, `AccountStores`,
+  `AccountPersonal`, `AccountDisplay`, and `HereBlock`, the overview's first block on a
+  store). An app tells the body its `app`, the store it is on (`here`), how a link to a
+  section is written there (`link`), and whether its own bar carries the title
+  (`showTitle`). Tokens come from the theme on `<html>`, so a store draws them in its
+  own theme.
+- **R2 — Four frames, one route list.** `router/accountRoutes.jsx` lists the sections
+  once; each table mounts it under its frame: `platform/account/AccountLayout`,
+  `pages/AccountPage` (title in the store's header line below a desktop),
+  `manager/ManagerAccount` and `admin/AdminAccount` (title and the way back in their bar).
+  No nav entry is current on `/account` in the back office and admin. Admin's sign-in
+  callback goes to its store list, as before.
+- **R3 — Links.** The menu's account rows are in-app links on every host; `away`
+  (esy.ge's pages) and `out` (any other app) open a new tab off esy.ge. The store's
+  language pill, checkout's "add phone" and the orders screen's "all orders" stay in the
+  store.
+- **R4 — Strings.** The account's strings are the `account` namespace (`gate`, `me`,
+  `hub`), replacing the legacy one nothing read, and every host loads it. Removed: the
+  origin block's strings, the old display screen's back links, `owner.manageStore`.
 
 ## The decision
 

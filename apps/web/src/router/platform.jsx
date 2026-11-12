@@ -2,8 +2,10 @@
 // storefront's, so the same path renders differently per host; its own chunk
 // too (router/index.jsx). The landing page comes with it, every other screen
 // is fetched when a link to it is pointed at or pressed.
+import { Navigate } from 'react-router-dom';
 import PlatformLanding from '../platform/PlatformLanding';
-import { accountLoader, addressesLoader, directoryLoader } from './platformLoaders';
+import { directoryLoader } from './platformLoaders';
+import { accountRoute } from './accountRoutes';
 import { lazyScreen } from './prime';
 
 const directory = lazyScreen(() => import('../platform/PlatformDirectory'));
@@ -19,22 +21,11 @@ export const routes = [
   { path: 'stores/:subdomain', lazy: directory, loader: directoryLoader },
   { path: 'sell', lazy: lazyScreen(() => import('../platform/PlatformRegistration')) },
   { path: 'create-store', lazy: lazyScreen(() => import('../platform/PlatformRegistration')) },
-  // The esy account (U2–U6): one frame, a section per route. The frame reads
-  // the account, so a section opens on what the frame already has.
-  {
-    path: 'account',
-    lazy: lazyScreen(() => import('../platform/account/AccountLayout')),
-    loader: accountLoader,
-    children: [
-      { index: true, lazy: lazyScreen(() => import('../platform/account/AccountHome')) },
-      { path: 'orders', lazy: lazyScreen(() => import('../platform/account/AccountOrders')) },
-      { path: 'addresses', lazy: lazyScreen(() => import('../platform/account/AccountAddresses')), loader: addressesLoader },
-      { path: 'stores', lazy: lazyScreen(() => import('../platform/account/AccountStores')) },
-      { path: 'personal', lazy: lazyScreen(() => import('../platform/account/AccountPersonal')) },
-    ],
-  },
-  // The display settings every store shares; the account's row leads here.
-  { path: 'settings/display', lazy: lazyScreen(() => import('../pages/DisplaySettings')) },
+  // The esy account (U2–U7), in esy.ge's own frame. Every app mounts the same
+  // sections (accountRoutes.jsx).
+  accountRoute(lazyScreen(() => import('../platform/account/AccountLayout'))),
+  // Language and display became an account section; old links land there.
+  { path: 'settings/display', element: <Navigate to="/account/display" replace /> },
   { path: 'signin', lazy: lazyScreen(() => import('../platform/PlatformAuth')) },
   // The footer has always linked to these; until now every one 404'd.
   { path: 'help', lazy: lazyScreen(() => import('../platform/PlatformHelp')) },

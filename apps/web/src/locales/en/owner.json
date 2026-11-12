@@ -100,7 +100,6 @@
   "storeSaveFailed": "Couldn't save the store",
   "settingsSaved": "Saved",
   "subdomainLocked": "{{domain}} · subdomain is locked",
-  "manageStore": "Manage store",
   "orderAdvance": {
     "shipped": "Mark shipped",
     "out_for_delivery": "Out for delivery",

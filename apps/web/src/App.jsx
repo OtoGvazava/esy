@@ -25,8 +25,9 @@ export function GoTo({ href }) {
 }
 
 // Storefront: shopping only (scope rule: no admin functions in the store).
-// Management lives at manager.esy.ge — the ManageButton on Home is the one
-// affordance, and the old /manage + /settings/store|config routes are gone.
+// Management lives at manager.esy.ge; the store's team reaches it from the
+// account menu's back office row, and the old /manage + /settings/store|config
+// routes are gone.
 // The routes themselves are router/store.jsx; this is the chrome around them.
 export function StoreLayout() {
   // The storefront takes two shapes, as the design specifies: a bar across the
