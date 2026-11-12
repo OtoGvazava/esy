@@ -10,10 +10,10 @@ export function sectionOf(pathname) {
   return m && SECTIONS.includes(m[1]) ? m[1] : '';
 }
 
-/** A section's title. `t` reads the `account` namespace. */
-export function sectionTitle(t, section) {
+/** A section's title. `t` reads the `account` namespace; inside a store, orders are that store's. */
+export function sectionTitle(t, section, app) {
   switch (section) {
-    case 'orders': return t('hub.ordersTitle');
+    case 'orders': return app === 'store' ? t('hub.hereOrdersTitle') : t('hub.ordersTitle');
     case 'addresses': return t('hub.addresses');
     case 'stores': return t('me.stores');
     case 'personal': return t('me.personal');

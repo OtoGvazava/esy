@@ -115,7 +115,9 @@ image builds the SPA itself.
   what does leave it opens in a new tab with the mark for it: esy.ge's help,
   another app, another store's order, and the two sections that are esy.ge's
   alone, orders from every store and my stores (only esy.ge's routes have
-  them: `accountRoute(..., { esy: true })`). Every app opens the one shared menu
+  them: `accountRoute(..., { esy: true })`). A store has its own orders section
+  instead, the orders placed there (`account/HereOrders`, `{ store: true }`),
+  and its overview is about that store alone. Every app opens the one shared menu
   (`components/account/AccountMenu.jsx`). The strings are the `account`
   namespace, loaded on all four hosts. Signed out, `/account/display` still
   works (kept in the browser). Never name a query parameter `store`,

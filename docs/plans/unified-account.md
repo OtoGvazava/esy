@@ -31,6 +31,13 @@ The owner's review of the hub, four points:
    back office and admin, the menu's "All orders", the section list's orders and my stores,
    the overview's "all orders" and "see all", and the store's orders screen open esy.ge's
    account in a new tab. Those two sections are no longer drawn in the other apps.
+6. **A store's account is about that store** (follow-up, 2026-11-13): inside a store,
+   `/account/orders` is the orders placed at that store (S2, `account/HereOrders`), with
+   "All orders" opening esy.ge's list in a new tab. The section list has "Orders at this
+   store" and then all orders and my stores, both marked as a new tab. The overview drops
+   all orders, my stores and the latest orders from every store: it is the store's block
+   and, below a desktop, the sections that stay in the store. The block's "see all" opens
+   the account's orders at this store.
 
 ### How it is built
 

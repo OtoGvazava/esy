@@ -1,8 +1,10 @@
 // /account — the overview (the design's U2; inside a store, S1). Who you are,
 // the stores you run or the offer to open one, the latest orders from every
 // store, and, below a desktop, the account's sections as rows: on a desktop
-// they are the list beside the page instead. Inside a store it opens with what
-// this account has at that store (HereBlock).
+// they are the list beside the page instead. Inside a store it is about that
+// store alone: what this account has there (HereBlock) and the sections that
+// stay in the store. Orders from every store and the stores you run are
+// esy.ge's, a new tab away in the side list and the account menu.
 import { useTranslation } from 'react-i18next';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { langInfo } from '../components/glow/GlowPrimitives';
@@ -14,7 +16,7 @@ import { Go, NewStoreLink, OrderRow, Row, StoreRow, phoneText, srOnly, useAccoun
 const RECENT = 3;
 
 export default function AccountHome() {
-  const { T, dev, app, user, stores, orders, addressCount, signOut, link, away, showTitle } = useAccount();
+  const { T, dev, app, here, user, stores, orders, addressCount, signOut, link, away, showTitle } = useAccount();
   const { ph, desk } = dev;
   const { t } = useTranslation('account');
   const { language, appearance } = useThemeMode();
@@ -22,9 +24,11 @@ export default function AccountHome() {
 
   const phone = user.phoneVerified && user.phoneNumber ? phoneText(user.phoneNumber) : '';
   const from = new Set(orders.map((o) => o.store?.subdomain).filter(Boolean)).size;
+  const inStore = app === 'store';
+  const hereCount = inStore ? orders.filter((o) => o.store?.subdomain === here).length : 0;
   const col = { display: 'flex', flexDirection: 'column', gap: ph ? 18 : 20, minWidth: 0 };
-  const grid = ph
-    ? { display: 'flex', flexDirection: 'column', gap: 18 }
+  const grid = ph || inStore
+    ? { display: 'flex', flexDirection: 'column', gap: ph ? 18 : 20, maxWidth: inStore && !ph ? 640 : undefined }
     : { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: desk ? 24 : 20, alignItems: 'start' };
   const block = { display: 'flex', flexDirection: 'column', gap: 10 };
   const linkStyle = { font: `600 12.5px ${T.font}`, color: T.accentFg, textDecoration: 'none' };
@@ -50,16 +54,20 @@ export default function AccountHome() {
 
       <div style={grid}>
         <div style={col}>
-          {app === 'store' && <HereBlock />}
+          {inStore && <HereBlock />}
 
           {!desk && (
             <section style={block}>
               <Lbl T={T} as="h2">{t('hub.account')}</Lbl>
               <List T={T}>
-                <Row
-                  T={T} icon="receipt" {...away('/account/orders')} label={t('hub.allOrders')} meta={orders.length}
-                  sub={from > 0 ? t('hub.fromStores', { count: from, n: from }) : null}
-                />
+                {inStore ? (
+                  <Row T={T} icon="bag" to={link('/account/orders')} label={t('hub.hereOrders')} meta={hereCount} />
+                ) : (
+                  <Row
+                    T={T} icon="receipt" {...away('/account/orders')} label={t('hub.allOrders')} meta={orders.length}
+                    sub={from > 0 ? t('hub.fromStores', { count: from, n: from }) : null}
+                  />
+                )}
                 <Row T={T} icon="pin" to={link('/account/addresses')} label={t('hub.addresses')} meta={addressCount} />
                 <Row T={T} icon="user" to={link('/account/personal')} label={t('me.personal')} />
                 <Row
@@ -73,6 +81,7 @@ export default function AccountHome() {
             </section>
           )}
 
+          {!inStore && (
           <section style={block}>
             <Lbl T={T} as="h2">{t('me.stores')}</Lbl>
             {stores.map((s) => <StoreRow key={s.subdomain} T={T} t={t} ph={ph} store={s} />)}
@@ -92,10 +101,11 @@ export default function AccountHome() {
               </div>
             )}
           </section>
+          )}
         </div>
 
         <div style={col}>
-          {!ph && (
+          {!ph && !inStore && (
             <section style={block}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <Lbl T={T} as="h2">{t('hub.recent')}</Lbl>

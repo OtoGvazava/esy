@@ -10,11 +10,11 @@ import { safeAccent } from '../core/tokens';
 import { Av, Chip, Lbl, List, initialsOf, liStyle } from '../platform/PlatformKit';
 import { Go, OrderRow, Row, isCancelled, officeUrl, outProps, storeName, useAccount } from './parts';
 
-/** The orders shown here: the latest two; the store's own orders page has the rest. */
+/** The orders shown here: the latest two; the account's orders at this store has the rest. */
 const LATEST = 2;
 
 export default function HereBlock() {
-  const { T, here, orders, out } = useAccount();
+  const { T, here, orders, out, link } = useAccount();
   const { t } = useTranslation('account');
   const { canManageStore, isStoreOwner } = useAuth();
   const { tenant } = useTenant();
@@ -33,7 +33,7 @@ export default function HereBlock() {
     <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <Lbl T={T} as="h2">{t('hub.hereStore')}</Lbl>
-        {mine.length > 0 && <Go to="/orders" style={linkStyle}>{t('hub.seeAll')}</Go>}
+        {mine.length > 0 && <Go to={link('/account/orders')} style={linkStyle}>{t('hub.seeAll')}</Go>}
       </div>
       <List T={T}>
         <div style={liStyle(T, !latest.length && !office)}>

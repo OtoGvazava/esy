@@ -228,14 +228,18 @@ export default function AccountBody({
   // Orders from every store and the stores you run are esy.ge's own sections:
   // anywhere else they open esy.ge in a new tab (router/accountRoutes.jsx).
   const esy = (path) => (out ? { href: platformUrl(path) } : { to: link(path) });
+  // Inside a store, its own orders come first and stay in the store.
+  const inStore = app === 'store' && !!here;
+  const hereCount = inStore ? orders.filter((o) => o.store?.subdomain === here).length : 0;
   const items = [
     { to: link('/account'), end: true, icon: 'grid', label: t('hub.overview') },
-    { ...esy('/account/orders'), icon: 'receipt', label: t('hub.orders'), n: orders.length },
+    inStore && { to: link('/account/orders'), icon: 'bag', label: t('hub.hereOrders'), n: hereCount },
+    { ...esy('/account/orders'), icon: 'receipt', label: out ? t('hub.allOrders') : t('hub.orders'), n: orders.length },
     { to: link('/account/addresses'), icon: 'pin', label: t('hub.addresses'), n: addressCount },
     { ...esy('/account/stores'), icon: 'store', label: t('me.stores'), n: stores.length || null },
     { to: link('/account/personal'), icon: 'user', label: t('me.personal') },
     { to: link('/account/display'), icon: 'screen', label: t('me.display') },
-  ];
+  ].filter(Boolean);
 
   return (
     <div style={wrapStyle(dev, padded)}>

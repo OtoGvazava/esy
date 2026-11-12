@@ -4,8 +4,8 @@
 // contacts are: inside that store its own page, from anywhere else a new tab.
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, List, liStyle } from '../platform/PlatformKit';
-import { Go, Head, OrderRow, dayText, storeName, useAccount } from './parts';
+import { Card, List } from '../platform/PlatformKit';
+import { Go, Head, OrderRow, ShownRow, dayText, storeName, useAccount } from './parts';
 
 /** The rows shown before "show more", and how many each press adds. */
 const STEP = 10;
@@ -81,24 +81,7 @@ export default function AccountOrders() {
             {shown.map((o) => (
               <OrderRow key={o.orderNumber || o.id} T={T} t={t} order={o} day={ph ? null : dayText(o.placed, i18n.language)} />
             ))}
-            <div style={{ ...liStyle(T, true), justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12.5, color: T.textDim, fontVariantNumeric: 'tabular-nums' }}>
-                {t('hub.shown', { shown: shown.length, total: list.length })}
-              </span>
-              {list.length > shown.length && (
-                <button
-                  type="button"
-                  onClick={() => setLimit((n) => n + STEP)}
-                  className="esy-press-soft"
-                  style={{
-                    height: ph ? 40 : 38, padding: '0 15px', borderRadius: 'var(--k-r-btn)', border: 0, cursor: 'pointer',
-                    background: 'transparent', color: T.text, boxShadow: `inset 0 0 0 1.5px ${T.border}`, font: `600 13.5px/1 ${T.font}`,
-                  }}
-                >
-                  {t('hub.more')}
-                </button>
-              )}
-            </div>
+            <ShownRow T={T} t={t} ph={ph} shown={shown.length} total={list.length} onMore={() => setLimit((n) => n + STEP)} />
           </List>
         </>
       )}

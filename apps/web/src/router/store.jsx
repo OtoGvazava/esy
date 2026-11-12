@@ -41,7 +41,7 @@ export const routes = [{
     { path: 'success', lazy: lazyScreen(() => import('../pages/OrderSuccess')) },
     // The esy account (S1–S5), inside the store: its bar, its menu, its theme.
     // Signed out the overview signs in, and language and display still works.
-    accountRoute(lazyScreen(() => import('../pages/AccountPage'))),
+    accountRoute(lazyScreen(() => import('../pages/AccountPage')), {}, { store: true }),
     { path: 'orders', lazy: lazyScreen(() => import('../pages/Orders')), loader: ordersLoader },
     { path: 'orders/:orderNumber', lazy: lazyScreen(() => import('../pages/OrderDetail')), loader: orderLoader },
     { path: 'signin', lazy: lazyScreen(() => import('../pages/SignIn')) },

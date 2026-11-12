@@ -126,6 +126,30 @@ export function OrderRow({ T, t, order, last, day, bare }) {
   );
 }
 
+/** A list's last row: how many are shown of how many, and "show more" while there are more. */
+export function ShownRow({ T, t, ph, shown, total, onMore }) {
+  return (
+    <div style={{ ...liStyle(T, true), justifyContent: 'space-between' }}>
+      <span style={{ fontSize: 12.5, color: T.textDim, fontVariantNumeric: 'tabular-nums' }}>
+        {t('hub.shown', { shown, total })}
+      </span>
+      {total > shown && (
+        <button
+          type="button"
+          onClick={onMore}
+          className="esy-press-soft"
+          style={{
+            height: ph ? 40 : 38, padding: '0 15px', borderRadius: 'var(--k-r-btn)', border: 0, cursor: 'pointer',
+            background: 'transparent', color: T.text, boxShadow: `inset 0 0 0 1.5px ${T.border}`, font: `600 13.5px/1 ${T.font}`,
+          }}
+        >
+          {t('hub.more')}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /**
  * A list row that goes somewhere: an icon, a label with an optional second
  * line, then a count or a chip, and a chevron. `to` stays in the app, `href`

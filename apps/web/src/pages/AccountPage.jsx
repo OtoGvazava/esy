@@ -29,7 +29,7 @@ export default function AccountPage() {
   return (
     <GlowScreen T={T} padBottom={isDesktop ? 48 : clearance + 28}>
       {!isDesktop && (
-        <GlowTopNav T={T} title={sectionTitle(t, section)} onBack={section ? () => navigate('/account') : undefined} />
+        <GlowTopNav T={T} title={sectionTitle(t, section, 'store')} onBack={section ? () => navigate('/account') : undefined} />
       )}
       <AccountBody
         app="store" T={T} here={tenant?.subdomain || null}
