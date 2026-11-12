@@ -31,6 +31,8 @@ import { CHANNELS, channelHref } from '../../core/channels';
 import ManageButton from '../ManageButton';
 import { useStoreBarMounted } from './storeChrome';
 import { useTenant } from '../../contexts/TenantContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { toggleAccountMenu, useAccountMenuState } from '../account/accountSheet';
 import { useDesign } from '../../core/design/useDesign';
 import { StoreName } from './VerifiedTick';
 
@@ -58,6 +60,13 @@ export default function StoreBar({ compact }) {
     ? store.coverUrl : null;
 
   const count = getTotalItems();
+  const { isAuthenticated } = useAuth();
+  const account = useAccountMenuState();
+  const accountBtn = {
+    width: 36, height: 36, borderRadius: '50%', display: 'inline-flex', padding: 0,
+    alignItems: 'center', justifyContent: 'center', background: 'transparent', cursor: 'pointer',
+    border: `1px solid ${T.border}`, color: T.textDim, textDecoration: 'none',
+  };
   const pill = {
     display: 'inline-flex', alignItems: 'center', gap: 6, height: 36,
     padding: '0 11px', borderRadius: 999, border: `1px solid ${T.border}`,
@@ -154,13 +163,19 @@ export default function StoreBar({ compact }) {
         <Icon.bag /> {count || 0}
       </Link>
 
-      <Link to="/account" aria-label={t('account', { defaultValue: 'Account' })} className="esy-press" style={{
-        width: 36, height: 36, borderRadius: '50%', display: 'inline-flex',
-        alignItems: 'center', justifyContent: 'center',
-        border: `1px solid ${T.border}`, color: T.textDim, textDecoration: 'none',
-      }}>
-        <Icon.user />
-      </Link>
+      {isAuthenticated ? (
+        // Signed in, it opens the account menu out of itself (StoreAccount.jsx).
+        <button
+          type="button" aria-label={t('account', { defaultValue: 'Account' })} aria-haspopup="menu" aria-expanded={account.open}
+          onClick={(e) => toggleAccountMenu(e.currentTarget)} className="esy-press" style={accountBtn}
+        >
+          <Icon.user />
+        </button>
+      ) : (
+        <Link to="/account" aria-label={t('account', { defaultValue: 'Account' })} className="esy-press" style={accountBtn}>
+          <Icon.user />
+        </Link>
+      )}
     </div>
   );
 

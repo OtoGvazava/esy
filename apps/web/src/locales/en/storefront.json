@@ -170,6 +170,7 @@
   },
   "orders": {
     "title": "Orders",
+    "allOnEsy": "All your orders on esy",
     "emptyTitle": "No orders yet",
     "emptyBody": "Your orders will show here after checkout.",
     "browse": "Browse {{name}}",

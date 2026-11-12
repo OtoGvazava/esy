@@ -13,7 +13,7 @@ import ProductDetails from '../pages/ProductDetails';
 import SearchOverlay from '../pages/SearchOverlay';
 import Cart from '../pages/Cart';
 import {
-  aboutLoader, accountLoader, checkoutLoader, homeLoader, orderLoader, ordersLoader, productLoader,
+  aboutLoader, checkoutLoader, homeLoader, orderLoader, ordersLoader, productLoader,
 } from './storeLoaders';
 import { lazyScreen, searchStays } from './prime';
 
@@ -25,6 +25,12 @@ const homeRevalidate = ({ currentUrl, nextUrl, defaultShouldRevalidate }) => (
   || currentUrl.searchParams.get('category') !== nextUrl.searchParams.get('category')
     ? defaultShouldRevalidate : false
 );
+
+// One screen with where it forwards to.
+const door = (to) => lazyScreen(() => import('../pages/AccountDoor').then((m) => {
+  const Door = m.default;
+  return { default: () => <Door to={to} /> };
+}));
 
 export const routes = [{
   element: <StoreLayout />,
@@ -38,8 +44,10 @@ export const routes = [{
     { path: 'checkout', lazy: lazyScreen(() => import('../pages/Checkout')), loader: checkoutLoader, shouldRevalidate: searchStays },
     { path: 'pay/return', lazy: lazyScreen(() => import('../pages/PayReturn')) },
     { path: 'success', lazy: lazyScreen(() => import('../pages/OrderSuccess')) },
-    { path: 'account', lazy: lazyScreen(() => import('../pages/Account')), loader: accountLoader },
-    { path: 'account/personal', lazy: lazyScreen(() => import('../pages/PersonalDetails')) },
+    // The account lives on esy.ge. Signed out, this is where the menu's account
+    // item signs in; signed in, an old link is forwarded there (AccountDoor).
+    { path: 'account', lazy: door('/account') },
+    { path: 'account/personal', lazy: door('/account/personal') },
     { path: 'orders', lazy: lazyScreen(() => import('../pages/Orders')), loader: ordersLoader },
     { path: 'orders/:orderNumber', lazy: lazyScreen(() => import('../pages/OrderDetail')), loader: orderLoader },
     { path: 'signin', lazy: lazyScreen(() => import('../pages/SignIn')) },
@@ -60,4 +68,4 @@ export const routes = [{
 }];
 
 /** Where a shopper goes next from the shop, warmed once the page is idle. */
-export const next = ['/orders', '/account', '/checkout'];
+export const next = ['/orders', '/checkout'];

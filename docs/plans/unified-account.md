@@ -147,30 +147,60 @@ Orders: one list from `/api/account`, store pills counted in the page, the first
 with "show more" as `PlatformAccount` does today. A row opens the order on its own
 store (`storeUrl(store)/orders/<n>`), as now.
 
-### W3 — The account menu, on esy.ge, the back office and admin
+### W3 — The account menu, on esy.ge, the back office and admin — done 2026-11-12
 
-- `apps/web/src/components/account/AccountMenu.jsx` and a small stylesheet on the
-  `--k-*` tokens every host already sets, so it needs no host's kit. Props: `app`
-  (`store`, `platform`, `manager`, `admin`), `sheet` (the host's own device hook
-  decides), the anchor's placement. `usePresence` for the fade, focus kept inside,
-  Escape and an outside press close it.
-- Counts come from `accountQuery()`, read when the menu first opens and cached.
-- Mounted in `PTopBar` (the avatar becomes a button), `ManagerShell` (replaces `Account`)
-  and `AdminShell` (replaces `UserMenu`).
+- `apps/web/src/components/account/AccountMenu.jsx` and `styles/account-menu.css`, on
+  the `--k-*` tokens every host already sets, so it needs no host's kit. Props: `app`
+  (`store`, `platform`, `manager`, `admin`), `sheet` and `wide` (the host's own device
+  hook decides: a sheet on a phone, a floating one on a tablet), `anchor` (`below` a bar's
+  control, `above` a sidebar's), `store`. The host renders the control itself and
+  spreads `triggerProps` on it.
+- **The popover is a portal, fixed to its control's place**, not a child of the control's
+  box: the back office sidebar scrolls, so it clips anything wider than its 256 px, and
+  the menu is 340.
+- Arrow keys, Home and End move between rows; Escape closes and returns to the control;
+  an outside press closes the popover, the scrim closes the sheet.
+- Counts come from `accountQuery()`, read when the menu first opens and cached. Rows do
+  not come and go with it: "my stores" is always there on esy.ge.
+- Strings are `navbar.acct.*`: `navbar` is in the shared namespaces, so no host list
+  changed.
+- Mounted in `PTopBar` (the avatar is a button now), `ManagerShell` (`Account`: sidebar
+  row, the rail's avatar, which had no menu before, and the phone header) and
+  `AdminShell` (`UserMenu`, its three places).
+- Checked in the docker stack on all three hosts: popover placement on a desktop, the
+  sheet on a tablet and a phone, every link and its origin query, the keys. Not checked:
+  the store app's rows (W4 mounts them), and pressing sign out.
 
-### W4 — The store
+### W4 — The store — done 2026-11-12
 
-- The account button in `StoreBar` and the account item of the bottom menu open the menu
-  when signed in. `useStoreNav`'s account item gains a press handler in place of `to`;
-  `GlowDock` and the six menus in `StoreMenus` must draw an item that is a button. This
-  is the fiddly part of the plan.
-- `/account` and `/account/personal` on a store become forwards to the hub with the
-  origin (`GoTo`, as `/create-store` does), so bookmarks keep working.
-- `/orders`, `/orders/:orderNumber` and `/settings/display` stay on the store. `/orders`
-  gains a link to all orders on esy.ge.
+- **One menu for the whole store**, mounted once by the store's layout
+  (`components/account/StoreAccount.jsx`) and fetched the first time it is opened.
+  `accountSheet.js` holds whether it is open and which control opened it.
+- Signed in, the bar's account button (`StoreBar`) opens it as a popover out of itself;
+  the account item of the store's menu opens it as a sheet. `useStoreNav`'s account item
+  carries `press`: the button-drawn menus (`GlowDock`: tab bar, capsule, icon island) call
+  it instead of navigating, and the link-drawn ones (`StoreMenus`: top tabs, side menu,
+  action button) keep the link and answer its click. Signed out nothing changes: the
+  item is a link to `/account`, which signs in.
+- The back office row comes from the session's own flags (`storeRole`), so it is there
+  from the first frame. Platform ADMIN grants nothing inside a store.
+- `/account` and `/account/personal` are `pages/AccountDoor.jsx`: sign-in when signed
+  out, a forward to the hub with the store as its origin when signed in.
+- After signing in on a store, `AuthCallback` returns to the shop, not to `/account`,
+  which would now forward to esy.ge.
+- Display settings on a store go back to the shop; checkout's "add phone" goes to the
+  hub's personal details; the closed-store page's "my orders" goes to the hub's orders;
+  the store's orders screen links to all orders on the hub.
+- Layering: the menu is at 1300, above a store's floating menu (1200) and filter sheet
+  (1295), under the registration gate (3000). It was 90 and the store's menu covered it.
 - Deleted: `pages/Account.jsx`, `pages/PersonalDetails.jsx`, the store's `accountLoader`,
-  and `/account` from the store's `next` list. `components/ProfileMenu.jsx` and
-  `MobileFooter.jsx` look unreferenced already; confirm, then delete.
+  `/account` from the store's `next` list, `components/ProfileMenu.jsx` and
+  `MobileFooter.jsx` (nothing imported either).
+- Checked in the docker stack: the popover on a desktop, the sheet on a phone and a
+  tablet, five of the six menu styles (tabs, top tabs, side menu, capsule, action
+  button; the icon island shares the capsule's code), the forwards, the orders link and
+  the signed-out path. Not checked: a real Google sign-in returning to the shop, and
+  pressing sign out.
 
 ### W5 — Strings, checks, records
 

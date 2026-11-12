@@ -69,7 +69,7 @@ export default function StoreClosed() {
           <h1 className="h1">{t('closed.title')}</h1>
           <p className="dim">{t('closed.body', { domain })}</p>
           <div className="stk" style={{ gap: 10, width: '100%' }}>
-            <a href={platformUrl('/account')} className="btn btn-p btn-lg btn-b">{t('closed.myOrders')}</a>
+            <a href={platformUrl('/account/orders')} className="btn btn-p btn-lg btn-b">{t('closed.myOrders')}</a>
             <a href={platformUrl('/stores')} className="btn btn-g btn-b">{t('closed.otherStores')}</a>
           </div>
         </div>

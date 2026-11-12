@@ -176,6 +176,7 @@
     "heading": "შენი შეკვეთები",
     "orderCount_one": "{{count}} შეკვეთა",
     "orderCount_other": "{{count}} შეკვეთა",
+    "allOnEsy": "ყველა შეკვეთა esy-ზე",
     "itemCount_one": "{{count}} ნივთი",
     "itemCount_other": "{{count}} ნივთი",
     "signInRequired": "შეკვეთების სანახავად შედი ანგარიშზე.",
