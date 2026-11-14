@@ -61,6 +61,8 @@
     "displayMeta": "{{language}} · {{appearance}}",
     "help": "დახმარება",
     "signOut": "გასვლა",
+    "signIn": "შესვლა",
+    "signInSub": "იყიდე ნებისმიერ მაღაზიაში ან გახსენი შენი",
     "newTab": "იხსნება ახალ ჩანართში"
   }
 }

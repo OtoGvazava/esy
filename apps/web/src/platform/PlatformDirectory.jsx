@@ -1,14 +1,86 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePlatform, useStores, PTopBar, PFooter, StatusPill } from './PlatformShared';
-import { usePDevice } from './PlatformKit';
+import { Btn, Glyph, IconBtn, Lbl, type, usePDevice } from './PlatformKit';
 import { CATEGORIES, storeInitials, storeUrl } from './platformData';
-import { StoreList, StoreListSkeleton, StoresViewSwitch } from './DirectoryViews';
+import { StoreList, StoreListSkeleton, StoresViewSwitch, ViewGlyph } from './DirectoryViews';
 import { useDisplayPrefs } from '../contexts/DisplayPrefsContext';
 import { STORE_VIEWS } from '../core/display/prefs';
 import { alpha } from '../core/tokens';
+import { usePresence } from '../core/usePresence';
 import { Skeleton } from '../components/skeleton/Skeleton';
+
+// A phone's sheet lists the views rows first: rows are what it starts on.
+const SHEET_VIEWS = ['list', 'photos', 'compact', 'cover'];
+
+/**
+ * A phone's sort and view in one sheet (the design's L1e), behind the button
+ * beside the search: the two controls took a row of their own above the
+ * stores. A choice applies at once; the sheet stays open until it is closed.
+ */
+function SortViewSheet({ T, t, open, onClose, sort, onSort, view, onView }) {
+  const { mounted, state } = usePresence(open, 240);
+  const titleId = useId();
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+  if (!mounted) return null;
+  const ty = type(T, false);
+  const seg = (on) => ({
+    flex: 1, height: 40, border: 0, borderRadius: 'calc(var(--k-r-btn) - 4px)', cursor: 'pointer', padding: '0 10px',
+    background: on ? T.surface : 'transparent', color: on ? T.text : T.textDim,
+    font: `${on ? 600 : 500} 13.5px ${T.font}`, boxShadow: on ? '0 1px 4px rgba(0,0,0,.14)' : 'none', whiteSpace: 'nowrap',
+  });
+  const tile = (on) => ({
+    display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', padding: 16, cursor: 'pointer',
+    borderRadius: 'var(--k-r-card)', textAlign: 'left', font: `600 14px ${T.font}`, color: T.text,
+    background: on ? `color-mix(in oklab, ${T.accent} 7%, ${T.surface})` : T.surface,
+    border: `1.5px solid ${on ? T.accent : T.border}`,
+  });
+  return createPortal(
+    <>
+      <div aria-hidden="true" onClick={onClose} className="esy-scrim" data-state={state} style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(8,8,12,0.44)' }} />
+      <section
+        role="dialog" aria-modal="true" aria-labelledby={titleId} className="esy-sheet" data-state={state} inert={!open}
+        style={{
+          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1201, maxHeight: '88vh', overflowY: 'auto', boxSizing: 'border-box',
+          display: 'flex', flexDirection: 'column', gap: 14, padding: '10px 16px calc(env(safe-area-inset-bottom, 0px) + 18px)',
+          borderRadius: 'var(--k-r-sheet) var(--k-r-sheet) 0 0', background: T.surface, border: 'var(--k-fl-bd)', borderBottom: 0,
+          boxShadow: '0 -14px 40px -10px rgba(0,0,0,.28)', color: T.text, font: `400 14px ${T.font}`,
+        }}
+      >
+        <span aria-hidden="true" style={{ width: 42, height: 5, borderRadius: 3, background: T.border, alignSelf: 'center', flex: 'none' }} />
+        <h2 id={titleId} style={ty.h2}>{t('directory.sortView')}</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Lbl T={T}>{t('directory.sortBy')}</Lbl>
+          <div role="radiogroup" aria-label={t('directory.sortBy')} style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 'var(--k-r-btn)', background: T.surface2 }}>
+            {[['new', t('directory.sortNew')], ['az', t('directory.sortAZ')]].map(([k, label]) => (
+              <button key={k} type="button" role="radio" aria-checked={sort === k} onClick={() => onSort(k)} style={seg(sort === k)}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Lbl T={T}>{t('directory.view.label')}</Lbl>
+          <div role="radiogroup" aria-label={t('directory.view.label')} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+            {SHEET_VIEWS.map((v) => (
+              <button key={v} type="button" role="radio" aria-checked={view === v} onClick={() => onView(v)} style={tile(view === v)}>
+                <span style={{ display: 'inline-flex', color: view === v ? T.accentFg : T.text }}><ViewGlyph view={v} /></span>
+                {t(`directory.view.${v}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Btn T={T} kind="p" block onClick={onClose}>{t('directory.done')}</Btn>
+      </section>
+    </>,
+    document.body,
+  );
+}
 
 function QuickView({ T, t, store, onClose }) {
   return (
@@ -76,32 +148,44 @@ export default function PlatformDirectory() {
 
   const open = subdomain ? list.find((s) => s.subdomain === subdomain) : null;
   const isEmpty = !loading && filtered.length === 0;
-  // How the stores are drawn: the shopper's choice (photos until they make
-  // one), kept in this browser and, signed in, on their esy account.
+  // How the stores are drawn: the shopper's choice, kept in this browser and,
+  // signed in, on their esy account. Until they make one a phone shows rows
+  // (seven stores to a screen where a photo card showed one and a half) and
+  // wider screens show photos.
   const dev = usePDevice();
   const display = useDisplayPrefs();
-  const view = display?.storesView || STORE_VIEWS[0];
-  // A phone has no room for the sort's label beside the view switch, so it
-  // shows the order alone there and says the label to a screen reader.
+  const chosen = display?.prefs?.stores;
+  const view = STORE_VIEWS.includes(chosen) ? chosen : (dev.ph ? 'list' : STORE_VIEWS[0]);
+  const pickView = (v) => display?.setStoresView(v);
+  const [sheet, setSheet] = useState(false);
   const sortValue = sort === 'new' ? t('directory.sortNew') : t('directory.sortAZ');
+  // Tablet and desktop: the sort and the view switch beside (or under) the
+  // search. A phone has both in one sheet (SortViewSheet).
   const sortButton = (
     <button
       onClick={() => setSort(sort === 'new' ? 'az' : 'new')}
-      aria-label={dev.ph ? `${t('directory.sort')} ${sortValue}` : undefined}
       style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0, height: 52, padding: '0 16px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`, font: `600 13px ${T.font}`, color: T.text, cursor: 'pointer', whiteSpace: 'nowrap' }}
     >
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ flex: 'none' }}><path d="M3 6h18M6 12h12M10 18h4" /></svg>
-      {!dev.ph && t('directory.sort')} <span style={{ color: T.textDim, overflow: 'hidden', textOverflow: 'ellipsis' }}>{sortValue}</span>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" style={{ flex: 'none' }}><path d="M3 6h18M6 12h12M10 18h4" /></svg>
+      {t('directory.sort')} <span style={{ color: T.textDim, overflow: 'hidden', textOverflow: 'ellipsis' }}>{sortValue}</span>
     </button>
   );
-  const viewSwitch = <StoresViewSwitch T={T} t={t} view={view} onPick={(v) => display?.setStoresView(v)} />;
+  const viewSwitch = <StoresViewSwitch T={T} t={t} view={view} onPick={pickView} />;
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, font: `400 14px ${T.font}` }}>
       <PTopBar current="browse" />
 
-      <div style={{ position: 'relative', padding: isDesktop ? '52px 56px 28px' : '20px 22px 8px', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', padding: isDesktop ? '52px 56px 28px' : dev.ph ? `6px ${dev.gut}px 8px` : '20px 22px 8px', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -120, left: '40%', right: '20%', height: 320, background: `radial-gradient(60% 80% at 50% 30%, ${alpha(T.accent, 0.16)}, transparent 70%)`, filter: 'blur(40px)', pointerEvents: 'none' }} />
+        {/* A phone: the title and the count on one line, so the stores start higher. */}
+        {dev.ph && (
+          <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: '4px 12px', marginBottom: 12 }}>
+            <h1 style={{ font: `700 26px/1.15 ${T.font}`, color: T.text, letterSpacing: '-0.02em', margin: 0 }}>{t('directory.everyStore')}</h1>
+            <span style={{ font: `400 12.5px ${T.font}`, color: T.textDim, whiteSpace: 'nowrap' }}>{t('directory.count', { count: list.length, n: list.length })}</span>
+          </div>
+        )}
+        {!dev.ph && (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 11px', borderRadius: 999, background: T.accentBg, color: T.accentFg, font: `600 11px ${T.font}`, letterSpacing: '0.14em', marginBottom: 16 }}>
@@ -114,15 +198,26 @@ export default function PlatformDirectory() {
             <button onClick={() => navigate('/sell')} style={{ height: 44, padding: '0 18px', borderRadius: 14, border: 'none', background: T.grad, color: T.onAccent, font: `700 13px ${T.font}`, cursor: 'pointer', boxShadow: `0 10px 28px ${alpha(T.accent, 0.33)}`, whiteSpace: 'nowrap' }}>+ {t('directory.openStore')}</button>
           )}
         </div>
+        )}
 
-        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: isDesktop ? 'minmax(0, 1fr) auto auto' : 'minmax(0, 1fr)', gap: 12, alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 52, padding: '0 14px 0 18px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}` }}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ color: T.textDim }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('directory.searchPlaceholder')} style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', color: T.text, font: `400 14px ${T.font}` }} />
+        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: isDesktop ? 'minmax(0, 1fr) auto auto' : dev.ph ? 'minmax(0, 1fr) auto' : 'minmax(0, 1fr)', gap: dev.ph ? 10 : 12, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, height: 52, padding: '0 14px 0 18px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}` }}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" style={{ color: T.textDim, flex: 'none' }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t(dev.ph ? 'directory.searchShort' : 'directory.searchPlaceholder')} aria-label={t('directory.searchShort')} style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: T.text, font: `400 ${dev.ph ? 16 : 14}px ${T.font}` }} />
           </div>
-          {/* The sort and the view switch: beside the search on a desktop, on a row of their own below it elsewhere. */}
-          {isDesktop ? <>{sortButton}{viewSwitch}</> : (
+          {/* The sort and the view switch: beside the search on a desktop, on a
+              row of their own below it on a tablet, behind one button on a phone. */}
+          {isDesktop && <>{sortButton}{viewSwitch}</>}
+          {!isDesktop && !dev.ph && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>{sortButton}{viewSwitch}</div>
+          )}
+          {dev.ph && (
+            <IconBtn
+              T={T} label={t('directory.sortView')} aria-haspopup="dialog" aria-expanded={sheet} onClick={() => setSheet(true)}
+              style={{ width: 52, height: 52, borderRadius: 14, background: T.surface, border: `1px solid ${T.border}` }}
+            >
+              <Glyph name="sliders" />
+            </IconBtn>
           )}
         </div>
 
@@ -172,6 +267,12 @@ export default function PlatformDirectory() {
 
       <PFooter compact />
       {open && <QuickView T={T} t={t} store={open} onClose={() => navigate('/stores')} />}
+      {dev.ph && (
+        <SortViewSheet
+          T={T} t={t} open={sheet} onClose={() => setSheet(false)}
+          sort={sort} onSort={setSort} view={view} onView={pickView}
+        />
+      )}
     </div>
   );
 }

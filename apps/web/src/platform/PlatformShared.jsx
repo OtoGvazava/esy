@@ -150,7 +150,64 @@ function useSectionLink() {
   };
 }
 
-// The design's PlatTop. Phone: the mark, the open-a-store button and a menu.
+/**
+ * The phone's bottom menu (the design's PlatTop on a phone): home, the stores,
+ * selling and the account, where the bar's button, links and menu used to be.
+ * Selling is the back office for an account and the offer to open a store for
+ * a guest. The account tab opens the menu every app has; signed out, that menu
+ * holds the way in, the language and display settings, and help.
+ */
+function PDock({ T }) {
+  const { t } = useTranslation('platform');
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const at = (p) => (p === '/' ? pathname === '/' : pathname === p || pathname.startsWith(`${p}/`));
+  const tab = (on) => ({
+    position: 'relative', flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column',
+    alignItems: 'center', gap: 3, padding: '7px 2px 6px', borderRadius: 14, border: 0,
+    background: 'transparent', cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap',
+    font: `${on ? 600 : 400} 11px/13px ${T.font}`, color: on ? T.accentFg : T.textDim,
+  });
+  const cur = (on) => (on ? 'page' : undefined);
+  return (
+    <nav
+      aria-label={t('chrome.navLabel')}
+      style={{
+        position: 'fixed', zIndex: 30, left: 12, right: 12,
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 10px)',
+        display: 'flex', padding: '6px 4px', borderRadius: 'var(--k-r-dock)', boxSizing: 'border-box',
+        background: 'var(--k-fl-bg)', border: 'var(--k-fl-bd)', boxShadow: 'var(--k-fl-sh)',
+        viewTransitionName: 'esy-pdock',
+      }}
+    >
+      <Link to="/" aria-current={cur(at('/'))} className="esy-press-soft" style={tab(at('/'))}>
+        <Glyph name="home" />{t('chrome.tabHome')}
+      </Link>
+      <Link to="/stores" aria-current={cur(at('/stores'))} className="esy-press-soft" style={tab(at('/stores'))}>
+        <Glyph name="store" />{t('chrome.stores')}
+      </Link>
+      {isAuthenticated ? (
+        <a href={managerUrl('/')} className="esy-press-soft" style={tab(false)}>
+          <Glyph name="plusO" />{t('chrome.tabSell')}
+        </a>
+      ) : (
+        <Link to="/sell" aria-current={cur(at('/sell'))} className="esy-press-soft" style={tab(at('/sell'))}>
+          <Glyph name="plusO" />{t('chrome.tabSell')}
+        </Link>
+      )}
+      <AccountMenu app="platform" sheet wrapStyle={{ flex: '1 1 0', minWidth: 0, display: 'flex' }} onSignedOut={() => navigate('/')}>
+        {({ triggerProps }) => (
+          <button type="button" {...triggerProps} className="esy-press-soft" style={tab(at('/account'))}>
+            <Glyph name="user" />{t('chrome.tabAccount')}
+          </button>
+        )}
+      </AccountMenu>
+    </nav>
+  );
+}
+
+// The design's PlatTop. Phone: the mark alone, and the bottom menu (PDock).
 // Tablet: two links (prices and help would not fit), the language, sign in,
 // the button and the menu. Desktop: four links and no menu. Signed in, the
 // avatar and "my store" take the place of sign-in and the open button.
@@ -168,8 +225,10 @@ export function PTopBar({ current = 'none', cta = true, below = null }) {
   // Below a desktop the bar, and the way back a page puts under it, stay at
   // the top while the page scrolls: a page opened in a new tab has no browser
   // back, and a long one should not have to be scrolled to its top to leave.
+  // A phone has its bottom menu for that, so its bar pins only when a page
+  // puts a way back under it.
   const [marker, stuck] = useStuck();
-  const pin = !desk;
+  const pin = !desk && (!ph || !!below);
   // The scrim dims the page under the bar, not the bar itself: measured when the menu opens.
   const [scrimTop, setScrimTop] = useState(0);
   const toggleMenu = () => {
@@ -272,16 +331,18 @@ export function PTopBar({ current = 'none', cta = true, below = null }) {
         </nav>
       )}
 
+      {/* A phone's bar is the mark alone: all of this is in its bottom menu. */}
+      {!ph && (
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 3 }}>
-        {!ph && <LangBtn T={T} ph={ph} />}
+        <LangBtn T={T} ph={ph} />
         {isAuthenticated && avatar}
-        {!isAuthenticated && !ph && (
+        {!isAuthenticated && (
           <Btn T={T} size="sm" ph={ph} to="/signin">{t('chrome.signIn')}</Btn>
         )}
         {!isAuthenticated && cta && (
           <Btn T={T} kind="p" size="sm" ph={ph} to="/sell">{t('chrome.openStore')}</Btn>
         )}
-        {isAuthenticated && !ph && (
+        {isAuthenticated && (
           <Btn T={T} kind="s" size="sm" ph={ph} href={managerUrl('/')}>{t('chrome.myStore')}</Btn>
         )}
         {!desk && (
@@ -296,8 +357,9 @@ export function PTopBar({ current = 'none', cta = true, below = null }) {
           </IconBtn>
         )}
       </div>
+      )}
 
-      {menu && !desk && (
+      {menu && !desk && !ph && (
         <>
           <div
             aria-hidden="true"
@@ -347,6 +409,7 @@ export function PTopBar({ current = 'none', cta = true, below = null }) {
     </header>
     {below}
     </div>
+    {ph && <PDock T={T} />}
     </>
   );
 }
@@ -398,7 +461,8 @@ export function PFooter() {
   return (
     <footer style={{
       borderTop: `1px solid ${T.border}`, background: T.surface, color: T.text, font: `400 14px/1.45 ${T.font}`,
-      padding: `${ph ? 24 : 32}px ${gut}px ${ph ? 20 : 24}px`,
+      // A phone's last row clears the bottom menu that floats over the page's end.
+      padding: ph ? `24px ${gut}px calc(96px + env(safe-area-inset-bottom, 0px))` : `32px ${gut}px 24px`,
       display: 'flex', flexDirection: 'column', gap: ph ? 16 : 24, flex: 'none',
     }}>
       <div style={{ display: 'flex', flexDirection: ph ? 'column' : 'row', gap: ph ? 18 : 40 }}>
@@ -433,19 +497,5 @@ export function PFooter() {
         <LangBtn T={T} ph={ph} style={{ marginLeft: 'auto' }} />
       </div>
     </footer>
-  );
-}
-
-// Subtle striped placeholder used in store cards.
-export function StoreArtStrip({ store, height = 96 }) {
-  return (
-    <div style={{
-      height, width: '100%', borderRadius: 12,
-      background: `linear-gradient(135deg, ${store.primaryColor}24 0%, ${(store.secondaryColor || store.primaryColor)}18 100%)`,
-      position: 'relative', overflow: 'hidden',
-    }}>
-      <div style={{ position: 'absolute', inset: 0, background: `repeating-linear-gradient(135deg, ${store.primaryColor}14 0 14px, transparent 14px 28px)` }} />
-      <div style={{ position: 'absolute', right: -30, top: -30, width: 110, height: 110, borderRadius: '50%', background: `radial-gradient(circle, ${store.primaryColor}55 0%, transparent 70%)`, filter: 'blur(8px)' }} />
-    </div>
   );
 }

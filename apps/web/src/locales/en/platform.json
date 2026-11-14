@@ -280,9 +280,7 @@
     "h2d": "Upload photos, set prices, choose your brand color. Two minutes per item.",
     "h3": "Go live, no review",
     "h3d": "Your store is public the moment you save. Share the link and start selling.",
-    "featuredEyebrow": "Featured · this week",
     "discover": "Discover the stores",
-    "seeAll": "See all →",
     "fee": "Flat 2% per sale",
     "feeBody": "No subscription. No listing fees. No surprise tiers. You keep 98% of every sale.",
     "feeListing": "Listing fees",
@@ -292,7 +290,15 @@
     "h4d": "Money goes straight to your bank account. esy takes 2% of a sale and never holds the rest.",
     "factFree": "Free to open",
     "factFee": "2% of each sale",
-    "factCards": "Card payments"
+    "factCards": "Card payments",
+    "discoverLabel": "Independent stores",
+    "discoverAll": "All {{n}} stores",
+    "discoverAllShort": "All · {{n}}",
+    "discoverFilter": "Filter stores by category",
+    "shelfPrev": "Previous stores",
+    "shelfNext": "More stores",
+    "looksTitle": "Pick a ready-made look",
+    "looksCount": "{{n}} looks"
   },
   "directory": {
     "storeCount": "{{n}} shops · live",
@@ -313,6 +319,12 @@
     "openAStore": "+ Open a store",
     "visitStore": "Visit {{host}}",
     "verified": "Verified",
+    "sortView": "Sort and view",
+    "sortBy": "Sort",
+    "done": "Done",
+    "searchShort": "Search stores",
+    "count_one": "{{n}} store",
+    "count_other": "{{n}} stores",
     "view": {
       "label": "Stores view",
       "photos": "Photos",
@@ -396,6 +408,9 @@
     "returns": "Returns",
     "sellerTerms": "Seller terms",
     "tagline": "Your online store in a few minutes — in Georgia.",
+    "tabHome": "Home",
+    "tabSell": "Sell",
+    "tabAccount": "Account",
     "rights": "© 2026 esy · Tbilisi"
   },
   "lost": {

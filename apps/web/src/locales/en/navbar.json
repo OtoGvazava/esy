@@ -61,6 +61,8 @@
     "displayMeta": "{{language}} · {{appearance}}",
     "help": "Help",
     "signOut": "Sign out",
+    "signIn": "Sign in",
+    "signInSub": "Buy from any store, or open your own",
     "newTab": "opens in a new tab"
   }
 }

@@ -101,7 +101,9 @@ export function DisplayPrefsProvider({ children }) {
     if (shop) setPrefs((p) => normalizePrefs({ ...p, views: withView(p.views, shop, view) }));
   }, [shop]);
   const setStoresView = useCallback(
-    (v) => setPref('stores', v === STORE_VIEWS[0] ? undefined : v),
+    // Kept as chosen, the first view too: unchosen means rows on a phone and
+    // photos on wider screens, so "photos" picked on a phone has to stay picked.
+    (v) => setPref('stores', v),
     [setPref],
   );
 
@@ -185,8 +187,10 @@ export function DisplayPrefsProvider({ children }) {
   const [platform] = useState(isPlatformHost);
   const platformUser = platform ? user?.id ?? null : null;
   const stores = prefs.stores || STORE_VIEWS[0];
-  const storesNow = useRef(stores);
-  useEffect(() => { storesNow.current = stores; }, [stores]);
+  // The view as chosen, or null while nobody has: only a choice is sent to the account.
+  const chosen = prefs.stores || null;
+  const storesNow = useRef(chosen);
+  useEffect(() => { storesNow.current = chosen; }, [chosen]);
   const account = useRef(null); // the account's settings, as last read or written here
   const [platformSynced, setPlatformSynced] = useState(null);
 
@@ -211,16 +215,16 @@ export function DisplayPrefsProvider({ children }) {
 
   useEffect(() => {
     if (!platformUser || platformSynced !== platformUser || !account.current) return;
-    if ((account.current.stores || STORE_VIEWS[0]) === stores) return;
-    // The view is always named, the first one too: an account esy.ge alone
-    // has written to then reads, in a store, as one with no settings of the
-    // store's yet, rather than as one whose every setting was put back.
-    const next = normalizePrefs({ ...account.current, stores });
+    if (!chosen || account.current.stores === chosen) return;
+    // A chosen view is always named, the first one too: an account esy.ge
+    // alone has written to then reads, in a store, as one with no settings of
+    // the store's yet, rather than as one whose every setting was put back.
+    const next = normalizePrefs({ ...account.current, stores: chosen });
     account.current = next;
     accountApi.putDisplayPrefs(next).catch(() => {
       /* This browser still has the choice, and the next change sends it again. */
     });
-  }, [platformUser, platformSynced, stores]);
+  }, [platformUser, platformSynced, chosen]);
 
   const value = useMemo(() => ({
     store,

@@ -102,6 +102,16 @@ image builds the SPA itself.
   of the display settings: in the browser for a guest, on the account when
   signed in. It is the only setting esy.ge writes there, merged over what the
   account holds so a store's language and light / dark are left alone.
+- **esy.ge on a phone** (the design's PlatTop, O1, O1b, L1, L1e): the bar is
+  the mark alone and a bottom menu (`PDock` in `platform/PlatformShared.jsx`)
+  carries home, stores, selling and the account; `PTopBar` draws it, so every
+  page with the bar has it. The account tab opens the shared account menu,
+  which for a guest holds sign-in, language and display, and help. The landing
+  runs offer, stores (a shelf, stores with product photos first), looks, steps,
+  prices. The directory starts on rows on a phone, with sort and view in one
+  sheet; an unchosen `stores` setting means rows on a phone and photos on wider
+  screens, so a choice is kept as chosen, `photos` too. Tablet and desktop
+  headers are unchanged.
 - **Shopper display settings**: `GET`/`PUT /api/account/display-prefs`
   (`users.display_prefs`). It sits under `/api/account/`, so an account
   without a verified phone can still save them.

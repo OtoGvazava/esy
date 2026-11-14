@@ -6,7 +6,8 @@
 //   lang        ka | en               (kept by useAppTheme, synced from here)
 //   appearance  light | dark | auto   (kept by useAppTheme, synced from here)
 //   text        s | m | l | xl        absent: m
-//   stores      photos | compact | list | cover   absent: photos (the store directory's view)
+//   stores      photos | compact | list | cover   absent: rows on a phone, photos on wider
+//               screens (the store directory's view; kept as chosen, the first one too)
 //   solid      reduce transparency   absent: the device's own setting decides
 //   motion      reduce motion         absent: the device's own setting decides
 //   saver       data saver            absent: the device's own setting decides

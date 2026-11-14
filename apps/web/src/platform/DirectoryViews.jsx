@@ -38,6 +38,11 @@ function Stroke({ size = 18, children }) {
   );
 }
 
+/** A view's glyph on its own (the phone's sort-and-view sheet). */
+export function ViewGlyph({ view, size = 20 }) {
+  return <Stroke size={size}>{VIEW_PATHS[view]}</Stroke>;
+}
+
 /** Columns for a view on a device: the cards with a picture are wider than the compact ones. */
 export function viewColumns(view, dev) {
   if (view === 'list') return 1;
@@ -175,12 +180,12 @@ function Foot({ T, t, store }) {
 }
 
 /** Small square photos in a row (compact cards, list rows); nothing for a store with none. */
-function Thumbs({ T, store, size }) {
+function Thumbs({ T, store, size, max = 3 }) {
   const [shown, fail] = useShown(store.productPhotos);
   if (!shown.length) return null;
   return (
     <div aria-hidden="true" style={{ display: 'flex', gap: 6, flex: 'none' }}>
-      {shown.map((src, i) => (
+      {shown.slice(0, max).map((src, i) => (
         <Shot key={`${i}:${src}`} src={src} onFail={fail} style={{ width: size, height: size, borderRadius: 10, background: T.surface2, flex: 'none' }} />
       ))}
     </div>
@@ -217,22 +222,40 @@ function Mosaic({ T, store, height }) {
   );
 }
 
-function PhotosCard({ T, t, store }) {
+// `compact` is the landing's shelf on a phone: the photos, the mark, the name
+// and what the store sells, nothing under them.
+export function PhotosCard({ T, t, store, compact = false, style }) {
   return (
-    <Link to={pathOf(store)} style={{ ...cardStyle(T), padding: 10 }}>
-      <Mosaic T={T} store={store} height={150} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, padding: '12px 6px 6px' }}>
+    <Link to={pathOf(store)} style={{ ...cardStyle(T), padding: compact ? 8 : 10, ...style }}>
+      <Mosaic T={T} store={store} height={compact ? 132 : 150} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, padding: compact ? '10px 4px 4px' : '12px 6px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <StoreMark store={store} size={36} radius={10} />
+          <StoreMark store={store} size={compact ? 34 : 36} radius={10} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <Name T={T} t={t} store={store} />
-            <Host T={T}>{hostOf(store)}</Host>
+            {compact
+              ? <div style={{ font: `400 12px ${T.font}`, color: T.textDim, marginTop: 1, ...ONE_LINE }}>{categoryOf(store, t)}</div>
+              : <Host T={T}>{hostOf(store)}</Host>}
           </div>
         </div>
-        <Blurb T={T} t={t} store={store} />
-        <Foot T={T} t={t} store={store} />
+        {!compact && <Blurb T={T} t={t} store={store} />}
+        {!compact && <Foot T={T} t={t} store={store} />}
       </div>
     </Link>
+  );
+}
+
+/** The shelf's card while the stores load: the photos, the mark, two lines. */
+export function PhotosCardSkeleton({ T, compact = false, style }) {
+  return (
+    <div style={{ ...cardStyle(T), padding: compact ? 8 : 10, ...style }}>
+      <div style={{ height: compact ? 132 : 150, borderRadius: 11, background: T.surface2 }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: compact ? '10px 4px 4px' : '12px 6px 6px' }}>
+        <HeadBars T={T} size={compact ? 34 : 36} />
+        {!compact && <Bar T={T} w="92%" />}
+        {!compact && <Bar T={T} w="70%" />}
+      </div>
+    </div>
   );
 }
 
@@ -259,8 +282,8 @@ function CompactCard({ T, t, store }) {
 
 // ─── List ───────────────────────────────────────────────────────────────────
 
-// A phone keeps the mark, the name and the way in; wider screens add the line
-// about the store and its photos, and a desktop the category too.
+// A phone keeps the mark, the name, one photo and the way in; wider screens
+// add the line about the store and all its photos, and a desktop the category too.
 function ListRow({ T, t, store, dev, first }) {
   return (
     <Link to={pathOf(store)} style={{
@@ -283,6 +306,7 @@ function ListRow({ T, t, store, dev, first }) {
         </div>
       )}
       {!dev.ph && <div style={{ flex: '0 0 138px' }}><Thumbs T={T} store={store} size={42} /></div>}
+      {dev.ph && <Thumbs T={T} store={store} size={40} max={1} />}
       <Visit T={T} t={t} bare={dev.ph} />
     </Link>
   );

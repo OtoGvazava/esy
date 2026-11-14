@@ -52,6 +52,10 @@ const PATHS = {
   swap: <path d="M4 8h14M15 5l3 3-3 3M20 16H6M9 13l-3 3 3 3" />,
   team: <><circle cx="9" cy="9" r="3.5" /><path d="M3 19.5c1-3 3.3-4.5 6-4.5s5 1.5 6 4.5" /><circle cx="17" cy="8" r="2.6" /><path d="M17.5 13.5c2 .3 3.3 1.6 4 3.8" /></>,
   shield: <><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z" /><path d="m9 12 2 2 4-4" /></>,
+  // The phone's bottom menu (PlatTop) and the directory's sort-and-view button (L1).
+  home: <path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" />,
+  plusO: <><circle cx="12" cy="12" r="8.5" /><path d="M12 8.5v7M8.5 12h7" /></>,
+  sliders: <><path d="M4 7h9M19 7h1M4 17h1M11 17h9" /><circle cx="16" cy="7" r="2.5" /><circle cx="8" cy="17" r="2.5" /></>,
   ext: <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />,
 };
 

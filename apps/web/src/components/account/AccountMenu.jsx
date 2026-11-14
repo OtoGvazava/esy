@@ -138,7 +138,7 @@ export default function AccountMenu({
 
   // The account's stores and orders, for the counts: read when the menu first
   // opens, cached after that. A count that has not arrived is simply not drawn.
-  const { data } = useQuery({ ...accountQuery(), enabled: open });
+  const { data } = useQuery({ ...accountQuery(), enabled: open && !!user });
 
   const close = () => setOpen(false);
 
@@ -299,6 +299,24 @@ export default function AccountMenu({
     </div>
   );
 
+  // Signed out (esy.ge's phone menu opens this for a guest too): the way in,
+  // and the two things that need no account.
+  const guestBody = (
+    <div className="am-list" role="menu" aria-label={t('acct.label')}>
+      <Item icon="user" label={t('acct.signIn')} sub={t('acct.signInSub')} chev to="/signin" onClick={close} />
+      <div className="am-sep gap" role="separator" />
+      <Item
+        icon="screen" label={t('acct.display')} {...inApp('/account/display')} onClick={close}
+        meta={t('acct.displayMeta', {
+          language: NATIVE[language] || NATIVE.ka,
+          appearance: t(`appearance.${appearance || 'auto'}`, { ns: 'display' }),
+        })}
+      />
+      <Item icon="info" label={t('acct.help')} {...help} onClick={close} />
+    </div>
+  );
+  const shownBody = user ? body : guestBody;
+
   const triggerProps = {
     ref: trigger,
     'aria-haspopup': 'menu',
@@ -318,7 +336,7 @@ export default function AccountMenu({
           className={`am am-pop ${open ? (anchor === 'above' ? 'esy-menu-up' : 'esy-menu-in') : 'esy-pop-in'}`}
           style={place}
         >
-          {body}
+          {shownBody}
         </div>,
         document.body,
       )}
@@ -327,7 +345,7 @@ export default function AccountMenu({
           <div aria-hidden="true" className="am-scrim esy-scrim" data-state={menu.state} onClick={close} />
           <div ref={panel} className="am-sheet esy-sheet" data-state={menu.state}>
             <span aria-hidden="true" className="am-grab" />
-            {body}
+            {shownBody}
           </div>
         </div>,
         document.body,
