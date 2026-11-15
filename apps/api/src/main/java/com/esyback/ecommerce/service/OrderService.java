@@ -346,6 +346,18 @@ public class OrderService {
         }
     }
 
+    /**
+     * A card checkout whose payment the bank never started: closed as a failed
+     * payment, so it is no sale and nobody ships it. No stock was taken.
+     */
+    public void failUnstartedPayment(Order order) {
+        orderRepository.findById(order.getId()).ifPresent(o -> {
+            o.setPaymentStatus(Order.PaymentStatus.FAILED);
+            o.setStatus(Order.Status.CANCELLED);
+            orderRepository.save(o);
+        });
+    }
+
     /** Mark a freshly created order as awaiting BOG payment + record BOG's id. */
     public Order markBogPending(Order order, String bogOrderId) {
         order.setPaymentStatus(Order.PaymentStatus.PENDING);

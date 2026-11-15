@@ -78,11 +78,21 @@ public class PaymentController {
         String storeOrigin = com.esyback.ecommerce.security.TenantOrigins.of(http);
         String back = com.esyback.ecommerce.security.TenantOrigins.isAllowed(storeOrigin) ? storeOrigin : base;
         String num = URLEncoder.encode(order.getOrderNumber(), StandardCharsets.UTF_8);
-        BogPaymentService.PaymentSession session = bogPaymentService.createPayment(
-            tenant, order,
-            base + "/api/payments/bog/callback",
-            back + "/pay/return?order=" + num + "&status=success",
-            back + "/pay/return?order=" + num + "&status=fail");
+        BogPaymentService.PaymentSession session;
+        try {
+            session = bogPaymentService.createPayment(
+                tenant, order,
+                base + "/api/payments/bog/callback",
+                back + "/pay/return?order=" + num + "&status=success",
+                back + "/pay/return?order=" + num + "&status=fail");
+        } catch (RuntimeException e) {
+            // The bank never took the payment. Left as it was, the order sat at
+            // PLACED with no payment, looked like a pay-later order, and was
+            // billed and counted as a sale; every retry added another (review
+            // M31). It is closed as a failed payment instead.
+            orderService.failUnstartedPayment(order);
+            throw e;
+        }
 
         orderService.markBogPending(order, session.bogOrderId());
         return ResponseEntity.ok(Map.of(

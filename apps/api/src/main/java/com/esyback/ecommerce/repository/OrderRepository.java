@@ -116,4 +116,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         + "or (o.stockCommitted is null and o.paymentStatus in :held))")
     int releaseStock(@Param("id") Long id,
                      @Param("held") java.util.Collection<Order.PaymentStatus> held);
+
+    /** Card payments still pending since before {@code before}, store loaded (PendingPaymentSweeper). */
+    @Query("select o from Order o join fetch o.tenant where o.paymentStatus = :status and o.createdAt < :before")
+    List<Order> findPendingWithTenant(@Param("status") Order.PaymentStatus status,
+                                      @Param("before") java.time.LocalDateTime before);
 }
