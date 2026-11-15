@@ -490,7 +490,7 @@ export default function Checkout() {
         const res = await paymentApi.checkout(cartItems, devTenant(), delivery());
         if (res?.redirectUrl) {
           clearCart();
-          window.location.href = res.redirectUrl;
+          window.location.assign(res.redirectUrl);
           return; // leaving the SPA — keep the spinner
         }
         setPayError(t('checkout.payError'));

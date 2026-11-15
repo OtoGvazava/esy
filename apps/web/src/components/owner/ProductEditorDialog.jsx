@@ -51,6 +51,9 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
   const { T } = useTK();
   const { isMobile, isDesktop } = useDevice();
   const isEdit = Boolean(product);
+  // "Now" for the New badge, read once when the editor opens rather than on
+  // every render (rendering must not depend on the clock).
+  const [openedAt] = useState(() => Date.now());
   const { percent: livePercent, rate: liveRate } = useFeePercent();
 
   const initial = useMemo(() => (product ? {
@@ -213,7 +216,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
 
   // ---- the New badge: automatic, for NEW_DAYS after the product was added
   const created = product?.createdAt ? new Date(product.createdAt) : null;
-  const daysLeft = created ? Math.ceil((created.getTime() + NEW_DAYS * 86400000 - Date.now()) / 86400000) : NEW_DAYS;
+  const daysLeft = created ? Math.ceil((created.getTime() + NEW_DAYS * 86400000 - openedAt) / 86400000) : NEW_DAYS;
 
   const photos = [
     ...existing.filter((img) => !removed.includes(img.id)).map((img) => ({ key: `e${img.id}`, url: img.url, remove: () => removeExisting(img.id) })),

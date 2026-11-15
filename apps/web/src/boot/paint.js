@@ -86,7 +86,7 @@ export default function paint(cfg) {
   const lang = stored('lang');
   if (lang === 'ka' || lang === 'en') html.setAttribute('lang', lang);
 
-  let tenant = null;
+  let tenant;
   try {
     const el = document.getElementById('esy-boot');
     tenant = el ? JSON.parse(el.textContent).tenant || null : null;
@@ -158,7 +158,7 @@ export default function paint(cfg) {
     let prefs = {};
     try { prefs = JSON.parse(stored('esy-display') || '{}') || {}; } catch { prefs = {}; }
     const own = (key, device) => (typeof prefs[key] === 'boolean' ? prefs[key] : device);
-    let saveData = false;
+    let saveData;
     try { saveData = !!navigator.connection.saveData; } catch { saveData = false; }
     html.setAttribute('data-text', pick(prefs.text, ['s', 'm', 'l', 'xl'], 'm'));
     if (own('solid', matches('(prefers-reduced-transparency: reduce)'))) html.setAttribute('data-solid', '');

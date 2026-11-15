@@ -11,7 +11,7 @@ export default defineConfig([
     files: ['**/*.{js,jsx}'],
     extends: [
       js.configs.recommended,
-      reactHooks.configs['recommended-latest'],
+      reactHooks.configs.flat['recommended-latest'],
       reactRefresh.configs.vite,
     ],
     plugins: { i18next },
@@ -42,6 +42,14 @@ export default defineConfig([
       'jsx-quotes': ['error', 'prefer-double'],
       'react-hooks/exhaustive-deps': 'warn',
       'react-hooks/rules-of-hooks': 'error',
+      // react-hooks 7 adds rules written for the React Compiler, which this
+      // app does not use. Warnings, so they stay visible and can be worked
+      // down, without failing CI on patterns that work today.
+      'react-hooks/refs': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/use-memo': 'warn',
     },
   },
 ]);

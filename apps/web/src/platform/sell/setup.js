@@ -33,7 +33,7 @@ export function colourName(hex) {
   if (l < 0.12) return 'black';
   if (l > 0.93) return 'white';
   if (s < 0.14) return 'grey';
-  let h = 0;
+  let h;
   if (hi === r) h = ((g - b) / (hi - lo)) % 6;
   else if (hi === g) h = (b - r) / (hi - lo) + 2;
   else h = (r - g) / (hi - lo) + 4;
