@@ -68,7 +68,9 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
   const [apiError, setApiError] = useState('');
   const [existing, setExisting] = useState(product?.imageList || []);
   const [staged, setStaged] = useState([]);
-  const [imgBusy, setImgBusy] = useState(false);
+  // Saved photos the merchant has taken off, deleted only on Save: removing
+  // one used to delete it at once, so Cancel could not bring it back.
+  const [removed, setRemoved] = useState([]);
   const [variants, setVariants] = useState(null);
   const [variantsDirty, setVariantsDirty] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -88,6 +90,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
     setErrors({});
     setApiError('');
     setStaged([]);
+    setRemoved([]);
     setExisting(product?.imageList || []);
     setCreatedId(null);
     stockSeen.current = product?.quantity ?? null;
@@ -97,8 +100,8 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
 
   if (!open) return null;
 
-  const busy = saving || imgBusy;
-  const dirty = staged.length > 0 || variantsDirty
+  const busy = saving;
+  const dirty = staged.length > 0 || removed.length > 0 || variantsDirty
     || Object.keys(EMPTY).some((k) => String(form[k] ?? '') !== String(initial[k] ?? ''));
 
   const set = (field) => (e) => {
@@ -124,19 +127,8 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
       return prev.filter((_, i) => i !== idx);
     });
   };
-  const removeExisting = async (imageId) => {
-    const id = product?.id ?? createdId;
-    if (imgBusy || id == null) return;
-    setImgBusy(true);
-    setApiError('');
-    try {
-      const updated = await productApi.deleteImage(id, imageId);
-      setExisting(updated.imageList || []);
-    } catch (err) {
-      setApiError(handleApiError(err, t('imageDeleteFailed')));
-    } finally {
-      setImgBusy(false);
-    }
+  const removeExisting = (imageId) => {
+    setRemoved((prev) => (prev.includes(imageId) ? prev : [...prev, imageId]));
   };
 
   const hasVariants = !!variants;
@@ -176,6 +168,18 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
       const saved = id != null ? await productApi.update(id, payload) : await productApi.create(payload);
       if (id == null) setCreatedId(saved.id);
       stockSeen.current = saved?.quantity ?? null;
+      if (removed.length) {
+        step = 'removals';
+        // One at a time, each dropped from the list once gone, so a retry
+        // deletes only what is still there.
+        for (const imageId of removed) {
+          // A photo already gone (404) is what was asked for.
+          const updated = await productApi.deleteImage(saved.id, imageId)
+            .catch((e) => { if (e?.status === 404) return null; throw e; });
+          setRemoved((prev) => prev.filter((x) => x !== imageId));
+          if (updated?.imageList) setExisting(updated.imageList);
+        }
+      }
       if (staged.length) {
         step = 'photos';
         const withPhotos = await productApi.uploadImages(saved.id, staged.map((s) => s.file));
@@ -189,7 +193,8 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
       onSaved?.(saved);
     } catch (err) {
       const reason = handleApiError(err, t('saveFailed'));
-      setApiError(step === 'photos' ? t('editor.failedPhotos', { reason })
+      setApiError(step === 'removals' ? t('editor.failedRemovals', { reason })
+        : step === 'photos' ? t('editor.failedPhotos', { reason })
         : step === 'variants' ? t('editor.failedVariants', { reason })
           : reason);
     } finally {
@@ -208,7 +213,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
   const daysLeft = created ? Math.ceil((created.getTime() + NEW_DAYS * 86400000 - Date.now()) / 86400000) : NEW_DAYS;
 
   const photos = [
-    ...existing.map((img) => ({ key: `e${img.id}`, url: img.url, remove: () => removeExisting(img.id) })),
+    ...existing.filter((img) => !removed.includes(img.id)).map((img) => ({ key: `e${img.id}`, url: img.url, remove: () => removeExisting(img.id) })),
     ...staged.map((s, i) => ({ key: s.preview, url: s.preview, fresh: true, remove: () => unstage(i) })),
   ];
 

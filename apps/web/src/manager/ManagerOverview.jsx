@@ -60,7 +60,10 @@ function itemsOf(o, t) {
   const lines = Array.isArray(o.lines) ? o.lines : [];
   if (lines.length === 1) return `${lines[0].title} ×${lines[0].quantity}`;
   if (lines.length > 1) return t('overview.items', { count: lines.reduce((n, l) => n + (Number(l.quantity) || 0), 0) });
-  return '';
+  // The list rows carry no lines, only how many there are (`items`): without
+  // this the to-do list never said what was ordered.
+  const count = Number(o.items);
+  return count > 0 ? t('overview.items', { count }) : '';
 }
 
 function Waiting({ T, t, lang, orders, q, isMobile }) {

@@ -378,7 +378,8 @@
     "markOut": "Mark out for delivery",
     "allDone": "Nothing is waiting — every order is moving.",
     "feeHint": "{{percent}}% · billed separately",
-    "items": "{{count}} items",
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} items",
     "justNow": "just now"
   },
   "orders": {
@@ -608,7 +609,8 @@
       "category": "Category",
       "noCategory": "None",
       "established": "Founded",
-      "yearPlaceholder": "2024"
+      "yearPlaceholder": "2024",
+      "yearInvalid": "The founding year must be between 1900 and {{max}}."
     },
     "brand": {
       "logo": "Logo",

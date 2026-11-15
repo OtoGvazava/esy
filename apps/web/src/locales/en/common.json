@@ -1,5 +1,6 @@
 {
   "poweredBy": "powered by",
+  "cancel": "Cancel",
   "errorBoundary": {
     "title": "Something went wrong",
     "message": "We encountered an unexpected error. Please try again.",

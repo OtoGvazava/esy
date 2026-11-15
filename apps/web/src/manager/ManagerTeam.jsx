@@ -13,7 +13,7 @@
 // The board also says when each person was last in ("ბოლოს: დღეს"). Nothing
 // records that, so it is not shown rather than guessed.
 import { useEffect, useId, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -82,13 +82,14 @@ function RowMenu({ T, t, member, busy, onRole, onRemove }) {
 export default function ManagerTeam() {
   const { T } = useTK();
   const { t } = useTranslation('manager');
-  const { user } = useAuth();
+  const { user, isStoreOwner, loading: authLoading, refreshUser } = useAuth();
+  const navigate = useNavigate();
   const { isDesktop, isMobile } = useDevice();
   const [params] = useSearchParams();
   const devTenant = params.get('tenant') || undefined;
 
   const qc = useQueryClient();
-  const team = useQuery(teamQuery());
+  const team = useQuery({ ...teamQuery(), enabled: !authLoading && isStoreOwner });
   // A list that failed to load is shown as no one, with the reason above it.
   const rows = team.data ?? [];
   const loading = team.isPending;
@@ -107,12 +108,16 @@ export default function ManagerTeam() {
   // answer rather than a local guess — promoting a second owner changes what
   // is allowed for the first.
   const setRows = (next) => qc.setQueryData(teamQuery().queryKey, Array.isArray(next) ? next : []);
-  const write = async (fn, fallbackKey) => {
+  // `self`: the write changes the signed-in person's own role. Their owner
+  // permission is then re-read, or the screen kept offering owner actions the
+  // server now refuses.
+  const write = async (fn, fallbackKey, self = false) => {
     setBusy(true);
     setWriteError('');
     setNotice('');
     try {
       setRows(await fn());
+      if (self) await refreshUser().catch(() => {});
       return true;
     } catch (e) {
       setWriteError(teamProblem(t, e, fallbackKey));
@@ -136,6 +141,13 @@ export default function ManagerTeam() {
     ['settings', 'owner'],
     ['team', 'owner'],
   ];
+
+  // Owners only, as Settings: the API refuses a manager every write here, so
+  // the screen does not offer them (and a self-demotion lands here too).
+  useEffect(() => {
+    if (!authLoading && !isStoreOwner) navigate(`/${devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : ''}`, { replace: true });
+  }, [authLoading, isStoreOwner, navigate, devTenant]);
+  if (!authLoading && !isStoreOwner) return null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : isDesktop ? 20 : 18 }}>
@@ -195,7 +207,7 @@ export default function ManagerTeam() {
                       T={T} t={t} member={m} busy={busy}
                       onRole={async (role) => {
                         // Up to owner is an offer the person must accept; down to manager applies at once.
-                        if (await write(() => teamApi.assign(m.email, role, devTenant), 'team.assignFailed') && role === 'OWNER') {
+                        if (await write(() => teamApi.assign(m.email, role, devTenant), 'team.assignFailed', !!self) && role === 'OWNER') {
                           setNotice(t('people.promoteSent', { email: m.email }));
                         }
                       }}
@@ -258,7 +270,7 @@ export default function ManagerTeam() {
                 const go = withdrawing
                   ? () => teamApi.withdraw(removing.email, devTenant)
                   : () => teamApi.remove(removing.email, devTenant);
-                if (await write(go, 'team.removeFailed')) setRemoving(null);
+                if (await write(go, 'team.removeFailed', !withdrawing && norm(removing.email) === me)) setRemoving(null);
               }}
               style={{ ...btn(T, 'bad', { block: true }), opacity: busy ? 0.6 : 1 }}
             >{withdrawing ? t('people.withdraw') : t('people.remove')}</button>

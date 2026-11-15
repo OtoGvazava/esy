@@ -41,7 +41,7 @@ export default function DeleteProductDialog({ open, product, onClose, onDeleted 
   const footer = (
     <>
       <button onClick={onClose} disabled={busy} style={glowGhostBtn(T, busy)}>
-        {t('cancel', { ns: 'common', defaultValue: 'Cancel' })}
+        {t('cancel', { ns: 'common' })}
       </button>
       <button onClick={confirm} disabled={busy} style={dangerBtn}>
         {busy ? t('deleting') : t('deleteConfirm')}

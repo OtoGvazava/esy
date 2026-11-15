@@ -20,6 +20,10 @@ import {
   li, list, teamProblem, type, useFocusRing,
 } from './officeKit';
 
+// The refusals about the address itself: the same address would be refused
+// again, so the button waits for it to change.
+const ADDRESS_CODES = ['TEAM_ALREADY', 'TEAM_BAD_EMAIL', 'TEAM_NO_ACCOUNT', 'TEAM_NOT_STAFF'];
+
 const norm = (s) => String(s || '').trim().toLowerCase();
 
 function CanList({ T, t }) {
@@ -60,6 +64,9 @@ export default function InviteDialog({ T, isMobile, rows, devTenant, onDone, onC
   const [sure, setSure] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState('');
+  // Only a refusal about the address itself waits for it to be changed; any
+  // other (a network hiccup, a server error) can be retried as it stands.
+  const [stuck, setStuck] = useState(false);
   const [sent, setSent] = useState(null);
   const [focus, ring] = useFocusRing();
   const [boxFocus, boxRing] = useFocusRing();
@@ -67,7 +74,7 @@ export default function InviteDialog({ T, isMobile, rows, devTenant, onDone, onC
   const value = norm(email);
   const owner = role === 'OWNER';
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  const blocked = !valid || busy || !!problem || (owner && !sure);
+  const blocked = !valid || busy || stuck || (owner && !sure);
 
   const shut = () => { if (!busy) onClose(); };
 
@@ -77,6 +84,7 @@ export default function InviteDialog({ T, isMobile, rows, devTenant, onDone, onC
     const known = rows.find((r) => norm(r.email) === value && !r.pending);
     if (known) {
       setProblem(teamProblem(t, { code: 'TEAM_ALREADY', details: { email: value, role: known.role } }));
+      setStuck(true);
       return;
     }
     setBusy(true);
@@ -90,6 +98,7 @@ export default function InviteDialog({ T, isMobile, rows, devTenant, onDone, onC
         || staff.find((r) => norm(r.email) === value) || { email: value, role, pending: true });
     } catch (err) {
       setProblem(teamProblem(t, err, 'team.assignFailed'));
+      setStuck(ADDRESS_CODES.includes(err?.code));
     } finally {
       setBusy(false);
     }
@@ -101,6 +110,7 @@ export default function InviteDialog({ T, isMobile, rows, devTenant, onDone, onC
     setRole('MANAGER');
     setSure(false);
     setProblem('');
+    setStuck(false);
   };
 
   if (sent) {
@@ -154,7 +164,7 @@ export default function InviteDialog({ T, isMobile, rows, devTenant, onDone, onC
             id={fieldId} type="email" value={email} autoComplete="off" spellCheck={false} disabled={busy}
             data-autofocus={isMobile ? undefined : ''} inputMode="email"
             aria-invalid={problem ? 'true' : 'false'} aria-describedby={`${fieldId}-msg`}
-            onChange={(e) => { setEmail(e.target.value); setProblem(''); setSure(false); }}
+            onChange={(e) => { setEmail(e.target.value); setProblem(''); setStuck(false); setSure(false); }}
             {...ring}
             style={input(T, { focus, error: !!problem })}
           />
@@ -173,10 +183,10 @@ export default function InviteDialog({ T, isMobile, rows, devTenant, onDone, onC
 
         <div role="radiogroup" aria-labelledby={titleId} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <Option T={T} name={`${titleId}-role`} on={!owner} disabled={busy}
-            onSelect={() => { setRole('MANAGER'); setSure(false); }}
+            onSelect={() => { setRole('MANAGER'); setSure(false); setProblem(''); setStuck(false); }}
             title={t('role.MANAGER')} sub={t('invite.managerSub')} />
           <Option T={T} name={`${titleId}-role`} on={owner} disabled={busy}
-            onSelect={() => setRole('OWNER')}
+            onSelect={() => { setRole('OWNER'); setProblem(''); setStuck(false); }}
             title={t('role.OWNER')} sub={t('invite.ownerSub')} />
         </div>
 

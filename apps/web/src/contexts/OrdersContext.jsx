@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { orderApi } from '../utils/api';
 import { myOrdersQuery } from '../core/query/queries';
 import { useAuth } from './AuthContext';
+import { isAdminHost, isManagerHost } from '../hooks/usePlatformHost';
 
 const OrdersContext = createContext();
 
@@ -48,7 +49,11 @@ export const OrdersProvider = ({ children }) => {
   // session). Guests have none. One cached read, so the orders screen opens on
   // the list it showed last time while a refetch brings it up to date.
   const signedIn = isAuthenticated && !authLoading;
-  const query = useQuery({ ...myOrdersQuery(), enabled: signedIn });
+  // Only a store and esy.ge show the shopper's orders: the back office and
+  // admin never read them, so the list is not fetched (or refetched after
+  // every write) there.
+  const shopperHost = !isManagerHost() && !isAdminHost();
+  const query = useQuery({ ...myOrdersQuery(), enabled: signedIn && shopperHost });
   const orders = useMemo(
     () => (signedIn && query.data ? query.data.map(normalize) : []),
     [signedIn, query.data],
@@ -56,14 +61,14 @@ export const OrdersProvider = ({ children }) => {
   const loading = placing || (signedIn && query.isFetching);
   // Not known yet: the session is still being restored, or the first read is
   // out. A screen draws its skeleton then, never "no orders yet".
-  const pending = authLoading || (signedIn && query.isPending);
+  const pending = authLoading || (signedIn && shopperHost && query.isPending);
 
   const refresh = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !shopperHost) return;
     try {
       await qc.fetchQuery({ ...myOrdersQuery(), staleTime: 0 });
     } catch { /* the list keeps what it had */ }
-  }, [isAuthenticated, qc]);
+  }, [isAuthenticated, shopperHost, qc]);
 
   // Place a real order against the current store, then reflect it locally.
   // Returns { success, order } so checkout can route to the receipt.

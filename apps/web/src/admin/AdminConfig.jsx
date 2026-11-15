@@ -266,7 +266,10 @@ export default function AdminConfig() {
   );
 
   // ── The bank environment ────────────────────────────────────────────────
-  const bank = String(data?.bogEnv || '');
+  // Read as the server reads it (BogPaymentService): "sandbox" in any case is
+  // the test bank, anything else (blank, "LIVE") is live. Compared raw, "LIVE"
+  // locked the switch and a blank value let an empty confirmation through.
+  const bank = !data ? '' : String(data.bogEnv || '').trim().toLowerCase() === 'sandbox' ? 'sandbox' : 'live';
   const bankTo = bank === 'live' ? 'sandbox' : 'live';
   const bankRow = (
     <ValueRow
@@ -481,7 +484,7 @@ export default function AdminConfig() {
     </Dialog>
   );
 
-  const typedOk = typed.trim().toLowerCase() === bank;
+  const typedOk = bank !== '' && typed.trim().toLowerCase() === bank;
   const bankDialog = (
     <Dialog
       T={T}

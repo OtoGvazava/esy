@@ -54,7 +54,7 @@ export default function Cart() {
         {/* line items */}
         <div style={{ padding: '0 16px 8px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {items.map((it) => (
-            <div key={it.id} style={{ display: 'flex', gap: 12, padding: 12, borderRadius: 16, background: T.surface, border: `1px solid ${T.border}` }}>
+            <div key={lineKey(it)} style={{ display: 'flex', gap: 12, padding: 12, borderRadius: 16, background: T.surface, border: `1px solid ${T.border}` }}>
               <Thumb T={T} item={it} tenant={tenant} />
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <div style={{ font: `600 13.5px ${T.font}`, color: T.text, letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.title}</div>
