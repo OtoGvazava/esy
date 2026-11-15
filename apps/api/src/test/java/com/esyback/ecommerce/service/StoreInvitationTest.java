@@ -146,4 +146,45 @@ class StoreInvitationTest {
         assertThatThrownBy(() -> membership.acceptInvitation(late, inv.getId())).isInstanceOf(ApiRefusal.class);
         assertThat(roleOf(late)).isNull();
     }
+
+    @Test
+    @DisplayName("removing someone withdraws their open invitation, so they cannot walk back in with it")
+    void removalWithdrawsInvitation() {
+        User x = account("x@invite.test");
+        membership.assign(x, store, StoreMembership.Role.MANAGER);
+        membership.invite(store, x.getEmail(), "OWNER", owner.getEmail());
+        Long id = membership.invitationsFor(x).get(0).getId();
+
+        membership.removeStaffQuietly(store, x.getEmail());
+
+        assertThat(roleOf(x)).isNull();
+        assertThat(membership.invitationsFor(x)).isEmpty();
+        assertThatThrownBy(() -> membership.acceptInvitation(x, id)).isInstanceOf(ApiRefusal.class);
+        assertThat(roleOf(x)).isNull();
+    }
+
+    @Test
+    @DisplayName("an invitation from an owner who has since been removed cannot be accepted")
+    void inviterMustStillOwn() {
+        User rogue = account("rogue@invite.test");
+        membership.assign(rogue, store, StoreMembership.Role.OWNER);
+        User accomplice = account("accomplice@invite.test");
+        membership.invite(store, accomplice.getEmail(), "OWNER", rogue.getEmail());
+        Long id = membership.invitationsFor(accomplice).get(0).getId();
+
+        membership.removeStaff(store, rogue.getEmail());
+
+        assertThatThrownBy(() -> membership.acceptInvitation(accomplice, id))
+            .isInstanceOf(ApiRefusal.class)
+            .satisfies(e -> assertThat(((ApiRefusal) e).getCode()).isEqualTo(MembershipService.INVITE_GONE));
+        assertThat(roleOf(accomplice)).isNull();
+    }
+
+    @Test
+    @DisplayName("an owner's removal answers the same for an address with no account as for one off the team")
+    void quietRemoval() {
+        assertThatThrownBy(() -> membership.removeStaffQuietly(store, "ghost@invite.test"))
+            .isInstanceOf(ApiRefusal.class)
+            .satisfies(e -> assertThat(((ApiRefusal) e).getCode()).isEqualTo(MembershipService.TEAM_NOT_STAFF));
+    }
 }

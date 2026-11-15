@@ -73,19 +73,30 @@ public class StoreTeamController {
                                             org.springframework.security.core.Authentication authentication) {
         String email = body == null ? null : body.get("email");
         String role = body == null ? null : body.get("role");
-        membershipService.invite(tenantContextService.getCurrentTenant(), email, role,
-            authentication == null ? null : authentication.getName());
+        String by = authentication == null ? null : authentication.getName();
+        try {
+            membershipService.invite(tenantContextService.getCurrentTenant(), email, role, by);
+        } catch (org.springframework.dao.DataIntegrityViolationException racedTheSameInvite) {
+            // Two invitations to one address at once (a double click): the
+            // other one inserted first, so this one becomes an update of it.
+            membershipService.invite(tenantContextService.getCurrentTenant(), email, role, by);
+        }
         return list();
     }
 
-    /** Take someone off the team, or withdraw an invitation to that address. */
+    /**
+     * Take someone off the team (which also withdraws any invitation to them),
+     * or, with {@code ?invitation=true}, only withdraw the invitation. Two
+     * different acts on two different rows: guessing between them let
+     * "Remove" withdraw a leftover invitation and leave the member in place.
+     */
     @DeleteMapping("/{email}")
     @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
-    public ResponseEntity<List<Map<String, Object>>> remove(@PathVariable String email) {
+    public ResponseEntity<List<Map<String, Object>>> remove(@PathVariable String email,
+                                                            @RequestParam(defaultValue = "false") boolean invitation) {
         com.esyback.ecommerce.entity.Tenant tenant = tenantContextService.getCurrentTenant();
-        if (!membershipService.cancelInvitation(tenant, email)) {
-            membershipService.removeStaffQuietly(tenant, email);
-        }
+        if (invitation) membershipService.cancelInvitation(tenant, email);
+        else membershipService.removeStaffQuietly(tenant, email);
         return ResponseEntity.ok(list());
     }
 

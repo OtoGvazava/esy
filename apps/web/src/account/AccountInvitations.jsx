@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { accountApi, handleApiError } from '../utils/api';
+import { accountApi } from '../utils/api';
 import { invitationsQuery, accountQuery } from '../core/query/queries';
 import { safeAccent } from '../core/tokens';
 import { Av, Btn, Lbl, List, initialsOf, liStyle } from '../platform/PlatformKit';
@@ -37,7 +37,8 @@ export default function AccountInvitations() {
         qc.invalidateQueries({ queryKey: accountQuery().queryKey });
       }
     } catch (e) {
-      setProblem(handleApiError(e, t('invites.failed')));
+      // Said by code in the reader's language, never the server's English.
+      setProblem(e?.code === 'INVITE_GONE' ? t('invites.gone') : t('invites.failed'));
       qc.invalidateQueries({ queryKey: invitationsQuery().queryKey });
     } finally {
       setBusy(null);

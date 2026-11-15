@@ -2,14 +2,16 @@
 // role, what that role can and cannot do, and — for an owner — a deliberate
 // tick, because an owner can do everything the person granting it can.
 //
-// The rules are the server's (MembershipService): roles go only to accounts
-// that have signed in once, CUSTOMER is not grantable, a store keeps an
-// owner. Its refusals carry codes, so each one is said here in the
-// merchant's language. Someone already on the team is caught before the
-// request: changing a role is the list's "⋯", not this dialog.
+// The rules are the server's (MembershipService): CUSTOMER is not
+// grantable, a store keeps an owner. Its refusals carry codes, so each one is
+// said here in the merchant's language. Someone already on the team is caught
+// before the request: changing a role is the list's "⋯", not this dialog. An
+// address with an invitation still open may be invited again (a new role, or
+// a fresh 14 days).
 //
-// A role applies at once and nothing is emailed, so the confirmation says
-// so and names the address to sign in with.
+// It sends an invitation, not a role (review M36): nothing changes until the
+// person accepts it from their esy account, and nothing is emailed, so the
+// confirmation says so and names the address they must sign in with.
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { teamApi } from '../utils/api';
@@ -72,7 +74,7 @@ export default function InviteDialog({ T, isMobile, rows, devTenant, onDone, onC
   const submit = async (e) => {
     e?.preventDefault();
     if (blocked) return;
-    const known = rows.find((r) => norm(r.email) === value);
+    const known = rows.find((r) => norm(r.email) === value && !r.pending);
     if (known) {
       setProblem(teamProblem(t, { code: 'TEAM_ALREADY', details: { email: value, role: known.role } }));
       return;

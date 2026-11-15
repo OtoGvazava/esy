@@ -112,6 +112,7 @@
     "accepted": "You now help run {{store}}.",
     "openOffice": "Open the back office",
     "ownerNote": "An owner can change everything in the store, including who runs it and refunds.",
-    "failed": "That did not work. Try again."
+    "failed": "That did not work. Try again.",
+    "gone": "This invitation is no longer open. Ask the store's owner to send a new one."
   }
 }

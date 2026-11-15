@@ -119,21 +119,8 @@ public class MembershipService {
      *         caller that audits can say what actually changed.
      */
     public Assignment assignStaff(Tenant tenant, String email, String roleName) {
-        String normalized = normalizeEmail(email);
-        if (normalized == null || !normalized.contains("@")) {
-            throw bad(TEAM_BAD_EMAIL, "A valid email address is required", Map.of());
-        }
-
-        StoreMembership.Role target;
-        try {
-            target = StoreMembership.Role.valueOf(String.valueOf(roleName).trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw bad(TEAM_BAD_ROLE, "Role must be OWNER or MANAGER", Map.of());
-        }
-        if (!STAFF.contains(target)) {
-            throw bad(TEAM_BAD_ROLE,
-                "Role must be OWNER or MANAGER — CUSTOMER is recorded automatically, not granted", Map.of());
-        }
+        String normalized = validEmail(email);
+        StoreMembership.Role target = staffRole(roleName);
 
         // Identities come from Google, so a row invented for an address nobody
         // has signed in with would never match the person who eventually does.
@@ -160,11 +147,24 @@ public class MembershipService {
 
     /** Take away a store role. Shopping history is untouched. */
     public StoreMembership.Role removeStaff(Tenant tenant, String email) {
+        return removeStaff(tenant, email, false);
+    }
+
+    /**
+     * @param quiet an owner's removal: an address with no account answers
+     *              like one that is simply not on the team, so removal cannot
+     *              be used to learn which addresses have accounts. The admin
+     *              screen keeps the more precise answer.
+     */
+    private StoreMembership.Role removeStaff(Tenant tenant, String email, boolean quiet) {
         String normalized = normalizeEmail(email);
         if (normalized == null) throw bad(TEAM_BAD_EMAIL, "An email address is required", Map.of());
 
-        User user = userRepository.findByEmail(normalized).orElseThrow(() -> new ApiRefusal(
-            HttpStatus.NOT_FOUND, TEAM_NO_ACCOUNT, normalized + " has no account", Map.of("email", normalized)));
+        User user = userRepository.findByEmail(normalized).orElseThrow(() -> quiet
+            ? new ApiRefusal(HttpStatus.NOT_FOUND, TEAM_NOT_STAFF,
+                normalized + " holds no role in this store", Map.of("email", normalized))
+            : new ApiRefusal(HttpStatus.NOT_FOUND, TEAM_NO_ACCOUNT,
+                normalized + " has no account", Map.of("email", normalized)));
 
         StoreMembership existing = membershipRepository.findByUserAndTenant(user, tenant)
             .orElseThrow(() -> new ApiRefusal(HttpStatus.NOT_FOUND, TEAM_NOT_STAFF,
@@ -181,6 +181,9 @@ public class MembershipService {
 
         StoreMembership.Role was = existing.getRole();
         remove(user, tenant);
+        // Someone taken off the team must not walk back in through an offer
+        // still open from before.
+        invitationRepository.findByTenantAndEmail(tenant, normalized).ifPresent(invitationRepository::delete);
         return was;
     }
 
@@ -202,10 +205,7 @@ public class MembershipService {
      * already hold is an invitation (INVITED), replacing an earlier one.
      */
     public InviteOutcome invite(Tenant tenant, String email, String roleName, String invitedBy) {
-        String normalized = normalizeEmail(email);
-        if (normalized == null || !normalized.contains("@")) {
-            throw bad(TEAM_BAD_EMAIL, "A valid email address is required", Map.of());
-        }
+        String normalized = validEmail(email);
         StoreMembership.Role target = staffRole(roleName);
 
         // Someone already on this store's team: their role is on the owner's
@@ -276,6 +276,16 @@ public class MembershipService {
      */
     public StoreMembership acceptInvitation(User user, Long invitationId) {
         com.esyback.ecommerce.entity.StoreInvitation inv = mine(user, invitationId);
+        // An offer is only as good as the owner who made it: one sent by an
+        // owner since removed or moved down must not hand out their power.
+        boolean inviterStillOwns = inv.getInvitedBy() != null && userRepository.findByEmail(inv.getInvitedBy())
+            .flatMap(u -> membershipRepository.findByUserAndTenant(u, inv.getTenant()))
+            .map(m -> m.getRole() == StoreMembership.Role.OWNER)
+            .orElse(false);
+        if (!inviterStillOwns) {
+            invitationRepository.delete(inv);
+            throw new ApiRefusal(HttpStatus.NOT_FOUND, INVITE_GONE, "This invitation is no longer open", Map.of());
+        }
         StoreMembership.Role offered = inv.roleValue();
         StoreMembership m = membershipRepository.findByUserAndTenant(user, inv.getTenant())
             .filter(existing -> rank(existing.getRole()) >= rank(offered))
@@ -303,6 +313,20 @@ public class MembershipService {
         return java.time.Instant.now().minus(INVITE_TTL);
     }
 
+    private static String validEmail(String email) {
+        String normalized = normalizeEmail(email);
+        if (normalized == null || !normalized.contains("@")) {
+            throw bad(TEAM_BAD_EMAIL, "A valid email address is required", Map.of());
+        }
+        return normalized;
+    }
+
+    /** Clears invitations past their time; nothing reads them, they only pile up. */
+    @org.springframework.scheduling.annotation.Scheduled(initialDelayString = "PT10M", fixedDelayString = "PT6H")
+    public void purgeExpiredInvitations() {
+        invitationRepository.deleteByCreatedAtBefore(openSince());
+    }
+
     private static StoreMembership.Role staffRole(String roleName) {
         StoreMembership.Role target;
         try {
@@ -317,22 +341,9 @@ public class MembershipService {
         return target;
     }
 
-    /**
-     * An owner taking someone off the team. A person who is not staff here
-     * (or has no account at all) gets the same answer, so removal cannot be
-     * used to probe which addresses have accounts.
-     */
+    /** An owner taking someone off the team (see {@link #removeStaff(Tenant, String, boolean)}). */
     public StoreMembership.Role removeStaffQuietly(Tenant tenant, String email) {
-        String normalized = normalizeEmail(email);
-        User user = normalized == null ? null : userRepository.findByEmail(normalized).orElse(null);
-        StoreMembership existing = user == null ? null
-            : membershipRepository.findByUserAndTenant(user, tenant).filter(m -> STAFF.contains(m.getRole())).orElse(null);
-        if (existing == null) {
-            throw new ApiRefusal(HttpStatus.NOT_FOUND, TEAM_NOT_STAFF,
-                (normalized == null ? "That address" : normalized) + " holds no role in this store",
-                Map.of("email", normalized == null ? "" : normalized));
-        }
-        return removeStaff(tenant, normalized);
+        return removeStaff(tenant, email, true);
     }
 
     /** What an assignment did, for the caller's audit line. */

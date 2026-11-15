@@ -16,6 +16,10 @@ public interface StoreInvitationRepository extends JpaRepository<StoreInvitation
 
     Optional<StoreInvitation> findByTenantAndEmail(Tenant tenant, String email);
 
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("delete from StoreInvitation i where i.createdAt < :before")
+    int deleteByCreatedAtBefore(@Param("before") Instant before);
+
     List<StoreInvitation> findByTenantAndCreatedAtAfterOrderByCreatedAtAsc(Tenant tenant, Instant after);
 
     /** An address's open invitations, with each store loaded for the list. */

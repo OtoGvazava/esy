@@ -93,6 +93,9 @@ export default function ManagerTeam() {
   const rows = team.data ?? [];
   const loading = team.isPending;
   const [writeError, setWriteError] = useState('');
+  // What a write did that the list alone does not say: "Make owner" sends an
+  // invitation, and nothing changes until it is accepted.
+  const [notice, setNotice] = useState('');
   const error = writeError || (team.isError ? teamProblem(t, team.error, 'team.loadFailed') : '');
   const [busy, setBusy] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -107,6 +110,7 @@ export default function ManagerTeam() {
   const write = async (fn, fallbackKey) => {
     setBusy(true);
     setWriteError('');
+    setNotice('');
     try {
       setRows(await fn());
       return true;
@@ -138,6 +142,7 @@ export default function ManagerTeam() {
       <PageHead T={T} mobile={isMobile} title={t('people.title')} sub={t('people.sub')} />
 
       {error && <Alert T={T} tone="bad" role="alert">{error}</Alert>}
+      {notice && <Alert T={T} role="status">{notice}</Alert>}
 
       <div style={{
         display: 'grid', gap: 20, alignItems: 'start',
@@ -188,7 +193,12 @@ export default function ManagerTeam() {
                   ) : (
                     <RowMenu
                       T={T} t={t} member={m} busy={busy}
-                      onRole={(role) => write(() => teamApi.assign(m.email, role, devTenant), 'team.assignFailed')}
+                      onRole={async (role) => {
+                        // Up to owner is an offer the person must accept; down to manager applies at once.
+                        if (await write(() => teamApi.assign(m.email, role, devTenant), 'team.assignFailed') && role === 'OWNER') {
+                          setNotice(t('people.promoteSent', { email: m.email }));
+                        }
+                      }}
                       onRemove={() => setRemoving(m)}
                     />
                   )}
@@ -244,7 +254,12 @@ export default function ManagerTeam() {
             </button>
             <button
               type="button" disabled={busy}
-              onClick={async () => { if (await write(() => teamApi.remove(removing.email, devTenant), 'team.removeFailed')) setRemoving(null); }}
+              onClick={async () => {
+                const go = withdrawing
+                  ? () => teamApi.withdraw(removing.email, devTenant)
+                  : () => teamApi.remove(removing.email, devTenant);
+                if (await write(go, 'team.removeFailed')) setRemoving(null);
+              }}
               style={{ ...btn(T, 'bad', { block: true }), opacity: busy ? 0.6 : 1 }}
             >{withdrawing ? t('people.withdraw') : t('people.remove')}</button>
           </div>

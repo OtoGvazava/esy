@@ -25,7 +25,8 @@
     "invited": "Invitation sent · waiting for an answer",
     "withdraw": "Withdraw invitation",
     "withdrawTitle": "Withdraw the invitation?",
-    "withdrawConfirm": "{{email}} will no longer be able to accept it."
+    "withdrawConfirm": "{{email}} will no longer be able to accept it.",
+    "promoteSent": "Invitation sent. {{email}} becomes an owner once they accept it from their esy account; until then their role stays as it is."
   },
   "invite": {
     "title": "Give someone a role",

@@ -541,6 +541,12 @@ export const teamApi = {
     const q = devTenant ? `?tenant=${encodeURIComponent(devTenant)}` : '';
     return api.delete(`/api/store/team/${encodeURIComponent(email)}${q}`);
   },
+  // Withdraw an invitation only; a member with the same address stays.
+  withdraw(email, devTenant) {
+    const q = new URLSearchParams({ invitation: 'true' });
+    if (devTenant) q.set('tenant', devTenant);
+    return api.delete(`/api/store/team/${encodeURIComponent(email)}?${q}`);
+  },
 };
 
 export const tenantApi = {
