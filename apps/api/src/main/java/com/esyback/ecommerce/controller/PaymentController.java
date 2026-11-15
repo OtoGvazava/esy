@@ -69,13 +69,20 @@ public class PaymentController {
 
         Order order = orderService.createOrder(user, tenant, request);
 
+        // The callback goes to the public base URL, which BOG can reach. The
+        // shopper goes back to the STORE they paid on: the base URL is the
+        // platform's (www.esy.ge), which has no /pay/return, so every return
+        // landed on a 404 and the shopper never saw a confirmation (review
+        // M2). An origin that is not one of ours falls back to the base.
         String base = origin(http);
+        String storeOrigin = com.esyback.ecommerce.security.TenantOrigins.of(http);
+        String back = com.esyback.ecommerce.security.TenantOrigins.isAllowed(storeOrigin) ? storeOrigin : base;
         String num = URLEncoder.encode(order.getOrderNumber(), StandardCharsets.UTF_8);
         BogPaymentService.PaymentSession session = bogPaymentService.createPayment(
             tenant, order,
             base + "/api/payments/bog/callback",
-            base + "/pay/return?order=" + num + "&status=success",
-            base + "/pay/return?order=" + num + "&status=fail");
+            back + "/pay/return?order=" + num + "&status=success",
+            back + "/pay/return?order=" + num + "&status=fail");
 
         orderService.markBogPending(order, session.bogOrderId());
         return ResponseEntity.ok(Map.of(
