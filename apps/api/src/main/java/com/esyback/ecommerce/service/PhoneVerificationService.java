@@ -87,9 +87,25 @@ public class PhoneVerificationService {
      */
     static final int MAX_SENDS_PER_NUMBER_PER_DAY = 5;
 
+    /**
+     * Codes one ACCOUNT may be sent per day, whatever the number. The per-code
+     * attempt limit alone let an account rotate numbers and ask for a fresh
+     * code every minute all day: ~1,440 texts, and ~1,440 × 5 guesses at
+     * other people's codes (review M23).
+     */
+    static final int MAX_SENDS_PER_ACCOUNT_PER_DAY = 10;
+
+    /** Wrong codes one account may enter per day, across every code it was sent. */
+    static final int MAX_WRONG_CODES_PER_ACCOUNT_PER_DAY = 15;
+
     private final ConcurrentHashMap<Long, Pending> pending = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, Instant> lastSentAt = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Deque<Instant>> sendsByNumber = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, Deque<Instant>> sendsByAccount = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, Deque<Instant>> wrongByAccount = new ConcurrentHashMap<>();
+    // Guards check-and-reserve of the throttles above. Held only for that
+    // bookkeeping, never across the SMS call.
+    private final Object throttle = new Object();
     private final UserService userService;
     private final UserRepository userRepository;
     private final SmsSender sms;
@@ -124,20 +140,21 @@ public class PhoneVerificationService {
                 "That number is already verified on another esy account");
         }
         // Throttle before generating anything: a refused request must not
-        // replace the code the person is currently typing.
-        Instant last = lastSentAt.get(user.getId());
-        if (last != null) {
-            long wait = RESEND_COOLDOWN_SECONDS - Duration.between(last, Instant.now()).toSeconds();
-            if (wait > 0) {
-                throw refuse(user, HttpStatus.TOO_MANY_REQUESTS, "PHONE_COOLDOWN",
-                    "Wait " + wait + "s before asking for another code");
-            }
+        // replace the code the person is currently typing. Checked AND
+        // reserved in one step, before the send: checking first and recording
+        // after the (slow) SMS call let 100 parallel requests all pass the
+        // cooldown and the daily cap (review M24). A send that does not
+        // happen gives its reservation back.
+        Reservation reserved = reserve(user, normalised);
+        try {
+            return sendReserved(user, phone, normalised);
+        } catch (RuntimeException e) {
+            release(reserved);
+            throw e;
         }
-        if (recentSends(normalised) >= MAX_SENDS_PER_NUMBER_PER_DAY) {
-            throw refuse(user, HttpStatus.TOO_MANY_REQUESTS, "PHONE_CAP",
-                "Too many codes sent to this number today — try again tomorrow");
-        }
+    }
 
+    private String sendReserved(User user, String phone, String normalised) {
         String code = String.format("%04d", ThreadLocalRandom.current().nextInt(0, 10_000));
 
         // The master switch is off: no message can be sent, and falling back to
@@ -194,23 +211,58 @@ public class PhoneVerificationService {
         return new ApiRefusal(status, code, reason);
     }
 
-    /** Records a freshly issued code, the number it is for, and the send. */
+    /** Records a freshly issued code and the number it is for (the send itself was reserved). */
     private void issue(User user, String code, String phone, String normalised) {
-        Instant now = Instant.now();
-        pending.put(user.getId(), new Pending(code, phone, normalised, now.plusSeconds(TTL_SECONDS)));
-        lastSentAt.put(user.getId(), now);
-        sendsByNumber.computeIfAbsent(normalised, k -> new ArrayDeque<>()).addLast(now);
+        pending.put(user.getId(), new Pending(code, phone, normalised, Instant.now().plusSeconds(TTL_SECONDS)));
     }
 
-    /** Sends to this number in the last 24 hours, dropping older entries. */
-    private int recentSends(String normalised) {
-        Deque<Instant> sends = sendsByNumber.get(normalised);
-        if (sends == null) return 0;
-        synchronized (sends) {
-            Instant cutoff = Instant.now().minus(Duration.ofDays(1));
-            while (!sends.isEmpty() && sends.peekFirst().isBefore(cutoff)) sends.pollFirst();
-            return sends.size();
+    /** What reserve() took, so a send that fails can give it back. */
+    private record Reservation(Long userId, Instant previousLast, Instant at, String normalised) {}
+
+    private Reservation reserve(User user, String normalised) {
+        synchronized (throttle) {
+            Instant now = Instant.now();
+            Instant last = lastSentAt.get(user.getId());
+            if (last != null) {
+                long wait = RESEND_COOLDOWN_SECONDS - Duration.between(last, now).toSeconds();
+                if (wait > 0) {
+                    throw refuse(user, HttpStatus.TOO_MANY_REQUESTS, "PHONE_COOLDOWN",
+                        "Wait " + wait + "s before asking for another code");
+                }
+            }
+            Deque<Instant> byNumber = sendsByNumber.computeIfAbsent(normalised, k -> new ArrayDeque<>());
+            if (inLastDay(byNumber, now) >= MAX_SENDS_PER_NUMBER_PER_DAY) {
+                throw refuse(user, HttpStatus.TOO_MANY_REQUESTS, "PHONE_CAP",
+                    "Too many codes sent to this number today — try again tomorrow");
+            }
+            Deque<Instant> byAccount = sendsByAccount.computeIfAbsent(user.getId(), k -> new ArrayDeque<>());
+            if (inLastDay(byAccount, now) >= MAX_SENDS_PER_ACCOUNT_PER_DAY) {
+                throw refuse(user, HttpStatus.TOO_MANY_REQUESTS, "PHONE_DAILY_LIMIT",
+                    "Too many codes for this account today — try again tomorrow");
+            }
+            lastSentAt.put(user.getId(), now);
+            byNumber.addLast(now);
+            byAccount.addLast(now);
+            return new Reservation(user.getId(), last, now, normalised);
         }
+    }
+
+    private void release(Reservation r) {
+        synchronized (throttle) {
+            if (r.previousLast() == null) lastSentAt.remove(r.userId(), r.at());
+            else lastSentAt.replace(r.userId(), r.at(), r.previousLast());
+            Deque<Instant> byNumber = sendsByNumber.get(r.normalised());
+            if (byNumber != null) byNumber.removeLastOccurrence(r.at());
+            Deque<Instant> byAccount = sendsByAccount.get(r.userId());
+            if (byAccount != null) byAccount.removeLastOccurrence(r.at());
+        }
+    }
+
+    /** Entries in the last 24 hours, dropping older ones. Call with {@code throttle} held. */
+    private static int inLastDay(Deque<Instant> times, Instant now) {
+        Instant cutoff = now.minus(Duration.ofDays(1));
+        while (!times.isEmpty() && times.peekFirst().isBefore(cutoff)) times.pollFirst();
+        return times.size();
     }
 
     /**
@@ -223,11 +275,22 @@ public class PhoneVerificationService {
      * point is that a four-digit secret must not survive being guessed at.
      */
     public void verify(User user, String code) {
+        synchronized (throttle) {
+            Deque<Instant> wrong = wrongByAccount.get(user.getId());
+            if (wrong != null && inLastDay(wrong, Instant.now()) >= MAX_WRONG_CODES_PER_ACCOUNT_PER_DAY) {
+                pending.remove(user.getId());
+                throw new ApiRefusal(HttpStatus.TOO_MANY_REQUESTS, "PHONE_DAILY_LIMIT",
+                    "Too many wrong codes for this account today — try again tomorrow");
+            }
+        }
         Pending p = pending.get(user.getId());
         if (p == null || Instant.now().isAfter(p.expiresAt)) {
             throw new ApiRefusal(HttpStatus.BAD_REQUEST, "CODE_EXPIRED", "Code expired — request a new one");
         }
         if (code == null || !code.trim().equals(p.code)) {
+            synchronized (throttle) {
+                wrongByAccount.computeIfAbsent(user.getId(), k -> new ArrayDeque<>()).addLast(Instant.now());
+            }
             p.attempts++;
             if (p.attempts >= MAX_ATTEMPTS) {
                 pending.remove(user.getId());

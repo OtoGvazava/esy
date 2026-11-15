@@ -324,4 +324,74 @@ class PhoneVerificationTest {
             }
         }
     }
+
+    // ---- account-wide limits (review M23) and atomic reservation (M24) -----
+
+    /** Stands in for the 60 s cooldown passing, without a clock to inject. */
+    @SuppressWarnings("unchecked")
+    private void cooldownPasses() throws Exception {
+        java.lang.reflect.Field f = PhoneVerificationService.class.getDeclaredField("lastSentAt");
+        f.setAccessible(true);
+        ((java.util.Map<Long, ?>) f.get(service)).clear();
+    }
+
+    private static String code(ResponseStatusException e) {
+        return e instanceof ApiRefusal r ? r.getCode() : null;
+    }
+
+    @Test
+    @DisplayName("20 parallel send requests produce exactly one code (M24)")
+    void parallelSendsReserveOnce() throws Exception {
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(20);
+        java.util.concurrent.CountDownLatch go = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicInteger sent = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.List<java.util.concurrent.Future<?>> all = new java.util.ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            all.add(pool.submit(() -> {
+                go.await();
+                try { service.sendCode(user); sent.incrementAndGet(); }
+                catch (ResponseStatusException refused) { /* the cooldown, as it should be */ }
+                return null;
+            }));
+        }
+        go.countDown();
+        for (java.util.concurrent.Future<?> fu : all) fu.get();
+        pool.shutdown();
+        assertEquals(1, sent.get());
+    }
+
+    @Test
+    @DisplayName("an account gets at most 10 codes a day, whatever numbers it uses (M23)")
+    void accountSendCap() throws Exception {
+        for (int i = 0; i < PhoneVerificationService.MAX_SENDS_PER_ACCOUNT_PER_DAY; i++) {
+            cooldownPasses();
+            service.sendCode(user, "+995 555 10 00 " + String.format("%02d", i));
+        }
+        cooldownPasses();
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+            () -> service.sendCode(user, "+995 555 10 00 99"));
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, e.getStatusCode());
+        assertEquals("PHONE_DAILY_LIMIT", code(e));
+    }
+
+    @Test
+    @DisplayName("15 wrong codes in a day lock the account out until tomorrow, right code or not (M23)")
+    void accountWrongCodeCap() throws Exception {
+        String last = null;
+        int wrongs = 0;
+        while (wrongs < PhoneVerificationService.MAX_WRONG_CODES_PER_ACCOUNT_PER_DAY) {
+            cooldownPasses();
+            last = service.sendCode(user, "+995 555 20 00 " + String.format("%02d", wrongs));
+            String wrong = last.equals("0000") ? "1111" : "0000";
+            // Stay under the per-code limit so only the daily one can bite.
+            for (int i = 0; i < PhoneVerificationService.MAX_ATTEMPTS - 1
+                    && wrongs < PhoneVerificationService.MAX_WRONG_CODES_PER_ACCOUNT_PER_DAY; i++, wrongs++) {
+                assertThrows(ResponseStatusException.class, () -> service.verify(user, wrong));
+            }
+        }
+        String right = last;
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.verify(user, right));
+        assertEquals("PHONE_DAILY_LIMIT", code(e));
+        assertFalse(Boolean.TRUE.equals(user.getPhoneVerified()));
+    }
 }

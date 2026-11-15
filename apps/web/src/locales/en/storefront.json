@@ -459,6 +459,7 @@
       "PHONE_TAKEN": "This number is already verified on another esy account.",
       "PHONE_COOLDOWN": "Please wait a moment before asking for another code.",
       "PHONE_CAP": "Too many codes sent to this number today. Try again tomorrow.",
+      "PHONE_DAILY_LIMIT": "Too many codes for this account today. Try again tomorrow.",
       "SMS_UNAVAILABLE": "The code could not be sent right now. Your number is kept — try again in a minute.",
       "CODE_EXPIRED": "That code has expired. Ask for a new one.",
       "CODE_WRONG": "Incorrect code — check it and try again.",
