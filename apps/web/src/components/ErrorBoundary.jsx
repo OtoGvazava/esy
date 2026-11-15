@@ -1,7 +1,7 @@
 /* global process */
 import React from 'react';
 import { Box, Typography, Button, Alert } from '@mui/material';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import { useTranslation } from 'react-i18next';
 
 class ErrorBoundary extends React.Component {

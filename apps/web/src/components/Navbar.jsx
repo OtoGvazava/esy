@@ -258,7 +258,7 @@ export default function Navbar({ searchQuery = '', onSearchChange, onToggleTheme
         anchorEl={accountMenuAnchor}
         open={Boolean(accountMenuAnchor)}
         onClose={handleAccountMenuClose}
-        PaperProps={{
+        slotProps={{ paper: {
           sx: {
             mt: 1,
             borderRadius: 2,
@@ -274,7 +274,7 @@ export default function Navbar({ searchQuery = '', onSearchChange, onToggleTheme
               ? '0 10px 25px rgba(0,0,0,0.3)'
               : '0 10px 25px rgba(0,0,0,0.1)',
           },
-        }}
+        } }}
       >
         <MenuItem onClick={handleMyAccount} sx={{ py: 1.5 }}>
           <AccountCircleOutlinedIcon sx={{ mr: 2 }} />

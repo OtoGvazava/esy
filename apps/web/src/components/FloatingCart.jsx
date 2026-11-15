@@ -24,8 +24,8 @@ export default function FloatingCart({ onCartToggle }) {
       <Tooltip 
         title={t('cart')} 
         placement="left"
-        TransitionComponent={Zoom}
-        TransitionProps={{ timeout: 200 }}
+        slots={{ transition: Zoom }}
+        slotProps={{ transition: { timeout: 200 } }}
       >
         <Badge 
           badgeContent={totalItems} 

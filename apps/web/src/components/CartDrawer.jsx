@@ -59,8 +59,8 @@ export default function CartDrawer({ open, onClose }) {
     <Modal
       open={open}
       onClose={onClose}
-      BackdropComponent={Backdrop}
-      BackdropProps={{
+      slots={{ backdrop: Backdrop }}
+      slotProps={{ backdrop: {
         sx: (theme) => ({
           backgroundColor: theme.palette.mode === 'dark' 
             ? 'rgba(0, 0, 0, 0.6)' 
@@ -68,7 +68,7 @@ export default function CartDrawer({ open, onClose }) {
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
         }),
-      }}
+      } }}
       sx={{
         display: 'flex',
         alignItems: 'center',
