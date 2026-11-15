@@ -3,13 +3,16 @@ package com.esyback.ecommerce.service;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.TenantRepository;
 import com.esyback.ecommerce.security.PlatformHosts;
+import com.esyback.ecommerce.web.ApiRefusal;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -19,12 +22,41 @@ public class TenantContextService {
     private final TenantRepository tenantRepository;
     
     private static final String DEFAULT_TENANT_SUBDOMAIN = "main";
-    
+
+    /** The refusal for an address that names a store that does not exist. */
+    public static final String STORE_NOT_FOUND = "STORE_NOT_FOUND";
+
+    /**
+     * The store this request is scoped to. A request that names a store (a
+     * storefront host, or {@code ?tenant=} where that is honoured) gets that
+     * store or a 404 {@link #STORE_NOT_FOUND}; it used to fall back to the
+     * default store, so a mistyped store address showed main's catalogue and
+     * booked orders against it. A request that names none is the default
+     * store's, as before.
+     */
     public Tenant getCurrentTenant() {
         String subdomain = getCurrentSubdomain();
-        return tenantRepository.findBySubdomain(subdomain)
-            .orElseGet(() -> tenantRepository.findBySubdomain(DEFAULT_TENANT_SUBDOMAIN)
-                .orElseThrow(() -> new RuntimeException("Default tenant not found")));
+        Optional<Tenant> named = tenantRepository.findBySubdomain(subdomain);
+        if (named.isPresent()) return named.get();
+        if (!DEFAULT_TENANT_SUBDOMAIN.equals(subdomain)) {
+            throw new ApiRefusal(HttpStatus.NOT_FOUND, STORE_NOT_FOUND,
+                "There is no store at this address", Map.of("subdomain", subdomain));
+        }
+        throw new RuntimeException("Default tenant not found");
+    }
+
+    /**
+     * {@link #getCurrentTenant}, empty where the address names a store that
+     * does not exist: for answers that merely mention the store (who is
+     * signed in, and whether they run it) and must not fail on such a page.
+     */
+    public Optional<Tenant> findCurrentTenant() {
+        try {
+            return Optional.of(getCurrentTenant());
+        } catch (ApiRefusal e) {
+            if (STORE_NOT_FOUND.equals(e.getCode())) return Optional.empty();
+            throw e;
+        }
     }
     
     public String getCurrentSubdomain() {
@@ -136,8 +168,11 @@ public class TenantContextService {
         if (h.equals("localhost") || h.equals("127.0.0.1")) {
             return request.getParameter("tenant") == null;
         }
-        // <sub>.<base domain> = a tenant storefront.
-        return false;
+        // <sub>.<base domain> = a tenant storefront. Any other host (the
+        // Render hostname, say) serves no store of its own, so it is the
+        // platform, as the web's isPlatformHost already reads it; it used to
+        // draw the default store's storefront.
+        return PlatformHosts.storefrontSubdomain(h) == null;
     }
 
     /** manager.esy.ge / manager.lvh.me / manager.localhost — the back office. */

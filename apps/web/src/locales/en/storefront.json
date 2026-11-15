@@ -415,6 +415,8 @@
   "closed": {
     "title": "This store is unavailable",
     "body": "{{domain}} is suspended for now, so nothing can be bought here. Orders you've already placed are in your esy account.",
+    "missingTitle": "There's no store here",
+    "missingBody": "No store on esy uses the address {{domain}}. Check the spelling, or find the store among the others on esy.ge.",
     "myOrders": "My orders",
     "otherStores": "Other stores on esy.ge",
     "stores": "Stores",
