@@ -22,7 +22,7 @@
   "shipsFrom": "Ships from",
   "addToBag": "Add to bag · {{price}}",
   "youMayAlsoLike": "You may also like",
-  "add": "To bag",
+  "addNamed": "Add {{name}} to bag",
   "tagBest": "best",
   "tagLow": "low stock",
   "tagNew": "new",
