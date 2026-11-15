@@ -13,27 +13,45 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UrlPathHelper;
 
 import java.io.IOException;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    
+
+    private static final UrlPathHelper PATHS = new UrlPathHelper();
+
     @Autowired
     private JwtUtil jwtUtil;
-    
+
     @Autowired
     private CustomUserDetailsService userDetailsService;
-    
+
+    /**
+     * Only the API and the (admin-only) API reference read who is signed in.
+     * The SPA's pages, scripts and images do not, and each used to cost a
+     * database query and three signature checks. The decoded path, as MVC
+     * routes on, so an encoded "/%61pi/" is still an API request; skipping one
+     * would anyway only make it anonymous, never more privileged.
+     */
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return !needsIdentity(PATHS.getPathWithinApplication(request));
+    }
+
+    static boolean needsIdentity(String path) {
+        return path.startsWith("/api/")
+            || path.equals("/docs") || path.equals("/swagger")
+            || path.equals("/v3/api-docs") || path.startsWith("/v3/api-docs/");
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        
+
         final String authorizationHeader = request.getHeader("Authorization");
-
-        String username = null;
-        String jwt = null;
-
+        String jwt;
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
         } else {
@@ -43,14 +61,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             jwt = AuthCookie.read(request);
         }
 
-        if (jwt != null) {
-            try {
-                username = jwtUtil.extractUsername(jwt);
-            } catch (Exception e) {
-                logger.error("JWT token is invalid or expired", e);
-            }
+        // One signature check, which also refuses an expired token.
+        String username = jwt == null ? null : jwtUtil.verifiedSubject(jwt);
+        if (jwt != null && username == null) {
+            logger.debug("JWT token is invalid or expired");
         }
-        
+
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
@@ -58,7 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // A deactivated account keeps no access, whatever its cookie
                 // says: it proceeds as anonymous.
                 if (userDetails.isEnabled() && userDetails.isAccountNonLocked()
-                        && jwtUtil.validateToken(jwt, userDetails)) {
+                        && username.equals(userDetails.getUsername())) {
                     UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
