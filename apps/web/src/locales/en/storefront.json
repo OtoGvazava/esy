@@ -143,6 +143,13 @@
       "tbilisi": "Courier — Tbilisi",
       "georgia": "Courier — rest of Georgia",
       "express": "Express"
+    },
+    "refused": {
+      "OUT_OF_STOCK": "Part of your bag is no longer in stock. Lower the quantity and try again.",
+      "QUANTITY_TOO_LARGE": "That is more than one order can hold. Lower the quantity.",
+      "CARD_ONLY": "This store takes card payments only. Reload the page and pay by card.",
+      "STORE_SUSPENDED": "This store is not taking orders right now.",
+      "STORE_CLOSED": "This store is not taking orders right now."
     }
   },
   "payReturn": {

@@ -126,7 +126,16 @@ class VariantStockTest {
     @Test
     @Transactional
     void oversellingOneSizeFloorsThatRowAlone() {
+        // Nine were there at checkout; seven sold elsewhere before this order
+        // took its stock (checkout refuses more than is on hand, so an
+        // oversell can only happen in that gap).
+        ProductVariant row = variant("38");
+        row.setQuantity(9);
+        variantRepository.save(row);
         Order order = buy(variant("38"), 9);
+        row = variant("38");
+        row.setQuantity(2);
+        variantRepository.save(row);
         productService.commitStock(order);
 
         assertThat(variant("38").getQuantity()).isZero();

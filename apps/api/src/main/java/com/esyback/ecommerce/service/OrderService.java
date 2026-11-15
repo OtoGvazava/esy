@@ -77,6 +77,9 @@ public class OrderService {
      * hundred orders and failed checkout with a 500 (review H10). Random and
      * large also keeps one shopper from guessing their way to another's order.
      */
+    /** No line may ask for more than this of one item; real orders never come close. */
+    static final int MAX_LINE_QUANTITY = 999;
+
     String newOrderNumber() {
         for (int attempt = 0; attempt < 5; attempt++) {
             StringBuilder sb = new StringBuilder("ESY-");
@@ -116,6 +119,8 @@ public class OrderService {
         order.setOrderNumber(newOrderNumber());
 
         BigDecimal total = BigDecimal.ZERO;
+        // What this order asks of each product (or variant row), across lines.
+        java.util.Map<String, Integer> asked = new java.util.HashMap<>();
         for (CreateOrderRequest.Item i : req.getItems()) {
             // What is sold, and for how much, is this store's catalogue — never
             // the browser's. A line must name one of the store's own products;
@@ -137,6 +142,10 @@ public class OrderService {
             oi.setTitle(product.getTitle());
             BigDecimal price = product.getPrice() == null ? BigDecimal.ZERO : product.getPrice();
             int qty = i.getQuantity() == null || i.getQuantity() < 1 ? 1 : i.getQuantity();
+            if (qty > MAX_LINE_QUANTITY) {
+                throw new ApiRefusal(HttpStatus.BAD_REQUEST, "QUANTITY_TOO_LARGE",
+                    "At most " + MAX_LINE_QUANTITY + " of one item per order");
+            }
 
             // Variants (D11). The combination is frozen onto the line the same
             // way the title and price are, and the row's own price wins.
@@ -145,6 +154,26 @@ public class OrderService {
                 oi.setVariantId(variant.getId());
                 oi.setVariantLabel(variant.label());
                 price = variant.getPrice() != null ? variant.getPrice() : price;
+            }
+
+            // Checkout used to take any quantity of anything, sold out or not,
+            // so a card was charged for goods that do not exist and a free
+            // order could empty every shelf (review M34). Null stock on a
+            // product without variants means the store does not count it.
+            Integer stock = product.variantsEnabled()
+                ? productVariantService.require(product, i.getVariantId()).getQuantity()
+                : product.getQuantity();
+            String key = product.getId() + ":" + (oi.getVariantId() == null ? "" : oi.getVariantId());
+            int wanted = asked.merge(key, qty, Integer::sum);
+            if (stock != null && wanted > stock) {
+                java.util.Map<String, Object> details = new java.util.LinkedHashMap<>();
+                details.put("productId", product.getId());
+                if (oi.getVariantId() != null) details.put("variantId", oi.getVariantId());
+                details.put("available", Math.max(0, stock));
+                throw new ApiRefusal(HttpStatus.CONFLICT, "OUT_OF_STOCK",
+                    stock <= 0 ? "\"" + product.getTitle() + "\" is sold out"
+                        : "Only " + stock + " of \"" + product.getTitle() + "\" left",
+                    details);
             }
 
             oi.setPrice(price);
