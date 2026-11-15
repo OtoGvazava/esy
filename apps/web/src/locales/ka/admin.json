@@ -344,7 +344,7 @@
     "bodyLabel": "წერილის ტექსტი",
     "units": "{{len}} სიმბოლო · {{units}} SMS",
     "requiredToken": "<mono>{{token}}</mono> სავალდებულოა.",
-    "orderCounted": "<mono>{order}</mono> ითვლება ყველაზე გრძელი ნომრით, <mono>#99999</mono>.",
+    "orderCounted": "<mono>{order}</mono> ითვლება ყველაზე გრძელი ნომრით, <mono>{{sample}}</mono>.",
     "unicode": "ქართული ტექსტი Unicode‑ია: 70 სიმბოლო ერთი SMS‑ია, 71 უკვე ორი.",
     "notCounted": "<mono>{store}</mono> და <mono>{url}</mono> აქ არ ითვლება: გაგზავნისას ტექსტს ამატებენ.",
     "emailPlain": "მხოლოდ ტექსტი — HTML ავტომატურად იგება, ამიტომ აქ ჩაწერილი ტეგები არ დარენდერდება.",

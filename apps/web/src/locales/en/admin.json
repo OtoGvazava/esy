@@ -344,7 +344,7 @@
     "bodyLabel": "Email text",
     "units": "{{len}} characters · {{units}} SMS",
     "requiredToken": "<mono>{{token}}</mono> is required.",
-    "orderCounted": "<mono>{order}</mono> is counted at the longest number, <mono>#99999</mono>.",
+    "orderCounted": "<mono>{order}</mono> is counted at the longest number, <mono>{{sample}}</mono>.",
     "unicode": "Georgian text is Unicode: 70 characters is one SMS, 71 is already two.",
     "notCounted": "<mono>{store}</mono> and <mono>{url}</mono> aren't counted here; they lengthen the message when it's sent.",
     "emailPlain": "Plain text — the HTML is generated, so markup here is escaped rather than rendered.",
