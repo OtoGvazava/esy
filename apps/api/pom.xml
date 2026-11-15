@@ -15,6 +15,8 @@
     <description>Ecommerce platform with OAuth2 authentication</description>
     <properties>
         <java.version>25</java.version>
+        <!-- Empty unless a plugin (e.g. JaCoCo) sets it; surefire appends to it. -->
+        <argLine></argLine>
     </properties>
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -127,11 +129,9 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-            <!-- Tests run against nothing real: no Redis config store (a local
-                 fee-rate override broke fee assertions) and no provider keys
-                 (an exported SMS key sent real texts from the test suite). -->
             <!-- Lombok named as the annotation processor: since JDK 23 javac no
-                 longer runs processors it merely finds on the classpath. -->
+                 longer runs processors it merely finds on the classpath. A new
+                 annotation processor must be listed here too. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -157,13 +157,16 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Tests run against nothing real: no Redis config store (a local
+                 fee-rate override broke fee assertions) and no provider keys
+                 (an exported SMS key sent real texts from the test suite). -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <!-- Mockito as a Java agent: recent JDKs warn about (and future ones
                          refuse) a library attaching an agent to itself at runtime. -->
-                    <argLine>-javaagent:${org.mockito:mockito-core:jar}</argLine>
+                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
                     <environmentVariables>
                         <SPRING_DATA_REDIS_URL>redis://127.0.0.1:1</SPRING_DATA_REDIS_URL>
                         <APP_SMS_KEY></APP_SMS_KEY>
