@@ -457,7 +457,10 @@ public class OrderService {
      * @param amount the partial amount, or null to refund everything still
      *               refundable on the order
      */
-    @Transactional
+    // noRollbackFor is what makes "the claim deliberately stands" true: the
+    // bank's silence is a RuntimeException, which would otherwise roll the
+    // claim back and leave the full amount refundable a second time.
+    @Transactional(noRollbackFor = BogPaymentService.BogUnreachableException.class)
     public Order requestRefund(Tenant tenant, Long orderId, BigDecimal amount) {
         Order order = orderForTenant(tenant, orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));

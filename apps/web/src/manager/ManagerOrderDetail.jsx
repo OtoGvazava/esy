@@ -255,6 +255,13 @@ export default function ManagerOrderDetail() {
     qc.invalidateQueries({ queryKey, exact: true, refetchType: 'none' });
   };
 
+  // Read the order again from the server: after a refund the bank did not
+  // confirm, the server holds a claim the screen has not seen yet.
+  const reload = () => {
+    qc.invalidateQueries({ queryKey: storeOrderQuery(orderId).queryKey, exact: true });
+    qc.invalidateQueries({ queryKey: storeOrdersQuery().queryKey, exact: true, refetchType: 'none' });
+  };
+
   const back = () => navigate(`/orders${q}`);
   const gap = isMobile ? 14 : isDesktop ? 20 : 18;
 
@@ -516,6 +523,7 @@ export default function ManagerOrderDetail() {
         <StepOrderDialog
           {...sheetProps} next={next}
           onDone={(updated) => { merge(updated); setDialog(null); }}
+          onUnconfirmed={reload}
           onClose={() => setDialog(null)}
         />
       )}
@@ -525,7 +533,11 @@ export default function ManagerOrderDetail() {
         <CancelOrderDialog
           T={T} order={order} refundable={refundable} isOwner={isStoreOwner}
           isMobile={isMobile} sub={sub}
-          onDone={(updated, why) => { merge(updated); setProblem(why || ''); }}
+          onDone={(updated, why, opts) => {
+            merge(updated);
+            setProblem(why || '');
+            if (opts?.reload) reload();
+          }}
           onClose={() => setDialog(null)}
         />
       )}

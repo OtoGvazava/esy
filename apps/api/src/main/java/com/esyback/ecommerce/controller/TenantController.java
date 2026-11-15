@@ -19,6 +19,7 @@ import com.esyback.ecommerce.service.TenantService;
 import com.esyback.ecommerce.service.TenantViewService;
 import com.esyback.ecommerce.service.UserService;
 import com.esyback.ecommerce.service.BogPaymentService;
+import com.esyback.ecommerce.web.ApiRefusal;
 import com.esyback.ecommerce.web.TenantMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -429,9 +430,10 @@ public class TenantController {
             return ResponseEntity.ok(m);
         } catch (BogPaymentService.BogUnreachableException e) {
             // 502 with the bank's silence spelled out. The claim was kept on
-            // purpose, so the operator must check before retrying rather than
-            // being invited to send the same money twice.
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, e.getMessage());
+            // purpose (requestRefund does not roll back on this), so the
+            // operator must check before retrying rather than being invited to
+            // send the same money twice. The code lets the screen say so.
+            throw new ApiRefusal(HttpStatus.BAD_GATEWAY, "REFUND_UNCONFIRMED", e.getMessage());
         }
     }
 
