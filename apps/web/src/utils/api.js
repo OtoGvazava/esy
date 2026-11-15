@@ -378,6 +378,17 @@ export const accountApi = {
   get() {
     return api.get('/api/account');
   },
+  // Store roles offered to this account (review M36); each answer is the
+  // list still open.
+  invitations({ signal } = {}) {
+    return api.get('/api/account/invitations', { signal });
+  },
+  acceptInvitation(id) {
+    return api.post(`/api/account/invitations/${encodeURIComponent(id)}/accept`, {});
+  },
+  declineInvitation(id) {
+    return api.post(`/api/account/invitations/${encodeURIComponent(id)}/decline`, {});
+  },
   // Mandatory profile (name/surname/dateOfBirth). Phone is separate below.
   updateProfile(body) {
     return api.put('/api/account/profile', body);

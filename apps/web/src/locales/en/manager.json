@@ -21,13 +21,17 @@
       "team": "Team and roles"
     },
     "both": "Both",
-    "note": "A store always needs at least one owner. A manager runs products and orders; the team and the settings stay with the owner."
+    "note": "A store always needs at least one owner. A manager runs products and orders; the team and the settings stay with the owner.",
+    "invited": "Invitation sent · waiting for an answer",
+    "withdraw": "Withdraw invitation",
+    "withdrawTitle": "Withdraw the invitation?",
+    "withdrawConfirm": "{{email}} will no longer be able to accept it."
   },
   "invite": {
     "title": "Give someone a role",
     "close": "Close",
     "email": "Their Google account email",
-    "hint": "They must have signed in to esy at least once. Identity comes from Google, so nobody is sent a password.",
+    "hint": "We only send an invitation. The role applies once they accept it from their esy account, signed in with this address.",
     "managerSub": "Day-to-day work: orders, products and stock.",
     "ownerSub": "Everything you can do, refunds included.",
     "can": "A manager can",
@@ -44,9 +48,9 @@
     "makeManager": "Make manager",
     "makeOwner": "Make owner",
     "working": "Saving…",
-    "sentManager": "{{name}} is now a manager",
-    "sentOwner": "{{name}} is now an owner",
-    "sentBody": "The role applies at once. No email is sent: tell them to sign in at {{host}} with {{email}}.",
+    "sentManager": "Invitation sent to {{name}} as a manager",
+    "sentOwner": "Invitation sent to {{name}} as an owner",
+    "sentBody": "Nothing changes until they accept. They will find the invitation in their esy account when they sign in with {{email}}; tell them to look at {{host}}. It stays open for 14 days.",
     "another": "Add another",
     "done": "Done",
     "err": {

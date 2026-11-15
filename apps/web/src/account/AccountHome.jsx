@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useThemeMode } from '../contexts/ThemeModeContext';
 import { langInfo } from '../components/glow/GlowPrimitives';
 import { Av, Btn, Card, Glyph, Lbl, LiIc, List, cardStyle, initialsOf, type } from '../platform/PlatformKit';
+import AccountInvitations from './AccountInvitations';
 import HereBlock from './HereBlock';
 import { Go, NewStoreLink, OrderRow, Row, StoreRow, phoneText, srOnly, useAccount } from './parts';
 
@@ -54,6 +55,7 @@ export default function AccountHome() {
 
       <div style={grid}>
         <div style={col}>
+          <AccountInvitations />
           {inStore && <HereBlock />}
 
           {!desk && (

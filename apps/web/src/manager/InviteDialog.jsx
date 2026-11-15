@@ -82,7 +82,10 @@ export default function InviteDialog({ T, isMobile, rows, devTenant, onDone, onC
       const next = await teamApi.assign(value, role, devTenant);
       const staff = Array.isArray(next) ? next : [];
       onDone(staff);
-      setSent(staff.find((r) => norm(r.email) === value) || { email: value, role });
+      // The row the answer lists for this address: a pending invitation, or,
+      // when an owner was moved down to manager, the member itself.
+      setSent(staff.find((r) => norm(r.email) === value && r.pending)
+        || staff.find((r) => norm(r.email) === value) || { email: value, role, pending: true });
     } catch (err) {
       setProblem(teamProblem(t, err, 'team.assignFailed'));
     } finally {
