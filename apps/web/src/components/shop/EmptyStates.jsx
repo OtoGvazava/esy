@@ -11,7 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { productPageQuery } from '../../core/query/queries';
-import { useCart } from '../../contexts/CartContext';
+import useQuickAdd from '../../hooks/useQuickAdd';
 import { useGlow } from '../../styles/glow';
 import { useBottomClearance, useDesign } from '../../core/design/useDesign';
 import GlowProductCard from '../glow/GlowProductCard';
@@ -32,7 +32,7 @@ export function Suggestions({ products }) {
   const { T, tenant } = useGlow();
   const dev = useDev();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const quickAdd = useQuickAdd();
   const { t } = useTranslation('storefront');
   const design = useDesign();
   const shown = (products || []).slice(0, COUNT[dev]);
@@ -49,7 +49,7 @@ export function Suggestions({ products }) {
             key={p.id} T={T} p={p} hue={tenant.hue} compact={dev === 'ph'}
             layout="grid2" look={design.style}
             onOpen={() => navigate(`/product/${p.id}`)}
-            onAdd={() => addToCart({ id: p.id, title: p.title, price: p.price, image: p.image, thumbnail: p.thumbnail })}
+            onAdd={() => quickAdd(p)}
           />
         ))}
       </div>

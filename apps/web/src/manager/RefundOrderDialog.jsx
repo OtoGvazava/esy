@@ -24,7 +24,7 @@ const parseAmount = (raw) => {
 };
 
 export default function RefundOrderDialog({
-  T, order, isMobile, sub, buyerName, statusLabel, refundable, refunded, deliveryFee, onDone, onClose,
+  T, order, isMobile, sub, buyerName, statusLabel, refundable, refunded, deliveryFee, onDone, onUnconfirmed, onClose,
 }) {
   const { t } = useTranslation('manager');
   const titleId = useId();
@@ -32,12 +32,15 @@ export default function RefundOrderDialog({
   const [raw, setRaw] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // The bank did not answer: the refund may have gone through, and the server
+  // kept its claim on the money. Nothing more may be sent from this dialog.
+  const [unconfirmed, setUnconfirmed] = useState(false);
   const [focus, ring] = useFocusRing();
 
   const part = parseAmount(raw);
   const partOk = Number.isFinite(part) && part > 0 && part <= refundable + 1e-9;
   const amount = mode === 'full' ? refundable : part;
-  const ready = mode === 'full' ? refundable > 0 : partOk;
+  const ready = !unconfirmed && (mode === 'full' ? refundable > 0 : partOk);
   const tooMuch = mode === 'part' && Number.isFinite(part) && part > refundable + 1e-9;
 
   const shut = () => { if (!busy) onClose(); };
@@ -51,8 +54,14 @@ export default function RefundOrderDialog({
       const updated = await tenantApi.refundOrder(order.id, mode === 'full' ? '' : part.toFixed(2), sub);
       onDone(updated);
     } catch (e) {
-      const why = handleApiError(e, '');
-      setError(why ? `${t('refund.failed')} ${why}` : t('refund.failed'));
+      if (e?.code === 'REFUND_UNCONFIRMED') {
+        setUnconfirmed(true);
+        setError(t('refund.unconfirmed'));
+        onUnconfirmed?.();
+      } else {
+        const why = handleApiError(e, '');
+        setError(why ? `${t('refund.failed')} ${why}` : t('refund.failed'));
+      }
       setBusy(false);
     }
   };
@@ -77,7 +86,7 @@ export default function RefundOrderDialog({
 
       <div role="radiogroup" aria-labelledby={titleId} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <Option
-          T={T} name={`${titleId}-mode`} on={mode === 'full'} onSelect={() => setMode('full')} disabled={busy}
+          T={T} name={`${titleId}-mode`} on={mode === 'full'} onSelect={() => setMode('full')} disabled={busy || unconfirmed}
           title={refunded > 0 ? t('refund.rest') : t('refund.full')}
           sub={refunded > 0 ? t('refund.restSub', { amount: money(refunded) })
             : deliveryFee > 0 ? t('refund.fullSub') : t('refund.fullSubItems')}
@@ -85,7 +94,7 @@ export default function RefundOrderDialog({
           <b style={{ font: `600 14px ${T.font}`, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{money(refundable)}</b>
         </Option>
         <Option
-          T={T} name={`${titleId}-mode`} on={mode === 'part'} onSelect={() => setMode('part')} disabled={busy}
+          T={T} name={`${titleId}-mode`} on={mode === 'part'} onSelect={() => setMode('part')} disabled={busy || unconfirmed}
           title={t('refund.part')} sub={t('refund.partSub', { max: money(refundable) })}
         >
           <span style={{
@@ -95,7 +104,7 @@ export default function RefundOrderDialog({
             boxShadow: focus && !tooMuch ? `0 0 0 4px color-mix(in oklab, ${T.accent} 18%, transparent)` : 'none',
           }}>
             <input
-              value={raw} inputMode="decimal" placeholder={t('refund.placeholder')} disabled={busy}
+              value={raw} inputMode="decimal" placeholder={t('refund.placeholder')} disabled={busy || unconfirmed}
               aria-label={t('refund.amountLabel')} aria-invalid={tooMuch || undefined}
               onChange={(e) => { setRaw(e.target.value); setMode('part'); }}
               onFocus={() => { ring.onFocus(); setMode('part'); }} onBlur={ring.onBlur}

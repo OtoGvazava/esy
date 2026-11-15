@@ -53,6 +53,8 @@ public class ProductImportService {
     private static final String TITLE = "title";
     private static final String DESCRIPTION = "description";
     private static final String PRICE = "price";
+    // products.price is numeric(10,2): at most 8 digits before the point.
+    private static final int MAX_PRICE_DIGITS = 8;
     private static final String QUANTITY = "quantity";
     private static final String CATEGORY = "category";
 
@@ -192,6 +194,13 @@ public class ProductImportService {
                     if (parsed.signum() <= 0) {
                         errors.add(new RowError(line, PRICE, "notPositive", rawPrice,
                             "price must be greater than 0"));
+                    } else if (parsed.precision() - parsed.scale() > MAX_PRICE_DIGITS) {
+                        // Checked on precision and scale, which are cheap, BEFORE
+                        // anything materialises the number: "1e50000000" is a
+                        // valid BigDecimal whose setScale(2) builds a ~166-million
+                        // bit integer and pins a CPU for seconds per cell.
+                        errors.add(new RowError(line, PRICE, "tooBig", rawPrice,
+                            "price \"" + rawPrice + "\" is too large"));
                     } else if (parsed.stripTrailingZeros().scale() > 2) {
                         // Only real precision counts: the column holds two
                         // decimals, so 24.999 would be rounded to something the
@@ -202,7 +211,7 @@ public class ProductImportService {
                     } else {
                         price = parsed.setScale(2, java.math.RoundingMode.UNNECESSARY);
                     }
-                } catch (NumberFormatException e) {
+                } catch (NumberFormatException | ArithmeticException e) {
                     errors.add(new RowError(line, PRICE, "notNumber", rawPrice,
                         "price \"" + rawPrice + "\" is not a number"));
                 }

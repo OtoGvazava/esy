@@ -15,6 +15,7 @@ import com.esyback.ecommerce.repository.AddressRepository;
 import com.esyback.ecommerce.repository.OrderRepository;
 import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.repository.ProductVariantRepository;
+import com.esyback.ecommerce.web.ApiRefusal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -62,7 +64,44 @@ public class OrderService {
     // HTTP client — it does not reach back into orders.
     private final BogPaymentService bogPaymentService;
 
+    // Crockford-style: no 0/O, 1/I/L or U, so a number read out over the
+    // phone or copied by hand survives. 30^8 ≈ 6.6e11 values.
+    private static final char[] ORDER_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ".toCharArray();
+    private static final SecureRandom ORDER_RANDOM = new SecureRandom();
+
+    /**
+     * A fresh, unused order number: ESY-XXXX-XXXX.
+     *
+     * <p>It used to be ESY-nnnn-n, about 72,000 values under a unique
+     * constraint that spans every store, so collisions began within a few
+     * hundred orders and failed checkout with a 500 (review H10). Random and
+     * large also keeps one shopper from guessing their way to another's order.
+     */
+    String newOrderNumber() {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            StringBuilder sb = new StringBuilder("ESY-");
+            for (int i = 0; i < 8; i++) {
+                if (i == 4) sb.append('-');
+                sb.append(ORDER_ALPHABET[ORDER_RANDOM.nextInt(ORDER_ALPHABET.length)]);
+            }
+            String candidate = sb.toString();
+            if (orderRepository.findByOrderNumber(candidate).isEmpty()) return candidate;
+        }
+        throw new IllegalStateException("Could not find a free order number");
+    }
+
     public Order createOrder(User user, Tenant tenant, CreateOrderRequest req) {
+        // Enforced here, where both checkouts (pay later and card) create the
+        // order: a store the platform suspended or the owner switched off takes
+        // no orders, whatever a stale tab or a direct API call sends.
+        if (tenant == null || tenant.getSuspendedAt() != null) {
+            throw new ApiRefusal(HttpStatus.FORBIDDEN, "STORE_SUSPENDED",
+                "This store is not taking orders right now");
+        }
+        if (!Boolean.TRUE.equals(tenant.getIsActive())) {
+            throw new ApiRefusal(HttpStatus.FORBIDDEN, "STORE_CLOSED",
+                "This store is not taking orders right now");
+        }
         if (req.getItems() == null || req.getItems().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order has no items");
         }
@@ -74,8 +113,7 @@ public class OrderService {
         // Explicit rather than null, because null means "placed before the
         // flag existed" and is read from the payment status instead.
         order.setStockCommitted(false);
-        order.setOrderNumber("ESY-" + ThreadLocalRandom.current().nextInt(1000, 9999)
-            + "-" + ThreadLocalRandom.current().nextInt(1, 9));
+        order.setOrderNumber(newOrderNumber());
 
         BigDecimal total = BigDecimal.ZERO;
         for (CreateOrderRequest.Item i : req.getItems()) {
@@ -360,6 +398,35 @@ public class OrderService {
         }
         return findByOrderNumber(orderNumber).map(order -> {
             if (order.getPaymentStatus() == outcome) return order;
+            // Only transitions that make sense from where the order is: a
+            // payment can fail only while it is still pending, and a refund
+            // can only land on money that was taken. A late or replayed
+            // "rejected" must never cancel a paid or delivered order.
+            Order.PaymentStatus current = order.getPaymentStatus();
+            boolean allowed = switch (outcome) {
+                case FAILED -> current == Order.PaymentStatus.PENDING;
+                case REFUNDED -> current == Order.PaymentStatus.PAID
+                    || current == Order.PaymentStatus.REFUND_PENDING;
+                default -> false;
+            };
+            if (!allowed) {
+                log.warn("Ignored payment outcome {} for order {} in payment state {}",
+                    outcome, orderNumber, current);
+                return order;
+            }
+            // A refund that leaves money on the order (BOG's refunded_partially,
+            // which maps to REFUNDED like a full one) puts it back to PAID: the
+            // rest stays refundable. Fully refunded, or refunded outside esy
+            // with nothing on our ledger, it is REFUNDED.
+            if (outcome == Order.PaymentStatus.REFUNDED) {
+                BigDecimal refunded = order.refundedOrZero();
+                BigDecimal total = order.getTotal() == null ? BigDecimal.ZERO : order.getTotal();
+                boolean partial = refunded.signum() > 0 && refunded.compareTo(total) < 0;
+                Order.PaymentStatus next = partial ? Order.PaymentStatus.PAID : Order.PaymentStatus.REFUNDED;
+                if (order.getPaymentStatus() == next) return order;
+                order.setPaymentStatus(next);
+                return orderRepository.save(order);
+            }
             order.setPaymentStatus(outcome);
             if (outcome == Order.PaymentStatus.FAILED) {
                 // Cancelled by a failed or abandoned payment, and deliberately
@@ -441,7 +508,10 @@ public class OrderService {
      * @param amount the partial amount, or null to refund everything still
      *               refundable on the order
      */
-    @Transactional
+    // noRollbackFor is what makes "the claim deliberately stands" true: the
+    // bank's silence is a RuntimeException, which would otherwise roll the
+    // claim back and leave the full amount refundable a second time.
+    @Transactional(noRollbackFor = BogPaymentService.BogUnreachableException.class)
     public Order requestRefund(Tenant tenant, Long orderId, BigDecimal amount) {
         Order order = orderForTenant(tenant, orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));

@@ -244,18 +244,39 @@ class RefundTest {
         verify(bogPaymentService, never()).refund(any(), any(), any());
     }
 
+    // NOT @Transactional: inside a test transaction a rollback can never be
+    // seen, which is how this test once passed while the claim was in fact
+    // rolled back. Each call commits (or rolls back) on its own here.
     @Test
-    @Transactional
     @DisplayName("the bank going silent keeps the claim rather than inviting a second attempt")
     void unreachableBankKeepsTheClaim() {
         Order order = paidOrder("100.00");
         when(bogPaymentService.refund(any(), any(), any()))
             .thenThrow(new BogPaymentService.BogUnreachableException("no answer"));
 
-        assertThatThrownBy(() -> orderService.requestRefund(tenant, order.getId(), null))
+        assertThatThrownBy(() -> orderService.requestRefund(tenant, order.getId(), new BigDecimal("40.00")))
             .isInstanceOf(BogPaymentService.BogUnreachableException.class);
-        // Deliberately NOT asserting a rollback here: whether the money moved
-        // is unknown, so the surviving claim is the point. The controller turns
-        // this into a 502 telling the operator to check with the bank.
+
+        // The money may have moved, so the claim must survive the exception.
+        Order after = orderRepository.findById(order.getId()).orElseThrow();
+        assertThat(after.getPaymentStatus()).isEqualTo(Order.PaymentStatus.REFUND_PENDING);
+        assertThat(after.getRefundedAmount()).isEqualByComparingTo("40.00");
+        // ...so a second press cannot send the same 100 again.
+        assertThat(after.refundableAmount()).isEqualByComparingTo("60.00");
+    }
+
+    @Test
+    @DisplayName("an explicit refusal from the bank really rolls the claim back")
+    void refusalRollsBackForReal() {
+        Order order = paidOrder("100.00");
+        when(bogPaymentService.refund(any(), any(), any()))
+            .thenReturn(new BogPaymentService.RefundResult(false, "error", "Card not refundable", null));
+
+        assertThatThrownBy(() -> orderService.requestRefund(tenant, order.getId(), null))
+            .isInstanceOf(ResponseStatusException.class);
+
+        Order after = orderRepository.findById(order.getId()).orElseThrow();
+        assertThat(after.getPaymentStatus()).isEqualTo(Order.PaymentStatus.PAID);
+        assertThat(after.refundedOrZero()).isEqualByComparingTo("0");
     }
 }

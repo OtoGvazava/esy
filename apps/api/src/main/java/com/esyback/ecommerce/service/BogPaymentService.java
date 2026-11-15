@@ -251,16 +251,24 @@ public class BogPaymentService {
 
     /**
      * Verify the {@code Callback-Signature} (base64, SHA256withRSA over the
-     * raw request body) against BOG's public key. Returns {@code true} when
-     * no public key is configured (dev) — fail-open is intentional there and
-     * logged; production sets the key so it is fail-closed.
+     * raw request body) against BOG's public key.
+     *
+     * <p>Fails CLOSED: with no public key configured no signature is ever
+     * valid. The callback endpoint is public and settles orders, so an
+     * unchecked body would let anyone mark an order PAID. Without a key the
+     * controller instead treats a callback as a nudge and settles from BOG's
+     * own receipt (see {@link #hasCallbackKey()}).
      */
+    /** Whether callbacks can be authenticated (a public key is configured). */
+    public boolean hasCallbackKey() {
+        String pem = bog.getPublicKey();
+        return pem != null && !pem.isBlank();
+    }
+
     public boolean verifyCallbackSignature(byte[] rawBody, String signatureBase64) {
         String publicKeyPem = bog.getPublicKey();
         if (publicKeyPem == null || publicKeyPem.isBlank()) {
-            log.warn("BOG_PUBLIC_KEY unset — skipping callback signature verification "
-                + "(set it in production so callbacks are authenticated).");
-            return true;
+            return false;
         }
         if (signatureBase64 == null || signatureBase64.isBlank()) {
             log.warn("BOG callback missing Callback-Signature header");

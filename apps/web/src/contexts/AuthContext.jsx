@@ -105,7 +105,19 @@ export const AuthProvider = ({ children }) => {
     // store and land back on the platform. The round-trip returns to this same
     // origin, so stash the return path for AuthCallback to restore.
     try {
-      sessionStorage.setItem('esy_post_login', window.location.pathname + window.location.search);
+      // From /signin?next=/checkout (checkout sends shoppers there), come back
+      // to where they were going, not to the sign-in page. Same-origin paths
+      // only, and the dev store's ?tenant= rides along.
+      const here = new URL(window.location.href);
+      let back = here.pathname + here.search;
+      const next = here.searchParams.get('next');
+      if (next && /^\/(?![/\\])/.test(next)) {
+        const to = new URL(next, here.origin);
+        const tenant = here.searchParams.get('tenant');
+        if (tenant && !to.searchParams.has('tenant')) to.searchParams.set('tenant', tenant);
+        back = to.pathname + to.search;
+      }
+      sessionStorage.setItem('esy_post_login', back);
     } catch { /* storage blocked — AuthCallback falls back to /account */ }
     window.location.href = `${base}/oauth2/authorization/google?tenant_origin=${origin}`;
   };
@@ -125,6 +137,13 @@ export const AuthProvider = ({ children }) => {
     authApi.logout().catch(() => {});
     setUser(null);
     localStorage.removeItem(STORAGE_KEYS.USER);
+    // The bag is kept in the browser (CartContext); on a shared device the
+    // next person must not find this one's. Every store's bag on this origin.
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith(`${STORAGE_KEYS.CART}:`))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch { /* storage blocked: nothing was kept */ }
   };
 
   const updateProfile = async (userData) => {

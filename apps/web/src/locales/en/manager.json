@@ -169,7 +169,8 @@
     "cancel": "Cancel",
     "confirm": "Refund {{amount}}",
     "working": "Sending…",
-    "failed": "The refund could not be sent."
+    "failed": "The refund could not be sent.",
+    "unconfirmed": "The bank did not answer, so the refund may have gone through. Check in Bank of Georgia before sending it again."
   },
   "title": "esy manager",
   "roleOwner": "Owner",
@@ -233,7 +234,8 @@
     "confirm": "Cancel the order",
     "confirmRefund": "Cancel and refund",
     "failed": "The order could not be cancelled.",
-    "refundFailed": "The order is cancelled, but the refund could not be sent."
+    "refundFailed": "The order is cancelled, but the refund could not be sent.",
+    "refundUnconfirmed": "The order is cancelled. The bank did not answer, so the refund may have gone through. Check in Bank of Georgia before sending it again."
   },
   "nav": {
     "products": "Products",

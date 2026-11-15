@@ -164,9 +164,10 @@ app:
 
   # Bank of Georgia endpoints + the callback-signing public key. The key has
   # NO default on purpose: a wrong key rejects every real payment callback.
-  # Unset → signature checks are skipped (logged) so local dev works; prod
-  # MUST set BOG_PUBLIC_KEY to the PEM from
-  # https://api.bog.ge/docs/en/payments/callback so callbacks are enforced.
+  # Unset → no callback body is trusted: each callback only triggers a read of
+  # BOG's receipt with the store's credentials, and the order settles from
+  # that. Prod should still set BOG_PUBLIC_KEY to the PEM from
+  # https://api.bog.ge/docs/en/payments/callback so signed callbacks are used.
   bog:
     # Environment: live (default) or sandbox. One switch flips BOTH hosts:
     #   live    → oauth2.bog.ge         + api.bog.ge

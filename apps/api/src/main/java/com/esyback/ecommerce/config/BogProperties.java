@@ -31,7 +31,7 @@ public class BogProperties {
         return config.get("app.bog.base-url", "");
     }
 
-    /** Callback-signing public key (PEM); blank = skip signature verification. */
+    /** Callback-signing public key (PEM); blank = callbacks settle from BOG's receipt. */
     public String getPublicKey() {
         return config.get("app.bog.public-key", "");
     }

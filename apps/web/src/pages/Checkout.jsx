@@ -438,7 +438,12 @@ export default function Checkout() {
   }, [step, authLoading, routesReady, bookReady, eligible, setParams]);
 
   const toReview = () => {
-    if (!user) { navigate('/signin'); return; }
+    if (!user) {
+      // Come back here after signing in, with the bag (CartContext keeps it).
+      const tenant = devTenant();
+      navigate(`/signin?next=${encodeURIComponent('/checkout')}${tenant ? `&tenant=${encodeURIComponent(tenant)}` : ''}`);
+      return;
+    }
     if (!identityOk) return;
     setTouched(true);
     if (!addressOk) {
@@ -470,12 +475,16 @@ export default function Checkout() {
     }));
 
     // Stores that connected Bank of Georgia: create the order + BOG payment,
-    // then hand the browser to the bank-hosted page. The cart is kept until
-    // /pay/return confirms PAID (so an abandoned payment doesn't lose it).
+    // then hand the browser to the bank-hosted page. The bag is emptied as the
+    // shopper leaves: it is kept in the browser now, so a payment that went
+    // through while the shopper never came back would otherwise leave the
+    // paid items in it, ready to be bought twice. A failed or abandoned
+    // payment gets them back: /pay/return refills the bag from the order.
     if (card) {
       try {
         const res = await paymentApi.checkout(cartItems, devTenant(), delivery());
         if (res?.redirectUrl) {
+          clearCart();
           window.location.href = res.redirectUrl;
           return; // leaving the SPA — keep the spinner
         }

@@ -6,7 +6,7 @@ import { handleApiError } from '../utils/api';
 import { productsInfinite } from '../core/query/queries';
 import { SORTS, homeListArgs, sortIdOf } from './shopQuery';
 import { Sk, Skeleton, SkProductGrid } from '../components/skeleton/Skeleton';
-import { useCart } from '../contexts/CartContext';
+import useQuickAdd from '../hooks/useQuickAdd';
 import { useDevice } from '../contexts/DeviceContext';
 import { useGlow } from '../styles/glow';
 import { Chip } from '../core/primitives';
@@ -56,7 +56,7 @@ function ShopHome() {
   const { T, tenant } = useGlow();
   const { isMobile, isTablet, isDesktop } = useDevice();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const quickAdd = useQuickAdd();
   // Where StoreBar is the header (tablet and desktop today) it already carries
   // identity, search, cart and account, so this page draws its own header only
   // where StoreBar is absent; a second header stacked under the first is what
@@ -130,7 +130,7 @@ function ShopHome() {
     />
   );
 
-  const handleAdd = (p) => addToCart({ id: p.id, title: p.title, price: p.price, image: p.image, thumbnail: p.thumbnail });
+  const handleAdd = quickAdd;
   const openProduct = (p) => navigate(`/product/${p.id}`);
 
   const gutter = isMobile ? 16 : 40;

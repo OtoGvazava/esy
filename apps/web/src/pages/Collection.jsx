@@ -18,7 +18,7 @@ import { handleApiError } from '../utils/api';
 import { collectionInfinite, facetsQuery, priceBoundsQuery } from '../core/query/queries';
 import { COLLECTION_PAGE_SIZE, SORTS, collectionArgs, readFilters, writeFilters } from './shopQuery';
 import { Skeleton, SkProductGrid } from '../components/skeleton/Skeleton';
-import { useCart } from '../contexts/CartContext';
+import useQuickAdd from '../hooks/useQuickAdd';
 import { useDevice } from '../contexts/DeviceContext';
 import { useGlow } from '../styles/glow';
 import { useDesign } from '../core/design/useDesign';
@@ -50,7 +50,7 @@ export default function Collection() {
   const { t, i18n } = useTranslation('storefront');
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const { addToCart } = useCart();
+  const quickAdd = useQuickAdd();
 
   const f = useMemo(() => readFilters(params), [params]);
   const { categories } = useStoreCategories();
@@ -158,11 +158,8 @@ export default function Collection() {
     } catch { /* the shopper closed the share sheet */ }
   };
 
-  const handleAdd = (p) => (p.hasVariants
-    // A product sold in sizes is chosen on its page; added from here it would
-    // reach checkout without a combination and be refused there (D11).
-    ? navigate(`/product/${p.id}`)
-    : addToCart({ id: p.id, title: p.title, price: p.price, image: p.image, thumbnail: p.thumbnail }));
+  // A product sold in sizes is chosen on its page (D11); see useQuickAdd.
+  const handleAdd = quickAdd;
   const openProduct = (p) => navigate(`/product/${p.id}`);
 
   const gutter = isMobile ? 16 : 40;

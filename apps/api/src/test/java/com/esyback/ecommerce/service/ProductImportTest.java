@@ -146,6 +146,32 @@ class ProductImportTest {
 
     @Test
     @Transactional
+    @DisplayName("a huge or exponent price is a row error, found in milliseconds, not a stalled request")
+    void hugePricesAreRowErrors() {
+        long started = System.nanoTime();
+        var report = importService.importCsv("""
+            title,price,quantity
+            Mug,1e50000000,1
+            Plate,1e999999999,1
+            Bowl,1E-999999999,1
+            Cup,123456789,1
+            Jug,99999999.99,1
+            """, true);
+        long ms = (System.nanoTime() - started) / 1_000_000;
+
+        assertThat(report.errors()).extracting(
+                ProductImportService.RowError::line, ProductImportService.RowError::code)
+            .containsExactly(
+                org.assertj.core.groups.Tuple.tuple(2, "tooBig"),
+                org.assertj.core.groups.Tuple.tuple(3, "tooBig"),
+                org.assertj.core.groups.Tuple.tuple(4, "tooPrecise"),
+                org.assertj.core.groups.Tuple.tuple(5, "tooBig"));
+        // Before the bound, line 2 alone took ~17 s of CPU.
+        assertThat(ms).isLessThan(2_000);
+    }
+
+    @Test
+    @Transactional
     @DisplayName("an optional category column is imported trimmed, a blank cell as none")
     void importsCategory() {
         var report = importService.importCsv("""

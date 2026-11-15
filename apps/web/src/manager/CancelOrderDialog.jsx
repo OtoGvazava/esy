@@ -93,10 +93,16 @@ export default function CancelOrderDialog({ T, order, refundable, isOwner, isMob
       const refunded = await tenantApi.refundOrder(order.id, '', sub);
       onDone({ ...cancelled, ...refunded });
     } catch (e) {
-      // The cancellation stands. The refund can be sent again from the
-      // order's payment card, so the page says what happened.
-      const why = handleApiError(e, '');
-      onDone(cancelled, why ? `${t('cancel.refundFailed')} ${why}` : t('cancel.refundFailed'));
+      if (e?.code === 'REFUND_UNCONFIRMED') {
+        // The bank did not answer: the money may have moved and the server
+        // kept its claim, so the page must not invite sending it again.
+        onDone(cancelled, t('cancel.refundUnconfirmed'), { reload: true });
+      } else {
+        // The cancellation stands. The refund can be sent again from the
+        // order's payment card, so the page says what happened.
+        const why = handleApiError(e, '');
+        onDone(cancelled, why ? `${t('cancel.refundFailed')} ${why}` : t('cancel.refundFailed'));
+      }
     }
     onClose();
   };
