@@ -19,7 +19,9 @@ import java.util.List;
 // callback that loaded the order a moment before a cancellation, say — would
 // otherwise write the old status and the old stock flag straight back.
 @Entity
-@Table(name = "orders")
+// A store's orders by date: its order list and every revenue, fee and stats
+// window read them this way. ddl-auto=update adds a missing index.
+@Table(name = "orders", indexes = @Index(name = "idx_orders_tenant_created", columnList = "tenant_id, created_at"))
 @DynamicUpdate
 @Getter
 @Setter
