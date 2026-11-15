@@ -378,7 +378,8 @@
     "markOut": "მიტანის პროცესში მონიშვნა",
     "allDone": "მოქმედებას არაფერი ელოდება — ყველა შეკვეთა მოძრაობს.",
     "feeHint": "{{percent}}% · ცალკე გამოიწერება",
-    "items": "{{count}} ნივთი",
+    "items_one": "{{count}} ნივთი",
+    "items_other": "{{count}} ნივთი",
     "justNow": "ახლახან"
   },
   "orders": {
@@ -608,7 +609,8 @@
       "category": "კატეგორია",
       "noCategory": "არ არის არჩეული",
       "established": "დაარსდა",
-      "yearPlaceholder": "2024"
+      "yearPlaceholder": "2024",
+      "yearInvalid": "დაარსების წელი უნდა იყოს 1900-დან {{max}}-მდე."
     },
     "brand": {
       "logo": "ლოგო",

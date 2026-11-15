@@ -11,7 +11,7 @@
 // orders" switch and its temporary closure dates (no such fields, and
 // checkout has no rule to honour them), and Z7's "check" of the keys (they
 // are stored as given; the bank is first asked when a shopper pays).
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +36,6 @@ const fromTenant = (tn) => ({
   displayName: tn.displayName || tn.name || '',
   description: tn.description || '',
   tagline: tn.tagline || '',
-  logoUrl: tn.logoUrl || '',
   category: tn.category || '',
   primaryColor: tn.primaryColor || '#6366f1',
   secondaryColor: tn.secondaryColor || '#8b5cf6',
@@ -73,12 +72,26 @@ function useStoreForm() {
 
   const save = async (extra = {}) => {
     if (!form || busy) return false;
+    // The server keeps a year from 1900 to next year and silently drops any
+    // other, so the save would report success over a year that was not kept.
+    const year = String(form.establishedYear || '').trim();
+    const maxYear = new Date().getFullYear() + 1;
+    if (year && !(Number(year) >= 1900 && Number(year) <= maxYear)) {
+      setError(t('settingsTabs.shop.yearInvalid', { max: maxYear }));
+      return false;
+    }
     setBusy(true);
     setError('');
     setSaved(false);
     try {
       const payload = {};
       Object.keys(form).forEach((k) => { payload[k] = typeof form[k] === 'string' ? form[k].trim() : form[k]; });
+      // The logo is not this form's: it is saved by its own card. The server
+      // still writes whatever logoUrl the save carries (absent clears it), so
+      // it is the one the store has now, read just before the write, not the
+      // one this tab opened with (another tab may have changed it since).
+      const now = await refresh();
+      payload.logoUrl = now?.logoUrl || '';
       await tenantApi.update({ ...payload, ...extra }, sub);
       await refresh();
       setEdits({});
@@ -247,17 +260,20 @@ export function ShopTab() {
 // --------------------------------------------------------------- Z2 Brand
 
 /** The logo: saved the moment it is chosen or removed, like the cover. */
-function LogoCard({ store, sub, refresh }) {
+// `locked` while the form saves, and `onBusy` tells the form while a logo is
+// on its way: the two writes carry the logo, and whichever lands last wins.
+function LogoCard({ store, sub, refresh, locked, onBusy }) {
   const { t } = useTranslation('manager');
   const input = useRef(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const url = store.logoUrl;
+  useEffect(() => { onBusy?.(!!busy); }, [busy, onBusy]);
 
   const pick = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file || busy) return;
+    if (!file || busy || locked) return;
     if (file.type && !IMAGE_TYPES.includes(file.type)) { setError(t('settingsTabs.brand.logoBadType')); return; }
     if (file.size > IMAGE_MAX) { setError(t('settingsTabs.brand.logoTooLarge')); return; }
     setBusy('upload');
@@ -272,7 +288,7 @@ function LogoCard({ store, sub, refresh }) {
     }
   };
   const remove = async () => {
-    if (busy) return;
+    if (busy || locked) return;
     setBusy('remove');
     setError('');
     try {
@@ -296,12 +312,12 @@ function LogoCard({ store, sub, refresh }) {
           <span className="bx-xs bx-dim">{t('settingsTabs.brand.logoHint')}</span>
           <div className="bx-row bx-wrap" style={{ gap: 8 }}>
             <input ref={input} type="file" accept={IMAGE_TYPES.join(',')} onChange={pick} hidden />
-            <button type="button" className="bx-btn bx-btn-s bx-btn-sm" disabled={!!busy} onClick={() => input.current?.click()}>
+            <button type="button" className="bx-btn bx-btn-s bx-btn-sm" disabled={!!busy || locked} onClick={() => input.current?.click()}>
               <BxIcon name="upload" />
               {busy === 'upload' ? t('settingsTabs.brand.uploading') : url ? t('settingsTabs.brand.change') : t('settingsTabs.brand.upload')}
             </button>
             {url && (
-              <button type="button" className="bx-btn bx-btn-g bx-btn-sm" disabled={!!busy} onClick={remove}>
+              <button type="button" className="bx-btn bx-btn-g bx-btn-sm" disabled={!!busy || locked} onClick={remove}>
                 {busy === 'remove' ? t('settingsTabs.brand.removing') : t('settingsTabs.brand.remove')}
               </button>
             )}
@@ -433,6 +449,7 @@ export function BrandTab() {
   const { t } = useTranslation('manager');
   const f = useStoreForm();
   const bx = useBx();
+  const [logoBusy, setLogoBusy] = useState(false);
   if (!f.form || !f.tenant) return <Loading kind="brand" />;
   const { form, set } = f;
   const q = f.sub ? `?tenant=${encodeURIComponent(f.sub)}` : '';
@@ -444,7 +461,7 @@ export function BrandTab() {
       {f.error && <Alert tone="bad" icon="warn"><span className="bx-sm">{f.error}</span></Alert>}
       <div className="bx-two even">
         <div className="bx-stk" style={{ gap: 16 }}>
-          <LogoCard store={f.tenant} sub={f.sub} refresh={f.refresh} />
+          <LogoCard store={f.tenant} sub={f.sub} refresh={f.refresh} locked={f.busy} onBusy={setLogoBusy} />
           <CoverCard store={f.tenant} sub={f.sub} refresh={f.refresh} />
           {/* The theme moved to the Design tab. The colour has not: that tab
               has no colour control yet and sends owners here for it. */}
@@ -484,7 +501,7 @@ export function BrandTab() {
           </div>
         </div>
       </div>
-      <SaveBar t={t} dirty={f.dirty} busy={f.busy} saved={f.saved} onSave={() => f.save()} onCancel={f.cancel} />
+      <SaveBar t={t} dirty={f.dirty} busy={f.busy || logoBusy} saved={f.saved} onSave={() => f.save()} onCancel={f.cancel} />
     </>
   );
 }
