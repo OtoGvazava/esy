@@ -38,27 +38,65 @@ public class StoreTeamController {
     private final MembershipService membershipService;
     private final TenantContextService tenantContextService;
 
+    /**
+     * The team, then the invitations still waiting for an answer. A pending
+     * row carries only what the owner typed (the address and the role) with
+     * {@code pending: true}; who the address belongs to is not the owner's
+     * to learn until it accepts (review M36).
+     */
     @GetMapping
     @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
     public List<Map<String, Object>> list() {
-        return membershipService.staffOf(tenantContextService.getCurrentTenant())
-            .stream().map(StoreTeamController::toMap).toList();
+        com.esyback.ecommerce.entity.Tenant tenant = tenantContextService.getCurrentTenant();
+        List<Map<String, Object>> rows = new java.util.ArrayList<>(membershipService.staffOf(tenant)
+            .stream().map(StoreTeamController::toMap).toList());
+        for (com.esyback.ecommerce.entity.StoreInvitation inv : membershipService.invitationsOf(tenant)) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("email", inv.getEmail());
+            out.put("role", inv.getRole());
+            out.put("pending", true);
+            out.put("invitedAt", inv.getCreatedAt() == null ? null : inv.getCreatedAt().toString());
+            rows.add(out);
+        }
+        return rows;
     }
 
-    /** Body: {"email": "…", "role": "OWNER"|"MANAGER"}. Returns the new list. */
+    /**
+     * Body: {"email": "…", "role": "OWNER"|"MANAGER"}. Offers the role; it
+     * applies only once accepted (moving an owner down to manager applies at
+     * once). Returns the new list, the same whether or not the address has an
+     * account.
+     */
     @PostMapping
     @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
-    public List<Map<String, Object>> assign(@RequestBody Map<String, String> body) {
+    public List<Map<String, Object>> assign(@RequestBody Map<String, String> body,
+                                            org.springframework.security.core.Authentication authentication) {
         String email = body == null ? null : body.get("email");
         String role = body == null ? null : body.get("role");
-        membershipService.assignStaff(tenantContextService.getCurrentTenant(), email, role);
+        String by = authentication == null ? null : authentication.getName();
+        try {
+            membershipService.invite(tenantContextService.getCurrentTenant(), email, role, by);
+        } catch (org.springframework.dao.DataIntegrityViolationException racedTheSameInvite) {
+            // Two invitations to one address at once (a double click): the
+            // other one inserted first, so this one becomes an update of it.
+            membershipService.invite(tenantContextService.getCurrentTenant(), email, role, by);
+        }
         return list();
     }
 
+    /**
+     * Take someone off the team (which also withdraws any invitation to them),
+     * or, with {@code ?invitation=true}, only withdraw the invitation. Two
+     * different acts on two different rows: guessing between them let
+     * "Remove" withdraw a leftover invitation and leave the member in place.
+     */
     @DeleteMapping("/{email}")
     @PreAuthorize("@storeAccess.ownsCurrentStore(authentication)")
-    public ResponseEntity<List<Map<String, Object>>> remove(@PathVariable String email) {
-        membershipService.removeStaff(tenantContextService.getCurrentTenant(), email);
+    public ResponseEntity<List<Map<String, Object>>> remove(@PathVariable String email,
+                                                            @RequestParam(defaultValue = "false") boolean invitation) {
+        com.esyback.ecommerce.entity.Tenant tenant = tenantContextService.getCurrentTenant();
+        if (invitation) membershipService.cancelInvitation(tenant, email);
+        else membershipService.removeStaffQuietly(tenant, email);
         return ResponseEntity.ok(list());
     }
 

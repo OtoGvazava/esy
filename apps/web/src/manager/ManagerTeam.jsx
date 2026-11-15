@@ -45,6 +45,7 @@ function RowMenu({ T, t, member, busy, onRole, onRemove }) {
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc); };
   }, [open]);
   const other = member.role === 'OWNER' ? 'MANAGER' : 'OWNER';
+  const pending = !!member.pending;
   const item = (danger) => ({
     display: 'flex', alignItems: 'center', width: '100%', minHeight: 44, padding: '0 14px', boxSizing: 'border-box',
     border: 0, borderRadius: 10, background: 'transparent', cursor: 'pointer', textAlign: 'left',
@@ -64,11 +65,13 @@ function RowMenu({ T, t, member, busy, onRole, onRemove }) {
           borderRadius: 14, background: T.surface, border: `1px solid ${T.border}`,
           boxShadow: '0 18px 44px -18px rgba(0,0,0,.4)', boxSizing: 'border-box',
         }}>
-          <button type="button" role="menuitem" style={item(false)} onClick={() => { setOpen(false); onRole(other); }}>
-            {t(`people.make.${other}`)}
-          </button>
+          {!pending && (
+            <button type="button" role="menuitem" style={item(false)} onClick={() => { setOpen(false); onRole(other); }}>
+              {t(`people.make.${other}`)}
+            </button>
+          )}
           <button type="button" role="menuitem" style={item(true)} onClick={() => { setOpen(false); onRemove(); }}>
-            {t('people.remove')}
+            {pending ? t('people.withdraw') : t('people.remove')}
           </button>
         </div>
       )}
@@ -90,11 +93,15 @@ export default function ManagerTeam() {
   const rows = team.data ?? [];
   const loading = team.isPending;
   const [writeError, setWriteError] = useState('');
+  // What a write did that the list alone does not say: "Make owner" sends an
+  // invitation, and nothing changes until it is accepted.
+  const [notice, setNotice] = useState('');
   const error = writeError || (team.isError ? teamProblem(t, team.error, 'team.loadFailed') : '');
   const [busy, setBusy] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState(null);
   const removeTitle = useId();
+  const withdrawing = !!removing?.pending;
 
   // Every write answers with the refreshed list, so the table is the server's
   // answer rather than a local guess — promoting a second owner changes what
@@ -103,6 +110,7 @@ export default function ManagerTeam() {
   const write = async (fn, fallbackKey) => {
     setBusy(true);
     setWriteError('');
+    setNotice('');
     try {
       setRows(await fn());
       return true;
@@ -114,10 +122,12 @@ export default function ManagerTeam() {
     }
   };
 
-  const owners = rows.filter((r) => r.role === 'OWNER').length;
+  // Invitations are offers, not owners: they never count toward "the last owner".
+  const owners = rows.filter((r) => r.role === 'OWNER' && !r.pending).length;
   const me = norm(user?.email);
-  // The owner first, then everyone else as the server lists them.
-  const sorted = [...rows].sort((a, b) => (a.role === b.role ? 0 : a.role === 'OWNER' ? -1 : 1));
+  // The team, owners first; then the invitations still waiting for an answer.
+  const rank = (r) => (r.pending ? 2 : r.role === 'OWNER' ? 0 : 1);
+  const sorted = [...rows].sort((a, b) => rank(a) - rank(b));
 
   const rules = [
     ['orders', 'both'],
@@ -132,6 +142,7 @@ export default function ManagerTeam() {
       <PageHead T={T} mobile={isMobile} title={t('people.title')} sub={t('people.sub')} />
 
       {error && <Alert T={T} tone="bad" role="alert">{error}</Alert>}
+      {notice && <Alert T={T} role="status">{notice}</Alert>}
 
       <div style={{
         display: 'grid', gap: 20, alignItems: 'start',
@@ -164,9 +175,9 @@ export default function ManagerTeam() {
               const self = me && norm(m.email) === me;
               // The last owner cannot go or step down — the server refuses
               // both, so offering them would only produce a predictable error.
-              const lastOwner = m.role === 'OWNER' && owners <= 1;
+              const lastOwner = !m.pending && m.role === 'OWNER' && owners <= 1;
               return (
-                <div key={m.email} style={li(T, i === sorted.length - 1)}>
+                <div key={`${m.pending ? 'invite' : 'member'}-${m.email}`} style={li(T, i === sorted.length - 1)}>
                   <Avatar T={T} text={initials(name, m.email)} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <b style={{ display: 'block', font: `600 12.5px/1.4 ${T.font}`, overflowWrap: 'anywhere' }}>
@@ -174,6 +185,7 @@ export default function ManagerTeam() {
                       {self && <span style={{ fontWeight: 400, color: T.textDim }}> · {t('people.you')}</span>}
                     </b>
                     {name && <div style={{ font: `400 12px/1.4 ${T.font}`, color: T.textDim, overflowWrap: 'anywhere' }}>{m.email}</div>}
+                    {m.pending && <div style={{ font: `400 12px/1.4 ${T.font}`, color: T.textDim }}>{t('people.invited')}</div>}
                   </div>
                   <Chip T={T} name={m.role === 'OWNER' ? 'conf' : 'proc'} dot={false}>{t(`role.${m.role}`, { defaultValue: m.role })}</Chip>
                   {lastOwner ? (
@@ -181,7 +193,12 @@ export default function ManagerTeam() {
                   ) : (
                     <RowMenu
                       T={T} t={t} member={m} busy={busy}
-                      onRole={(role) => write(() => teamApi.assign(m.email, role, devTenant), 'team.assignFailed')}
+                      onRole={async (role) => {
+                        // Up to owner is an offer the person must accept; down to manager applies at once.
+                        if (await write(() => teamApi.assign(m.email, role, devTenant), 'team.assignFailed') && role === 'OWNER') {
+                          setNotice(t('people.promoteSent', { email: m.email }));
+                        }
+                      }}
                       onRemove={() => setRemoving(m)}
                     />
                   )}
@@ -222,12 +239,14 @@ export default function ManagerTeam() {
 
       {removing && (
         <Sheet T={T} isMobile={isMobile} titleId={removeTitle} onClose={() => { if (!busy) setRemoving(null); }}>
-          <SheetHead T={T} titleId={removeTitle} title={t('people.removeTitle')} closeLabel={t('invite.close')}
+          <SheetHead T={T} titleId={removeTitle} title={withdrawing ? t('people.withdrawTitle') : t('people.removeTitle')} closeLabel={t('invite.close')}
             onClose={() => { if (!busy) setRemoving(null); }} />
           <p style={{ margin: 0, font: `400 13px/1.5 ${T.font}`, color: T.textDim }}>
-            {me && norm(removing.email) === me
-              ? t('team.removeSelfConfirm')
-              : t('team.removeConfirm', { email: removing.email })}
+            {withdrawing
+              ? t('people.withdrawConfirm', { email: removing.email })
+              : me && norm(removing.email) === me
+                ? t('team.removeSelfConfirm')
+                : t('team.removeConfirm', { email: removing.email })}
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button type="button" disabled={busy} data-autofocus="" onClick={() => setRemoving(null)} style={btn(T, 'g')}>
@@ -235,9 +254,14 @@ export default function ManagerTeam() {
             </button>
             <button
               type="button" disabled={busy}
-              onClick={async () => { if (await write(() => teamApi.remove(removing.email, devTenant), 'team.removeFailed')) setRemoving(null); }}
+              onClick={async () => {
+                const go = withdrawing
+                  ? () => teamApi.withdraw(removing.email, devTenant)
+                  : () => teamApi.remove(removing.email, devTenant);
+                if (await write(go, 'team.removeFailed')) setRemoving(null);
+              }}
               style={{ ...btn(T, 'bad', { block: true }), opacity: busy ? 0.6 : 1 }}
-            >{t('people.remove')}</button>
+            >{withdrawing ? t('people.withdraw') : t('people.remove')}</button>
           </div>
         </Sheet>
       )}

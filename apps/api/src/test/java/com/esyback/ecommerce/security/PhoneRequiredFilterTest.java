@@ -75,6 +75,15 @@ class PhoneRequiredFilterTest {
     }
 
     @Test
+    @DisplayName("accepting a store invitation is a write the gate covers (M36)")
+    void invitationAcceptIsGated() throws Exception {
+        signInAs(false);
+        FilterChain chain = mock(FilterChain.class);
+        MockHttpServletResponse res = run("POST", "/api/account/invitations/7/accept", chain);
+        assertEquals(403, res.getStatus());
+    }
+
+    @Test
     @DisplayName("the gate's own endpoints stay open, or nobody could get verified")
     void gateEndpointsAreExempt() throws Exception {
         signInAs(false);

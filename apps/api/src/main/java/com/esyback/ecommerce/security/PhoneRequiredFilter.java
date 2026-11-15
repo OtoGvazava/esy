@@ -86,6 +86,9 @@ public class PhoneRequiredFilter extends OncePerRequestFilter {
         // /api/account/** carries the gate's profile and phone endpoints and
         // the display settings; narrowing it must keep display-prefs open
         // (DisplayPrefsTest checks it through the real chain).
+        // ...except answering a store invitation: accepting grants a store
+        // role, which is the kind of write the gate exists for (M36).
+        if (path.startsWith("/api/account/invitations/")) return false;
         return path.startsWith("/api/auth/")
             || path.equals("/api/account") || path.startsWith("/api/account/")
             || path.equals("/api/payments/bog/callback");

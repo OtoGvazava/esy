@@ -128,6 +128,12 @@ export const accountQuery = () => queryOptions({
   queryFn: () => accountApi.get(),
 });
 
+/** Store roles waiting for this account's answer. */
+export const invitationsQuery = () => queryOptions({
+  queryKey: ['account', 'invitations'],
+  queryFn: ({ signal }) => accountApi.invitations({ signal }).then((rows) => (Array.isArray(rows) ? rows : [])),
+});
+
 /** The public store directory (active stores), on the platform. */
 export const directoryQuery = () => queryOptions({
   queryKey: ['directory'],

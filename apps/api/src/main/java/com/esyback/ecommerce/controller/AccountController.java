@@ -42,6 +42,7 @@ public class AccountController {
     private final StoreMembershipRepository membershipRepository;
     private final OrderService orderService;
     private final PhoneVerificationService phoneVerificationService;
+    private final com.esyback.ecommerce.service.MembershipService membershipService;
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> account(Authentication authentication) {
@@ -198,6 +199,39 @@ public class AccountController {
         User user = requireUser(authentication);
         phoneVerificationService.verify(user, body == null ? null : body.get("code"));
         return ResponseEntity.ok(userMap(user));
+    }
+
+    // ─── Store invitations (review M36) ────────────────────────────────────
+    // Roles a store owner has offered to this account's sign-in email. They
+    // take effect only from here: accepted by the person they name.
+
+    /** Open invitations addressed to me, newest first. */
+    @GetMapping("/invitations")
+    public List<Map<String, Object>> invitations(Authentication authentication) {
+        User user = requireUser(authentication);
+        return membershipService.invitationsFor(user).stream().map(inv -> {
+            Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("id", inv.getId());
+            m.put("role", inv.getRole());
+            m.put("invitedBy", inv.getInvitedBy());
+            m.put("invitedAt", inv.getCreatedAt() == null ? null : inv.getCreatedAt().toString());
+            m.put("store", TenantMapper.toMap(inv.getTenant()));
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    /** Accept: the role applies now. Answers with what is still open. */
+    @PostMapping("/invitations/{id}/accept")
+    public List<Map<String, Object>> acceptInvitation(@PathVariable Long id, Authentication authentication) {
+        membershipService.acceptInvitation(requireUser(authentication), id);
+        return invitations(authentication);
+    }
+
+    /** Decline: nothing is granted. Answers with what is still open. */
+    @PostMapping("/invitations/{id}/decline")
+    public List<Map<String, Object>> declineInvitation(@PathVariable Long id, Authentication authentication) {
+        membershipService.declineInvitation(requireUser(authentication), id);
+        return invitations(authentication);
     }
 
     /**

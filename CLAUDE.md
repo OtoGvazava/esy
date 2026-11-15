@@ -145,6 +145,15 @@ image builds the SPA itself.
   `PATCH` takes `sms`/`email: false` to skip a channel for that step.
 - **Store analytics**: `/api/tenant/stats/period?days=` and `/stats/months`,
   with the same revenue, refund and commission rules as admin billing.
+- **Store team roles are invitations** (review M36): an owner's "give a role"
+  (`POST /api/store/team`) only records a `store_invitations` row for that
+  email; nothing is granted, and the answer is the same whether the address
+  has an account. The person accepts or declines from their own account
+  (`/api/account/invitations`, shown at the top of the account overview), and
+  the role applies then. Invitations last 14 days; pending ones are rows with
+  `pending: true` in the team list. Moving an owner down to manager, and
+  removing someone, still apply at once. Platform admins still assign directly
+  (audited) from `admin.esy.ge`.
 - **Refusals** (`ApiRefusal`) carry a stable `code` and optional `details`.
   `ApiErrorAdvice` sends the details nested under `details` and also beside the
   code, because clients read either form; screens translate by code, never by
