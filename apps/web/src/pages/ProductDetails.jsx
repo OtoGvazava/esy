@@ -8,6 +8,7 @@ import { markIfComplete, markLoaded } from '../core/imgFade';
 import { Sk, SkText, Skeleton } from '../components/skeleton/Skeleton';
 import { renderMarkdown } from '../utils/markdown';
 import { useCart } from '../contexts/CartContext';
+import useQuickAdd from '../hooks/useQuickAdd';
 import { useDevice } from '../contexts/DeviceContext';
 import { useGlow } from '../styles/glow';
 import { Chip } from '../core/primitives';
@@ -40,6 +41,7 @@ function ProductView({ id }) {
   const navigate = useNavigate();
   const { t } = useTranslation('product');
   const { addToCart } = useCart();
+  const quickAdd = useQuickAdd();
   const { T, tenant } = useGlow();
   // Three widths, as on Home: the two-column layout is right for a tablet too,
   // and reading MUI's `md` gave a tablet the phone's single stacked column.
@@ -304,7 +306,7 @@ function ProductView({ id }) {
             <div style={{ font: `700 16px ${T.font}`, color: T.text, letterSpacing: '-0.02em', marginBottom: 12 }}>{t('youMayAlsoLike')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>
               {related.slice(0, cols).map((rp) => (
-                <GlowProductCard key={rp.id} T={T} p={rp} hue={tenant.hue} compact onOpen={(p) => navigate(`/product/${p.id}`)} onAdd={(p) => addToCart({ id: p.id, title: p.title, price: p.price, image: p.image, thumbnail: p.thumbnail })} />
+                <GlowProductCard key={rp.id} T={T} p={rp} hue={tenant.hue} compact onOpen={(p) => navigate(`/product/${p.id}`)} onAdd={quickAdd} />
               ))}
             </div>
           </div>
