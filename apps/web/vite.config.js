@@ -228,13 +228,18 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
+    // Vite 8 bundles with Rolldown, which takes manualChunks as a function
+    // only: the same four groups as before, by package.
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          mui: ['@mui/material', '@mui/icons-material'],
-          router: ['react-router-dom'],
-          i18n: ['react-i18next', 'i18next'],
+        manualChunks(id) {
+          const pkg = id.replace(/\\/g, '/').match(/\/node_modules\/((?:@[^/]+\/)?[^/]+)\//)?.[1];
+          if (!pkg) return undefined;
+          if (['react', 'react-dom', 'scheduler'].includes(pkg)) return 'vendor';
+          if (['@mui/material', '@mui/icons-material'].includes(pkg)) return 'mui';
+          if (['react-router-dom', 'react-router'].includes(pkg)) return 'router';
+          if (['react-i18next', 'i18next'].includes(pkg)) return 'i18n';
+          return undefined;
         },
       },
     },

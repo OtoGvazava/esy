@@ -3,7 +3,7 @@
 # origin -> no CORS/proxy). Used by Render (render.yaml) and runnable anywhere.
 
 # 1) Build the web SPA (pinned Node 20 — reproducible, avoids host Node issues)
-FROM node:20-alpine AS web
+FROM node:22-alpine AS web
 WORKDIR /web
 COPY apps/web/package.json apps/web/package-lock.json ./
 RUN npm ci

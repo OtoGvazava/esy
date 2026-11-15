@@ -198,7 +198,13 @@ Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
   `C:\Program Files\Microsoft\jdk-17.0.20.8-hotspot` (there is no `mvnw`
   wrapper; `mvn` lives in `%LOCALAPPDATA%\Programs\apache-maven-3.9.9\bin`).
 - **Vite dev server needs Node 18–22.** Node 25 crashes `vite`/`vite preview`
-  silently (the Docker build pins Node 20). `vite build` works on Node 25.
+  silently (the Docker build and CI use Node 22). `vite build` works on Node 25.
+  Vite 8 bundles with Rolldown: chunking lives in `build.rolldownOptions` and
+  `manualChunks` must be a function. `esbuild` is a dev dependency because the
+  config still minifies the inline paint script with `transformWithEsbuild`.
+- **Windows Application Control may block Rolldown's native binary** on this
+  machine (`ERR_DLOPEN_FAILED` from `rollup.win32-x64-msvc.node` or rolldown's).
+  Build in Docker instead: `docker build --target web .`
 - **Prod runs on Render PostgreSQL** (`SPRING_DATASOURCE_*` +
   `JPA_DDL_AUTO=update`) — data persists across deploys. **Local/default is
   in-memory H2** (`create-drop`, wiped each boot; `DataInitializer` reseeds
