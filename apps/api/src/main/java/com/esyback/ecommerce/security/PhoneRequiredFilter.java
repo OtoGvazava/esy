@@ -12,6 +12,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UrlPathHelper;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -42,6 +43,8 @@ public class PhoneRequiredFilter extends OncePerRequestFilter {
 
     private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS");
 
+    private static final UrlPathHelper PATHS = new UrlPathHelper();
+
     private final UserRepository users;
 
     public PhoneRequiredFilter(UserRepository users) {
@@ -65,7 +68,10 @@ public class PhoneRequiredFilter extends OncePerRequestFilter {
 
     private boolean mustVerifyFirst(HttpServletRequest request) {
         if (SAFE_METHODS.contains(request.getMethod())) return false;
-        String path = request.getRequestURI();
+        // The DECODED, normalised path, which is what MVC routes on. The raw
+        // URI let "/%61pi/tenant" skip the gate and still reach /api/tenant
+        // (review M38); ";jsessionid"-style segments are stripped too.
+        String path = PATHS.getPathWithinApplication(request);
         if (!path.startsWith("/api/") || isExempt(path)) return false;
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
