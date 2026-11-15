@@ -5,7 +5,7 @@
 // With no store chosen (no ?tenant=) ManagerShell draws the front door
 // whatever the path, so a store's reads are not started for it.
 import { ensure, prime } from './prime';
-import { accountQuery, publicDeliveryQuery, tenantQuery } from '../core/query/queries';
+import { accountQuery, publicDeliveryQuery, scope, tenantQuery } from '../core/query/queries';
 import {
   contactsQuery, deliveryQuery, designQuery, monthStatsQuery, periodStatsQuery, previewProductsQuery,
   storeOrderQuery, storeOrdersQuery, storeProductsQuery, storeStatsQuery, teamQuery,
@@ -14,8 +14,16 @@ import { periodOf } from '../manager/useStoreStats';
 
 const inStore = (url) => !!url.searchParams.get('tenant');
 
-/** A store's screen: its reads, or nothing on the front door. */
-const storeLoader = (load) => prime((args) => (inStore(args.url) ? load(args) : undefined));
+// The query factories scope every read to the store of the page that is open
+// (scope(), read from window.location), not to the target URL's. A loader or
+// hover prefetch for another store's page would fetch this store's data under
+// this store's keys, so a link to another store prefetches nothing and that
+// screen reads its own store once it is open.
+const sameStore = (url) => url.searchParams.get('tenant') === scope();
+
+/** A store's screen: its reads, or nothing on the front door or for another store. */
+const storeLoader = (load) => prime((args) => (
+  inStore(args.url) && sameStore(args.url) ? load(args) : undefined));
 
 // The overview: its four figures and the orders its to-do list is made of. A
 // live store with no order yet opens on its checklist instead (FirstVisit),
@@ -23,6 +31,7 @@ const storeLoader = (load) => prime((args) => (inStore(args.url) ? load(args) : 
 // this is the front door, which lists the stores the account runs.
 export const overviewLoader = prime(({ url, qc }) => {
   if (!inStore(url)) return ensure(qc, accountQuery());
+  if (!sameStore(url)) return undefined;
   const figures = ensure(qc, storeStatsQuery())
     .then((s) => (Number(s?.orders) === 0 ? ensure(qc, publicDeliveryQuery()) : null));
   return Promise.all([figures, ensure(qc, storeOrdersQuery())]);
