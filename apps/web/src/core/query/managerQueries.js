@@ -70,8 +70,39 @@ export const monthStatsQuery = () => queryOptions({
 
 // ---- products ----------------------------------------------------------------
 
-/** The products screen: one page holding the whole catalogue it lists. */
-export const storeProductsQuery = () => productPageQuery({ page: 0, size: 100 });
+// Pages of 100, read one after another. The ceiling is only a guard against a
+// server that never says "last page"; no store comes near 100 pages.
+const STORE_PAGE = 100;
+const STORE_PAGES_MAX = 100;
+
+/**
+ * The products screen: the WHOLE catalogue, read page by page.
+ *
+ * Search, the stock filters and both pagers run over this list in the
+ * browser, so it has to hold everything. It used to be the first page of 100
+ * alone, which left products 101 and up invisible, unsearchable and
+ * undeletable in the back office while shoppers could still buy them (review
+ * H5). Same shape as one page of productApi.list, with hasMore false.
+ */
+export const storeProductsQuery = () => queryOptions({
+  queryKey: ['products', scope(), 'store-all'],
+  queryFn: async ({ signal }) => {
+    const products = [];
+    let last = null;
+    for (let page = 0; page < STORE_PAGES_MAX; page += 1) {
+      last = await productApi.list({ page, size: STORE_PAGE, signal });
+      products.push(...last.products);
+      if (!last.hasMore || last.products.length === 0) break;
+    }
+    return {
+      products,
+      hasMore: false,
+      page: 0,
+      totalPages: 1,
+      totalElements: Math.max(products.length, last?.totalElements ?? 0),
+    };
+  },
+});
 
 /** The first page buyers see, which the design tab's preview draws. */
 export const previewProductsQuery = () => productPageQuery({ page: 0, size: 12 });
