@@ -151,7 +151,7 @@ class AdminRoleRevocationTest {
             .thenThrow(new org.springframework.dao.DataIntegrityViolationException("platform_admins_email_key"));
         AdminService service = new AdminService(null, null, null,
             org.mockito.Mockito.mock(com.esyback.ecommerce.repository.AuditLogRepository.class),
-            admins, null, null, null, config, null);
+            admins, null, null, config, null, null);
 
         assertThatThrownBy(() -> service.grantAdmin("race@example.com", ACTOR))
             .isInstanceOfSatisfying(org.springframework.web.server.ResponseStatusException.class,

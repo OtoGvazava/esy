@@ -20,6 +20,19 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserOrderByCreatedAtDesc(User user);
     List<Order> findByUserAndTenantOrderByCreatedAtDesc(User user, Tenant tenant);
     List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant);
+
+    /** The newest orders of one store, bounded by the page. */
+    List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant, org.springframework.data.domain.Pageable page);
+
+    // Platform-wide reads for the admin store list and billing: one query for
+    // every store instead of two or three per store. The money rules stay in
+    // OrderService's static helpers, applied to these rows.
+    @Query("select o from Order o join fetch o.tenant")
+    List<Order> findAllWithTenant();
+
+    @Query("select o from Order o join fetch o.tenant where o.createdAt >= :from and o.createdAt < :to")
+    List<Order> findCreatedBetweenWithTenant(@Param("from") java.time.LocalDateTime from,
+                                             @Param("to") java.time.LocalDateTime to);
     long countByTenant(Tenant tenant);
     long countByTenantAndStatus(Tenant tenant, Order.Status status);
 
