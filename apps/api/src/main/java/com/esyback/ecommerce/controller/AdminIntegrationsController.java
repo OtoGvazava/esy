@@ -47,6 +47,7 @@ public class AdminIntegrationsController {
     private final EmailTemplates emailTemplates;
     private final EmailSender emailSender;
     private final AuditLogRepository auditLog;
+    private final com.esyback.ecommerce.service.ConfigStore configStore;
 
     /** One validated write, held until the whole body has passed validation. */
     private record Change(String key, String before, String after, Runnable apply) {}
@@ -252,8 +253,9 @@ public class AdminIntegrationsController {
         // reaches a shopper, and nothing recorded who flipped them.
         String actor = authentication == null || authentication.getName() == null
             ? "unknown" : authentication.getName();
+        // All of them land or none (ConfigStore.inOneWrite); audited after.
+        configStore.inOneWrite(() -> changes.forEach(c -> c.apply().run()));
         for (Change c : changes) {
-            c.apply().run();
             auditLog.save(AuditLog.of(actor, "INTEGRATION_CHANGED", "INTEGRATION", c.key(),
                 c.before() + " -> " + c.after()));
         }

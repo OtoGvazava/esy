@@ -283,7 +283,7 @@ class RefundTest {
 
     @Test
     @Transactional
-    @DisplayName("each refund has its own idempotency key, the same one if that refund is retried")
+    @DisplayName("each refund request carries its own idempotency key")
     void refundKeysFollowTheClaim() {
         Order order = paidOrder("100.00");
         orderService.requestRefund(tenant, order.getId(), new BigDecimal("10.00"));
@@ -291,9 +291,5 @@ class RefundTest {
         org.mockito.ArgumentCaptor<String> keys = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(bogPaymentService, org.mockito.Mockito.times(2)).refund(any(), any(), any(), keys.capture());
         assertThat(keys.getAllValues().get(0)).isNotEqualTo(keys.getAllValues().get(1));
-        // The same claim (order, refunded total it brings) gives the same key.
-        String again = java.util.UUID.nameUUIDFromBytes(
-            (order.getBogOrderId() + ":10.00").getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
-        assertThat(keys.getAllValues().get(0)).isEqualTo(again);
     }
 }

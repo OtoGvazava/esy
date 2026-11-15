@@ -87,12 +87,9 @@ function useStoreForm() {
     try {
       const payload = {};
       Object.keys(form).forEach((k) => { payload[k] = typeof form[k] === 'string' ? form[k].trim() : form[k]; });
-      // The logo is not this form's: it is saved by its own card. The server
-      // still writes whatever logoUrl the save carries (absent clears it), so
-      // it is the one the store has now, read just before the write, not the
-      // one this tab opened with (another tab may have changed it since).
-      const now = await refresh();
-      payload.logoUrl = now?.logoUrl || '';
+      // The logo is not this form's: it is saved by its own card, and the
+      // server leaves it alone when a save does not mention it.
+      delete payload.logoUrl;
       await tenantApi.update({ ...payload, ...extra }, sub);
       await refresh();
       setEdits({});

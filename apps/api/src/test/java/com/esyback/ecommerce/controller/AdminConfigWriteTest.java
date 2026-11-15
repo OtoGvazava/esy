@@ -50,7 +50,12 @@ class AdminConfigWriteTest {
     private final SmsProperties sms = mock(SmsProperties.class);
     private final SmsTemplates smsTemplates = mock(SmsTemplates.class);
     private final AdminIntegrationsController integrations = new AdminIntegrationsController(sms, smsTemplates,
-        mock(SmsSender.class), mock(EmailProperties.class), mock(EmailTemplates.class), mock(EmailSender.class), audit);
+        mock(SmsSender.class), mock(EmailProperties.class), mock(EmailTemplates.class), mock(EmailSender.class), audit, store);
+    {
+        // inOneWrite on a mock would skip the writes it wraps: run them.
+        org.mockito.Mockito.doAnswer(inv -> { ((Runnable) inv.getArgument(0)).run(); return null; })
+            .when(store).inOneWrite(any());
+    }
 
     private static TestingAuthenticationToken admin() {
         return new TestingAuthenticationToken("boss@esy.ge", null, "ROLE_ADMIN");

@@ -86,8 +86,56 @@ public class ConfigStore {
         return v;
     }
 
+    // Writes collected by inOneWrite on this thread, committed together.
+    private final ThreadLocal<java.util.LinkedHashMap<String, String>> batch = new ThreadLocal<>();
+
+    /**
+     * Runs {@code writes} and commits every {@link #set} made inside it as ONE
+     * Redis transaction (MULTI/EXEC): all of them land, or none. An admin save
+     * of several settings used to write them one by one, so a Redis blip
+     * half-way left some live while the screen said the save had failed.
+     */
+    public void inOneWrite(Runnable writes) {
+        java.util.LinkedHashMap<String, String> pending = new java.util.LinkedHashMap<>();
+        batch.set(pending);
+        try {
+            writes.run();
+        } finally {
+            batch.remove();
+        }
+        if (pending.isEmpty()) return;
+        try {
+            redis.execute(new org.springframework.data.redis.core.SessionCallback<java.util.List<Object>>() {
+                @Override
+                @SuppressWarnings("unchecked")
+                public <K, V> java.util.List<Object> execute(org.springframework.data.redis.core.RedisOperations<K, V> ops) {
+                    org.springframework.data.redis.core.RedisOperations<String, String> o =
+                        (org.springframework.data.redis.core.RedisOperations<String, String>) ops;
+                    o.multi();
+                    pending.forEach((key, value) -> {
+                        if (value == null || value.isEmpty()) o.delete(PREFIX + key);
+                        else o.opsForValue().set(PREFIX + key, value);
+                    });
+                    return o.exec();
+                }
+            });
+        } catch (Exception e) {
+            log.error("Redis config write failed for {}", pending.keySet(), e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                "Config store (Key Value) isn't reachable — write failed");
+        }
+        long until = clock.getAsLong() + TTL_MS;
+        pending.forEach((key, value) -> cache.put(key,
+            new Cached(value == null || value.isEmpty() ? null : value, until, true)));
+    }
+
     /** Write an override. Blank/null clears it (falls back to env/default). */
     public void set(String key, String value) {
+        java.util.LinkedHashMap<String, String> collecting = batch.get();
+        if (collecting != null) {
+            collecting.put(key, value);
+            return;
+        }
         try {
             if (value == null || value.isEmpty()) {
                 redis.delete(PREFIX + key);

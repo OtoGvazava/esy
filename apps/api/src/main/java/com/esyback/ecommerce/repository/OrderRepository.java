@@ -19,6 +19,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // both for every order, which was two more queries per order.
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tenant", "items"})
     List<Order> findByUserOrderByCreatedAtDesc(User user);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tenant", "items"})
     List<Order> findByUserAndTenantOrderByCreatedAtDesc(User user, Tenant tenant);
     List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant);
 
@@ -37,12 +38,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // Platform-wide reads for the admin store list and billing: one query for
     // every store instead of two or three per store. The money rules stay in
     // OrderService's static helpers, applied to these rows.
-    @Query("select o from Order o join fetch o.tenant")
-    List<Order> findAllWithTenant();
-
-    @Query("select o from Order o join fetch o.tenant where o.createdAt >= :from and o.createdAt < :to")
-    List<Order> findCreatedBetweenWithTenant(@Param("from") java.time.LocalDateTime from,
-                                             @Param("to") java.time.LocalDateTime to);
     long countByTenant(Tenant tenant);
 
     // The store analytics' reads (StoreStatsService). A window reads only the
@@ -168,4 +163,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("select o from Order o join fetch o.tenant where o.paymentStatus = :status and o.createdAt < :before")
     List<Order> findPendingWithTenant(@Param("status") Order.PaymentStatus status,
                                       @Param("before") java.time.LocalDateTime before);
+
+    /** Every order's money columns, for the platform-wide admin figures (see OrderMoney). */
+    @Query("select new com.esyback.ecommerce.repository.OrderMoney(o.tenant.id, o.total, o.deliveryFee, o.serviceFee, o.refundedAmount, o.status, o.paymentStatus) from Order o")
+    List<OrderMoney> findAllMoney();
+
+    @Query("select new com.esyback.ecommerce.repository.OrderMoney(o.tenant.id, o.total, o.deliveryFee, o.serviceFee, o.refundedAmount, o.status, o.paymentStatus) from Order o where o.createdAt >= :from and o.createdAt < :to")
+    List<OrderMoney> findMoneyCreatedBetween(@Param("from") java.time.LocalDateTime from,
+                                             @Param("to") java.time.LocalDateTime to);
 }

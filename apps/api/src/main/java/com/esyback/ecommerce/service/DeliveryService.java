@@ -136,11 +136,14 @@ public class DeliveryService {
         // so an unbounded delivery price let a store move a sale into it and
         // pay no commission (₾1500 "pickup" on a ₾0.01 item). Collecting in
         // person is free, and a courier price has a ceiling.
-        if (DeliveryOption.PICKUP.equals(key) && target.getPrice() != null && target.getPrice().signum() > 0) {
+        // Only a price this save sends is judged: a route priced before these
+        // rules must still be switchable and editable without retyping it.
+        boolean priceSent = body.containsKey("price");
+        if (priceSent && DeliveryOption.PICKUP.equals(key) && target.getPrice() != null && target.getPrice().signum() > 0) {
             throw new com.esyback.ecommerce.web.ApiRefusal(HttpStatus.BAD_REQUEST, "DELIVERY_PICKUP_FREE",
                 "Collection in person is always free");
         }
-        if (target.getPrice() != null && target.getPrice().compareTo(MAX_DELIVERY_PRICE) > 0) {
+        if (priceSent && target.getPrice() != null && target.getPrice().compareTo(MAX_DELIVERY_PRICE) > 0) {
             throw new com.esyback.ecommerce.web.ApiRefusal(HttpStatus.BAD_REQUEST, "DELIVERY_PRICE_TOO_HIGH",
                 "A delivery price can be at most " + MAX_DELIVERY_PRICE.toPlainString(),
                 java.util.Map.of("max", MAX_DELIVERY_PRICE));
@@ -248,8 +251,21 @@ public class DeliveryService {
     }
 
     /** Every route for this store, creating any that do not exist yet. */
+    /**
+     * A new store's delivery rows, made with the store. They used to appear
+     * only on its first visit, and two first visits at once inserted them
+     * twice; with one row per route enforced (SchemaMigrations) that race
+     * would now be a 500, so a new store never runs it.
+     */
+    public void seedFor(Tenant tenant) {
+        options(tenant);
+    }
+
     private List<DeliveryOption> options() {
-        Tenant tenant = tenant();
+        return options(tenant());
+    }
+
+    private List<DeliveryOption> options(Tenant tenant) {
         List<DeliveryOption> existing = repository.findByTenant(tenant);
         List<DeliveryOption> result = new ArrayList<>();
         for (String route : DeliveryOption.ROUTES) {

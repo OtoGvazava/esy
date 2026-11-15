@@ -281,15 +281,15 @@
     "h3": "Go live, no review",
     "h3d": "Your store is public the moment you save. Share the link and start selling.",
     "discover": "Discover the stores",
-    "fee": "Flat 2% per sale",
+    "fee": "Flat {{fee}}% per sale",
     "feeBody": "No subscription. No listing fees. No surprise tiers. You keep 98% of every sale.",
     "feeListing": "Listing fees",
     "feeMonthly": "Monthly fee",
     "feeCommission": "Commission",
     "h4": "Get paid",
-    "h4d": "Money goes straight to your bank account. esy takes 2% of a sale and never holds the rest.",
+    "h4d": "Money goes straight to your bank account. esy takes {{fee}}% of a sale and never holds the rest.",
     "factFree": "Free to open",
-    "factFee": "2% of each sale",
+    "factFee": "{{fee}}% of each sale",
     "factCards": "Card payments",
     "discoverLabel": "Independent stores",
     "discoverAll": "All {{n}} stores",
@@ -494,7 +494,7 @@
       },
       "openCost": {
         "q": "What does a store cost?",
-        "a": "Opening one is free and there is no monthly fee. esy takes 2% of each sale."
+        "a": "Opening one is free and there is no monthly fee. esy takes {{fee}}% of each sale."
       },
       "howOpen": {
         "q": "How do I open a store?",
@@ -514,7 +514,7 @@
       },
       "fee": {
         "q": "When do I pay the fee?",
-        "a": "The 2% fee is fixed when an order is placed and paid once a month, on one invoice. Refunded orders are not counted."
+        "a": "The {{fee}}% fee is fixed when an order is placed and paid once a month, on one invoice. Refunded orders are not counted."
       },
       "sellerRefund": {
         "q": "How do I refund a shopper?",

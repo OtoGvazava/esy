@@ -105,7 +105,10 @@ public class PendingPaymentSweeper {
             try {
                 Optional<String> key = p.bogOrderId() == null ? Optional.empty()
                     : bog.fetchReceiptKey(p.tenant(), p.bogOrderId());
-                if (key.isEmpty() || bog.mapStatus(key.get()) != Order.PaymentStatus.REFUNDED) continue;
+                // Only BOG's "refunded" (all of it). A "refunded_partially" may be
+                // left over from an EARLIER partial refund and says nothing
+                // about the one now in flight; that one settles by callback.
+                if (key.isEmpty() || !"refunded".equals(key.get())) continue;
                 Order after = orderService.settlePayment(p.orderNumber(), Order.PaymentStatus.REFUNDED).orElse(null);
                 if (after != null && after.getPaymentStatus() != Order.PaymentStatus.REFUND_PENDING) moved++;
             } catch (RuntimeException e) {

@@ -362,10 +362,9 @@ public class BogPaymentService {
     }
 
     /**
-     * @param idempotencyKey the same for a retry of one refund, different for
-     *                       each refund. A fresh random key per call meant BOG
-     *                       could never recognise a retry; the caller derives
-     *                       it from the refund claim instead.
+     * @param idempotencyKey unique per refund request; the same key only for a
+     *                       re-send of that exact request (which this code
+     *                       does not do).
      */
     public RefundResult refund(Tenant tenant, String bogOrderId, BigDecimal amount, String idempotencyKey) {
         if (!isConfigured(tenant)) {

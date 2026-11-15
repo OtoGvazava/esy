@@ -5,6 +5,7 @@
 // readable from JS — so requests just need to carry cookies; there is no
 // token in localStorage. "Am I signed in?" is answered by /api/auth/user.
 import { isManagerHostname, managerUrl } from './hosts';
+import i18n from '../i18n';
 
 // ---- Low-level client -------------------------------------------------------
 export class ApiError extends Error {
@@ -879,5 +880,9 @@ export const adminApi = {
 export const handleApiError = (error, fallbackMessage = 'An error occurred') => {
   if (!(error instanceof ApiError)
     && ['TypeError', 'AbortError', 'SyntaxError'].includes(error?.name)) return fallbackMessage;
+  // A refusal the app has words for is said in the reader's language, never
+  // in the server's English sentence (common:refusal.<CODE>).
+  const key = error?.code ? `common:refusal.${error.code}` : null;
+  if (key && i18n.exists(key)) return i18n.t(key);
   return error?.message || fallbackMessage;
 };

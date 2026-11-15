@@ -141,13 +141,15 @@ public class AdminConfigController {
             writes.put("designEnabled", on);
         }
 
-        // Then written, each with an audit row saying who changed it from what.
-        writes.forEach((field, value) -> {
-            String before = effectiveValue(field);
+        // Then written as one: all of them land or none (ConfigStore.inOneWrite),
+        // and only then audited, each with who changed it from what.
+        Map<String, String> before = new LinkedHashMap<>();
+        writes.keySet().forEach(field -> before.put(field, effectiveValue(field)));
+        store.inOneWrite(() -> writes.forEach((field, value) -> {
             if (field.equals("designEnabled")) design.setEnabled(value.equals("true"));
             else store.set(FIELD_KEYS.get(field), value);
-            audit(actor, field, before + " -> " + value);
-        });
+        }));
+        writes.forEach((field, value) -> audit(actor, field, before.get(field) + " -> " + value));
         return ResponseEntity.ok(Map.of(
             "ok", true,
             "note", "Written to the config store; the change applies within a few seconds."));

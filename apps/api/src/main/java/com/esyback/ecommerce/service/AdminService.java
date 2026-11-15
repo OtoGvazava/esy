@@ -130,7 +130,7 @@ public class AdminService {
         Map<Long, String> owners = ownerEmailByTenantId();
         // Every order once, grouped by store, instead of each store's orders
         // loaded twice over (revenue, then fees) plus a count.
-        Map<Long, List<Order>> orders = ordersByTenantId(orderRepository.findAllWithTenant());
+        Map<Long, List<Order>> orders = ordersByTenantId(money(orderRepository.findAllMoney()));
         return tenantRepository.findAll().stream()
             .filter(t -> matches(t, owners.get(t.getId()), needle))
             .sorted(NEWEST_FIRST)
@@ -254,9 +254,9 @@ public class AdminService {
         List<Map<String, Object>> stores = new ArrayList<>();
         List<Order> all = new ArrayList<>();
         // One query for the period (the range is in SQL), grouped by store.
-        Map<Long, List<Order>> byTenant = ordersByTenantId(period == null
-            ? orderRepository.findAllWithTenant()
-            : orderRepository.findCreatedBetweenWithTenant(from, to));
+        Map<Long, List<Order>> byTenant = ordersByTenantId(money(period == null
+            ? orderRepository.findAllMoney()
+            : orderRepository.findMoneyCreatedBetween(from, to)));
         for (Tenant t : tenantRepository.findAll()) {
             List<Order> orders = byTenant.getOrDefault(t.getId(), List.of());
             OrderService.BillingFigures f = OrderService.billingFigures(orders);
@@ -534,6 +534,11 @@ public class AdminService {
                 return row;
             })
             .collect(Collectors.toList());
+    }
+
+    /** Money-only rows as detached orders for OrderService's rules (see OrderMoney). */
+    private static List<Order> money(List<com.esyback.ecommerce.repository.OrderMoney> rows) {
+        return rows.stream().map(com.esyback.ecommerce.repository.OrderMoney::toOrder).toList();
     }
 
     private static Map<Long, List<Order>> ordersByTenantId(List<Order> orders) {

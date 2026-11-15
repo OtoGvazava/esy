@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import useFeePercent from '../hooks/useFeePercent';
 import { useMediaQuery } from '@mui/material';
 import { usePlatform, useStores, PTopBar, PFooter, shiftHue } from './PlatformShared';
 import { Chip, Glyph, IconBtn, Lbl, cardStyle, type, usePDevice } from './PlatformKit';
@@ -251,7 +252,10 @@ function Prices({ T, t, dev }) {
 
 export default function PlatformLanding() {
   const { T } = usePlatform();
-  const { t } = useTranslation('platform');
+  // esy's live fee for the strings that state it ({{fee}}), not a fixed 2%.
+  const { percent: fee } = useFeePercent();
+  const { t: tp } = useTranslation('platform');
+  const t = (key, opts) => tp(key, { fee, ...opts });
   const navigate = useNavigate();
   const { stores } = useStores();
   const dev = usePDevice();

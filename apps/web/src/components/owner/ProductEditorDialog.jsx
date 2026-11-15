@@ -51,7 +51,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
   const { T } = useTK();
   const { isMobile, isDesktop } = useDevice();
   const isEdit = Boolean(product);
-  const { percent: livePercent } = useFeePercent();
+  const { percent: livePercent, rate: liveRate } = useFeePercent();
 
   const initial = useMemo(() => (product ? {
     title: product.title || '',
@@ -206,7 +206,8 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
 
   // ---- the price card's figures
   const rate = livePercent;
-  const fee = Number.isFinite(price) ? Math.round(price * livePercent) / 100 : null;
+  // From the exact rate: the shown percent is rounded (0.0275 shows as 2.8).
+  const fee = Number.isFinite(price) ? Math.round(price * liveRate * 100) / 100 : null;
   const ownPrices = hasVariants ? variants.rows.filter((r) => r.price != null && r.price !== '').length : 0;
   const pct = String(rate).replace('.', lang === 'ka' ? ',' : '.');
 

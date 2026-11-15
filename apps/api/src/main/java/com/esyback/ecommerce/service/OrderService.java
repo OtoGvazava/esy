@@ -577,12 +577,12 @@ public class OrderService {
         // avoids a rounding argument with the bank over the final lari.
         boolean whole = asked.compareTo(order.getTotal() == null ? asked : order.getTotal()) == 0
             && order.refundedOrZero().signum() == 0;
-        // One key per claim: the order and the refunded total this claim
-        // brings it to. A retry of this refund repeats it; the next refund,
-        // even of the same amount, does not.
-        String refundKey = java.util.UUID.nameUUIDFromBytes(
-            (order.getBogOrderId() + ":" + order.refundedOrZero().add(asked).toPlainString())
-                .getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+        // A fresh key per attempt. This code never re-sends a request, so
+        // there is no retry for BOG to recognise; a key derived from the
+        // claim was worse, because after a refusal (which rolls the claim
+        // back) the next attempt repeated the refused request's key and BOG
+        // could answer with the stored refusal.
+        String refundKey = java.util.UUID.randomUUID().toString();
         BogPaymentService.RefundResult result =
             bogPaymentService.refund(tenant, order.getBogOrderId(), whole ? null : asked, refundKey);
 

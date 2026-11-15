@@ -27,5 +27,15 @@
     "title": "Discover Beauty",
     "subtitle": "Your premium destination for cosmetics and skincare",
     "tagline": "Where beauty meets quality"
+  },
+  "refusal": {
+    "PHOTO_LIMIT": "A product can have at most 12 photos.",
+    "FILE_TOO_LARGE": "That file is too large.",
+    "DELIVERY_PICKUP_FREE": "Collection in person is always free.",
+    "DELIVERY_PRICE_TOO_HIGH": "A delivery price can be at most 300 ₾.",
+    "PAYMENT_PENDING": "This order's card payment isn't confirmed yet, so it can't be shipped.",
+    "DELIVERY_ADDRESS_REQUIRED": "Add a delivery address for courier delivery.",
+    "STORE_FIELD_TOO_LONG": "One of the fields is too long.",
+    "PRICE_INVALID": "A price must be more than 0, with at most 8 digits before the point and 2 after."
   }
 }

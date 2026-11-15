@@ -48,6 +48,7 @@ public class TenantController {
 
     private final TenantContextService tenantContextService;
     private final com.esyback.ecommerce.config.PlatformProperties platformProperties;
+    private final com.esyback.ecommerce.service.DeliveryService deliveryService;
     private final TenantService tenantService;
     private final TenantLogoService tenantLogoService;
     private final UserService userService;
@@ -127,6 +128,7 @@ public class TenantController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to open a store");
         }
         Tenant created = tenantService.createTenant(request);
+        deliveryService.seedFor(created);
         // The signed-in account that created it owns it (one account, many stores).
         membershipService.ensure(owner, created, StoreMembership.Role.OWNER);
         Map<String, Object> body = TenantMapper.toMap(created);
