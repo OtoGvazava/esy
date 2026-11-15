@@ -253,6 +253,7 @@
       "notPositive": "The price must be more than 0",
       "tooPrecise": "“{{value}}” has more than 2 decimal places",
       "tooBig": "“{{value}}” is too large for a price",
+      "ambiguous": "“{{value}}” could be read two ways. Write it like 1250 or 1250,00",
       "notWhole": "“{{value}}” is not a whole number",
       "negative": "Stock can't be negative"
     },

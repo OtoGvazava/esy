@@ -381,4 +381,27 @@ class ProductImportTest {
         assertThat(ProductImportService.template()).startsWith("title,description,price,quantity,category\n");
         assertThat(report.rows().get(0).category()).isEqualTo("Mugs");
     }
+
+    @Test
+    @DisplayName("thousands separators never import a price a thousand times too cheap (review M28)")
+    void thousandsSeparators() {
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("24,50")).isEqualTo("24.50");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("24.5")).isEqualTo("24.5");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1.250,50")).isEqualTo("1250.50");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1,250.50")).isEqualTo("1250.50");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1 250")).isEqualTo("1250");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1,250,000")).isEqualTo("1250000");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1250")).isEqualTo("1250");
+        // One mark before exactly three digits could be either reading.
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1,250")).isNull();
+        // A lone point stays a decimal point (24.500 is 24.50, as before).
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("24.500")).isEqualTo("24.500");
+
+        var report = importService.importCsv("""
+            title,price,quantity
+            Mug,"1,250",1
+            """, true);
+        org.assertj.core.api.Assertions.assertThat(report.errors()).extracting(ProductImportService.RowError::code)
+            .containsExactly("ambiguous");
+    }
 }
