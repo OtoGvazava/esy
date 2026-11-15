@@ -17,7 +17,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useTenant } from '../contexts/TenantContext';
 import { tenantApi, handleApiError } from '../utils/api';
-import { money, FEE_PERCENT } from '../core/money';
+import { money } from '../core/money';
+import useFeePercent from '../hooks/useFeePercent';
 import { storeOrdersQuery } from '../core/query/managerQueries';
 import { Sk, Skeleton } from '../components/skeleton/Skeleton';
 import { Alert, BxIcon, Fld, SaveBar, Select, initialsOf, useBx } from './officeBx';
@@ -546,6 +547,7 @@ function Steps({ title, steps, note }) {
 }
 
 export function PaymentsTab() {
+  const { percent: feePercent } = useFeePercent();
   const { t } = useTranslation('manager');
   const f = useStoreForm();
   const [clientId, setClientId] = useState('');
@@ -657,7 +659,7 @@ export function PaymentsTab() {
           <Steps
             title={t('settingsTabs.pay.howItWorks')}
             steps={[t('settingsTabs.pay.on1'), t('settingsTabs.pay.on2'), t('settingsTabs.pay.on3')]}
-            note={t('settingsTabs.pay.onNote', { percent: FEE_PERCENT })}
+            note={t('settingsTabs.pay.onNote', { percent: feePercent })}
           />
         ) : (
           <Steps

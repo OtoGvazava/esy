@@ -20,7 +20,8 @@ import { useDevice } from '../contexts/DeviceContext';
 import { useTK } from '../core/useTK';
 import { Btn, Card, Note } from '../core/primitives';
 import { Icons } from '../core/icons';
-import { money, FEE_PERCENT } from '../core/money';
+import { money } from '../core/money';
+import useFeePercent from '../hooks/useFeePercent';
 import { storeOrdersQuery } from '../core/query/managerQueries';
 import { handleApiError } from '../utils/api';
 import { Sk, Skeleton } from '../components/skeleton/Skeleton';
@@ -142,6 +143,7 @@ function WaitingSk({ T, isMobile }) {
 }
 
 export default function ManagerOverview() {
+  const { percent: feePercent } = useFeePercent();
   const { T } = useTK();
   const { t, i18n } = useTranslation('manager');
   const { isDesktop, isMobile } = useDevice();
@@ -200,7 +202,7 @@ export default function ManagerOverview() {
             <StatCard T={T} label={t('overview.orders')} value={String(data.orders ?? 0)} />
             <StatCard
               T={T} label={t('overview.feesOwed')} value={money(data.serviceFeesOwed)}
-              hint={t('overview.feeHint', { percent: FEE_PERCENT })}
+              hint={t('overview.feeHint', { percent: feePercent })}
             />
             <StatCard T={T} label={t('overview.products')} value={String(data.products ?? 0)} />
           </div>

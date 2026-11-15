@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 public class TenantController {
 
     private final TenantContextService tenantContextService;
+    private final com.esyback.ecommerce.config.PlatformProperties platformProperties;
     private final TenantService tenantService;
     private final TenantLogoService tenantLogoService;
     private final UserService userService;
@@ -85,6 +86,16 @@ public class TenantController {
                 return m;
             })
             .collect(Collectors.toList()));
+    }
+
+    /**
+     * esy's service fee as the admin has set it, for the screens that state it
+     * (opening a store, the product editor, the back office). They used to
+     * print a hard-coded 2% whatever the real rate was.
+     */
+    @GetMapping("/fee-rate")
+    public ResponseEntity<Map<String, Object>> feeRate() {
+        return ResponseEntity.ok(Map.of("serviceFeeRate", platformProperties.getServiceFeeRate()));
     }
 
     @GetMapping("/subdomain")

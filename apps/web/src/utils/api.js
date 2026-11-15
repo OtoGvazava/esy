@@ -556,6 +556,10 @@ export const teamApi = {
 };
 
 export const tenantApi = {
+  // esy's service fee rate as the admin has set it (public).
+  feeRate({ signal } = {}) {
+    return api.get('/api/tenant/fee-rate', { signal });
+  },
   // `devTenant` forwards ?tenant=<sub> so a single localhost host can switch
   // tenants in dev (the backend only honors it for localhost; prod resolves
   // by Host). No-op in production where there's no ?tenant= in the URL.

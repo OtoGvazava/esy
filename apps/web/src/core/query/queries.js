@@ -133,6 +133,14 @@ export const accountQuery = () => queryOptions({
   queryFn: () => accountApi.get(),
 });
 
+/** esy's service fee rate (0.02 = 2%), as the admin has set it. */
+export const feeRateQuery = () => queryOptions({
+  queryKey: ['platform', 'feeRate'],
+  queryFn: ({ signal }) => tenantApi.feeRate({ signal })
+    .then((b) => (Number.isFinite(Number(b?.serviceFeeRate)) ? Number(b.serviceFeeRate) : null)),
+  staleTime: 10 * 60 * 1000,
+});
+
 /** Store roles waiting for this account's answer. */
 export const invitationsQuery = () => queryOptions({
   queryKey: ['account', 'invitations'],

@@ -34,7 +34,9 @@ export default function HereBlock() {
   if (!here) return null;
 
   const mine = orders.filter((o) => o.store?.subdomain === here);
-  const spent = mine.filter(tookMoney).reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  // What was kept: the charge less anything already refunded (the order row carries `refunded`).
+  const spent = mine.filter(tookMoney)
+    .reduce((sum, o) => sum + Math.max(0, (Number(o.total) || 0) - (Number(o.refunded) || 0)), 0);
   const latest = mine.slice(0, LATEST);
   const name = storeName(tenant) || here;
   // Platform ADMIN grants nothing inside a store: only its own team sees the back office.

@@ -15,7 +15,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTK } from '../../core/useTK';
 import { useDevice } from '../../contexts/DeviceContext';
-import { money, feeOf, FEE_PERCENT } from '../../core/money';
+import { money } from '../../core/money';
+import useFeePercent from '../../hooks/useFeePercent';
 import { markIfComplete, markLoaded } from '../../core/imgFade';
 import { productApi, handleApiError } from '../../utils/api';
 import VariantEditor from './VariantEditor';
@@ -50,6 +51,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
   const { T } = useTK();
   const { isMobile, isDesktop } = useDevice();
   const isEdit = Boolean(product);
+  const { percent: livePercent } = useFeePercent();
 
   const initial = useMemo(() => (product ? {
     title: product.title || '',
@@ -203,8 +205,8 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
   };
 
   // ---- the price card's figures
-  const rate = FEE_PERCENT;
-  const fee = Number.isFinite(price) ? feeOf(price) : null;
+  const rate = livePercent;
+  const fee = Number.isFinite(price) ? Math.round(price * livePercent) / 100 : null;
   const ownPrices = hasVariants ? variants.rows.filter((r) => r.price != null && r.price !== '').length : 0;
   const pct = String(rate).replace('.', lang === 'ka' ? ',' : '.');
 

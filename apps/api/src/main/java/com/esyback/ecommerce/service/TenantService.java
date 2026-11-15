@@ -187,7 +187,10 @@ public class TenantService {
         tenant.setDisplayName(displayName == null ? tenant.getName() : displayName);
         tenant.setDescription(blankToNull(req.getDescription()));
         tenant.setTagline(clampTagline(req.getTagline()));
-        tenant.setLogoUrl(blankToNull(req.getLogoUrl()));
+        // Absent leaves the logo as it is; blank clears it. A save from a tab
+        // that had read the store before a new logo was uploaded used to send
+        // the old URL (or nothing) and lose the new one.
+        if (req.getLogoUrl() != null) tenant.setLogoUrl(blankToNull(req.getLogoUrl()));
         tenant.setPrimaryColor(normalizeColor(req.getPrimaryColor(), DEFAULT_PRIMARY));
         tenant.setSecondaryColor(normalizeColor(req.getSecondaryColor(), DEFAULT_SECONDARY));
         tenant.setCategory(normalizeCategory(req.getCategory()));
