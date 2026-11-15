@@ -110,7 +110,12 @@ export default function VariantEditor({ T, productId, basePrice, onChanged, onDi
   const [error, setError] = useState('');
   const [dirty, setDirty] = useState(false);
 
+  // The stock each row had when this document came from the server. Sent
+  // with every save as stockWas, so the server applies only what was typed
+  // and a sale made while the editor was open stands (review M16).
+  const seen = useRef({});
   const adopt = useCallback((d) => {
+    seen.current = Object.fromEntries((d?.rows || []).map((r) => [keyOf(r), r.stock]));
     setDoc(d);
     setAxes(d?.axes?.map((a) => ({ name: a.name, values: [...a.values] })) || []);
     setDirty(false);
@@ -152,7 +157,10 @@ export default function VariantEditor({ T, productId, basePrice, onChanged, onDi
   const put = useCallback(async (nextAxes, rows) => {
     const d = await productApi.putVariants(productId, {
       axes: nextAxes.map((a) => ({ name: a.name, values: a.values })),
-      rows: rows || doc?.rows || [],
+      rows: (rows || doc?.rows || []).map((r) => {
+        const was = seen.current[keyOf(r)];
+        return was == null ? r : { ...r, stockWas: was };
+      }),
     });
     adopt(d);
     return d;

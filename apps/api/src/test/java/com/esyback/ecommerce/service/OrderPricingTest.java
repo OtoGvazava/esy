@@ -117,4 +117,34 @@ class OrderPricingTest {
             .isInstanceOf(ResponseStatusException.class)
             .hasMessageContaining("400");
     }
+
+    @Test
+    @Transactional
+    @DisplayName("more than is in stock, across lines, is refused with OUT_OF_STOCK (review M34)")
+    void stockIsChecked() {
+        Product vase = product(tenant, "Clay vase", "95.00"); // 10 in stock
+        assertThat(orderService.createOrder(null, tenant, bag(vase.getId(), null, null, 10)).getId()).isNotNull();
+
+        assertThatThrownBy(() -> orderService.createOrder(null, tenant, bag(vase.getId(), null, null, 11)))
+            .isInstanceOf(com.esyback.ecommerce.web.ApiRefusal.class)
+            .satisfies(e -> assertThat(((com.esyback.ecommerce.web.ApiRefusal) e).getCode()).isEqualTo("OUT_OF_STOCK"));
+
+        // Two lines of 6 ask for 12 of the same 10.
+        CreateOrderRequest twoLines = bag(vase.getId(), null, null, 6);
+        twoLines.setItems(List.of(twoLines.getItems().get(0), bag(vase.getId(), null, null, 6).getItems().get(0)));
+        assertThatThrownBy(() -> orderService.createOrder(null, tenant, twoLines))
+            .isInstanceOf(com.esyback.ecommerce.web.ApiRefusal.class);
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("an absurd quantity is refused before anything is priced")
+    void hugeQuantityIsRefused() {
+        Product vase = product(tenant, "Clay vase", "95.00");
+        vase.setQuantity(null); // a store that does not count this one
+        productRepository.save(vase);
+        assertThatThrownBy(() -> orderService.createOrder(null, tenant, bag(vase.getId(), null, null, 1_000_000)))
+            .isInstanceOf(com.esyback.ecommerce.web.ApiRefusal.class)
+            .satisfies(e -> assertThat(((com.esyback.ecommerce.web.ApiRefusal) e).getCode()).isEqualTo("QUANTITY_TOO_LARGE"));
+    }
 }

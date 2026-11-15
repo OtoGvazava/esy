@@ -165,10 +165,10 @@ class CancelRestockTest {
         Order order = freeOrder(null, boots, size("38"), 1);
         Long soldFrom = size("38").getId();
 
-        // Saving the grid recreates every row with a new id, keeping the counts.
+        // Saving the grid keeps the rows it still has, ids and counts (M30).
         variantService.replace(productRepository.findById(boots.getId()).orElseThrow(), Map.of(
             "axes", List.of(Map.of("name", "Size", "values", List.of("38", "40")))));
-        assertThat(size("38").getId()).isNotEqualTo(soldFrom);
+        assertThat(size("38").getId()).isEqualTo(soldFrom);
         assertThat(size("38").getQuantity()).isEqualTo(1);
 
         cancel(order);
@@ -180,8 +180,15 @@ class CancelRestockTest {
     @Transactional
     @DisplayName("only what was taken comes back after an oversell")
     void oversellReturnsWhatWasTaken() {
-        Product last = product("Vase", "95.00", 2);
-        Order order = freeOrder(null, last, null, 5);
+        // Five were there at checkout; three sold elsewhere before this
+        // order took its stock (checkout now refuses more than is on hand,
+        // so an oversell can only happen in that gap).
+        Product last = product("Vase", "95.00", 5);
+        Order placed = orderService.createOrder(null, tenant, request(last, null, 5));
+        last.setQuantity(2);
+        productRepository.save(last);
+        orderService.commitFreeOrderStock(placed);
+        Order order = orderRepository.findById(placed.getId()).orElseThrow();
         // commitStock floors at zero rather than going negative...
         assertThat(stock(last)).isZero();
         assertThat(order.getItems().get(0).getStockTaken()).isEqualTo(2);

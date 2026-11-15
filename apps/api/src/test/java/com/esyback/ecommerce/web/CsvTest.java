@@ -96,4 +96,21 @@ class CsvTest {
         String round = Csv.line(List.of("Small, \"hand-thrown\"\nreally"));
         assertEquals("Small, \"hand-thrown\"\nreally", Csv.parse(round).get(0).get(0));
     }
+
+    @org.junit.jupiter.api.Test
+    @org.junit.jupiter.api.DisplayName("semicolon files (Excel in decimal-comma locales) and lone-CR line ends parse (review M27)")
+    void semicolonsAndLoneCr() {
+        java.util.List<java.util.List<String>> rows = Csv.parse("title;price;quantity\nMug;24,50;3\n\"A; B\";1;1\n");
+        org.assertj.core.api.Assertions.assertThat(rows).containsExactly(
+            java.util.List.of("title", "price", "quantity"),
+            java.util.List.of("Mug", "24,50", "3"),
+            java.util.List.of("A; B", "1", "1"));
+
+        java.util.List<java.util.List<String>> mac = Csv.parse("title,price\rMug,5\rCup,6");
+        org.assertj.core.api.Assertions.assertThat(mac).hasSize(3);
+
+        // A comma file whose values hold semicolons is still a comma file.
+        org.assertj.core.api.Assertions.assertThat(Csv.delimiterOf("title,description,price\nA,\"x; y; z\",1"))
+            .isEqualTo(',');
+    }
 }

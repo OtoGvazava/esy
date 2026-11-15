@@ -55,6 +55,7 @@ class AdminVerifyTest {
     @Autowired MockMvc mvc;
     @Autowired JwtUtil jwtUtil;
     @Autowired AdminService adminService;
+    @Autowired com.esyback.ecommerce.repository.PlatformAdminRepository platformAdminRepository;
     @Autowired TenantRepository tenantRepository;
     @Autowired UserRepository userRepository;
     @Autowired RoleRepository roleRepository;
@@ -82,6 +83,11 @@ class AdminVerifyTest {
             return tenantRepository.save(t);
         });
         account(ADMIN, "ADMIN");
+        // ADMIN is honoured only for an allowlisted address (M25): grant it the
+        // way the admin screen does, so the role on the account is not enough.
+        if (!platformAdminRepository.existsByEmailIgnoreCase(ADMIN)) {
+            platformAdminRepository.save(com.esyback.ecommerce.entity.PlatformAdmin.of(ADMIN, "test"));
+        }
         account(SHOPPER, null);
     }
 

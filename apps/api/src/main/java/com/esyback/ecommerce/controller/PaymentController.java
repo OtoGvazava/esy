@@ -67,15 +67,33 @@ public class PaymentController {
                 "This store has not enabled card payments");
         }
 
-        Order order = orderService.createOrder(user, tenant, request);
+        // No "placed" notice yet: it goes out when the payment is confirmed.
+        Order order = orderService.createOrder(user, tenant, request, false);
 
+        // The callback goes to the public base URL, which BOG can reach. The
+        // shopper goes back to the STORE they paid on: the base URL is the
+        // platform's (www.esy.ge), which has no /pay/return, so every return
+        // landed on a 404 and the shopper never saw a confirmation (review
+        // M2). An origin that is not one of ours falls back to the base.
         String base = origin(http);
+        String storeOrigin = com.esyback.ecommerce.security.TenantOrigins.of(http);
+        String back = com.esyback.ecommerce.security.TenantOrigins.isAllowed(storeOrigin) ? storeOrigin : base;
         String num = URLEncoder.encode(order.getOrderNumber(), StandardCharsets.UTF_8);
-        BogPaymentService.PaymentSession session = bogPaymentService.createPayment(
-            tenant, order,
-            base + "/api/payments/bog/callback",
-            base + "/pay/return?order=" + num + "&status=success",
-            base + "/pay/return?order=" + num + "&status=fail");
+        BogPaymentService.PaymentSession session;
+        try {
+            session = bogPaymentService.createPayment(
+                tenant, order,
+                base + "/api/payments/bog/callback",
+                back + "/pay/return?order=" + num + "&status=success",
+                back + "/pay/return?order=" + num + "&status=fail");
+        } catch (RuntimeException e) {
+            // The bank never took the payment. Left as it was, the order sat at
+            // PLACED with no payment, looked like a pay-later order, and was
+            // billed and counted as a sale; every retry added another (review
+            // M31). It is closed as a failed payment instead.
+            orderService.failUnstartedPayment(order);
+            throw e;
+        }
 
         orderService.markBogPending(order, session.bogOrderId());
         return ResponseEntity.ok(Map.of(
@@ -108,8 +126,16 @@ public class PaymentController {
             log.warn("Rejected BOG callback: bad signature");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("invalid signature");
         }
+        JsonNode root;
         try {
-            JsonNode root = objectMapper.readTree(rawBody);
+            root = objectMapper.readTree(rawBody);
+        } catch (Exception e) {
+            // Acknowledged: a body that does not parse will not parse on a
+            // retry either, and BOG must not hammer a poison callback forever.
+            log.error("BOG callback body does not parse", e);
+            return ResponseEntity.ok("ok");
+        }
+        try {
             JsonNode body = root.path("body");
             String externalId = body.path("external_order_id").asText(null);
             String bogOrderId = body.path("order_id").asText(null);
@@ -128,9 +154,11 @@ public class PaymentController {
                 keyed ? "signed" : "from receipt, no key");
             orderService.settlePayment(externalId, mapped);
         } catch (Exception e) {
-            // Acknowledge anyway: a parse error won't fix itself on retry, and
-            // we never want BOG hammering a poison callback forever.
-            log.error("BOG callback processing error", e);
+            // NOT acknowledged: a database hiccup while settling used to answer
+            // 200, BOG stopped retrying, and a taken payment stayed PENDING
+            // (review M32). settlePayment is idempotent, so a retry is safe.
+            log.error("BOG callback could not be settled; asking BOG to retry", e);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("retry");
         }
         return ResponseEntity.ok("ok");
     }
@@ -199,9 +227,8 @@ public class PaymentController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
     }
 
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> handle(ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode())
-            .body(Map.of("error", ex.getReason() == null ? "Request failed" : ex.getReason()));
-    }
+    // No local ResponseStatusException handler: ApiErrorAdvice writes the
+    // same {error} plus message, status and, for an ApiRefusal, its code. The
+    // copy that sat here dropped the code, so screens could not tell
+    // CARD_ONLY or STORE_SUSPENDED from any other refusal.
 }

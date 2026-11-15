@@ -93,7 +93,8 @@ export const OrdersProvider = ({ children }) => {
       }
       return { success: true, order };
     } catch (error) {
-      return { success: false, error: error?.message };
+      // The code too: checkout says a refusal in the shopper's language.
+      return { success: false, error: error?.message, code: error?.code };
     } finally {
       setPlacing(false);
     }

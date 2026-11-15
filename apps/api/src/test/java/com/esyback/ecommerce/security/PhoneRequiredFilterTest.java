@@ -63,6 +63,18 @@ class PhoneRequiredFilterTest {
     }
 
     @Test
+    @DisplayName("percent-encoding a letter of /api does not get past the gate (review M38)")
+    void encodedPathIsRefused() throws Exception {
+        signInAs(false);
+        for (String path : List.of("/%61pi/tenant", "/api/%74enant", "/api;x=1/tenant")) {
+            FilterChain chain = mock(FilterChain.class);
+            MockHttpServletResponse res = run("POST", path, chain);
+            assertEquals(403, res.getStatus(), path);
+            verify(chain, never()).doFilter(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        }
+    }
+
+    @Test
     @DisplayName("the gate's own endpoints stay open, or nobody could get verified")
     void gateEndpointsAreExempt() throws Exception {
         signInAs(false);

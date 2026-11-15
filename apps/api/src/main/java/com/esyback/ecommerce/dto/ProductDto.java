@@ -28,6 +28,9 @@ public class ProductDto {
     @NotNull(message = "Quantity is required")
     @PositiveOrZero(message = "Quantity must be 0 or positive")
     private Integer quantity;
+    // The stock the editor started from (request only). With it, a save applies
+    // only the change the merchant typed, so sales made meanwhile stand (M17).
+    private Integer quantityWas;
     
     private LocalDateTime createdAt;
 
@@ -111,6 +114,14 @@ public class ProductDto {
     
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
+    }
+
+    public Integer getQuantityWas() {
+        return quantityWas;
+    }
+
+    public void setQuantityWas(Integer quantityWas) {
+        this.quantityWas = quantityWas;
     }
     
     public LocalDateTime getCreatedAt() {

@@ -48,6 +48,13 @@ services:
       # PAID); each callback then settles from BOG's receipt instead.
       - key: BOG_PUBLIC_KEY
         sync: false
+      # Encrypts every store's BOG client secret in the database. Unset, the
+      # key published in the repository is used, so a database dump would reveal
+      # every secret. Set it to a long random value; secrets stored under the
+      # old key are re-encrypted with it on the next start (SecretKeyMigration).
+      # sync: false so a blueprint sync never replaces a key already in use.
+      - key: APP_SECRET_ENC_KEY
+        sync: false
 
   # Live config: the service-fee rate, the SMS sender and the message
   # templates. Small and write-rarely — the app re-reads through an 8s cache

@@ -437,6 +437,11 @@ export default function Checkout() {
     }
   }, [step, authLoading, routesReady, bookReady, eligible, setParams]);
 
+  // The server's refusals that a shopper can act on, said in their language;
+  // anything else keeps the server's sentence.
+  const REFUSALS = ['OUT_OF_STOCK', 'QUANTITY_TOO_LARGE', 'CARD_ONLY', 'STORE_SUSPENDED', 'STORE_CLOSED'];
+  const refusal = (code, fallback) => (REFUSALS.includes(code) ? t(`checkout.refused.${code}`) : fallback);
+
   const toReview = () => {
     if (!user) {
       // Come back here after signing in, with the bag (CartContext keeps it).
@@ -490,7 +495,7 @@ export default function Checkout() {
         }
         setPayError(t('checkout.payError'));
       } catch (e) {
-        setPayError(handleApiError(e, t('checkout.payError')));
+        setPayError(refusal(e?.code, handleApiError(e, t('checkout.payError'))));
       }
       setPlacing(false);
       return;
@@ -501,7 +506,7 @@ export default function Checkout() {
     const res = await createOrder({ items: cartItems, ...delivery() });
     setPlacing(false);
     if (!res?.success) {
-      setPayError(res?.error || t('checkout.flow.placeError'));
+      setPayError(refusal(res?.code, res?.error || t('checkout.flow.placeError')));
       return;
     }
     clearCart();

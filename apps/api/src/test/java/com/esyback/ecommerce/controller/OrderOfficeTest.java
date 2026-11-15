@@ -191,7 +191,12 @@ class OrderOfficeTest {
             .andExpect(jsonPath("$.email.to").value(BUYER));
     }
 
+    // Outside the class's test transaction: messages go out after a COMMIT
+    // (review M1), which a rolled-back test transaction never reaches. The
+    // sends then happen on another thread, so the checks wait for them.
     @Test
+    @org.springframework.transaction.annotation.Transactional(
+        propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     @DisplayName("the ship step's switches hold a message back, and leaving them out sends both")
     void notifySwitches() throws Exception {
         Order o = courierOrder();
@@ -202,8 +207,8 @@ class OrderOfficeTest {
                 .content("{\"status\":\"SHIPPED\",\"sms\":false}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("shipped"));
+        verify(email, org.mockito.Mockito.timeout(3000)).send(eq(BUYER), anyString(), anyString());
         verify(sms, never()).send(anyString(), anyString());
-        verify(email).send(eq(BUYER), anyString(), anyString());
 
         clearInvocations(sms, email);
         mvc.perform(patch("/api/tenant/orders/" + o.getId() + "/status")
@@ -211,7 +216,7 @@ class OrderOfficeTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\":\"OUT_FOR_DELIVERY\"}"))
             .andExpect(status().isOk());
-        verify(sms).send(eq("+995577442108"), anyString());
-        verify(email).send(eq(BUYER), anyString(), anyString());
+        verify(sms, org.mockito.Mockito.timeout(3000)).send(eq("+995577442108"), anyString());
+        verify(email, org.mockito.Mockito.timeout(3000)).send(eq(BUYER), anyString(), anyString());
     }
 }

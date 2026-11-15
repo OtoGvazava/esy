@@ -4,12 +4,15 @@ import com.esyback.ecommerce.config.AppProperties;
 import com.esyback.ecommerce.config.BogProperties;
 import com.esyback.ecommerce.config.DesignProperties;
 import com.esyback.ecommerce.config.PlatformProperties;
+import com.esyback.ecommerce.entity.AuditLog;
+import com.esyback.ecommerce.repository.AuditLogRepository;
 import com.esyback.ecommerce.service.ConfigStore;
 import com.esyback.ecommerce.service.TenantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -35,6 +38,7 @@ public class AdminConfigController {
     private final AppProperties app;
     private final ConfigStore store;
     private final DesignProperties design;
+    private final AuditLogRepository auditLog;
 
     /** The JSON field each editable value travels under, and its config-store key. */
     private static final Map<String, String> FIELD_KEYS = new LinkedHashMap<>();
@@ -88,7 +92,9 @@ public class AdminConfigController {
      */
     @PutMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> update(@RequestBody Map<String, String> body) {
+    public ResponseEntity<Map<String, Object>> update(@RequestBody Map<String, String> body,
+                                                      Authentication authentication) {
+        String actor = authentication == null ? null : authentication.getName();
         if (body.containsKey("serviceFeeRate")) {
             BigDecimal rate;
             try {
@@ -100,6 +106,7 @@ public class AdminConfigController {
                 throw bad("serviceFeeRate must be between 0 and 1 (0.02 = 2%)");
             }
             store.set("app.platform.service-fee-rate", rate.toPlainString());
+            audit(actor, "serviceFeeRate", rate.toPlainString());
         }
         if (body.containsKey("bogEnv")) {
             String env = body.get("bogEnv") == null ? "" : body.get("bogEnv").trim().toLowerCase();
@@ -107,15 +114,25 @@ public class AdminConfigController {
                 throw bad("bogEnv must be 'live' or 'sandbox'");
             }
             store.set("app.bog.env", env);
+            audit(actor, "bogEnv", env);
         }
+        // Every merchant's decrypted BOG secret is POSTed to the auth URL, and
+        // shoppers are sent to pay at the base URL, so both may only point at
+        // BOG itself, over https (review M26).
         if (body.containsKey("bogAuthUrl")) {
-            store.set("app.bog.auth-url", validUrlOrBlank(body.get("bogAuthUrl")));
+            String url = validBogUrlOrBlank(body.get("bogAuthUrl"));
+            store.set("app.bog.auth-url", url);
+            audit(actor, "bogAuthUrl", url);
         }
         if (body.containsKey("bogBaseUrl")) {
-            store.set("app.bog.base-url", validUrlOrBlank(body.get("bogBaseUrl")));
+            String url = validBogUrlOrBlank(body.get("bogBaseUrl"));
+            store.set("app.bog.base-url", url);
+            audit(actor, "bogBaseUrl", url);
         }
         if (body.containsKey("publicBaseUrl")) {
-            store.set("app.public-base-url", validUrlOrBlank(body.get("publicBaseUrl")));
+            String url = validUrlOrBlank(body.get("publicBaseUrl"));
+            store.set("app.public-base-url", url);
+            audit(actor, "publicBaseUrl", url);
         }
         // Off: storefronts draw today's chrome, registration keeps today's
         // brand step and nothing can be published (see DesignProperties).
@@ -126,10 +143,33 @@ public class AdminConfigController {
                 throw bad("designEnabled must be true or false");
             }
             design.setEnabled(on.equals("true"));
+            audit(actor, "designEnabled", on);
         }
         return ResponseEntity.ok(Map.of(
             "ok", true,
             "note", "Written to the config store; the change applies within a few seconds."));
+    }
+
+    /** Blank, or an https URL on bog.ge or one of its subdomains. */
+    static String validBogUrlOrBlank(String value) {
+        String s = value == null ? "" : value.trim();
+        if (s.isEmpty()) return s;
+        java.net.URI uri;
+        try {
+            uri = new java.net.URI(s);
+        } catch (java.net.URISyntaxException e) {
+            throw bad("That is not a valid URL");
+        }
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getUserInfo() != null
+                || !(host.equals("bog.ge") || host.endsWith(".bog.ge"))) {
+            throw bad("A Bank of Georgia URL must be https:// on bog.ge (or be blank to use the default)");
+        }
+        return s;
+    }
+
+    private void audit(String actor, String key, String value) {
+        auditLog.save(AuditLog.of(actor == null ? "unknown" : actor, "CONFIG_CHANGED", "CONFIG", key, value));
     }
 
     private String validUrlOrBlank(String value) {
@@ -140,7 +180,7 @@ public class AdminConfigController {
         return s;
     }
 
-    private ResponseStatusException bad(String msg) {
+    private static ResponseStatusException bad(String msg) {
         return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, msg);
     }
 

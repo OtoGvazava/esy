@@ -35,6 +35,7 @@ public final class Csv {
         // of the first header, so "title" never matches.
         if (text.charAt(0) == '﻿') text = text.substring(1);
 
+        char delimiter = delimiterOf(text);
         List<String> row = new ArrayList<>();
         StringBuilder field = new StringBuilder();
         boolean quoted = false;
@@ -55,13 +56,22 @@ public final class Csv {
                 }
                 continue;
             }
+            if (c == delimiter) {
+                row.add(field.toString());
+                field.setLength(0);
+                continue;
+            }
             switch (c) {
                 case '"' -> quoted = true;
-                case ',' -> {
+                // CRLF ends a line at its \n; a lone CR (old Mac exports) ends
+                // one itself — dropping it turned the whole file into one row.
+                case '\r' -> {
+                    if (i + 1 < text.length() && text.charAt(i + 1) == '\n') break;
                     row.add(field.toString());
                     field.setLength(0);
+                    addRow(rows, row);
+                    row = new ArrayList<>();
                 }
-                case '\r' -> { /* handled with the \n that follows it */ }
                 case '\n' -> {
                     row.add(field.toString());
                     field.setLength(0);
@@ -75,6 +85,28 @@ public final class Csv {
         row.add(field.toString());
         addRow(rows, row);
         return rows;
+    }
+
+    /**
+     * The field separator, read from the header line: whichever of comma,
+     * semicolon and tab occurs most there outside quotes (comma on a tie).
+     * Excel saves "CSV" with semicolons wherever the decimal mark is a comma,
+     * Georgian settings included, and those files were refused (review M27).
+     */
+    static char delimiterOf(String text) {
+        int commas = 0, semicolons = 0, tabs = 0;
+        boolean quoted = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '"') quoted = !quoted;
+            else if (!quoted && (c == '\n' || c == '\r')) break;
+            else if (!quoted && c == ',') commas++;
+            else if (!quoted && c == ';') semicolons++;
+            else if (!quoted && c == '\t') tabs++;
+        }
+        if (semicolons > commas && semicolons >= tabs) return ';';
+        if (tabs > commas && tabs > semicolons) return '\t';
+        return ',';
     }
 
     private static void addRow(List<List<String>> rows, List<String> row) {

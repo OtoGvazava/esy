@@ -55,6 +55,40 @@ public class ProductImportService {
     private static final String PRICE = "price";
     // products.price is numeric(10,2): at most 8 digits before the point.
     private static final int MAX_PRICE_DIGITS = 8;
+
+    /**
+     * A price cell as BigDecimal text, or null when it could mean two prices.
+     *
+     * <p>Spreadsheets in Georgia and much of Europe write 24,50, so a comma
+     * may be the decimal mark. But every comma used to become a point, and
+     * "1,250" imported as 1.25 — a thousand times too cheap, live at once
+     * (review M28). Now: with both marks, the last one is the decimal and the
+     * other groups thousands (1.250,50 and 1,250.50); with one mark, it is the
+     * decimal before one or two digits; and one followed by exactly three
+     * digits ("1,250", "1.250") could be either, so it is refused — pricing a
+     * product a thousand times too cheap is worse than asking the merchant to
+     * write 24.50 instead of 24.500.
+     * Anything else is left for BigDecimal to accept or reject.
+     */
+    static String plainPrice(String raw) {
+        // Spaces and no-break spaces group thousands in some locales (1 250).
+        String s = raw.trim().replace(" ", "").replace(" ", "");
+        int comma = s.lastIndexOf(','), dot = s.lastIndexOf('.');
+        if (comma >= 0 && dot >= 0) {
+            boolean commaIsDecimal = comma > dot;
+            String grouped = s.replace(commaIsDecimal ? "." : ",", "");
+            return commaIsDecimal ? grouped.replace(',', '.') : grouped;
+        }
+        int mark = Math.max(comma, dot);
+        if (mark < 0) return s;
+        if (s.indexOf(s.charAt(mark)) != mark) {
+            // The same mark more than once (1,250,000): only ever grouping.
+            return s.matches("\\d{1,3}([.,]\\d{3})+") ? s.replace(String.valueOf(s.charAt(mark)), "") : s;
+        }
+        int after = s.length() - mark - 1;
+        if (after == 3 && s.substring(0, mark).matches("\\d{1,3}")) return null;
+        return s.replace(',', '.');
+    }
     private static final String QUANTITY = "quantity";
     private static final String CATEGORY = "category";
 
@@ -185,12 +219,12 @@ public class ProductImportService {
             if (rawPrice.isBlank()) {
                 errors.add(new RowError(line, PRICE, "required", null, "price is required"));
             } else {
-                try {
-                    // Spreadsheets in Georgia and much of Europe write 24,50.
-                    // Rejecting that would be technically defensible and
-                    // useless; the comma cannot be a separator here because the
-                    // field was already split.
-                    BigDecimal parsed = new BigDecimal(rawPrice.replace(",", ".").replace(" ", ""));
+                String plain = plainPrice(rawPrice);
+                if (plain == null) {
+                    errors.add(new RowError(line, PRICE, "ambiguous", rawPrice,
+                        "price \"" + rawPrice + "\" could be read two ways — write it like 1250 or 1250,00"));
+                } else try {
+                    BigDecimal parsed = new BigDecimal(plain);
                     if (parsed.signum() <= 0) {
                         errors.add(new RowError(line, PRICE, "notPositive", rawPrice,
                             "price must be greater than 0"));

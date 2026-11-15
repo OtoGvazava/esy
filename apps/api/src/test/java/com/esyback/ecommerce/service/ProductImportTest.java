@@ -131,7 +131,7 @@ class ProductImportTest {
             title,price,quantity
             ,24.00,12
             Mug,fifteen,4
-            Plate,24.999,-1
+            Plate,24.9999,-1
             """, true);
 
         assertThat(report.errors()).extracting(
@@ -140,7 +140,7 @@ class ProductImportTest {
             .containsExactly(
                 org.assertj.core.groups.Tuple.tuple(2, "title", "required", null),
                 org.assertj.core.groups.Tuple.tuple(3, "price", "notNumber", "fifteen"),
-                org.assertj.core.groups.Tuple.tuple(4, "price", "tooPrecise", "24.999"),
+                org.assertj.core.groups.Tuple.tuple(4, "price", "tooPrecise", "24.9999"),
                 org.assertj.core.groups.Tuple.tuple(4, "quantity", "negative", "-1"));
     }
 
@@ -293,14 +293,15 @@ class ProductImportTest {
     void priceScale() {
         assertThat(importService.importCsv("""
             title,price,quantity
-            Mug,24.999,3
+            Mug,24.9999,3
             """, true).errors()).hasSize(1);
 
-        // 24.500 is the same number as 24.50; nothing is lost, so nothing is
-        // refused.
+        // 24.5000 is the same number as 24.50; nothing is lost, so nothing is
+        // refused. (Exactly three decimals, as in 24.500, reads as possible
+        // thousands grouping and is refused as ambiguous — review M28.)
         assertThat(importService.importCsv("""
             title,price,quantity
-            Mug,24.500,3
+            Mug,24.5000,3
             """, true).ok()).isTrue();
     }
 
@@ -380,5 +381,29 @@ class ProductImportTest {
         // And it teaches the category column.
         assertThat(ProductImportService.template()).startsWith("title,description,price,quantity,category\n");
         assertThat(report.rows().get(0).category()).isEqualTo("Mugs");
+    }
+
+    @Test
+    @DisplayName("thousands separators never import a price a thousand times too cheap (review M28)")
+    void thousandsSeparators() {
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("24,50")).isEqualTo("24.50");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("24.5")).isEqualTo("24.5");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1.250,50")).isEqualTo("1250.50");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1,250.50")).isEqualTo("1250.50");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1 250")).isEqualTo("1250");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1,250,000")).isEqualTo("1250000");
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1250")).isEqualTo("1250");
+        // One mark before exactly three digits could be either reading.
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1,250")).isNull();
+        // A lone point before three digits could be dot grouping too.
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("1.250")).isNull();
+        org.assertj.core.api.Assertions.assertThat(ProductImportService.plainPrice("24.5")).isEqualTo("24.5");
+
+        var report = importService.importCsv("""
+            title,price,quantity
+            Mug,"1,250",1
+            """, true);
+        org.assertj.core.api.Assertions.assertThat(report.errors()).extracting(ProductImportService.RowError::code)
+            .containsExactly("ambiguous");
     }
 }

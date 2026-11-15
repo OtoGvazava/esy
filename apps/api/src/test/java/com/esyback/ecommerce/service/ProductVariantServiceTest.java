@@ -209,4 +209,50 @@ class ProductVariantServiceTest {
         assertThatThrownBy(() -> service.require(product, foreign))
             .hasMessageContaining("no longer available");
     }
+
+    private com.esyback.ecommerce.entity.ProductVariant row(String size) {
+        return variantRepository.findByProductOrderByIdAsc(product).stream()
+            .filter(v -> size.equals(v.getValue1())).findFirst().orElseThrow();
+    }
+
+    private Map<String, Object> grid(Map<String, Object>... rows) {
+        return Map.of("axes", List.of(axis("Size", "S", "M", "L")), "rows", List.of(rows));
+    }
+
+    @Test
+    @Transactional
+    void aGridSaveKeepsTheRowsItStillHas() {
+        service.replace(product, grid());
+        Long m = row("M").getId();
+
+        service.replace(product, Map.of("axes", List.of(axis("Size", "M", "L", "XL")), "rows", List.of()));
+
+        // M survives with its id (review M30); S is gone, XL is new.
+        assertThat(row("M").getId()).isEqualTo(m);
+        assertThat(variantRepository.findByProductOrderByIdAsc(product)).extracting("value1")
+            .containsExactlyInAnyOrder("M", "L", "XL");
+    }
+
+    @Test
+    @Transactional
+    void aGridSaveAppliesOnlyWhatWasTyped() {
+        service.replace(product, grid(
+            Map.of("key", List.of("S"), "stock", 5),
+            Map.of("key", List.of("M"), "stock", 5),
+            Map.of("key", List.of("L"), "stock", 5)));
+        // Two M sell while the editor is open (5 -> 3).
+        var m = row("M");
+        m.setQuantity(3);
+        variantRepository.save(m);
+
+        // The editor still shows 5 everywhere; the merchant changes only L to 8.
+        service.replace(product, grid(
+            Map.of("key", List.of("S"), "stock", 5, "stockWas", 5),
+            Map.of("key", List.of("M"), "stock", 5, "stockWas", 5),
+            Map.of("key", List.of("L"), "stock", 8, "stockWas", 5)));
+
+        assertThat(row("M").getQuantity()).isEqualTo(3); // the sale stands (review M16)
+        assertThat(row("L").getQuantity()).isEqualTo(8);
+        assertThat(row("S").getQuantity()).isEqualTo(5);
+    }
 }

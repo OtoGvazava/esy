@@ -133,4 +133,19 @@ class BogCallbackReceiptTest {
             .andExpect(status().isUnauthorized());
         assertThat(reload(o).getPaymentStatus()).isEqualTo(Order.PaymentStatus.PENDING);
     }
+
+    @Test
+    @DisplayName("a failure while settling asks BOG to retry (503); a body that does not parse is acknowledged (M32)")
+    void transientFailureIsRetried() throws Exception {
+        Order o = pendingCardOrder();
+        when(bog.fetchReceiptStatus(any(), eq(o.getBogOrderId())))
+            .thenThrow(new RuntimeException("database hiccup"));
+        String body = "{\"body\":{\"order_id\":\"" + o.getBogOrderId() + "\",\"external_order_id\":\""
+            + o.getOrderNumber() + "\",\"order_status\":{\"key\":\"completed\"}}}";
+        mvc.perform(post("/api/payments/bog/callback").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isServiceUnavailable());
+
+        mvc.perform(post("/api/payments/bog/callback").contentType(MediaType.APPLICATION_JSON).content("{not json"))
+            .andExpect(status().isOk());
+    }
 }

@@ -9,7 +9,7 @@ import {
 } from '../core/query/queries';
 import { normalizeDesign } from '../core/design/normalize';
 import { bannerShown } from '../core/design/show';
-import { COLLECTION_PAGE_SIZE, collectionArgs, homeListArgs, readFilters } from '../pages/shopQuery';
+import { COLLECTION_PAGE_SIZE, collectionArgs, homeListArgs, isCollection, readFilters } from '../pages/shopQuery';
 
 /** Started, not waited for. */
 const behind = (promise) => { promise.catch(() => {}); };
@@ -22,12 +22,12 @@ function bannerProduct(qc) {
   return id ? ensure(qc, productQuery(id)) : null;
 }
 
-// The home page, or a collection (/?category=…): the list as the URL states
+// The home page, or a collection (/?category=…, or a filter alone): the list as the URL states
 // it, the category pills and, for a collection, its filter column.
 export const homeLoader = prime(({ url, qc }) => {
   const params = url.searchParams;
   const categories = ensure(qc, categoriesQuery());
-  if (params.get('category')) {
+  if (isCollection(params)) {
     const f = readFilters(params);
     return Promise.all([
       categories,

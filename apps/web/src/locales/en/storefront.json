@@ -143,6 +143,13 @@
       "tbilisi": "Courier — Tbilisi",
       "georgia": "Courier — rest of Georgia",
       "express": "Express"
+    },
+    "refused": {
+      "OUT_OF_STOCK": "Part of your bag is no longer in stock. Lower the quantity and try again.",
+      "QUANTITY_TOO_LARGE": "That is more than one order can hold. Lower the quantity.",
+      "CARD_ONLY": "This store takes card payments only. Reload the page and pay by card.",
+      "STORE_SUSPENDED": "This store is not taking orders right now.",
+      "STORE_CLOSED": "This store is not taking orders right now."
     }
   },
   "payReturn": {
@@ -334,14 +341,9 @@
     "popularMeta": "popular",
     "placeholder": "try \"olive oil 1L\" or \"ceramic\"…",
     "qUnder50": "Under 50 ₾",
-    "qFreeShip": "Free shipping",
-    "qNew": "New this week",
-    "qSale": "On sale",
+    "qNew": "New arrivals",
     "qInStock": "In stock",
-    "qGift": "Gift ideas",
-    "tNewWeek": "new this week",
-    "tOnSale": "on sale",
-    "tBestSellers": "best sellers",
+    "tNewWeek": "newest first",
     "tUnder30": "under 30 ₾"
   },
   "searchBar": {
@@ -459,6 +461,7 @@
       "PHONE_TAKEN": "This number is already verified on another esy account.",
       "PHONE_COOLDOWN": "Please wait a moment before asking for another code.",
       "PHONE_CAP": "Too many codes sent to this number today. Try again tomorrow.",
+      "PHONE_DAILY_LIMIT": "Too many codes for this account today. Try again tomorrow.",
       "SMS_UNAVAILABLE": "The code could not be sent right now. Your number is kept — try again in a minute.",
       "CODE_EXPIRED": "That code has expired. Ask for a new one.",
       "CODE_WRONG": "Incorrect code — check it and try again.",

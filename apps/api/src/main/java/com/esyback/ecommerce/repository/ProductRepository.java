@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -66,4 +68,13 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
         ORDER BY ranked.tenant_id, ranked.rn
         """)
     List<Object[]> findPreviewImages(@Param("tenantIds") Collection<Long> tenantIds, @Param("perStore") int perStore);
+
+    /**
+     * The product with its row locked until the transaction ends. Stock is
+     * read and written back in Java, so two orders taking the same item must
+     * not both read the same quantity (review M29).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Product p where p.id = :id")
+    java.util.Optional<Product> lockById(@Param("id") Long id);
 }

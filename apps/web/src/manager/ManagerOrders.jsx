@@ -54,12 +54,18 @@ const orderDate = (o, lang) => (o.placed
     { month: 'short', day: 'numeric', year: 'numeric' })
   : '—');
 
-/** Total minus the platform's cut — an em-dash when nothing will be paid out. */
+/**
+ * What the store is paid for the order, as the server works it out from the
+ * fee frozen on it and any refund (review M20) — an em-dash when nothing will
+ * be paid out. The old 2%-of-everything sum is only a fallback for an answer
+ * that predates the field.
+ */
 function Payout({ T, order, dead }) {
   const total = Number(order.total) || 0;
+  const payout = order.payout != null ? Number(order.payout) : total - feeOf(total);
   return (
-    <span style={{ font: `700 13px ${T.font}`, color: dead ? T.textMute : T.successFg }}>
-      {dead ? '—' : money(total - feeOf(total))}
+    <span style={{ font: `700 13px ${T.font}`, color: dead || order.payout === null ? T.textMute : T.successFg }}>
+      {dead || order.payout === null ? '—' : money(payout)}
     </span>
   );
 }

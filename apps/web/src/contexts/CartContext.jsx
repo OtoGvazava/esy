@@ -19,6 +19,20 @@ export { CartContext };
  */
 export const lineKey = (item) => `${item.id}::${item.variantId ?? ''}`;
 
+/**
+ * A line may carry `stock`, what the shop had when it was added. The bag never
+ * holds more than that, so a sold-out or short item cannot be paid for by card
+ * and then oversold (review M13). A line without it (an old bag, a re-added
+ * order) is not capped here; the server has the last word either way.
+ */
+const capAt = (quantity, stock) => {
+  const n = Number(stock);
+  return stock == null || stock === '' || !Number.isFinite(n) ? quantity : Math.min(quantity, Math.max(0, n));
+};
+
+/** Whether a line already holds all the stock the shop had. */
+export const atStock = (item) => capAt(item.quantity + 1, item.stock) <= item.quantity;
+
 // Cart reducer for state management
 const cartReducer = (state, action) => {
   switch (action.type) {
@@ -26,18 +40,22 @@ const cartReducer = (state, action) => {
       const key = lineKey(action.payload);
       const existingItem = state.items.find(item => lineKey(item) === key);
       if (existingItem) {
+        const stock = action.payload.stock ?? existingItem.stock;
         return {
           ...state,
           items: state.items.map(item =>
             lineKey(item) === key
-              ? { ...item, quantity: item.quantity + (action.payload.quantity || 1) }
+              // Adding never takes away what is already in the bag.
+              ? { ...item, stock, quantity: Math.max(item.quantity, capAt(item.quantity + (action.payload.quantity || 1), stock)) }
               : item,
           ),
         };
       }
+      const quantity = capAt(action.payload.quantity || 1, action.payload.stock);
+      if (quantity <= 0) return state;
       return {
         ...state,
-        items: [...state.items, { ...action.payload, quantity: action.payload.quantity || 1 }],
+        items: [...state.items, { ...action.payload, quantity }],
       };
     }
 
@@ -52,7 +70,8 @@ const cartReducer = (state, action) => {
         ...state,
         items: state.items.map(item =>
           lineKey(item) === action.payload.key
-            ? { ...item, quantity: Math.max(0, action.payload.quantity) }
+            // Raising stops at the line's stock; lowering is always allowed.
+            ? { ...item, quantity: Math.max(0, action.payload.quantity > item.quantity ? Math.max(item.quantity, capAt(action.payload.quantity, item.stock)) : action.payload.quantity) }
             : item,
         ).filter(item => item.quantity > 0),
       };

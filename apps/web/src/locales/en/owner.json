@@ -253,6 +253,7 @@
       "notPositive": "The price must be more than 0",
       "tooPrecise": "“{{value}}” has more than 2 decimal places",
       "tooBig": "“{{value}}” is too large for a price",
+      "ambiguous": "“{{value}}” could be read two ways. Write it like 1250 or 1250,00",
       "notWhole": "“{{value}}” is not a whole number",
       "negative": "Stock can't be negative"
     },
@@ -293,6 +294,9 @@
   },
   "editor": {
     "back": "Back",
+    "photoTooLarge": "Not added, over 5 MB: {{names}}",
+    "failedPhotos": "The product is saved, but its new photos are not ({{reason}}). Save again to retry the photos.",
+    "failedVariants": "The product is saved, but the variant stock is not ({{reason}}). Save again to retry.",
     "titleNew": "New product",
     "subEdit": "Editing a product",
     "subAdd": "Adding a product",

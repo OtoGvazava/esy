@@ -151,7 +151,7 @@ image builds the SPA itself.
   the English sentence.
 
 Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
-(`AuthController` exposes `/user`, `/token`, `/logout`). ADMIN comes solely from
+(`AuthController` exposes `/user` and `/logout`). ADMIN comes solely from
 `ADMIN_EMAILS`.
 
 - **Google Cloud Console** → OAuth client → Authorized redirect URIs must

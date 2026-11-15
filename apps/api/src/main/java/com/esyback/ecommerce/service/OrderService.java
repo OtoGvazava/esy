@@ -63,6 +63,15 @@ public class OrderService {
     // No cycle: BogPaymentService depends only on config, the cipher and an
     // HTTP client — it does not reach back into orders.
     private final BogPaymentService bogPaymentService;
+    // Where messages are sent from, after commit (see afterCommit). Spring
+    // Boot's own pool; field-injected because @EnableScheduling adds a second
+    // executor and the qualifier must not be lost by the generated constructor.
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.beans.factory.annotation.Qualifier("applicationTaskExecutor")
+    private org.springframework.core.task.TaskExecutor notifyExecutor;
+
+    /** No line may ask for more than this of one item; real orders never come close. */
+    static final int MAX_LINE_QUANTITY = 999;
 
     // Crockford-style: no 0/O, 1/I/L or U, so a number read out over the
     // phone or copied by hand survives. 30^8 ≈ 6.6e11 values.
@@ -91,6 +100,17 @@ public class OrderService {
     }
 
     public Order createOrder(User user, Tenant tenant, CreateOrderRequest req) {
+        return createOrder(user, tenant, req, true);
+    }
+
+    /**
+     * @param announce send the "order placed" text and email now. A card
+     *                 checkout passes false: until the bank has the money the
+     *                 order may never happen (the bank call can fail and close
+     *                 it), so the notice goes out when the payment is
+     *                 confirmed instead.
+     */
+    public Order createOrder(User user, Tenant tenant, CreateOrderRequest req, boolean announce) {
         // Enforced here, where both checkouts (pay later and card) create the
         // order: a store the platform suspended or the owner switched off takes
         // no orders, whatever a stale tab or a direct API call sends.
@@ -116,6 +136,8 @@ public class OrderService {
         order.setOrderNumber(newOrderNumber());
 
         BigDecimal total = BigDecimal.ZERO;
+        // What this order asks of each product (or variant row), across lines.
+        java.util.Map<String, Integer> asked = new java.util.HashMap<>();
         for (CreateOrderRequest.Item i : req.getItems()) {
             // What is sold, and for how much, is this store's catalogue — never
             // the browser's. A line must name one of the store's own products;
@@ -137,14 +159,37 @@ public class OrderService {
             oi.setTitle(product.getTitle());
             BigDecimal price = product.getPrice() == null ? BigDecimal.ZERO : product.getPrice();
             int qty = i.getQuantity() == null || i.getQuantity() < 1 ? 1 : i.getQuantity();
+            if (qty > MAX_LINE_QUANTITY) {
+                throw new ApiRefusal(HttpStatus.BAD_REQUEST, "QUANTITY_TOO_LARGE",
+                    "At most " + MAX_LINE_QUANTITY + " of one item per order");
+            }
 
             // Variants (D11). The combination is frozen onto the line the same
             // way the title and price are, and the row's own price wins.
+            ProductVariant variant = null;
             if (product.variantsEnabled()) {
-                ProductVariant variant = productVariantService.require(product, i.getVariantId());
+                variant = productVariantService.require(product, i.getVariantId());
                 oi.setVariantId(variant.getId());
                 oi.setVariantLabel(variant.label());
                 price = variant.getPrice() != null ? variant.getPrice() : price;
+            }
+
+            // Checkout used to take any quantity of anything, sold out or not,
+            // so a card was charged for goods that do not exist and a free
+            // order could empty every shelf (review M34). Null stock on a
+            // product without variants means the store does not count it.
+            Integer stock = variant != null ? variant.getQuantity() : product.getQuantity();
+            String key = product.getId() + ":" + (oi.getVariantId() == null ? "" : oi.getVariantId());
+            int wanted = asked.merge(key, qty, Integer::sum);
+            if (stock != null && wanted > stock) {
+                java.util.Map<String, Object> details = new java.util.LinkedHashMap<>();
+                details.put("productId", product.getId());
+                if (oi.getVariantId() != null) details.put("variantId", oi.getVariantId());
+                details.put("available", Math.max(0, stock));
+                throw new ApiRefusal(HttpStatus.CONFLICT, "OUT_OF_STOCK",
+                    stock <= 0 ? "\"" + product.getTitle() + "\" is sold out"
+                        : "Only " + stock + " of \"" + product.getTitle() + "\" left",
+                    details);
             }
 
             oi.setPrice(price);
@@ -185,7 +230,7 @@ public class OrderService {
         Order saved = orderRepository.save(order);
         // An order is CREATED as PLACED and never transitions into it, so the
         // status-change path can never send this one — it has to be sent here.
-        notify(saved, SmsTemplates.ORDER_PLACED);
+        if (announce) notify(saved, SmsTemplates.ORDER_PLACED);
         return saved;
     }
 
@@ -251,51 +296,14 @@ public class OrderService {
      *
      * <p>One conditional UPDATE decides, so a retried payment callback cannot
      * take the stock twice, and a payment that lands after the store cancelled
-     * the order takes none: a cancelled order holds no stock. Each line then
-     * records what it actually took, because commitStock floors a row at zero
-     * on an oversell and a cancellation must put back only what was taken.
+     * the order takes none: a cancelled order holds no stock. commitStock
+     * records on each line what it actually took, from the same locked read it
+     * takes it with, because it floors a row at zero on an oversell and a
+     * cancellation must put back only what was taken.
      */
     private void commitStockOnce(Long orderId) {
         if (orderId == null || orderRepository.markStockCommitted(orderId) != 1) return;
-        orderRepository.findById(orderId).ifPresent(order -> {
-            recordStockTaken(order);
-            productService.commitStock(order);
-        });
-    }
-
-    /**
-     * What each line will take, worked out the way ProductService.commitStock
-     * takes it: from the variant row when the product has variants, from the
-     * product otherwise, floored at zero, with two lines on the same row
-     * sharing what is there.
-     */
-    private void recordStockTaken(Order order) {
-        Map<String, Integer> left = new HashMap<>();
-        for (OrderItem item : order.getItems()) {
-            if (item.getProductId() == null) continue;
-            Product p = productRepository.findById(item.getProductId()).orElse(null);
-            if (p == null) {
-                item.setStockTaken(0);
-                continue;
-            }
-            int want = item.getQuantity() == null ? 1 : item.getQuantity();
-            String key;
-            int have;
-            if (p.variantsEnabled() && item.getVariantId() != null) {
-                ProductVariant v = variantRepository.findByIdAndProduct(item.getVariantId(), p).orElse(null);
-                if (v == null) {
-                    item.setStockTaken(0);
-                    continue;
-                }
-                key = "variant:" + v.getId();
-                have = left.getOrDefault(key, v.getQuantity() == null ? 0 : v.getQuantity());
-            } else {
-                key = "product:" + p.getId();
-                have = left.getOrDefault(key, p.getQuantity() == null ? 0 : p.getQuantity());
-            }
-            item.setStockTaken(Math.max(0, Math.min(want, have)));
-            left.put(key, Math.max(0, have - want));
-        }
+        orderRepository.findById(orderId).ifPresent(productService::commitStock);
     }
 
     /**
@@ -325,18 +333,18 @@ public class OrderService {
      * to, and is skipped.
      */
     private void restock(Order order) {
-        for (OrderItem item : order.getItems()) {
+        for (OrderItem item : ProductService.inLockOrder(order.getItems())) {
             if (item.getProductId() == null) continue;
             int back = item.getStockTaken() != null ? item.getStockTaken()
                 : (item.getQuantity() == null ? 1 : item.getQuantity());
             if (back <= 0) continue;
-            Product p = productRepository.findById(item.getProductId()).orElse(null);
+            // Locked like commitStock (review M29): a cancellation and a sale of
+            // the same item at once must not overwrite one another.
+            Product p = productRepository.lockById(item.getProductId()).orElse(null);
             if (p == null) continue;
 
             if (p.variantsEnabled() && item.getVariantId() != null) {
-                ProductVariant v = variantRepository.findByIdAndProduct(item.getVariantId(), p)
-                    .or(() -> sameCombination(p, item.getVariantLabel()))
-                    .orElse(null);
+                ProductVariant v = productService.lockVariant(p, item.getVariantId(), item.getVariantLabel());
                 if (v == null) {
                     log.warn("Cancelled order {}: {} × \"{}\" not restocked, that combination of product {} no longer exists",
                         order.getOrderNumber(), back, item.getVariantLabel(), p.getId());
@@ -354,11 +362,16 @@ public class OrderService {
         }
     }
 
-    private Optional<ProductVariant> sameCombination(Product p, String label) {
-        if (label == null || label.isBlank()) return Optional.empty();
-        return variantRepository.findByProductOrderByIdAsc(p).stream()
-            .filter(v -> label.equals(v.label()))
-            .findFirst();
+    /**
+     * A card checkout whose payment the bank never started: closed as a failed
+     * payment, so it is no sale and nobody ships it. No stock was taken.
+     */
+    public void failUnstartedPayment(Order order) {
+        orderRepository.findById(order.getId()).ifPresent(o -> {
+            o.setPaymentStatus(Order.PaymentStatus.FAILED);
+            o.setStatus(Order.Status.CANCELLED);
+            orderRepository.save(o);
+        });
     }
 
     /** Mark a freshly created order as awaiting BOG payment + record BOG's id. */
@@ -392,7 +405,12 @@ public class OrderService {
                 // Takes nothing if the store cancelled the order while the
                 // shopper was still on the bank's page: the money is in, the
                 // goods stay on the shelf, and the owner refunds it.
-                findByOrderNumber(orderNumber).ifPresent(order -> commitStockOnce(order.getId()));
+                findByOrderNumber(orderNumber).ifPresent(order -> {
+                    commitStockOnce(order.getId());
+                    // A card order announces itself once paid (see createOrder);
+                    // one the store cancelled meanwhile is not news to send.
+                    if (order.getStatus() != Order.Status.CANCELLED) notify(order, SmsTemplates.ORDER_PLACED);
+                });
             }
             return findByOrderNumber(orderNumber);
         }
@@ -706,11 +724,9 @@ public class OrderService {
         if (phone == null) return;
         // A shop watching its SMS bill can switch any of these off in admin.
         if (!smsTemplates.isEnabled(template)) return;
-        try {
-            sms.send(phone, smsTemplates.render(template, orderTokens(order)));
-        } catch (RuntimeException e) {
-            log.warn("Order SMS not sent for order {}: {}", order.getId(), e.getClass().getSimpleName());
-        }
+        String text = smsTemplates.render(template, orderTokens(order));
+        Long id = order.getId();
+        afterCommit(() -> sms.send(phone, text), "SMS", id);
     }
 
     /**
@@ -729,14 +745,46 @@ public class OrderService {
         String to = recipientEmail(order);
         if (to == null) return;
         if (!emailTemplates.isEnabled(template)) return;
-        try {
-            Map<String, String> tokens = new java.util.HashMap<>(orderTokens(order));
-            tokens.putAll(extra);
-            email.send(to,
-                emailTemplates.renderSubject(template, tokens),
-                emailTemplates.renderBody(template, tokens));
-        } catch (RuntimeException e) {
-            log.warn("Order email not sent for order {}: {}", order.getId(), e.getClass().getSimpleName());
+        Map<String, String> tokens = new java.util.HashMap<>(orderTokens(order));
+        tokens.putAll(extra);
+        String subject = emailTemplates.renderSubject(template, tokens);
+        String body = emailTemplates.renderBody(template, tokens);
+        Long id = order.getId();
+        afterCommit(() -> email.send(to, subject, body), "email", id);
+    }
+
+    /**
+     * Sends a message once the change it reports has committed, off the
+     * request thread.
+     *
+     * <p>Messages used to go out inside the transaction, holding a pooled
+     * connection and, after a status claim, the order's row lock for as long
+     * as the provider took (time-outs of 10 + 10 s for SMS, 15 + 15 s for
+     * email). A slow provider and ten concurrent changes took every connection
+     * in the pool, and the health check failed (review M1). Now the message is
+     * rendered here, while the order is loaded, and only the send waits for
+     * the commit, on the task executor. A rolled-back change sends nothing.
+     * Failures are still only logged: the status is the fact, the message a
+     * remark about it.
+     */
+    private void afterCommit(Runnable send, String channel, Long orderId) {
+        Runnable safe = () -> {
+            try {
+                send.run();
+            } catch (RuntimeException e) {
+                log.warn("Order {} not sent for order {}: {}", channel, orderId, e.getClass().getSimpleName());
+            }
+        };
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        notifyExecutor.execute(safe);
+                    }
+                });
+        } else {
+            notifyExecutor.execute(safe);
         }
     }
 
@@ -770,20 +818,17 @@ public class OrderService {
     }
 
     /**
-     * Who to text about this order.
-     *
-     * <p>The delivery contact first, because on a courier order it is the
-     * person who will actually receive the parcel — which may not be the buyer
-     * at all, as with a gift. Falling back to the account's own number matters
-     * for collection orders: those carry no delivery address, so keying only on
-     * the ship phone meant a pickup buyer heard nothing at any stage, which is
-     * exactly the case where "it is ready" is worth the most.
+     * Who gets an order's texts: the account's verified phone, and nobody
+     * else. The delivery phone is typed at checkout and never checked, so
+     * texting it let anyone script orders that sent esy-branded messages to
+     * any number, premium-rate ones included, at esy's cost (review M5).
+     * The courier still gets the delivery phone on the order itself.
      */
-    private static String recipientPhone(Order order) {
-        String ship = order.getShipPhone();
-        if (ship != null && !ship.isBlank()) return ship;
-        String account = order.getUser() == null ? null : order.getUser().getPhoneNumber();
-        return account == null || account.isBlank() ? null : account;
+    static String recipientPhone(Order order) {
+        com.esyback.ecommerce.entity.User u = order.getUser();
+        if (u == null || !Boolean.TRUE.equals(u.getPhoneVerified())) return null;
+        String phone = u.getPhoneNumber();
+        return phone == null || phone.isBlank() ? null : phone;
     }
 
     /** Values the order templates may reference. */
@@ -863,18 +908,52 @@ public class OrderService {
     public static BigDecimal revenueOf(Collection<Order> orders) {
         return orders.stream()
             .filter(OrderService::countsAsRevenue)
-            .map(OrderService::goodsTotal)
+            .map(o -> goodsTotal(o).multiply(keptShare(o)).setScale(2, RoundingMode.HALF_UP))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /**
-     * Whether an order's goods are in {@link #revenueOf}: not cancelled and
-     * not refunded. The store's analytics divide revenue by the orders this
-     * admits, so the average and the total can never be counted two ways.
+     * Whether an order's goods are in {@link #revenueOf}: money was taken for
+     * it and some of it was kept. The store's analytics divide revenue by the
+     * orders this admits, so the average and the total can never be counted
+     * two ways.
+     *
+     * <p>It used to be "not cancelled and not refunded", which counted an
+     * abandoned card checkout (PENDING) as a sale (review M3) and dropped a
+     * paid order a manager marked cancelled without refunding it, though the
+     * store kept the money (review M4).
      */
     static boolean countsAsRevenue(Order o) {
-        return o.getStatus() != Order.Status.CANCELLED
-            && o.getPaymentStatus() != Order.PaymentStatus.REFUNDED;
+        return tookMoney(o) && keptShare(o).signum() > 0;
+    }
+
+    /**
+     * Money was taken for this order: a card payment that went through (and
+     * may since be partly or wholly returned), or a pay-later order that was
+     * not cancelled. A pending or failed card payment took nothing.
+     */
+    static boolean tookMoney(Order o) {
+        Order.PaymentStatus ps = o.getPaymentStatus() == null ? Order.PaymentStatus.NONE : o.getPaymentStatus();
+        if (ps == Order.PaymentStatus.NONE) return o.getStatus() != Order.Status.CANCELLED;
+        return ps == Order.PaymentStatus.PAID || isBeingRefunded(o);
+    }
+
+    /**
+     * The share of what was charged that the store keeps: (total − refunded)
+     * / total, between 0 and 1. A REFUNDED order kept nothing, even one
+     * refunded outside esy with nothing on its ledger.
+     */
+    static BigDecimal keptShare(Order o) {
+        if (o.getPaymentStatus() == Order.PaymentStatus.REFUNDED) return BigDecimal.ZERO;
+        // A refund in flight with no amount on the ledger (from before the
+        // ledger existed) is read as the whole order, as it always was.
+        if (o.getPaymentStatus() == Order.PaymentStatus.REFUND_PENDING && o.refundedOrZero().signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = o.getTotal() == null ? BigDecimal.ZERO : o.getTotal();
+        if (total.signum() <= 0) return BigDecimal.ONE;
+        BigDecimal kept = total.subtract(o.refundedOrZero()).max(BigDecimal.ZERO);
+        return kept.divide(total, 6, RoundingMode.HALF_UP).min(BigDecimal.ONE);
     }
 
     /**
@@ -889,11 +968,13 @@ public class OrderService {
     }
 
     /**
-     * Platform service fees this store owes (for periodic out-of-band billing).
-     * Counts only revenue-bearing orders: not cancelled, and either a paid BOG
-     * order or a free-flow order (paymentStatus NONE). Pending/failed/refunded
-     * BOG orders are excluded so a store is never billed for money it didn't
-     * collect.
+     * Platform service fees this store owes (for periodic out-of-band billing):
+     * each order's frozen fee times the share of its money the store kept.
+     * Pending and failed card orders took nothing and owe nothing. A paid
+     * order cancelled without a refund still owes its fee — cancelling used
+     * to wipe it while the store kept the money (review M4) — and a partial
+     * refund writes off only its share, where a ₾0.01 refund used to write off
+     * the whole fee (review M33).
      */
     public BigDecimal serviceFeesOwed(Tenant tenant) {
         return feesOwedOf(orderRepository.findByTenantOrderByCreatedAtDesc(tenant));
@@ -902,10 +983,8 @@ public class OrderService {
     /** {@link #serviceFeesOwed(Tenant)} over a given set of orders. */
     public static BigDecimal feesOwedOf(Collection<Order> orders) {
         return orders.stream()
-            .filter(o -> o.getStatus() != Order.Status.CANCELLED)
-            .filter(o -> o.getPaymentStatus() == Order.PaymentStatus.PAID
-                || o.getPaymentStatus() == Order.PaymentStatus.NONE)
-            .map(OrderService::feeOrZero)
+            .filter(OrderService::tookMoney)
+            .map(o -> feeOrZero(o).multiply(keptShare(o)).setScale(2, RoundingMode.HALF_UP))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -915,14 +994,12 @@ public class OrderService {
      * <p>The screen reads the fee in three steps, and each step is a fact the
      * orders hold rather than a figure worked out in the browser:
      * <ul>
-     *   <li><b>sales / feesAccrued</b> — every order that took money (PAID), or
-     *       took none online (NONE, the free-order flow), or took it and is
-     *       giving it back (REFUND_PENDING, REFUNDED). Cancelled orders never
-     *       count. This is "before refunds".</li>
-     *   <li><b>feesWrittenOff / refundCount</b> — the part of that whose money
-     *       is being or has been returned. A partial refund writes off the
-     *       whole order's fee, because {@link #serviceFeesOwed} has always
-     *       dropped a refunded order entirely.</li>
+     *   <li><b>sales / feesAccrued</b> — every order that took money
+     *       ({@link #tookMoney}): paid by card, refunded or not, cancelled or
+     *       not, and pay-later orders that were not cancelled. This is
+     *       "before refunds".</li>
+     *   <li><b>feesWrittenOff / refundCount</b> — the share of those fees
+     *       whose money went back, and how many orders returned any.</li>
      *   <li><b>feesOwed</b> — {@link #feesOwedOf}, the merchant's own figure,
      *       computed by the same method rather than as a subtraction, so the
      *       two screens cannot disagree. By construction it equals
@@ -944,21 +1021,36 @@ public class OrderService {
             revenueOf(orders),
             billable.stream().map(OrderService::goodsTotal).reduce(BigDecimal.ZERO, BigDecimal::add),
             billable.stream().map(OrderService::feeOrZero).reduce(BigDecimal.ZERO, BigDecimal::add),
-            refunded.stream().map(OrderService::feeOrZero).reduce(BigDecimal.ZERO, BigDecimal::add),
+            billable.stream().map(OrderService::feeOrZero).reduce(BigDecimal.ZERO, BigDecimal::add)
+                .subtract(feesOwedOf(orders)),
             refunded.size(),
             feesOwedOf(orders));
     }
 
-    /** Took money, or the free-order flow, or money being returned — and not cancelled. */
-    static boolean isBillable(Order o) {
-        if (o.getStatus() == Order.Status.CANCELLED) return false;
-        Order.PaymentStatus ps = o.getPaymentStatus();
-        return ps == Order.PaymentStatus.PAID || ps == Order.PaymentStatus.NONE || isBeingRefunded(o);
+    /**
+     * What the store is left with from an order: what was charged, less what
+     * went back, less esy's fee on the share kept. Null when no money was
+     * taken. The back office used to work this out with a hard-coded 2% of
+     * the whole total (review M20); the fee is the one frozen on the order.
+     */
+    public static BigDecimal payoutOf(Order o) {
+        if (!tookMoney(o)) return null;
+        BigDecimal total = o.getTotal() == null ? BigDecimal.ZERO : o.getTotal();
+        BigDecimal fee = feeOrZero(o).multiply(keptShare(o)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal kept = keptShare(o).signum() == 0 ? BigDecimal.ZERO : total.subtract(o.refundedOrZero());
+        return kept.subtract(fee).max(BigDecimal.ZERO);
     }
 
+    /** An order the platform's fee applies to before refunds: one that took money. */
+    static boolean isBillable(Order o) {
+        return tookMoney(o);
+    }
+
+    /** Money is being or has been returned on it, in whole or in part. */
     static boolean isBeingRefunded(Order o) {
         return o.getPaymentStatus() == Order.PaymentStatus.REFUND_PENDING
-            || o.getPaymentStatus() == Order.PaymentStatus.REFUNDED;
+            || o.getPaymentStatus() == Order.PaymentStatus.REFUNDED
+            || o.refundedOrZero().signum() > 0;
     }
 
     private static BigDecimal feeOrZero(Order o) {
