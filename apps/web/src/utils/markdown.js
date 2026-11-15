@@ -14,20 +14,33 @@ const escapeHtml = (s) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+const emphasis = (text) => text
+  .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+  .replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+
+// A private-use character marks a finished tag set aside while emphasis runs,
+// so `_` and `*` inside an href, `target="_blank"` or code are never touched.
+const MARK = '';
+const MARKED = /(\d+)/g;
+
 // `text` is already HTML-escaped. We only add our own tags around it.
 const inline = (text) => {
-  let s = text;
+  const kept = [];
+  const keep = (html) => `${MARK}${kept.push(html) - 1}${MARK}`;
+  let s = text.split(MARK).join('');
+  s = s.replace(/`([^`]+)`/g, (m, code) => keep(`<code>${code}</code>`));
   // [label](url) — url scheme allow-listed; otherwise keep just the label.
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label, url) => {
-    const safe = /^(https?:\/\/|mailto:)/i.test(url);
+    // A url holding a set-aside code span is not a url anyone meant.
+    const safe = !url.includes(MARK) && /^(https?:\/\/|mailto:)/i.test(url);
     return safe
-      ? `<a href="${url}" target="_blank" rel="noopener noreferrer nofollow">${label}</a>`
+      ? keep(`<a href="${url}" target="_blank" rel="noopener noreferrer nofollow">${emphasis(label)}</a>`)
       : label;
   });
-  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
-  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
-  s = s.replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+  s = emphasis(s);
+  // A kept tag may hold another (code in a link label), so restore until none is left.
+  while (s.includes(MARK)) s = s.replace(MARKED, (m, i) => kept[Number(i)]);
   return s;
 };
 
