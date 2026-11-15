@@ -135,10 +135,6 @@ public class PhoneVerificationService {
             throw refuse(user, HttpStatus.BAD_REQUEST, "PHONE_INVALID",
                 "That phone number does not look right — check it and try again");
         }
-        if (userRepository.existsByVerifiedPhoneAndIdNot(normalised, user.getId())) {
-            throw refuse(user, HttpStatus.CONFLICT, "PHONE_TAKEN",
-                "That number is already verified on another esy account");
-        }
         // Throttle before generating anything: a refused request must not
         // replace the code the person is currently typing. Checked AND
         // reserved in one step, before the send: checking first and recording
@@ -146,6 +142,17 @@ public class PhoneVerificationService {
         // cooldown and the daily cap (review M24). A send that does not
         // happen gives its reservation back.
         Reservation reserved = reserve(user, normalised);
+        // "Taken" is answered only after the throttle. Answered first, it was
+        // a free, unlimited lookup of which numbers have esy accounts, and
+        // 409 against 429 inside the cooldown told the same without even an
+        // SMS. Each such answer costs one of the account's daily sends, so
+        // the lookup is bounded like the sends are; the cooldown and the
+        // number's own count are given back, as nothing was sent.
+        if (userRepository.existsByVerifiedPhoneAndIdNot(normalised, user.getId())) {
+            release(reserved, true);
+            throw refuse(user, HttpStatus.CONFLICT, "PHONE_TAKEN",
+                "That number is already verified on another esy account");
+        }
         try {
             return sendReserved(user, phone, normalised);
         } catch (RuntimeException e) {
@@ -248,13 +255,54 @@ public class PhoneVerificationService {
     }
 
     private void release(Reservation r) {
+        release(r, false);
+    }
+
+    /** Gives a reservation back; {@code keepAccountSlot} still counts it against the account's day. */
+    private void release(Reservation r, boolean keepAccountSlot) {
         synchronized (throttle) {
             if (r.previousLast() == null) lastSentAt.remove(r.userId(), r.at());
             else lastSentAt.replace(r.userId(), r.at(), r.previousLast());
             Deque<Instant> byNumber = sendsByNumber.get(r.normalised());
             if (byNumber != null) byNumber.removeLastOccurrence(r.at());
+            if (keepAccountSlot) return;
             Deque<Instant> byAccount = sendsByAccount.get(r.userId());
             if (byAccount != null) byAccount.removeLastOccurrence(r.at());
+        }
+    }
+
+    /**
+     * Drops what can no longer matter: expired codes, cooldowns that have run
+     * out, and day counters with nothing left in the last 24 hours. Without
+     * this every account and number ever seen stayed in memory for the life
+     * of the process.
+     *
+     * <p>The state itself stays in memory: a restart forgets live codes (the
+     * person asks for a new one) and resets the day's counters. Moving it to
+     * the Key Value store would not make it durable either — the free tier
+     * there is not persistent — so that is left for a persistent store.
+     */
+    @org.springframework.scheduling.annotation.Scheduled(initialDelayString = "PT10M", fixedDelayString = "PT10M")
+    public void evictExpired() {
+        evictExpired(Instant.now());
+    }
+
+    void evictExpired(Instant now) {
+        synchronized (throttle) {
+            pending.entrySet().removeIf(e -> now.isAfter(e.getValue().expiresAt));
+            lastSentAt.entrySet().removeIf(e ->
+                Duration.between(e.getValue(), now).toSeconds() >= RESEND_COOLDOWN_SECONDS);
+            sendsByNumber.entrySet().removeIf(e -> inLastDay(e.getValue(), now) == 0);
+            sendsByAccount.entrySet().removeIf(e -> inLastDay(e.getValue(), now) == 0);
+            wrongByAccount.entrySet().removeIf(e -> inLastDay(e.getValue(), now) == 0);
+        }
+    }
+
+    /** Entries held, for tests: pending codes, cooldowns and the three day counters. */
+    int trackedEntries() {
+        synchronized (throttle) {
+            return pending.size() + lastSentAt.size() + sendsByNumber.size()
+                + sendsByAccount.size() + wrongByAccount.size();
         }
     }
 
