@@ -43,7 +43,6 @@ Each tenant has:
 
 ### Authentication (Tenant-aware)
 - `GET /api/auth/user` - Get current user info (tenant-scoped)
-- `POST /api/auth/token` - Generate JWT token
 - `POST /api/auth/logout` - Logout user
 
 ### OAuth2 (Tenant-aware)

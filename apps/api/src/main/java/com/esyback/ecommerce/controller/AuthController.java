@@ -2,7 +2,6 @@ package com.esyback.ecommerce.controller;
 
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.security.AuthCookie;
-import com.esyback.ecommerce.security.JwtUtil;
 import com.esyback.ecommerce.service.MembershipService;
 import com.esyback.ecommerce.service.TenantContextService;
 import com.esyback.ecommerce.service.UserService;
@@ -21,9 +20,6 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
-    
-    @Autowired
-    private JwtUtil jwtUtil;
     
     @Autowired
     private UserService userService;
@@ -86,16 +82,11 @@ public class AuthController {
         return payload;
     }
     
-    @PostMapping("/token")
-    public ResponseEntity<Map<String, String>> generateToken(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "User not authenticated"));
-        }
-        
-        String token = jwtUtil.generateToken(authentication);
-        return ResponseEntity.ok(Map.of("token", token));
-    }
-    
+    // There is deliberately no /token endpoint: it handed the HttpOnly
+    // session JWT to page JavaScript as a portable Bearer token and renewed
+    // it without limit, so one XSS anywhere became a session on every host
+    // that logout could not end (review M37). Nothing used it.
+
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(HttpServletRequest request,
                                                       HttpServletResponse response) {
