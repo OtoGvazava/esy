@@ -438,7 +438,12 @@ export default function Checkout() {
   }, [step, authLoading, routesReady, bookReady, eligible, setParams]);
 
   const toReview = () => {
-    if (!user) { navigate('/signin'); return; }
+    if (!user) {
+      // Come back here after signing in, with the bag (CartContext keeps it).
+      const tenant = new URLSearchParams(location.search).get('tenant');
+      navigate(`/signin?next=${encodeURIComponent('/checkout')}${tenant ? `&tenant=${encodeURIComponent(tenant)}` : ''}`);
+      return;
+    }
     if (!identityOk) return;
     setTouched(true);
     if (!addressOk) {

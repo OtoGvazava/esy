@@ -24,7 +24,12 @@ export default function AuthCallback() {
       sessionStorage.removeItem('esy_post_login');
       const from = saved ? new URL(saved, window.location.origin) : null;
       const tenantParam = from && from.searchParams.get('tenant');
-      if (tenantParam) dest = `/account?tenant=${encodeURIComponent(tenantParam)}`;
+      // Back to the page sign-in started from (checkout, a product, ...),
+      // never to the sign-in or callback pages themselves.
+      const resumable = from && from.origin === window.location.origin
+        && !/^\/(signin|auth)(\/|$)/.test(from.pathname) && from.pathname !== '/';
+      if (resumable && hostKey() !== 'admin') dest = from.pathname + from.search;
+      else if (tenantParam) dest = `/account?tenant=${encodeURIComponent(tenantParam)}`;
       // Opening a store (esy.ge/sell) continues where it started, with the
       // look a landing-page link picked (?look=).
       else if (from && from.pathname === '/sell' && isPlatformHost()) {

@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useReducer } from 'react';
+import { createContext, useContext, useEffect, useReducer } from 'react';
+import { STORAGE_KEYS } from '../constants';
 
 const CartContext = createContext();
 
@@ -67,10 +68,43 @@ const cartReducer = (state, action) => {
   }
 };
 
+// The bag is kept in the browser, one per store. Signing in is a full-page
+// trip to Google and back, which used to tear the bag down: a guest sent from
+// checkout to sign in came back to an empty one (review H2). Each store is its
+// own origin in production; in dev every store shares one host and is told
+// apart by ?tenant=, so that is part of the key.
+const storageKey = () => {
+  if (typeof window === 'undefined') return null;
+  const tenant = new URLSearchParams(window.location.search).get('tenant');
+  return `${STORAGE_KEYS.CART}:${window.location.host}${tenant ? `:${tenant}` : ''}`;
+};
+
+const loadBag = () => {
+  try {
+    const key = storageKey();
+    const parsed = key ? JSON.parse(localStorage.getItem(key) || 'null') : null;
+    const items = Array.isArray(parsed?.items) ? parsed.items : [];
+    // Only lines that can still be shown and priced; anything else is dropped.
+    return {
+      items: items.filter((i) => i && i.id != null && Number.isFinite(Number(i.price))
+        && Number.isInteger(i.quantity) && i.quantity > 0),
+    };
+  } catch {
+    return { items: [] };
+  }
+};
+
 export const CartProvider = ({ children }) => {
-  const [cartState, dispatch] = useReducer(cartReducer, {
-    items: [],
-  });
+  const [cartState, dispatch] = useReducer(cartReducer, undefined, loadBag);
+
+  useEffect(() => {
+    try {
+      const key = storageKey();
+      if (!key) return;
+      if (cartState.items.length) localStorage.setItem(key, JSON.stringify({ items: cartState.items }));
+      else localStorage.removeItem(key);
+    } catch { /* storage blocked or full: the bag still works for this visit */ }
+  }, [cartState.items]);
 
   const addToCart = (product) => {
     dispatch({ type: 'ADD_TO_CART', payload: product });
