@@ -40,9 +40,25 @@ public class SpaConfig implements WebMvcConfigurer {
                         if (requested.exists() && requested.isReadable()) {
                             return requested; // real static asset (/assets/*, …)
                         }
+                        // A file that is not there is a 404, not the page:
+                        // a stale chunk then fails as missing rather than as
+                        // HTML served for a script, and a scanner's probe for
+                        // /wp-login.php costs no database reads.
+                        if (isFileRequest(resourcePath)) return null;
                     }
                     return spaIndex.page(); // the page, for "/", index.html and every SPA route
                 }
             });
+    }
+
+    /**
+     * True for a path that asks for a file rather than a screen: anything
+     * under assets/, or whose last segment has an extension. No SPA route
+     * has a dot in its last segment.
+     */
+    static boolean isFileRequest(String resourcePath) {
+        if (resourcePath.startsWith("assets/")) return true;
+        String last = resourcePath.substring(resourcePath.lastIndexOf('/') + 1);
+        return last.lastIndexOf('.') > 0 || last.startsWith(".");
     }
 }
