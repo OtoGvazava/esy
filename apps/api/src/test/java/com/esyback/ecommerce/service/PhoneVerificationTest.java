@@ -394,4 +394,32 @@ class PhoneVerificationTest {
         assertEquals("PHONE_DAILY_LIMIT", code(e));
         assertFalse(Boolean.TRUE.equals(user.getPhoneVerified()));
     }
+
+    @Test
+    @DisplayName("50 parallel wrong guesses are still held to the per-code limit")
+    void parallelGuessesAreCounted() throws Exception {
+        String right = service.sendCode(user);
+        String wrong = right.equals("0000") ? "1111" : "0000";
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(50);
+        java.util.concurrent.CountDownLatch go = new java.util.concurrent.CountDownLatch(1);
+        java.util.Map<String, java.util.concurrent.atomic.AtomicInteger> codes = new java.util.concurrent.ConcurrentHashMap<>();
+        java.util.List<java.util.concurrent.Future<?>> all = new java.util.ArrayList<>();
+        for (int i = 0; i < 50; i++) {
+            all.add(pool.submit(() -> {
+                go.await();
+                try { service.verify(user, wrong); }
+                catch (ResponseStatusException e) {
+                    codes.computeIfAbsent(code(e), k -> new java.util.concurrent.atomic.AtomicInteger()).incrementAndGet();
+                }
+                return null;
+            }));
+        }
+        go.countDown();
+        for (java.util.concurrent.Future<?> fu : all) fu.get();
+        pool.shutdown();
+        // Exactly MAX_ATTEMPTS guesses were judged; every other one found the code gone.
+        int judged = codes.getOrDefault("CODE_WRONG", new java.util.concurrent.atomic.AtomicInteger()).get()
+            + codes.getOrDefault("CODE_LOCKED", new java.util.concurrent.atomic.AtomicInteger()).get();
+        assertEquals(PhoneVerificationService.MAX_ATTEMPTS, judged);
+    }
 }

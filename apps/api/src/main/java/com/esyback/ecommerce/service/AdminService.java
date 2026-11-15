@@ -508,7 +508,8 @@ public class AdminService {
                     ? Order.PaymentStatus.NONE : o.getPaymentStatus();
                 row.put("status", status.name());
                 row.put("paymentStatus", paid.name());
-                row.put("createdAt", o.getCreatedAt());
+                // An instant, like every order time the browser reads (M6).
+                row.put("createdAt", com.esyback.ecommerce.web.Times.instant(o.getCreatedAt()));
                 return row;
             })
             .collect(Collectors.toList());
@@ -559,12 +560,7 @@ public class AdminService {
 
     /** The configured allowlist, normalized the same way UserService reads it. */
     private Set<String> envAdminEmails() {
-        String raw = configStore.get(ADMIN_EMAILS_KEY, "");
-        if (raw == null || raw.isBlank()) return Set.of();
-        return Arrays.stream(raw.split(","))
-            .map(s -> s.trim().toLowerCase())
-            .filter(s -> !s.isEmpty())
-            .collect(Collectors.toCollection(LinkedHashSet::new));
+        return com.esyback.ecommerce.web.AdminEmails.parse(configStore.get(ADMIN_EMAILS_KEY, ""));
     }
 
     private static Map<String, Object> adminMap(String email, String source, Instant grantedAt, String grantedBy) {

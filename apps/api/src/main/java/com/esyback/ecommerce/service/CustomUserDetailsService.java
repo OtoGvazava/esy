@@ -12,7 +12,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
@@ -57,10 +56,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     private boolean stillAllowlisted(String email) {
         if (email == null || email.isBlank()) return false;
         String normalized = email.trim().toLowerCase();
-        String raw = configStore.get("app.admin-emails", "");
-        boolean inEnv = raw != null && Arrays.stream(raw.split(","))
-            .map(s -> s.trim().toLowerCase())
-            .anyMatch(normalized::equals);
-        return inEnv || platformAdminRepository.existsByEmailIgnoreCase(normalized);
+        // The env list first: it is cached config, so the database is only
+        // asked about runtime grants.
+        return com.esyback.ecommerce.web.AdminEmails.parse(
+                configStore.get(com.esyback.ecommerce.web.AdminEmails.KEY, "")).contains(normalized)
+            || platformAdminRepository.existsByEmailIgnoreCase(normalized);
     }
 }

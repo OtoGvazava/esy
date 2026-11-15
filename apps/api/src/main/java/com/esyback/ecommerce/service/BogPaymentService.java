@@ -399,6 +399,18 @@ public class BogPaymentService {
 
     /** Poll BOG for the order's current status; empty if it can't be read. */
     public Optional<Order.PaymentStatus> fetchReceiptStatus(Tenant tenant, String bogOrderId) {
+        return fetchReceiptKey(tenant, bogOrderId).map(this::mapStatus);
+    }
+
+    /**
+     * BOG's own status key for the payment ("completed", "created",
+     * "processing", ...), or empty when BOG could not be asked at all
+     * (no credentials, unreachable, an error answer). Unlike
+     * {@link #fetchReceiptStatus}, a payment BOG is still working on is not
+     * empty, which is what lets the pending sweep tell "not paid yet" from
+     * "could not find out".
+     */
+    public Optional<String> fetchReceiptKey(Tenant tenant, String bogOrderId) {
         if (!isConfigured(tenant) || bogOrderId == null) return Optional.empty();
         try {
             HttpRequest req = HttpRequest.newBuilder(
@@ -414,8 +426,7 @@ public class BogPaymentService {
                 return Optional.empty();
             }
             JsonNode json = objectMapper.readTree(bodyString(res));
-            String key = json.path("order_status").path("key").asText(null);
-            return Optional.ofNullable(mapStatus(key));
+            return Optional.ofNullable(json.path("order_status").path("key").asText(null));
         } catch (Exception e) {
             log.debug("BOG receipt fetch error: {}", e.getMessage());
             return Optional.empty();

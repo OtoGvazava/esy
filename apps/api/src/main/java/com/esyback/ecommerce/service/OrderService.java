@@ -70,6 +70,9 @@ public class OrderService {
     @org.springframework.beans.factory.annotation.Qualifier("applicationTaskExecutor")
     private org.springframework.core.task.TaskExecutor notifyExecutor;
 
+    /** No line may ask for more than this of one item; real orders never come close. */
+    static final int MAX_LINE_QUANTITY = 999;
+
     // Crockford-style: no 0/O, 1/I/L or U, so a number read out over the
     // phone or copied by hand survives. 30^8 ≈ 6.6e11 values.
     private static final char[] ORDER_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ".toCharArray();
@@ -83,9 +86,6 @@ public class OrderService {
      * hundred orders and failed checkout with a 500 (review H10). Random and
      * large also keeps one shopper from guessing their way to another's order.
      */
-    /** No line may ask for more than this of one item; real orders never come close. */
-    static final int MAX_LINE_QUANTITY = 999;
-
     String newOrderNumber() {
         for (int attempt = 0; attempt < 5; attempt++) {
             StringBuilder sb = new StringBuilder("ESY-");
@@ -100,6 +100,17 @@ public class OrderService {
     }
 
     public Order createOrder(User user, Tenant tenant, CreateOrderRequest req) {
+        return createOrder(user, tenant, req, true);
+    }
+
+    /**
+     * @param announce send the "order placed" text and email now. A card
+     *                 checkout passes false: until the bank has the money the
+     *                 order may never happen (the bank call can fail and close
+     *                 it), so the notice goes out when the payment is
+     *                 confirmed instead.
+     */
+    public Order createOrder(User user, Tenant tenant, CreateOrderRequest req, boolean announce) {
         // Enforced here, where both checkouts (pay later and card) create the
         // order: a store the platform suspended or the owner switched off takes
         // no orders, whatever a stale tab or a direct API call sends.
@@ -155,8 +166,9 @@ public class OrderService {
 
             // Variants (D11). The combination is frozen onto the line the same
             // way the title and price are, and the row's own price wins.
+            ProductVariant variant = null;
             if (product.variantsEnabled()) {
-                ProductVariant variant = productVariantService.require(product, i.getVariantId());
+                variant = productVariantService.require(product, i.getVariantId());
                 oi.setVariantId(variant.getId());
                 oi.setVariantLabel(variant.label());
                 price = variant.getPrice() != null ? variant.getPrice() : price;
@@ -166,9 +178,7 @@ public class OrderService {
             // so a card was charged for goods that do not exist and a free
             // order could empty every shelf (review M34). Null stock on a
             // product without variants means the store does not count it.
-            Integer stock = product.variantsEnabled()
-                ? productVariantService.require(product, i.getVariantId()).getQuantity()
-                : product.getQuantity();
+            Integer stock = variant != null ? variant.getQuantity() : product.getQuantity();
             String key = product.getId() + ":" + (oi.getVariantId() == null ? "" : oi.getVariantId());
             int wanted = asked.merge(key, qty, Integer::sum);
             if (stock != null && wanted > stock) {
@@ -220,7 +230,7 @@ public class OrderService {
         Order saved = orderRepository.save(order);
         // An order is CREATED as PLACED and never transitions into it, so the
         // status-change path can never send this one — it has to be sent here.
-        notify(saved, SmsTemplates.ORDER_PLACED);
+        if (announce) notify(saved, SmsTemplates.ORDER_PLACED);
         return saved;
     }
 
@@ -323,7 +333,7 @@ public class OrderService {
      * to, and is skipped.
      */
     private void restock(Order order) {
-        for (OrderItem item : order.getItems()) {
+        for (OrderItem item : ProductService.inLockOrder(order.getItems())) {
             if (item.getProductId() == null) continue;
             int back = item.getStockTaken() != null ? item.getStockTaken()
                 : (item.getQuantity() == null ? 1 : item.getQuantity());
@@ -395,7 +405,12 @@ public class OrderService {
                 // Takes nothing if the store cancelled the order while the
                 // shopper was still on the bank's page: the money is in, the
                 // goods stay on the shelf, and the owner refunds it.
-                findByOrderNumber(orderNumber).ifPresent(order -> commitStockOnce(order.getId()));
+                findByOrderNumber(orderNumber).ifPresent(order -> {
+                    commitStockOnce(order.getId());
+                    // A card order announces itself once paid (see createOrder);
+                    // one the store cancelled meanwhile is not news to send.
+                    if (order.getStatus() != Order.Status.CANCELLED) notify(order, SmsTemplates.ORDER_PLACED);
+                });
             }
             return findByOrderNumber(orderNumber);
         }
@@ -802,16 +817,6 @@ public class OrderService {
         return email == null || email.isBlank() ? null : email;
     }
 
-    /**
-     * Who to text about this order.
-     *
-     * <p>The delivery contact first, because on a courier order it is the
-     * person who will actually receive the parcel — which may not be the buyer
-     * at all, as with a gift. Falling back to the account's own number matters
-     * for collection orders: those carry no delivery address, so keying only on
-     * the ship phone meant a pickup buyer heard nothing at any stage, which is
-     * exactly the case where "it is ready" is worth the most.
-     */
     /**
      * Who gets an order's texts: the account's verified phone, and nobody
      * else. The delivery phone is typed at checkout and never checked, so

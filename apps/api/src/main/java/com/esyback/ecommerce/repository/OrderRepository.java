@@ -36,13 +36,21 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // expression"), which fails Spring Data's boot-time query validation.
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Order o set o.paymentStatus = :paid "
-        + "where o.orderNumber = :orderNumber and o.paymentStatus = :pending")
+        + "where o.orderNumber = :orderNumber and o.paymentStatus in (:pending, :failed)")
     int claimPaid(@Param("orderNumber") String orderNumber,
                   @Param("paid") Order.PaymentStatus paid,
-                  @Param("pending") Order.PaymentStatus pending);
+                  @Param("pending") Order.PaymentStatus pending,
+                  @Param("failed") Order.PaymentStatus failed);
 
+    /**
+     * PENDING or FAILED → PAID. FAILED too: a payment given up on (a failed
+     * bank call, or the pending sweep after a day) that BOG later reports
+     * completed did take the money, and the order must say so. It stays
+     * cancelled and takes no stock; the owner refunds it.
+     */
     default int claimPaid(String orderNumber) {
-        return claimPaid(orderNumber, Order.PaymentStatus.PAID, Order.PaymentStatus.PENDING);
+        return claimPaid(orderNumber, Order.PaymentStatus.PAID, Order.PaymentStatus.PENDING,
+            Order.PaymentStatus.FAILED);
     }
 
     /**

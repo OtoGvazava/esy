@@ -85,7 +85,7 @@ public class ProductService {
      */
     public void commitStock(com.esyback.ecommerce.entity.Order order) {
         org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ProductService.class);
-        for (com.esyback.ecommerce.entity.OrderItem item : order.getItems()) {
+        for (com.esyback.ecommerce.entity.OrderItem item : inLockOrder(order.getItems())) {
             if (item.getProductId() == null) continue;
             Product p = productRepository.lockById(item.getProductId()).orElse(null);
             if (p == null) {
@@ -128,6 +128,22 @@ public class ProductService {
             p.setQuantity(Math.max(0, have - take));
             productRepository.save(p);
         }
+    }
+
+    /**
+     * An order's lines in product, then variant, id order. Every transaction
+     * that locks stock rows takes them in this one order, so two orders
+     * holding the same items in opposite line order cannot deadlock.
+     */
+    public static java.util.List<com.esyback.ecommerce.entity.OrderItem> inLockOrder(
+            java.util.Collection<com.esyback.ecommerce.entity.OrderItem> items) {
+        return items.stream()
+            .sorted(java.util.Comparator
+                .comparing(com.esyback.ecommerce.entity.OrderItem::getProductId,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                .thenComparing(com.esyback.ecommerce.entity.OrderItem::getVariantId,
+                    java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder())))
+            .toList();
     }
 
     /**

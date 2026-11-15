@@ -130,12 +130,8 @@ public class UserService {
 
     /** The env/config half of the allowlist, trimmed + lowercased. */
     private java.util.Set<String> allowlistedEmails() {
-        String raw = configStore.get("app.admin-emails", "");
-        if (raw == null || raw.isBlank()) return java.util.Set.of();
-        return java.util.Arrays.stream(raw.split(","))
-            .map(s -> s.trim().toLowerCase())
-            .filter(s -> !s.isEmpty())
-            .collect(java.util.stream.Collectors.toSet());
+        return com.esyback.ecommerce.web.AdminEmails.parse(
+            configStore.get(com.esyback.ecommerce.web.AdminEmails.KEY, ""));
     }
 
     private Role adminRole() {

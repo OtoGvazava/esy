@@ -167,8 +167,7 @@ public class OrderController {
         // reads it with new Date(), which took a UTC "10:00" as the browser's
         // own 10:00 — a new order showed as "4 hours ago" in Tbilisi and one
         // placed after midnight carried the previous day (review M6).
-        m.put("placed", o.getCreatedAt() == null ? null
-            : o.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toString());
+        m.put("placed", com.esyback.ecommerce.web.Times.instant(o.getCreatedAt()));
         m.put("store", o.getTenant() == null ? null : TenantMapper.toMap(o.getTenant()));
         if (o.getShipLine() != null) {
             Map<String, Object> ship = new HashMap<>();

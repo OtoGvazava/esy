@@ -63,9 +63,11 @@ public class ProductImportService {
      * may be the decimal mark. But every comma used to become a point, and
      * "1,250" imported as 1.25 — a thousand times too cheap, live at once
      * (review M28). Now: with both marks, the last one is the decimal and the
-     * other groups thousands (1.250,50 and 1,250.50); a lone point is a
-     * decimal point, as before; and a lone comma before exactly three digits
-     * ("1,250") could be either, so it is refused.
+     * other groups thousands (1.250,50 and 1,250.50); with one mark, it is the
+     * decimal before one or two digits; and one followed by exactly three
+     * digits ("1,250", "1.250") could be either, so it is refused — pricing a
+     * product a thousand times too cheap is worse than asking the merchant to
+     * write 24.50 instead of 24.500.
      * Anything else is left for BigDecimal to accept or reject.
      */
     static String plainPrice(String raw) {
@@ -84,7 +86,7 @@ public class ProductImportService {
             return s.matches("\\d{1,3}([.,]\\d{3})+") ? s.replace(String.valueOf(s.charAt(mark)), "") : s;
         }
         int after = s.length() - mark - 1;
-        if (s.charAt(mark) == ',' && after == 3 && s.substring(0, mark).matches("\\d{1,3}")) return null;
+        if (after == 3 && s.substring(0, mark).matches("\\d{1,3}")) return null;
         return s.replace(',', '.');
     }
     private static final String QUANTITY = "quantity";

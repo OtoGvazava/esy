@@ -322,7 +322,7 @@ public class TenantController {
                 // server's wall clock with no zone, which reads hours off in
                 // a browser four hours east of it.
                 if (order.getCreatedAt() != null) {
-                    m.put("placedAt", order.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toString());
+                    m.put("placedAt", com.esyback.ecommerce.web.Times.instant(order.getCreatedAt()));
                 }
                 // The same two figures the refund answers with, so the screen
                 // (and the cancel dialog's "still to refund") never has to

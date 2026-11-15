@@ -67,7 +67,8 @@ public class PaymentController {
                 "This store has not enabled card payments");
         }
 
-        Order order = orderService.createOrder(user, tenant, request);
+        // No "placed" notice yet: it goes out when the payment is confirmed.
+        Order order = orderService.createOrder(user, tenant, request, false);
 
         // The callback goes to the public base URL, which BOG can reach. The
         // shopper goes back to the STORE they paid on: the base URL is the

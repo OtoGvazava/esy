@@ -21,8 +21,10 @@ import java.util.Optional;
  * callback lost, stayed PENDING for ever: staff could ship it, and an
  * abandoned one never left the list. Every quarter hour this asks BOG for the
  * receipt of each card payment pending for more than half an hour and
- * settles it; one with no answer after a day is marked FAILED, which cancels
- * it (no stock was taken, so none is returned).
+ * settles it. One that BOG itself still reports as unfinished after a day is
+ * marked FAILED, which cancels it (no stock was taken, so none is returned);
+ * one BOG could not be asked about is never given up on, and a payment that
+ * completes after all is still recorded (claimPaid accepts FAILED).
  *
  * <p>The bank is called outside any transaction, so a slow BOG holds no
  * database connection; each order settles in its own.
@@ -60,17 +62,25 @@ public class PendingPaymentSweeper {
         int moved = 0;
         for (Pending p : due) {
             try {
-                Optional<Order.PaymentStatus> receipt = p.bogOrderId() == null ? Optional.empty()
-                    : bog.fetchReceiptStatus(p.tenant(), p.bogOrderId());
-                if (receipt.isPresent()) {
-                    orderService.settlePayment(p.orderNumber(), receipt.get());
-                    moved++;
-                } else if (p.createdAt() != null && p.createdAt().isBefore(now.minusHours(GIVE_UP_AFTER_HOURS))) {
-                    log.info("Card payment for order {} never settled in {}h; marking it FAILED",
-                        p.orderNumber(), GIVE_UP_AFTER_HOURS);
-                    orderService.settlePayment(p.orderNumber(), Order.PaymentStatus.FAILED);
-                    moved++;
+                // Empty means BOG could not be asked: that is no evidence the
+                // shopper did not pay, so it never ends an order.
+                Optional<String> key = p.bogOrderId() == null ? Optional.empty()
+                    : bog.fetchReceiptKey(p.tenant(), p.bogOrderId());
+                if (key.isEmpty()) continue;
+                Order.PaymentStatus outcome = bog.mapStatus(key.get());
+                // Paid and fully refunded before we ever heard: no money stays,
+                // so the order closes as a failed payment rather than sitting
+                // PENDING for ever (settlePayment takes no REFUNDED on PENDING).
+                if (outcome == Order.PaymentStatus.REFUNDED) outcome = Order.PaymentStatus.FAILED;
+                if (outcome == null && p.createdAt() != null
+                        && p.createdAt().isBefore(now.minusHours(GIVE_UP_AFTER_HOURS))) {
+                    log.info("Card payment for order {} still \"{}\" at BOG after {}h; marking it FAILED",
+                        p.orderNumber(), key.get(), GIVE_UP_AFTER_HOURS);
+                    outcome = Order.PaymentStatus.FAILED;
                 }
+                if (outcome == null) continue;
+                Order after = orderService.settlePayment(p.orderNumber(), outcome).orElse(null);
+                if (after != null && after.getPaymentStatus() != Order.PaymentStatus.PENDING) moved++;
             } catch (RuntimeException e) {
                 log.warn("Could not reconcile card payment for order {}: {}", p.orderNumber(), e.getMessage());
             }

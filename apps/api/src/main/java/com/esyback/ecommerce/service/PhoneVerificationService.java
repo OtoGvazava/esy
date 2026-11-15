@@ -275,6 +275,12 @@ public class PhoneVerificationService {
      * point is that a four-digit secret must not survive being guessed at.
      */
     public void verify(User user, String code) {
+        // The limits, the comparison, the count of a wrong guess and the use
+        // of a right code all happen under one lock. Checked in one block and
+        // counted in another, hundreds of parallel guesses all passed the
+        // checks before any was counted. A right code is taken out here, so
+        // it can be used only once.
+        Pending p;
         synchronized (throttle) {
             Deque<Instant> wrong = wrongByAccount.get(user.getId());
             if (wrong != null && inLastDay(wrong, Instant.now()) >= MAX_WRONG_CODES_PER_ACCOUNT_PER_DAY) {
@@ -282,31 +288,29 @@ public class PhoneVerificationService {
                 throw new ApiRefusal(HttpStatus.TOO_MANY_REQUESTS, "PHONE_DAILY_LIMIT",
                     "Too many wrong codes for this account today — try again tomorrow");
             }
-        }
-        Pending p = pending.get(user.getId());
-        if (p == null || Instant.now().isAfter(p.expiresAt)) {
-            throw new ApiRefusal(HttpStatus.BAD_REQUEST, "CODE_EXPIRED", "Code expired — request a new one");
-        }
-        if (code == null || !code.trim().equals(p.code)) {
-            synchronized (throttle) {
+            p = pending.get(user.getId());
+            if (p == null || Instant.now().isAfter(p.expiresAt)) {
+                throw new ApiRefusal(HttpStatus.BAD_REQUEST, "CODE_EXPIRED", "Code expired — request a new one");
+            }
+            if (code == null || !code.trim().equals(p.code)) {
                 wrongByAccount.computeIfAbsent(user.getId(), k -> new ArrayDeque<>()).addLast(Instant.now());
+                p.attempts++;
+                if (p.attempts >= MAX_ATTEMPTS) {
+                    pending.remove(user.getId());
+                    throw new ApiRefusal(HttpStatus.TOO_MANY_REQUESTS, "CODE_LOCKED",
+                        "Too many wrong codes — request a new one");
+                }
+                int left = MAX_ATTEMPTS - p.attempts;
+                // attemptsLeft as a number too: the client says "3 tries left" in
+                // Georgian, and must not parse it out of the English sentence.
+                throw new ApiRefusal(HttpStatus.BAD_REQUEST, "CODE_WRONG",
+                    "Incorrect code — " + left + (left == 1 ? " try" : " tries") + " left",
+                    java.util.Map.of("attemptsLeft", left));
             }
-            p.attempts++;
-            if (p.attempts >= MAX_ATTEMPTS) {
-                pending.remove(user.getId());
-                throw new ApiRefusal(HttpStatus.TOO_MANY_REQUESTS, "CODE_LOCKED",
-                    "Too many wrong codes — request a new one");
-            }
-            int left = MAX_ATTEMPTS - p.attempts;
-            // attemptsLeft as a number too: the client says "3 tries left" in
-            // Georgian, and must not parse it out of the English sentence.
-            throw new ApiRefusal(HttpStatus.BAD_REQUEST, "CODE_WRONG",
-                "Incorrect code — " + left + (left == 1 ? " try" : " tries") + " left",
-                java.util.Map.of("attemptsLeft", left));
+            pending.remove(user.getId());
         }
         // Someone may have verified the same number since the code was sent.
         if (userRepository.existsByVerifiedPhoneAndIdNot(p.normalised, user.getId())) {
-            pending.remove(user.getId());
             throw new ApiRefusal(HttpStatus.CONFLICT, "PHONE_TAKEN",
                 "That number is already verified on another esy account");
         }
@@ -320,7 +324,6 @@ public class PhoneVerificationService {
             throw new ApiRefusal(HttpStatus.CONFLICT, "PHONE_TAKEN",
                 "That number is already verified on another esy account");
         }
-        pending.remove(user.getId());
         lastSentAt.remove(user.getId());
     }
 }

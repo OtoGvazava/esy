@@ -57,7 +57,9 @@ class PendingPaymentSweeperTest {
         p.setPrice(new BigDecimal("24.00"));
         p.setQuantity(50);
         mug = productRepository.save(p);
-        when(bog.fetchReceiptStatus(any(), any())).thenReturn(Optional.empty());
+        // Unless a test says otherwise BOG answers, and the payment is unfinished.
+        when(bog.fetchReceiptKey(any(), any())).thenReturn(Optional.of("created"));
+        when(bog.mapStatus(any())).thenCallRealMethod();
     }
 
     private Order pending(LocalDateTime placed) {
@@ -77,22 +79,44 @@ class PendingPaymentSweeperTest {
     }
 
     @Test
-    @DisplayName("a lost payment settles from the receipt; a day-old silent one fails; a fresh one is left alone")
+    @DisplayName("a lost payment settles from the receipt; one BOG still calls unfinished after a day fails; a fresh one is left alone")
     void sweeps() {
         LocalDateTime now = LocalDateTime.now();
         Order paid = pending(now.minusHours(2));
         Order abandoned = pending(now.minusHours(25));
+        Order unreachable = pending(now.minusHours(26));
+        Order refunded = pending(now.minusHours(3));
         Order waiting = pending(now.minusHours(2).minusMinutes(1));
         Order fresh = pending(now.minusMinutes(5));
-        when(bog.fetchReceiptStatus(any(), eq(paid.getBogOrderId()))).thenReturn(Optional.of(Order.PaymentStatus.PAID));
+        when(bog.fetchReceiptKey(any(), eq(paid.getBogOrderId()))).thenReturn(Optional.of("completed"));
+        when(bog.fetchReceiptKey(any(), eq(unreachable.getBogOrderId()))).thenReturn(Optional.empty());
+        when(bog.fetchReceiptKey(any(), eq(refunded.getBogOrderId()))).thenReturn(Optional.of("refunded"));
 
         sweeper.sweep(now);
 
         assertThat(reload(paid).getPaymentStatus()).isEqualTo(Order.PaymentStatus.PAID);
         assertThat(reload(abandoned).getPaymentStatus()).isEqualTo(Order.PaymentStatus.FAILED);
         assertThat(reload(abandoned).getStatus()).isEqualTo(Order.Status.CANCELLED);
+        // BOG could not be asked: no evidence it was not paid, so not given up on.
+        assertThat(reload(unreachable).getPaymentStatus()).isEqualTo(Order.PaymentStatus.PENDING);
+        // Paid and refunded before we heard: closed, not left PENDING for ever.
+        assertThat(reload(refunded).getPaymentStatus()).isEqualTo(Order.PaymentStatus.FAILED);
         assertThat(reload(waiting).getPaymentStatus()).isEqualTo(Order.PaymentStatus.PENDING);
         assertThat(reload(fresh).getPaymentStatus()).isEqualTo(Order.PaymentStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("a payment that completes after it was given up on is still recorded as PAID")
+    void lateCompletionIsRecorded() {
+        Order o = pending(LocalDateTime.now().minusHours(30));
+        sweeper.sweep(LocalDateTime.now());
+        assertThat(reload(o).getPaymentStatus()).isEqualTo(Order.PaymentStatus.FAILED);
+
+        Order after = orderService.settlePayment(o.getOrderNumber(), Order.PaymentStatus.PAID).orElseThrow();
+
+        assertThat(after.getPaymentStatus()).isEqualTo(Order.PaymentStatus.PAID);
+        // Still cancelled, holding no stock: the owner refunds it.
+        assertThat(after.getStatus()).isEqualTo(Order.Status.CANCELLED);
     }
 
     @Test
