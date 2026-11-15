@@ -108,8 +108,16 @@ public class PaymentController {
             log.warn("Rejected BOG callback: bad signature");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("invalid signature");
         }
+        JsonNode root;
         try {
-            JsonNode root = objectMapper.readTree(rawBody);
+            root = objectMapper.readTree(rawBody);
+        } catch (Exception e) {
+            // Acknowledged: a body that does not parse will not parse on a
+            // retry either, and BOG must not hammer a poison callback forever.
+            log.error("BOG callback body does not parse", e);
+            return ResponseEntity.ok("ok");
+        }
+        try {
             JsonNode body = root.path("body");
             String externalId = body.path("external_order_id").asText(null);
             String bogOrderId = body.path("order_id").asText(null);
@@ -128,9 +136,11 @@ public class PaymentController {
                 keyed ? "signed" : "from receipt, no key");
             orderService.settlePayment(externalId, mapped);
         } catch (Exception e) {
-            // Acknowledge anyway: a parse error won't fix itself on retry, and
-            // we never want BOG hammering a poison callback forever.
-            log.error("BOG callback processing error", e);
+            // NOT acknowledged: a database hiccup while settling used to answer
+            // 200, BOG stopped retrying, and a taken payment stayed PENDING
+            // (review M32). settlePayment is idempotent, so a retry is safe.
+            log.error("BOG callback could not be settled; asking BOG to retry", e);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("retry");
         }
         return ResponseEntity.ok("ok");
     }
