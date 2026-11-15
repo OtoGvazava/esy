@@ -261,7 +261,7 @@ public class ProductService {
         // imageUrl is no longer user-set: it's the primary-thumbnail pointer
         // managed by ProductImageService (set on first upload, repointed on
         // delete). Legacy seeded products keep their existing imageUrl.
-        product.setPrice(productDto.getPrice());
+        product.setPrice(checkedPrice(productDto.getPrice()));
         product.setQuantity(productDto.getQuantity());
         product.setCategory(category(productDto.getCategory()));
         product.setTenant(currentTenant);
@@ -279,7 +279,7 @@ public class ProductService {
                 existingProduct.setTitle(productDto.getTitle());
                 existingProduct.setDescription(productDto.getDescription());
                 // imageUrl intentionally untouched — managed by image upload/delete.
-                existingProduct.setPrice(productDto.getPrice());
+                existingProduct.setPrice(checkedPrice(productDto.getPrice()));
                 existingProduct.setQuantity(stockAfterEdit(existingProduct, productDto));
                 // Absent means untouched and blank means cleared. A client that
                 // predates categories sends no field at all, and a save from it
@@ -309,6 +309,21 @@ public class ProductService {
         if (typed == null) return now;
         if (was == null || now == null) return typed;
         return Math.max(0, now + (typed - was));
+    }
+
+    /**
+     * A price the products.price column (numeric(10,2)) can hold: at most 8
+     * digits before the point and 2 after. Larger ones reached the database
+     * and came back as a 500; the CSV import already refused them, the
+     * editor and the variant grid did not. A clear 400 instead.
+     */
+    public static java.math.BigDecimal checkedPrice(java.math.BigDecimal price) {
+        if (price == null) return null;
+        if (price.precision() - price.scale() > 8 || price.stripTrailingZeros().scale() > 2) {
+            throw new com.esyback.ecommerce.web.ApiRefusal(org.springframework.http.HttpStatus.BAD_REQUEST,
+                "PRICE_INVALID", "A price can have at most 8 digits before the point and 2 after");
+        }
+        return price;
     }
 
     public boolean deleteProduct(Long id) {

@@ -283,11 +283,13 @@ public class ProductVariantService {
     private static BigDecimal money(Object o) {
         String s = str(o);
         if (s == null) return null;
+        BigDecimal price;
         try {
-            return new BigDecimal(s);
+            price = new BigDecimal(s);
         } catch (NumberFormatException e) {
             throw bad("Not a valid price: " + o);
         }
+        return ProductService.checkedPrice(price);
     }
 
     private static ResponseStatusException bad(String message) {

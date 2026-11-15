@@ -40,7 +40,8 @@ const showPrice = (v, lang) => {
 };
 const readPrice = (s) => {
   const v = String(s || '').trim().replace(/\s/g, '').replace(',', '.');
-  return /^\d+(\.\d{1,2})?$/.test(v) ? Number(v) : NaN;
+  // At most 8 digits before the point: what the server's price column holds.
+  return /^\d{1,8}(\.\d{1,2})?$/.test(v) ? Number(v) : NaN;
 };
 
 export default function ProductEditorDialog({ open, product, onClose, onSaved }) {
