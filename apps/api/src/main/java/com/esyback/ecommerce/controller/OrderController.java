@@ -1,5 +1,8 @@
 package com.esyback.ecommerce.controller;
 
+import com.esyback.ecommerce.web.ApiRefusal;
+import com.esyback.ecommerce.entity.Tenant;
+import com.esyback.ecommerce.service.BogPaymentService;
 import com.esyback.ecommerce.dto.CreateOrderRequest;
 import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.User;
@@ -30,13 +33,22 @@ public class OrderController {
     private final UserService userService;
     private final TenantContextService tenantContextService;
     private final ProductRepository productRepository;
+    private final BogPaymentService bogPaymentService;
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> create(@RequestBody CreateOrderRequest request,
                                                       Authentication authentication) {
         User user = currentUser(authentication);
         requireOrderEligible(user);
-        Order order = orderService.createOrder(user, tenantContextService.getCurrentTenant(), request);
+        Tenant tenant = tenantContextService.getCurrentTenant();
+        // A store that takes cards takes nothing else: checkout only offers
+        // the card there, and an order placed here would never be paid, yet
+        // take stock, text the shopper and be billed (review M35).
+        if (bogPaymentService.isConfigured(tenant)) {
+            throw new ApiRefusal(HttpStatus.CONFLICT, "CARD_ONLY",
+                "This store takes card payments only");
+        }
+        Order order = orderService.createOrder(user, tenant, request);
         // This endpoint IS the free flow (BOG stores checkout via
         // /api/payments/bog/checkout) — no payment will ever settle this
         // order, so stock commits at placement (decision D3, free path).
@@ -207,9 +219,8 @@ public class OrderController {
         return m;
     }
 
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> handle(ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode())
-            .body(Map.of("error", ex.getReason() == null ? "Request failed" : ex.getReason()));
-    }
+    // No local ResponseStatusException handler: ApiErrorAdvice writes the
+    // same {error} plus message, status and, for an ApiRefusal, its code. The
+    // copy that sat here dropped the code, so screens could not tell
+    // CARD_ONLY or STORE_SUSPENDED from any other refusal.
 }

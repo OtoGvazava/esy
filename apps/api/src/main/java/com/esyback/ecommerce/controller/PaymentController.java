@@ -199,9 +199,8 @@ public class PaymentController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
     }
 
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> handle(ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode())
-            .body(Map.of("error", ex.getReason() == null ? "Request failed" : ex.getReason()));
-    }
+    // No local ResponseStatusException handler: ApiErrorAdvice writes the
+    // same {error} plus message, status and, for an ApiRefusal, its code. The
+    // copy that sat here dropped the code, so screens could not tell
+    // CARD_ONLY or STORE_SUSPENDED from any other refusal.
 }
