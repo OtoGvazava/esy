@@ -70,8 +70,8 @@ export const monthStatsQuery = () => queryOptions({
 
 // ---- products ----------------------------------------------------------------
 
-// Pages of 100, read one after another. The ceiling is only a guard against a
-// server that never says "last page"; no store comes near 100 pages.
+// Pages of 100. The ceiling is only a guard against a page count gone wrong;
+// no store comes near 100 pages.
 const STORE_PAGE = 100;
 const STORE_PAGES_MAX = 100;
 
@@ -87,19 +87,20 @@ const STORE_PAGES_MAX = 100;
 export const storeProductsQuery = () => queryOptions({
   queryKey: ['products', scope(), 'store-all'],
   queryFn: async ({ signal }) => {
-    const products = [];
-    let last = null;
-    for (let page = 0; page < STORE_PAGES_MAX; page += 1) {
-      last = await productApi.list({ page, size: STORE_PAGE, signal });
-      products.push(...last.products);
-      if (!last.hasMore || last.products.length === 0) break;
-    }
+    // Page 0 says how many pages there are; the rest are read in parallel,
+    // so a big catalogue costs one round trip after the first, not N.
+    const first = await productApi.list({ page: 0, size: STORE_PAGE, signal });
+    const pages = Math.min(first.hasMore ? Math.max(first.totalPages, 2) : 1, STORE_PAGES_MAX);
+    const rest = await Promise.all(
+      Array.from({ length: pages - 1 }, (_, i) => productApi.list({ page: i + 1, size: STORE_PAGE, signal })),
+    );
+    const products = [first, ...rest].flatMap((p) => p.products);
     return {
       products,
       hasMore: false,
       page: 0,
       totalPages: 1,
-      totalElements: Math.max(products.length, last?.totalElements ?? 0),
+      totalElements: Math.max(products.length, first.totalElements ?? 0),
     };
   },
 });

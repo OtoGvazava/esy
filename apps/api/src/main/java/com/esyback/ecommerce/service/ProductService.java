@@ -263,8 +263,8 @@ public class ProductService {
                 // failed with a 500 the moment it had a photo (review H8).
                 // Children go first, in this same transaction. Orders are
                 // untouched: their lines keep a plain product id and a snapshot.
-                variantRepository.deleteByProduct(product);
-                optionRepository.deleteByProduct(product);
+                variantRepository.deleteAllOfProduct(product);
+                optionRepository.deleteAllOfProduct(product);
                 productImageRepository.deleteAllOfProduct(product);
                 productRepository.delete(productRepository.findById(id).orElseThrow());
                 return true;

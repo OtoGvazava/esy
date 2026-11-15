@@ -523,7 +523,6 @@ export default function ManagerOrderDetail() {
         <StepOrderDialog
           {...sheetProps} next={next}
           onDone={(updated) => { merge(updated); setDialog(null); }}
-          onUnconfirmed={reload}
           onClose={() => setDialog(null)}
         />
       )}
@@ -546,6 +545,7 @@ export default function ManagerOrderDetail() {
           {...sheetProps} refundable={refundable} refunded={refunded} deliveryFee={deliveryFee}
           statusLabel={t(`orders.status.${status.toLowerCase()}`, { defaultValue: status })}
           onDone={(updated) => { merge(updated); setDialog(null); }}
+          onUnconfirmed={reload}
           onClose={() => setDialog(null)}
         />
       )}

@@ -98,7 +98,13 @@ public class PaymentController {
                                            @RequestHeader(value = "Callback-Signature", required = false)
                                            String signature) {
         if (rawBody == null) rawBody = new byte[0];
-        if (!bogPaymentService.verifyCallbackSignature(rawBody, signature)) {
+        // With a key, the body is trusted once its signature checks out. With
+        // none, nothing in the body is believed: the callback only says "look
+        // again", and the outcome comes from BOG's receipt, read with the
+        // store's own credentials. So refunds and payments whose shopper
+        // never came back still settle, and a forged body settles nothing.
+        boolean keyed = bogPaymentService.hasCallbackKey();
+        if (keyed && !bogPaymentService.verifyCallbackSignature(rawBody, signature)) {
             log.warn("Rejected BOG callback: bad signature");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("invalid signature");
         }
@@ -108,7 +114,6 @@ public class PaymentController {
             String externalId = body.path("external_order_id").asText(null);
             String bogOrderId = body.path("order_id").asText(null);
             String statusKey = body.path("order_status").path("key").asText(null);
-            Order.PaymentStatus mapped = bogPaymentService.mapStatus(statusKey);
             Order order = orderService.findByOrderNumber(externalId).orElse(null);
             if (order == null || order.getBogOrderId() == null || bogOrderId == null
                     || !order.getBogOrderId().equals(bogOrderId)) {
@@ -116,7 +121,11 @@ public class PaymentController {
                     externalId, bogOrderId);
                 return ResponseEntity.ok("ok");
             }
-            log.info("BOG callback: order={} status={} -> {}", externalId, statusKey, mapped);
+            Order.PaymentStatus mapped = keyed
+                ? bogPaymentService.mapStatus(statusKey)
+                : bogPaymentService.fetchReceiptStatus(order.getTenant(), order.getBogOrderId()).orElse(null);
+            log.info("BOG callback: order={} status={} -> {} ({})", externalId, statusKey, mapped,
+                keyed ? "signed" : "from receipt, no key");
             orderService.settlePayment(externalId, mapped);
         } catch (Exception e) {
             // Acknowledge anyway: a parse error won't fix itself on retry, and

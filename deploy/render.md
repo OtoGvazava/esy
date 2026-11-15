@@ -66,9 +66,9 @@ code and verified. iCloud stays a dev stand-in (Apple OAuth not configured).
 
 Set **`BOG_PUBLIC_KEY`** (Render → Environment) to BOG's callback-signing
 public key, the PEM from BOG's payments docs, pasted on one line. Without it
-every payment callback is **refused**: the callback endpoint is public and
-settles orders, so an unsigned callback could mark any order PAID. Payments
-then settle only when the receipt is polled. `render.yaml` declares the key
+no callback body is trusted (the endpoint is public and settles orders, so an
+unsigned body could mark any order PAID): each callback only makes the app
+read the payment's receipt from BOG, and the order settles from that. `render.yaml` declares the key
 (`sync: false`), so a blueprint sync prompts for it.
 
 ## Redeploy

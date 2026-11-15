@@ -44,8 +44,8 @@ services:
       - key: APP_EMAIL_KEY
         sync: false
       # BOG's callback-signing public key (the PEM from BOG's payments docs).
-      # Unset = every payment callback is refused, because an unsigned callback
-      # could mark any order PAID; payments then settle only via receipt polling.
+      # Unset = no callback body is trusted (an unsigned one could mark any order
+      # PAID); each callback then settles from BOG's receipt instead.
       - key: BOG_PUBLIC_KEY
         sync: false
 

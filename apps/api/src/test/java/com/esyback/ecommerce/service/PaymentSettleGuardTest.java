@@ -101,4 +101,21 @@ class PaymentSettleGuardTest {
         Order refunded = orderService.settlePayment(n, Order.PaymentStatus.REFUNDED).orElseThrow();
         assertThat(refunded.getPaymentStatus()).isEqualTo(Order.PaymentStatus.REFUNDED);
     }
+
+    @Test
+    @Transactional
+    @DisplayName("a confirmed partial refund puts the order back to PAID with the rest refundable")
+    void partialRefundKeepsTheRest() {
+        String n = cardOrder().getOrderNumber();
+        orderService.settlePayment(n, Order.PaymentStatus.PAID);
+        Order o = orderService.findByOrderNumber(n).orElseThrow();
+        // What requestRefund's claim leaves behind: 10 of the 24 pending.
+        o.setRefundedAmount(new BigDecimal("10.00"));
+        o.setPaymentStatus(Order.PaymentStatus.REFUND_PENDING);
+
+        Order after = orderService.settlePayment(n, Order.PaymentStatus.REFUNDED).orElseThrow();
+
+        assertThat(after.getPaymentStatus()).isEqualTo(Order.PaymentStatus.PAID);
+        assertThat(after.refundableAmount()).isEqualByComparingTo("14.00");
+    }
 }

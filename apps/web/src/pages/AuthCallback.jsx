@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../styles/glow';
 import { alpha } from '../core/tokens';
-import { isPlatformHost } from '../hooks/usePlatformHost';
 import { hostKey } from '../core/hostKey';
 
 // Landing point after Google OAuth. The backend has already set the HttpOnly
@@ -24,18 +23,13 @@ export default function AuthCallback() {
       sessionStorage.removeItem('esy_post_login');
       const from = saved ? new URL(saved, window.location.origin) : null;
       const tenantParam = from && from.searchParams.get('tenant');
-      // Back to the page sign-in started from (checkout, a product, ...),
-      // never to the sign-in or callback pages themselves.
+      // Back to the page sign-in started from (checkout, a product, opening
+      // a store at esy.ge/sell with its ?look=, ...), never to the sign-in or
+      // callback pages themselves.
       const resumable = from && from.origin === window.location.origin
         && !/^\/(signin|auth)(\/|$)/.test(from.pathname) && from.pathname !== '/';
       if (resumable && hostKey() !== 'admin') dest = from.pathname + from.search;
       else if (tenantParam) dest = `/account?tenant=${encodeURIComponent(tenantParam)}`;
-      // Opening a store (esy.ge/sell) continues where it started, with the
-      // look a landing-page link picked (?look=).
-      else if (from && from.pathname === '/sell' && isPlatformHost()) {
-        const look = from.searchParams.get('look');
-        dest = look ? `/sell?look=${encodeURIComponent(look)}` : '/sell';
-      }
     } catch { /* keep the default */ }
     window.location.replace(dest);
   }, []);

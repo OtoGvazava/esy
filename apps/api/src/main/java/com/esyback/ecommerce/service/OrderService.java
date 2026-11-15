@@ -414,6 +414,19 @@ public class OrderService {
                     outcome, orderNumber, current);
                 return order;
             }
+            // A refund that leaves money on the order (BOG's refunded_partially,
+            // which maps to REFUNDED like a full one) puts it back to PAID: the
+            // rest stays refundable. Fully refunded, or refunded outside esy
+            // with nothing on our ledger, it is REFUNDED.
+            if (outcome == Order.PaymentStatus.REFUNDED) {
+                BigDecimal refunded = order.refundedOrZero();
+                BigDecimal total = order.getTotal() == null ? BigDecimal.ZERO : order.getTotal();
+                boolean partial = refunded.signum() > 0 && refunded.compareTo(total) < 0;
+                Order.PaymentStatus next = partial ? Order.PaymentStatus.PAID : Order.PaymentStatus.REFUNDED;
+                if (order.getPaymentStatus() == next) return order;
+                order.setPaymentStatus(next);
+                return orderRepository.save(order);
+            }
             order.setPaymentStatus(outcome);
             if (outcome == Order.PaymentStatus.FAILED) {
                 // Cancelled by a failed or abandoned payment, and deliberately

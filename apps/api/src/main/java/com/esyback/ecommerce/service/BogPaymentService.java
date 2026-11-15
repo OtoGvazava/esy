@@ -253,17 +253,21 @@ public class BogPaymentService {
      * Verify the {@code Callback-Signature} (base64, SHA256withRSA over the
      * raw request body) against BOG's public key.
      *
-     * <p>Fails CLOSED: with no public key configured every callback is refused.
-     * The callback endpoint is public and settles orders, so an unchecked body
-     * would let anyone mark an order PAID. Payments still settle without the
-     * key through receipt polling (the path local dev uses, since BOG cannot
-     * reach lvh.me) — only the push notification is lost.
+     * <p>Fails CLOSED: with no public key configured no signature is ever
+     * valid. The callback endpoint is public and settles orders, so an
+     * unchecked body would let anyone mark an order PAID. Without a key the
+     * controller instead treats a callback as a nudge and settles from BOG's
+     * own receipt (see {@link #hasCallbackKey()}).
      */
+    /** Whether callbacks can be authenticated (a public key is configured). */
+    public boolean hasCallbackKey() {
+        String pem = bog.getPublicKey();
+        return pem != null && !pem.isBlank();
+    }
+
     public boolean verifyCallbackSignature(byte[] rawBody, String signatureBase64) {
         String publicKeyPem = bog.getPublicKey();
         if (publicKeyPem == null || publicKeyPem.isBlank()) {
-            log.error("BOG_PUBLIC_KEY unset — refusing BOG callback (cannot authenticate it). "
-                + "Set BOG_PUBLIC_KEY so callbacks are accepted; payments still settle via receipt polling.");
             return false;
         }
         if (signatureBase64 == null || signatureBase64.isBlank()) {

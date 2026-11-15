@@ -137,6 +137,13 @@ export const AuthProvider = ({ children }) => {
     authApi.logout().catch(() => {});
     setUser(null);
     localStorage.removeItem(STORAGE_KEYS.USER);
+    // The bag is kept in the browser (CartContext); on a shared device the
+    // next person must not find this one's. Every store's bag on this origin.
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith(`${STORAGE_KEYS.CART}:`))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch { /* storage blocked: nothing was kept */ }
   };
 
   const updateProfile = async (userData) => {
