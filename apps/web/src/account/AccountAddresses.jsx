@@ -125,6 +125,7 @@ export default function AccountAddresses() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [pending, setPending] = useState(null);
+  const [defaultFailed, setDefaultFailed] = useState(null);
 
   const list = book.data || [];
   const close = () => { if (!busy) { setOpen(null); setError(''); } };
@@ -155,12 +156,17 @@ export default function AccountAddresses() {
     return run(() => (id ? addressApi.update(id, body) : addressApi.create(body)), t('hub.saveError'));
   };
   const remove = () => run(() => addressApi.remove(open.remove.id), t('hub.deleteError'));
+  // A failed "make default" says so under that address; it used to fail
+  // silently, which read as the button doing nothing.
   const makeDefault = async (a) => {
     setPending(a.id);
+    setDefaultFailed(null);
     try {
       await addressApi.update(a.id, { isDefault: 'true' });
       await book.refetch();
-    } catch { /* the list keeps what it had */ } finally {
+    } catch {
+      setDefaultFailed(a.id);
+    } finally {
       setPending(null);
     }
   };
@@ -229,6 +235,9 @@ export default function AccountAddresses() {
               )}
               <button type="button" style={{ ...link, color: 'var(--k-bad)' }} onClick={() => ask({ remove: a })}>{t('hub.remove')}</button>
             </div>
+            {defaultFailed === a.id && !a.isDefault && (
+              <p role="alert" style={{ margin: 0, fontSize: 12.5, color: 'var(--k-bad)' }}>{t('hub.defaultError')}</p>
+            )}
           </Card>
         ))}
         <button

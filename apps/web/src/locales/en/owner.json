@@ -289,13 +289,15 @@
       "IMPORT_NO_ROWS": "That file has its column names and no products.",
       "IMPORT_TOO_MANY_ROWS": "That file has {{rows}} rows, and {{max}} is the most in one upload. Split it into smaller files.",
       "IMPORT_NO_FILE": "Choose a CSV file first.",
-      "IMPORT_UNREADABLE": "That file could not be read."
+      "IMPORT_UNREADABLE": "That file could not be read.",
+      "IMPORT_OPEN_QUOTE": "A cell that starts with a quote mark on line {{line}} never closes. Check that line for a stray \" mark."
     }
   },
   "editor": {
     "back": "Back",
     "photoTooLarge": "Not added, over 5 MB: {{names}}",
     "failedPhotos": "The product is saved, but its new photos are not ({{reason}}). Save again to retry the photos.",
+    "failedRemovals": "The product is saved, but the photos you removed are still on it ({{reason}}). Save again to retry removing them.",
     "failedVariants": "The product is saved, but the variant stock is not ({{reason}}). Save again to retry.",
     "titleNew": "New product",
     "subEdit": "Editing a product",

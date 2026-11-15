@@ -72,9 +72,12 @@ export default function PlatformRegistration() {
   const [subState, setSubState] = useState('invalid');
   const checkSeq = useRef(0);
   useEffect(() => {
+    // Every change bumps the sequence first, the too-short one too, so a check
+    // still in flight for a longer link cannot land after it and call the
+    // short one "available".
+    const seq = ++checkSeq.current;
     if (!subdomain || subdomain.length < 3) { setSubState('invalid'); return undefined; }
     setSubState('checking');
-    const seq = ++checkSeq.current;
     const id = setTimeout(() => {
       tenantApi.checkSubdomain(subdomain)
         .then((r) => { if (seq === checkSeq.current) setSubState(r?.status || 'invalid'); })

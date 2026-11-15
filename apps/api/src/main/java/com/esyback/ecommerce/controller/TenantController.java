@@ -32,7 +32,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -48,6 +47,8 @@ import java.util.stream.Collectors;
 public class TenantController {
 
     private final TenantContextService tenantContextService;
+    private final com.esyback.ecommerce.config.PlatformProperties platformProperties;
+    private final com.esyback.ecommerce.service.DeliveryService deliveryService;
     private final TenantService tenantService;
     private final TenantLogoService tenantLogoService;
     private final UserService userService;
@@ -88,6 +89,16 @@ public class TenantController {
             .collect(Collectors.toList()));
     }
 
+    /**
+     * esy's service fee as the admin has set it, for the screens that state it
+     * (opening a store, the product editor, the back office). They used to
+     * print a hard-coded 2% whatever the real rate was.
+     */
+    @GetMapping("/fee-rate")
+    public ResponseEntity<Map<String, Object>> feeRate() {
+        return ResponseEntity.ok(Map.of("serviceFeeRate", platformProperties.getServiceFeeRate()));
+    }
+
     @GetMapping("/subdomain")
     public ResponseEntity<Map<String, String>> getCurrentSubdomain() {
         String subdomain = tenantContextService.getCurrentSubdomain();
@@ -117,6 +128,7 @@ public class TenantController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to open a store");
         }
         Tenant created = tenantService.createTenant(request);
+        deliveryService.seedFor(created);
         // The signed-in account that created it owns it (one account, many stores).
         membershipService.ensure(owner, created, StoreMembership.Role.OWNER);
         Map<String, Object> body = TenantMapper.toMap(created);
@@ -464,10 +476,5 @@ public class TenantController {
     // copy that used to sit here won over the advice and dropped the code,
     // which the design endpoints' refusals need so the web can show them in
     // Georgian too.
-
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException ex) {
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-            .body(Map.of("error", "Logo too large (max 5MB)"));
-    }
+    // An upload over the size limits is ApiErrorAdvice's (FILE_TOO_LARGE).
 }

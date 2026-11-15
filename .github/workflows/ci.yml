@@ -1,0 +1,55 @@
+# The checks a change must pass. The Docker image builds with -DskipTests,
+# there was no CI, and the pre-commit hook only checks i18n, so a push to main
+# auto-deployed whatever the tests said. This runs the API test suite and the
+# web checks on every push and pull request. To make Render deploy only after
+# it passes, set the service's auto-deploy to "After CI checks pass"
+# (autoDeployTrigger: checksPass in render.yaml).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      # The design-schema parity test reads apps/web/src/core/design/schema.json,
+      # which the full checkout provides.
+      - run: mvn -B test
+
+  web:
+    name: Web checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run i18n:check
+      - run: npx eslint . --quiet
+      - run: npm run build

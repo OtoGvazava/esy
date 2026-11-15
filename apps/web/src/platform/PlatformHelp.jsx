@@ -14,6 +14,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import useFeePercent from '../hooks/useFeePercent';
 import { usePlatform, PTopBar, PFooter } from './PlatformShared';
 import { Btn, Card, Glyph, IconBtn, Lbl, List, LiIc, ingrpInput, ingrpStyle, liStyle, type, usePDevice } from './PlatformKit';
 
@@ -91,7 +92,10 @@ function Answers({ T, t, ids, first, place }) {
 export default function PlatformHelp() {
   const { T } = usePlatform();
   const { ph, desk, gut } = usePDevice();
-  const { t } = useTranslation('platform');
+  // esy's live fee for the strings that state it ({{fee}}), not a fixed 2%.
+  const { percent: fee } = useFeePercent();
+  const { t: tp } = useTranslation('platform');
+  const t = (key, opts) => tp(key, { fee, ...opts });
   const [params, setParams] = useSearchParams();
   const [focus, setFocus] = useState(false);
   const ty = type(T, desk);

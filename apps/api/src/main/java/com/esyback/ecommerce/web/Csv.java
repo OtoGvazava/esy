@@ -23,6 +23,21 @@ public final class Csv {
 
     private Csv() {}
 
+    /** A quoted field that is still open at the end of the file. */
+    public static final class UnclosedQuote extends IllegalArgumentException {
+        private final int line;
+
+        public UnclosedQuote(int line) {
+            super("A quoted cell opened on line " + line + " never closes");
+            this.line = line;
+        }
+
+        /** The file line (from 1) the quote opened on. */
+        public int line() {
+            return line;
+        }
+    }
+
     /**
      * Splits CSV text into rows of fields. Fully blank lines are dropped —
      * spreadsheets habitually leave one at the end, and an empty row is not an
@@ -39,6 +54,12 @@ public final class Csv {
         List<String> row = new ArrayList<>();
         StringBuilder field = new StringBuilder();
         boolean quoted = false;
+        // Where the field began: a quote opens quoted mode only there. A stray
+        // quote inside a field (5" pot) is just a character; treating it as an
+        // opener silently swallowed every following row into one cell.
+        boolean fieldStart = true;
+        int line = 1;
+        int quoteOpenedOn = 0;
 
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
@@ -52,6 +73,7 @@ public final class Csv {
                         quoted = false;
                     }
                 } else {
+                    if (c == '\n' || (c == '\r' && !(i + 1 < text.length() && text.charAt(i + 1) == '\n'))) line++;
                     field.append(c);
                 }
                 continue;
@@ -59,10 +81,17 @@ public final class Csv {
             if (c == delimiter) {
                 row.add(field.toString());
                 field.setLength(0);
+                fieldStart = true;
                 continue;
             }
+            if (c == '"' && fieldStart) {
+                quoted = true;
+                quoteOpenedOn = line;
+                fieldStart = false;
+                continue;
+            }
+            if (c != '\r' && c != '\n') fieldStart = false;
             switch (c) {
-                case '"' -> quoted = true;
                 // CRLF ends a line at its \n; a lone CR (old Mac exports) ends
                 // one itself — dropping it turned the whole file into one row.
                 case '\r' -> {
@@ -71,16 +100,24 @@ public final class Csv {
                     field.setLength(0);
                     addRow(rows, row);
                     row = new ArrayList<>();
+                    fieldStart = true;
+                    line++;
                 }
                 case '\n' -> {
                     row.add(field.toString());
                     field.setLength(0);
                     addRow(rows, row);
                     row = new ArrayList<>();
+                    fieldStart = true;
+                    line++;
                 }
                 default -> field.append(c);
             }
         }
+        // A quote that never closed took the rest of the file into one cell.
+        // Refused rather than guessed at: the import is all or nothing, and a
+        // silently merged row is a product nobody meant to create.
+        if (quoted) throw new UnclosedQuote(quoteOpenedOn);
         // Whatever is left after the last newline is the final row.
         row.add(field.toString());
         addRow(rows, row);

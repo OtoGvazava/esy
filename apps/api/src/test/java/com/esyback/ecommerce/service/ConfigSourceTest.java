@@ -66,4 +66,25 @@ class ConfigSourceTest {
         assertThat(store.source("app.bog.env")).isEqualTo(ConfigStore.SOURCE_ENV);
         assertThat(store.get("app.bog.env", "live")).isEqualTo("sandbox");
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    @DisplayName("a failed read after a good one keeps the last value instead of falling back to env")
+    void blipKeepsLastValue() {
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        ValueOperations<String, String> ops = mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(ops);
+        when(ops.get("config:app.platform.service-fee-rate"))
+            .thenReturn("0.05")
+            .thenThrow(new RedisConnectionFailureException("blip"));
+        ConfigStore store = new ConfigStore(redis,
+            new MockEnvironment().withProperty("app.platform.service-fee-rate", "0.02"));
+        long[] now = {1_000};
+        store.clock = () -> now[0];
+
+        assertThat(store.get("app.platform.service-fee-rate", "0")).isEqualTo("0.05");
+        now[0] += 60_000; // past the cache TTL: the next read goes to Redis, which fails
+        assertThat(store.get("app.platform.service-fee-rate", "0")).isEqualTo("0.05");
+        assertThat(store.source("app.platform.service-fee-rate")).isEqualTo(ConfigStore.SOURCE_OVERRIDE);
+    }
 }

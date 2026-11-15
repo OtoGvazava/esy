@@ -1,5 +1,5 @@
 // Custom hook for localStorage with error handling
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export const useLocalStorage = (key, initialValue) => {
   const [storedValue, setStoredValue] = useState(() => {

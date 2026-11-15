@@ -19,6 +19,21 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
+    /**
+     * Email lookups that do not depend on how the address was capitalised when
+     * the account was created: the unique index on users.email is
+     * case-sensitive, and older rows keep Google's spelling. Oldest first, so
+     * the pick is stable if two rows ever differ only by case.
+     */
+    Optional<User> findFirstByEmailIgnoreCaseOrderByIdAsc(String email);
+
+    List<User> findAllByEmailIgnoreCase(String email);
+
+    /** Takes the user row's write lock for the current transaction. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.id = :id")
+    Optional<User> lockById(@Param("id") Long id);
+
     Optional<User> findByOauthProviderAndOauthProviderId(String oauthProvider, String oauthProviderId);
 
     /** Whether another account already holds this verified number. */

@@ -22,6 +22,9 @@ services:
       # fresh schema each boot. On Postgres it preserves data across deploys.
       - key: JPA_DDL_AUTO
         value: update
+      # No demo stores or sample products in production (DataInitializer).
+      - key: APP_SEED_DEMO
+        value: "false"
       # ConfigStore reads and writes here. Without it every write from
       # admin.esy.ge/config and /integrations fails with a 502 and those
       # screens are read-only — which is the state prod was in.

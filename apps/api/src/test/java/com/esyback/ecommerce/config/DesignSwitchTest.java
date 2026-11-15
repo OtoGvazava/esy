@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,6 +27,11 @@ import static org.mockito.Mockito.when;
 class DesignSwitchTest {
 
     private final ConfigStore store = mock(ConfigStore.class);
+    {
+        // inOneWrite on a mock would skip the writes it wraps: run them.
+        org.mockito.Mockito.doAnswer(inv -> { ((Runnable) inv.getArgument(0)).run(); return null; })
+            .when(store).inOneWrite(any());
+    }
     private final DesignProperties design = new DesignProperties(store);
 
     @Test

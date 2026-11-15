@@ -415,6 +415,8 @@
   "closed": {
     "title": "This store is unavailable",
     "body": "{{domain}} is suspended for now, so nothing can be bought here. Orders you've already placed are in your esy account.",
+    "missingTitle": "There's no store here",
+    "missingBody": "No store on esy uses the address {{domain}}. Check the spelling, or find the store among the others on esy.ge.",
     "myOrders": "My orders",
     "otherStores": "Other stores on esy.ge",
     "stores": "Stores",
@@ -448,6 +450,7 @@
     "wrong_other": "That code is wrong. {{count}} tries left.",
     "takenSub": "One number belongs to one account.",
     "taken": "This number is already on another esy account. Sign in with that account, or enter another number.",
+    "takenHelp": "Sign out and sign in with the account that has this number, or enter another number.",
     "otherGoogle": "Sign in with another <nc>Google</nc> account",
     "lockedTitle": "Wait a moment",
     "lockedBody": "Too many wrong codes. To protect your account, entering codes is paused for a while.",

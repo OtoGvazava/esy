@@ -162,6 +162,8 @@ public class OrderController {
         Order.PaymentStatus ps = o.getPaymentStatus() == null ? Order.PaymentStatus.NONE : o.getPaymentStatus();
         m.put("paymentStatus", ps.name().toLowerCase());
         m.put("total", o.getTotal());
+        // What went back to the shopper, so a screen can count only what was kept.
+        m.put("refunded", o.refundedOrZero());
         m.put("items", o.getItems().size());
         // An instant (…Z), not the server's zone-less wall clock: every screen
         // reads it with new Date(), which took a UTC "10:00" as the browser's

@@ -360,6 +360,11 @@ class ProductImportTest {
                 .containsEntry("rows", ProductImportService.MAX_ROWS + 3)
                 .containsEntry("max", ProductImportService.MAX_ROWS);
         });
+        // A quote that never closes would have merged every later row into one cell.
+        assertThat(refusal("title,price,quantity\nMug,24,1\n\"Plate,30,2\nBowl,12,3\n")).satisfies(r -> {
+            assertThat(r.getCode()).isEqualTo(ProductImportService.FILE_OPEN_QUOTE);
+            assertThat(r.getDetails()).containsEntry("line", 3);
+        });
         assertThat(stored()).isEmpty();
     }
 

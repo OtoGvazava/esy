@@ -8,6 +8,7 @@ import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.AuditLogRepository;
+import com.esyback.ecommerce.repository.OrderRepository;
 import com.esyback.ecommerce.repository.PlatformAdminRepository;
 import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.repository.StoreMembershipRepository;
@@ -52,8 +53,8 @@ import java.util.stream.Collectors;
  * platform payloads free of merchant-scoped context is the whole point of the
  * split.
  *
- * <p><b>Money.</b> Revenue and fees come from {@link OrderService#revenue} and
- * {@link OrderService#serviceFeesOwed}, which already implement decision D2
+ * <p><b>Money.</b> Revenue and fees come from {@link OrderService#revenueOf} and
+ * {@link OrderService#feesOwedOf}, which already implement decision D2
  * (refunded money is not revenue, and neither are cancelled orders). They are
  * reused rather than re-derived so the admin totals can never drift from the
  * numbers the merchant sees on their own stats screen.
@@ -72,13 +73,13 @@ public class AdminService {
     private final StoreMembershipRepository membershipRepository;
     private final AuditLogRepository auditLogRepository;
     private final PlatformAdminRepository platformAdminRepository;
-    private final OrderService orderService;
     private final UserService userService;
     private final MembershipService membershipService;
     // The ADMIN allowlist, read live (Redis override → env ADMIN_EMAILS → ""),
     // exactly as UserService reads it when it grants the role at sign-in.
     private final ConfigStore configStore;
     private final PlatformProperties platformProperties;
+    private final OrderRepository orderRepository;
 
     /** Key the allowlist lives under; must match UserService. */
     private static final String ADMIN_EMAILS_KEY = "app.admin-emails";
@@ -127,10 +128,13 @@ public class AdminService {
     public List<Map<String, Object>> listStores(String q) {
         String needle = q == null ? "" : q.trim().toLowerCase();
         Map<Long, String> owners = ownerEmailByTenantId();
+        // Every order once, grouped by store, instead of each store's orders
+        // loaded twice over (revenue, then fees) plus a count.
+        Map<Long, List<Order>> orders = ordersByTenantId(money(orderRepository.findAllMoney()));
         return tenantRepository.findAll().stream()
             .filter(t -> matches(t, owners.get(t.getId()), needle))
             .sorted(NEWEST_FIRST)
-            .map(t -> storeSummary(t, owners.get(t.getId())))
+            .map(t -> storeSummary(t, owners.get(t.getId()), orders.getOrDefault(t.getId(), List.of())))
             .collect(Collectors.toList());
     }
 
@@ -249,11 +253,12 @@ public class AdminService {
 
         List<Map<String, Object>> stores = new ArrayList<>();
         List<Order> all = new ArrayList<>();
+        // One query for the period (the range is in SQL), grouped by store.
+        Map<Long, List<Order>> byTenant = ordersByTenantId(money(period == null
+            ? orderRepository.findAllMoney()
+            : orderRepository.findMoneyCreatedBetween(from, to)));
         for (Tenant t : tenantRepository.findAll()) {
-            List<Order> orders = orderService.ordersForTenant(t).stream()
-                .filter(o -> from == null
-                    || (o.getCreatedAt() != null && !o.getCreatedAt().isBefore(from) && o.getCreatedAt().isBefore(to)))
-                .toList();
+            List<Order> orders = byTenant.getOrDefault(t.getId(), List.of());
             OrderService.BillingFigures f = OrderService.billingFigures(orders);
             if (f.billableCount() == 0) continue;
             all.addAll(orders);
@@ -397,7 +402,14 @@ public class AdminService {
         if (platformAdminRepository.existsByEmailIgnoreCase(normalized)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, normalized + " is already an admin");
         }
-        PlatformAdmin saved = platformAdminRepository.save(PlatformAdmin.of(normalized, actorEmail));
+        // Flushed here so two admins granting the same address at once meet
+        // the unique index now, as a 409, rather than at commit as a 500.
+        PlatformAdmin saved;
+        try {
+            saved = platformAdminRepository.saveAndFlush(PlatformAdmin.of(normalized, actorEmail));
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, normalized + " is already an admin");
+        }
         audit(actorEmail, ACTION_ADMIN_GRANTED, TARGET_ADMIN, normalized, null);
         return adminMap(saved.getEmail(), SOURCE_DB, saved.getGrantedAt(), saved.getGrantedBy());
     }
@@ -456,6 +468,15 @@ public class AdminService {
      * contract doesn't name — BOG credentials above all — can leak.
      */
     private Map<String, Object> storeSummary(Tenant t, String ownerEmail) {
+        return storeSummary(t, ownerEmail, orderRepository.findByTenantOrderByCreatedAtDesc(t));
+    }
+
+    /**
+     * {@link #storeSummary(Tenant, String)} over this store's orders, already
+     * loaded. The figures are OrderService's own rules applied to them, so
+     * they cannot drift from the merchant's stats.
+     */
+    private Map<String, Object> storeSummary(Tenant t, String ownerEmail, List<Order> orders) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("subdomain", t.getSubdomain());
         m.put("name", t.getName());
@@ -469,9 +490,9 @@ public class AdminService {
         m.put("suspendReason", t.getSuspendReason());
         m.put("verifiedAt", t.getVerifiedAt());
         m.put("productCount", productRepository.countByTenant(t));
-        m.put("orderCount", orderService.orderCount(t));
-        m.put("revenue", orderService.revenue(t));
-        m.put("feesOwed", orderService.serviceFeesOwed(t));
+        m.put("orderCount", (long) orders.size());
+        m.put("revenue", OrderService.revenueOf(orders));
+        m.put("feesOwed", OrderService.feesOwedOf(orders));
         m.put("ownerEmail", ownerEmail);
         return m;
     }
@@ -492,8 +513,8 @@ public class AdminService {
     }
 
     private List<Map<String, Object>> recentOrders(Tenant tenant) {
-        return orderService.ordersForTenant(tenant).stream()
-            .limit(RECENT_ORDERS)
+        // The newest ten from the database, not every order then the first ten.
+        return orderRepository.findByTenantOrderByCreatedAtDesc(tenant, PageRequest.of(0, RECENT_ORDERS)).stream()
             .map(o -> {
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("orderNumber", o.getOrderNumber());
@@ -513,6 +534,17 @@ public class AdminService {
                 return row;
             })
             .collect(Collectors.toList());
+    }
+
+    /** Money-only rows as detached orders for OrderService's rules (see OrderMoney). */
+    private static List<Order> money(List<com.esyback.ecommerce.repository.OrderMoney> rows) {
+        return rows.stream().map(com.esyback.ecommerce.repository.OrderMoney::toOrder).toList();
+    }
+
+    private static Map<Long, List<Order>> ordersByTenantId(List<Order> orders) {
+        return orders.stream()
+            .filter(o -> o.getTenant() != null)
+            .collect(Collectors.groupingBy(o -> o.getTenant().getId()));
     }
 
     /** tenantId → owner email, from one query, for the store list. */

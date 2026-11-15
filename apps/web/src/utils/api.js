@@ -5,6 +5,7 @@
 // readable from JS — so requests just need to carry cookies; there is no
 // token in localStorage. "Am I signed in?" is answered by /api/auth/user.
 import { isManagerHostname, managerUrl } from './hosts';
+import i18n from '../i18n';
 
 // ---- Low-level client -------------------------------------------------------
 export class ApiError extends Error {
@@ -57,6 +58,34 @@ function withManagerTenant(endpoint) {
   return `${endpoint + (endpoint.includes('?') ? '&' : '?')}tenant=${encodeURIComponent(tenant)}`;
 }
 
+// A redirect to Spring's sign-in page is how a lost session answers (see
+// request()); with redirect: 'manual' it arrives as an opaque redirect.
+const toSignIn = (res) => res.type === 'opaqueredirect'
+  || (res.redirected && new URL(res.url).pathname === '/login');
+
+/**
+ * The answer to a multipart upload, read the way request() reads one. The
+ * uploads bypass request() so the browser sets the boundary, and used to parse
+ * the sign-in page as JSON after the session expired ("Unexpected token '<'").
+ * `pickDetails` chooses what rides on the error as `details`.
+ */
+async function multipartResult(res, failed, pickDetails = (b) => b) {
+  if (toSignIn(res)) throw new ApiError('Sign-in required', 401);
+  if (!res.ok) {
+    let message = `${failed} (${res.status})`;
+    let body = null;
+    try {
+      body = await res.json();
+      message = body.error || body.message || message;
+    } catch { /* no JSON body */ }
+    if (body?.code === 'PHONE_REQUIRED' && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(PHONE_REQUIRED_EVENT));
+    }
+    throw new ApiError(message, res.status, body?.code, body ? pickDetails(body) : null);
+  }
+  return res.json();
+}
+
 class ApiClient {
   constructor(baseURL = '') {
     this.baseURL = baseURL;
@@ -90,7 +119,7 @@ class ApiClient {
     // sign-in page, which the browser follows to a 200 HTML page. Read as the
     // refusal it is, so the query cache does not retry it as a hiccup and a
     // screen shows "sign in", not a JSON parse error.
-    if (response.redirected && new URL(response.url).pathname === '/login') {
+    if (toSignIn(response)) {
       throw new ApiError('Sign-in required', 401);
     }
 
@@ -256,15 +285,7 @@ export const productApi = {
       body: fd,
       credentials: 'include',
     });
-    if (!res.ok) {
-      let message = `Upload failed (${res.status})`;
-      try {
-        const b = await res.json();
-        message = b.error || b.message || message;
-      } catch { /* no JSON body */ }
-      throw new ApiError(message, res.status);
-    }
-    const product = mapDetail(await res.json());
+    const product = mapDetail(await multipartResult(res, 'Upload failed'));
     wrote('/api/products');
     return product;
   },
@@ -284,24 +305,10 @@ export const productApi = {
       withManagerTenant(`/api/products/import?dryRun=${dryRun ? 'true' : 'false'}`),
       { method: 'POST', body: fd, credentials: 'include' },
     );
-    if (!res.ok) {
-      let message = `Import failed (${res.status})`;
-      // A file refused outright (empty, no header column, too many rows) says
-      // why with a code and the values in its sentence, so the screen can word
-      // it in Georgian rather than show the English.
-      let code;
-      let details;
-      try {
-        const b = await res.json();
-        message = b.error || b.message || message;
-        code = b.code;
-        details = b.details;
-      } catch { /* no JSON body */ }
-      const err = new ApiError(message, res.status, code);
-      err.details = details || {};
-      throw err;
-    }
-    const result = await res.json();
+    // A file refused outright (empty, no header column, too many rows) says
+    // why with a code and the values in its sentence, so the screen can word
+    // it in Georgian rather than show the English.
+    const result = await multipartResult(res, 'Import failed', (b) => b.details || {});
     if (!dryRun) wrote('/api/products/import');
     return result;
   },
@@ -550,6 +557,10 @@ export const teamApi = {
 };
 
 export const tenantApi = {
+  // esy's service fee rate as the admin has set it (public).
+  feeRate({ signal } = {}) {
+    return api.get('/api/tenant/fee-rate', { signal });
+  },
   // `devTenant` forwards ?tenant=<sub> so a single localhost host can switch
   // tenants in dev (the backend only honors it for localhost; prod resolves
   // by Host). No-op in production where there's no ?tenant= in the URL.
@@ -580,15 +591,7 @@ export const tenantApi = {
       ? `/api/tenant/logo?tenant=${encodeURIComponent(devTenant)}`
       : '/api/tenant/logo';
     const res = await fetch(path, { method: 'POST', body: fd, credentials: 'include' });
-    if (!res.ok) {
-      let message = `Upload failed (${res.status})`;
-      try {
-        const b = await res.json();
-        message = b.error || b.message || message;
-      } catch { /* no JSON body */ }
-      throw new ApiError(message, res.status);
-    }
-    const store = await res.json();
+    const store = await multipartResult(res, 'Upload failed');
     wrote('/api/tenant/logo');
     return store;
   },
@@ -604,15 +607,7 @@ export const tenantApi = {
     const res = await fetch(managerUrl(`/api/tenant/logo?tenant=${encodeURIComponent(subdomain)}`), {
       method: 'POST', body: fd, credentials: 'include', redirect: 'manual',
     });
-    if (!res.ok) {
-      let message = `Upload failed (${res.status})`;
-      try {
-        const b = await res.json();
-        message = b.error || b.message || message;
-      } catch { /* no JSON body */ }
-      throw new ApiError(message, res.status);
-    }
-    const store = await res.json();
+    const store = await multipartResult(res, 'Upload failed');
     wrote('/api/tenant/logo');
     return store;
   },
@@ -634,17 +629,7 @@ export const tenantApi = {
       ? `/api/tenant/cover?tenant=${encodeURIComponent(devTenant)}`
       : '/api/tenant/cover';
     const res = await fetch(path, { method: 'POST', body: fd, credentials: 'include' });
-    if (!res.ok) {
-      let message = `Upload failed (${res.status})`;
-      let code;
-      try {
-        const b = await res.json();
-        message = b.error || b.message || message;
-        code = b.code;
-      } catch { /* no JSON body */ }
-      throw new ApiError(message, res.status, code);
-    }
-    const store = await res.json();
+    const store = await multipartResult(res, 'Upload failed');
     wrote('/api/tenant/cover');
     return store;
   },
@@ -888,10 +873,16 @@ export const adminApi = {
   },
 };
 
+// A failure that never reached the server (fetch's TypeError, whose wording
+// differs per browser: "Failed to fetch", "Load failed", "NetworkError…"), a
+// cancelled request, or a body that was not JSON carries a browser's English,
+// not something to show: the screen's own translated message is shown instead.
 export const handleApiError = (error, fallbackMessage = 'An error occurred') => {
-  if (error?.name === 'AbortError') return 'Request was cancelled';
-  if (error?.message?.includes('Failed to fetch')) {
-    return 'Network error. Is the backend running on :8080?';
-  }
+  if (!(error instanceof ApiError)
+    && ['TypeError', 'AbortError', 'SyntaxError'].includes(error?.name)) return fallbackMessage;
+  // A refusal the app has words for is said in the reader's language, never
+  // in the server's English sentence (common:refusal.<CODE>).
+  const key = error?.code ? `common:refusal.${error.code}` : null;
+  if (key && i18n.exists(key)) return i18n.t(key);
   return error?.message || fallbackMessage;
 };

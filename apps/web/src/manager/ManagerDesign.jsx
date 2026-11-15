@@ -495,7 +495,14 @@ export default function ManagerDesign() {
     setDialogError('');
     try {
       if (typeof primary === 'string') {
-        await tenantApi.saveDesignDraft({ ...edit, colours: { ...(edit.colours || {}), primary } }, sub);
+        const stored = normalizeDesign(await tenantApi.saveDesignDraft({ ...edit, colours: { ...(edit.colours || {}), primary } }, sub));
+        // The fixed colour is now the server's draft: the screen shows it too,
+        // so a failed publish does not leave it there unseen for "Publish
+        // anyway" to publish.
+        held.current = 'own';
+        setView((v) => ({ ...v, draft: stored }));
+        setHistory((h) => [...h.slice(-49), edit]);
+        setEdit(stored);
       }
       applyView(await tenantApi.publishDesign(sub));
       unsaved.delete(cacheKey);

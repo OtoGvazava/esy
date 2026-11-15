@@ -53,10 +53,13 @@ spring:
       # Dev wipes/recreates (in-memory); prod sets JPA_DDL_AUTO=update so the
       # file-backed schema/data survive restarts.
       ddl-auto: ${JPA_DDL_AUTO:create-drop}
-    show-sql: true
+    # Off unless asked for: on the free instance every query echoed to the log
+    # cost CPU, buried real warnings and could carry personal data.
+    # docker-compose turns it on for local work.
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: ${JPA_SHOW_SQL:false}
   
   security:
     oauth2:
@@ -207,8 +210,9 @@ tenant:
 
 logging:
   level:
-    com.esyback.ecommerce: DEBUG
-    org.springframework.security: DEBUG
+    # INFO in production; docker-compose sets DEBUG for local work.
+    com.esyback.ecommerce: ${LOG_LEVEL_APP:INFO}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:INFO}
 
 jwt:
   # HS512 requires a key of at least 512 bits (64 bytes). This dev default is long

@@ -24,6 +24,8 @@ import { SkIn } from '../../manager/officeSk';
 
 const MAX_AXES = 2;
 const keyOf = (r) => r.key.join('|');
+/** An editable copy of a document's axes. */
+const axesOf = (d) => d?.axes?.map((a) => ({ name: a.name, values: [...a.values] })) || [];
 
 /** One axis: a name, and its values as removable pills. */
 function AxisRow({ T, t, axis, index, busy, onChange, onRemove }) {
@@ -117,7 +119,7 @@ export default function VariantEditor({ T, productId, basePrice, onChanged, onDi
   const adopt = useCallback((d) => {
     seen.current = Object.fromEntries((d?.rows || []).map((r) => [keyOf(r), r.stock]));
     setDoc(d);
-    setAxes(d?.axes?.map((a) => ({ name: a.name, values: [...a.values] })) || []);
+    setAxes(axesOf(d));
     setDirty(false);
     if (onChanged) onChanged(d);
     // onChanged is a parent setter; depending on it would re-run on every render.
@@ -171,10 +173,12 @@ export default function VariantEditor({ T, productId, basePrice, onChanged, onDi
     if (!saveRef) return undefined;
     saveRef.current = async () => {
       if (!dirty || !doc) return;
-      await put(axes, doc.rows);
+      // The saved axes, not the panel's: axis edits not yet applied are not
+      // the page's to commit (they regenerate the grid).
+      await put(doc.axes, doc.rows);
     };
     return () => { saveRef.current = null; };
-  }, [saveRef, dirty, doc, axes, put]);
+  }, [saveRef, dirty, doc, put]);
 
   const applyAxes = async (nextAxes) => {
     setBusy(true);
@@ -355,7 +359,9 @@ export default function VariantEditor({ T, productId, basePrice, onChanged, onDi
           onClick={() => applyAxes(axes)} style={btn(T, 'p', { size: 'sm' })}>
           {busy ? t('variants.saving') : t('variants.apply')}
         </button>
-        <button type="button" disabled={busy} onClick={() => { setEditing(false); load(); }} style={btn(T, 'g', { size: 'sm' })}>
+        {/* Cancel puts back the axes only: a re-read here threw away stock
+            typed into the grid but not yet saved. */}
+        <button type="button" disabled={busy} onClick={() => { setEditing(false); setAxes(axesOf(doc)); }} style={btn(T, 'g', { size: 'sm' })}>
           {t('editor.cancel')}
         </button>
         {doc && (

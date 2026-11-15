@@ -57,9 +57,9 @@ public class PendingPaymentSweeper {
             .findPendingWithTenant(Order.PaymentStatus.PENDING, now.minusMinutes(LOOK_AFTER_MINUTES)).stream()
             .map(o -> new Pending(o.getOrderNumber(), o.getTenant(), o.getBogOrderId(), o.getCreatedAt()))
             .toList());
-        if (due == null || due.isEmpty()) return 0;
+        int moved = sweepRefunds(now);
+        if (due == null || due.isEmpty()) return moved;
 
-        int moved = 0;
         for (Pending p : due) {
             try {
                 // Empty means BOG could not be asked: that is no evidence the
@@ -83,6 +83,36 @@ public class PendingPaymentSweeper {
                 if (after != null && after.getPaymentStatus() != Order.PaymentStatus.PENDING) moved++;
             } catch (RuntimeException e) {
                 log.warn("Could not reconcile card payment for order {}: {}", p.orderNumber(), e.getMessage());
+            }
+        }
+        return moved;
+    }
+
+    /**
+     * Refunds BOG accepted whose confirmation never reached us: the order said
+     * "being refunded" for ever. Asks for the receipt and settles a confirmed
+     * refund (a partial one puts the order back to PAID with the rest
+     * refundable). Never gives up; a refund is not abandoned like a checkout.
+     */
+    private int sweepRefunds(LocalDateTime now) {
+        List<Pending> due = tx.execute(s -> orders
+            .findPendingWithTenant(Order.PaymentStatus.REFUND_PENDING, now.minusMinutes(LOOK_AFTER_MINUTES)).stream()
+            .map(o -> new Pending(o.getOrderNumber(), o.getTenant(), o.getBogOrderId(), o.getCreatedAt()))
+            .toList());
+        if (due == null) return 0;
+        int moved = 0;
+        for (Pending p : due) {
+            try {
+                Optional<String> key = p.bogOrderId() == null ? Optional.empty()
+                    : bog.fetchReceiptKey(p.tenant(), p.bogOrderId());
+                // Only BOG's "refunded" (all of it). A "refunded_partially" may be
+                // left over from an EARLIER partial refund and says nothing
+                // about the one now in flight; that one settles by callback.
+                if (key.isEmpty() || !"refunded".equals(key.get())) continue;
+                Order after = orderService.settlePayment(p.orderNumber(), Order.PaymentStatus.REFUNDED).orElse(null);
+                if (after != null && after.getPaymentStatus() != Order.PaymentStatus.REFUND_PENDING) moved++;
+            } catch (RuntimeException e) {
+                log.warn("Could not reconcile refund for order {}: {}", p.orderNumber(), e.getMessage());
             }
         }
         return moved;

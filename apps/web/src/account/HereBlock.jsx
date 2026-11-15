@@ -13,6 +13,19 @@ import { Go, OrderRow, Row, isCancelled, officeUrl, outProps, storeName, useAcco
 /** The orders shown here: the latest two; the account's orders at this store has the rest. */
 const LATEST = 2;
 
+/**
+ * Whether an order is money spent, as the server's tookMoney reads it: a
+ * pay-later order that was not cancelled, or a card payment that went through.
+ * A pending or failed card payment took nothing, and a refunded one gave it
+ * all back. The list rows carry no refunded amount, so a partial refund still
+ * in flight counts in full.
+ */
+const tookMoney = (o) => {
+  const ps = String(o.paymentStatus || 'none').toLowerCase();
+  if (ps === 'none') return !isCancelled(o);
+  return ps === 'paid' || ps === 'refund_pending';
+};
+
 export default function HereBlock() {
   const { T, here, orders, out, link } = useAccount();
   const { t } = useTranslation('account');
@@ -21,8 +34,9 @@ export default function HereBlock() {
   if (!here) return null;
 
   const mine = orders.filter((o) => o.store?.subdomain === here);
-  // What was spent is what was kept: a cancelled order is not money spent.
-  const spent = mine.filter((o) => !isCancelled(o)).reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  // What was kept: the charge less anything already refunded (the order row carries `refunded`).
+  const spent = mine.filter(tookMoney)
+    .reduce((sum, o) => sum + Math.max(0, (Number(o.total) || 0) - (Number(o.refunded) || 0)), 0);
   const latest = mine.slice(0, LATEST);
   const name = storeName(tenant) || here;
   // Platform ADMIN grants nothing inside a store: only its own team sees the back office.

@@ -100,12 +100,17 @@ export const productQuery = (id) => queryOptions({
   queryFn: ({ signal }) => productApi.get(id, { signal }),
 });
 
-/** A product's variant document, or null for one that is sold without variants. */
+/**
+ * A product's variant document, or null for one that is sold without variants.
+ * Only a 404 reads as "no variants": any other failure stays a failure, or the
+ * page would sell a variant product without its picker and checkout would
+ * refuse the line.
+ */
 export const variantsQuery = (id) => queryOptions({
   queryKey: ['products', scope(), 'variants', String(id)],
   queryFn: ({ signal }) => productApi.getVariants(id, { signal }).catch((e) => {
-    if (e?.name === 'AbortError') throw e;
-    return null;
+    if (e?.status === 404) return null;
+    throw e;
   }),
 });
 
@@ -126,6 +131,14 @@ export const myOrderQuery = (orderNumber) => queryOptions({
 export const accountQuery = () => queryOptions({
   queryKey: ['account'],
   queryFn: () => accountApi.get(),
+});
+
+/** esy's service fee rate (0.02 = 2%), as the admin has set it. */
+export const feeRateQuery = () => queryOptions({
+  queryKey: ['platform', 'feeRate'],
+  queryFn: ({ signal }) => tenantApi.feeRate({ signal })
+    .then((b) => (Number.isFinite(Number(b?.serviceFeeRate)) ? Number(b.serviceFeeRate) : null)),
+  staleTime: 10 * 60 * 1000,
 });
 
 /** Store roles waiting for this account's answer. */

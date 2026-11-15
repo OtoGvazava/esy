@@ -227,4 +227,31 @@ class StoreStatsServiceTest {
         assertThat(money(rows.get(1), "feesOwed")).isEqualByComparingTo("7.80");
         assertThat(money(body, "serviceFeeRate")).isNotNull();
     }
+
+    @Test
+    @DisplayName("a store whose only orders are older than the table still gets every month the table holds")
+    void monthsBeforeTheTable() {
+        order(null, Order.Status.DELIVERED, Order.PaymentStatus.PAID, LocalDateTime.of(2028, 1, 10, 12, 0),
+            line(901L, "Vase", "90.00", 1));
+        List<Map<String, Object>> rows = list(stats.months(store, YearMonth.of(2032, 6)), "months");
+
+        // Those orders are not read, but the table still runs back its full length.
+        assertThat(rows).hasSize(StoreStatsService.MAX_MONTHS);
+        assertThat(rows).allSatisfy(r -> assertThat(money(r, "revenue")).isEqualByComparingTo("0"));
+    }
+
+    @Test
+    @DisplayName("a window is not changed by orders older than the window before it")
+    void olderOrdersDoNotReachAWindow() {
+        seed();
+        order(null, Order.Status.DELIVERED, Order.PaymentStatus.PAID, on(1, 5),
+            line(901L, "Vase", "90.00", 5));
+        Map<String, Object> body = stats.period(store, 30, TODAY);
+
+        assertThat(money(body, "revenue")).isEqualByComparingTo("390.00");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> prev = (Map<String, Object>) body.get("previous");
+        assertThat(money(prev, "revenue")).isEqualByComparingTo("90.00");
+        assertThat(list(body, "top")).extracting(r -> r.get("title")).containsExactly("Vase", "Cloth", "Mug");
+    }
 }

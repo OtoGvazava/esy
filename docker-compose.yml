@@ -28,8 +28,10 @@ services:
   # Render free tier; add a volume if you want overrides to survive restarts.)
   redis:
     image: valkey/valkey:8-alpine
+    # Loopback only: the store has no password, and anyone who can reach it
+    # can write config:app.admin-emails and make themselves admin here.
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
@@ -65,9 +67,16 @@ services:
       # Emails granted ADMIN on sign-in. Without this passed through,
       # app.admin-emails resolves empty and nobody gets ADMIN in this stack.
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
-      # Signing key for the session JWT. Unset falls back to the dev default in
-      # application.yml, which invalidates tokens whenever that default changes.
-      JWT_SECRET: ${JWT_SECRET:-}
+      # Signing key for the session JWT. ":-" turns an unset or blank value into
+      # an EMPTY string, which overrides application.yml's default and is
+      # refused at startup, so blank falls back to the same dev value here.
+      JWT_SECRET: ${JWT_SECRET:-dev-local-esy-jwt-secret-please-override-in-production-0123456789abcdef}
+      # Local debugging: every SQL statement and DEBUG logs (off in production).
+      JPA_SHOW_SQL: ${JPA_SHOW_SQL:-true}
+      LOG_LEVEL_APP: ${LOG_LEVEL_APP:-DEBUG}
+      LOG_LEVEL_SECURITY: ${LOG_LEVEL_SECURITY:-DEBUG}
+      # The demo stores and products (production does not seed them).
+      APP_SEED_DEMO: ${APP_SEED_DEMO:-true}
       # SMS (smsoffice.ge) — delivers the phone one-time code. Leave UNSET
       # locally: with no key (and the dev fallback below) the code is logged and
       # returned to the browser so verification works without spending

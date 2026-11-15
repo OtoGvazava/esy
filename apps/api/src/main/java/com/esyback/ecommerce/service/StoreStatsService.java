@@ -92,7 +92,12 @@ public class StoreStatsService {
         if (!lifetime && !PERIODS.contains(days)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "days must be one of " + PERIODS + ", or none for all time");
         }
-        List<Order> all = orderRepository.findByTenantOrderByCreatedAtDesc(tenant);
+        // Only what the figures read: a window and the one before it, or all
+        // time. Lines arrive with their orders (the best sellers read them).
+        List<Order> all = lifetime
+            ? orderRepository.findWithItemsByTenantOrderByCreatedAtDesc(tenant)
+            : orderRepository.findWithItemsByTenantAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(tenant,
+                today.minusDays(2L * days - 1L).atStartOfDay());
         LocalDate first = lifetime ? firstDay(all, today) : today.minusDays(days - 1L);
         LocalDateTime from = first.atStartOfDay();
         LocalDateTime to = today.plusDays(1).atStartOfDay();
@@ -132,13 +137,17 @@ public class StoreStatsService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> months(Tenant tenant, YearMonth current) {
-        List<Order> all = orderRepository.findByTenantOrderByCreatedAtDesc(tenant);
-        YearMonth oldest = all.stream()
-            .map(Order::getCreatedAt).filter(Objects::nonNull)
-            .map(YearMonth::from).min(Comparator.naturalOrder())
-            .orElse(current);
-        if (oldest.isAfter(current)) oldest = current;
+        // Only the months the table can show; the totals read no lines.
         YearMonth floor = current.minusMonths(MAX_MONTHS - 1L);
+        LocalDateTime floorStart = floor.atDay(1).atStartOfDay();
+        List<Order> all = orderRepository.findByTenantAndCreatedAtGreaterThanEqual(tenant, floorStart);
+        YearMonth oldest = orderRepository.existsByTenantAndCreatedAtBefore(tenant, floorStart)
+            ? floor
+            : all.stream()
+                .map(Order::getCreatedAt).filter(Objects::nonNull)
+                .map(YearMonth::from).min(Comparator.naturalOrder())
+                .orElse(current);
+        if (oldest.isAfter(current)) oldest = current;
         if (oldest.isBefore(floor)) oldest = floor;
 
         Map<YearMonth, List<Order>> byMonth = all.stream()

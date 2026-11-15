@@ -2,6 +2,8 @@ package com.esyback.ecommerce.controller;
 
 import com.esyback.ecommerce.config.EmailProperties;
 import com.esyback.ecommerce.config.SmsProperties;
+import com.esyback.ecommerce.entity.AuditLog;
+import com.esyback.ecommerce.repository.AuditLogRepository;
 import com.esyback.ecommerce.service.ConfigStore;
 import com.esyback.ecommerce.service.EmailSender;
 import com.esyback.ecommerce.service.EmailTemplates;
@@ -44,6 +46,11 @@ public class AdminIntegrationsController {
     private final EmailProperties emailProperties;
     private final EmailTemplates emailTemplates;
     private final EmailSender emailSender;
+    private final AuditLogRepository auditLog;
+    private final com.esyback.ecommerce.service.ConfigStore configStore;
+
+    /** One validated write, held until the whole body has passed validation. */
+    private record Change(String key, String before, String after, Runnable apply) {}
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -127,8 +134,13 @@ public class AdminIntegrationsController {
      */
     @PutMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> update(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> update(@RequestBody Map<String, Object> body,
+                                                      org.springframework.security.core.Authentication authentication) {
         if (body == null) throw bad("Nothing to update");
+        // Everything is validated before anything is written: validating as it
+        // went, a bad template late in the body answered 422 after the sender
+        // or a switch before it was already live.
+        List<Change> changes = new ArrayList<>();
 
         if (body.get("sender") instanceof String sender) {
             String s = sender.trim();
@@ -140,11 +152,12 @@ public class AdminIntegrationsController {
             if (!s.matches("[A-Za-z0-9.-]+")) {
                 throw bad("Sender name may use letters, digits, hyphen and period only");
             }
-            smsProperties.setSender(s);
+            changes.add(new Change("sms.sender", smsProperties.getSender(), s, () -> smsProperties.setSender(s)));
         }
 
         if (body.get("enabled") instanceof Boolean on) {
-            smsProperties.setEnabled(on);
+            changes.add(new Change("sms.enabled", String.valueOf(smsProperties.isEnabled()), String.valueOf(on),
+                () -> smsProperties.setEnabled(on)));
         }
 
         // Per-message switches: {"templateEnabled": {"orderShipped": false}}
@@ -155,7 +168,9 @@ public class AdminIntegrationsController {
                 if (!SmsTemplates.isSwitchable(key)) {
                     throw bad("The verification code cannot be switched off — checkout needs it");
                 }
-                templates.setEnabled(key, Boolean.TRUE.equals(e.getValue()));
+                boolean on = Boolean.TRUE.equals(e.getValue());
+                changes.add(new Change("sms.templateEnabled." + key, String.valueOf(templates.isEnabled(key)),
+                    String.valueOf(on), () -> templates.setEnabled(key, on)));
             }
         }
 
@@ -165,7 +180,8 @@ public class AdminIntegrationsController {
                 String text = e.getValue() == null ? "" : String.valueOf(e.getValue());
                 String problem = SmsTemplates.validate(key, text);
                 if (problem != null) throw bad(problem);
-                templates.set(key, text);
+                changes.add(new Change("sms.template." + key, templates.get(key), text.trim(),
+                    () -> templates.set(key, text)));
             }
         }
 
@@ -186,18 +202,21 @@ public class AdminIntegrationsController {
                 if (!EmailSender.looksLikeAddress(bare)) {
                     throw bad("\"" + f + "\" is not an address Resend will accept");
                 }
-                emailProperties.setFrom(f);
+                changes.add(new Change("email.from", emailProperties.getFrom(), f, () -> emailProperties.setFrom(f)));
             }
 
             if (em.get("enabled") instanceof Boolean on) {
-                emailProperties.setEnabled(on);
+                changes.add(new Change("email.enabled", String.valueOf(emailProperties.isEnabled()),
+                    String.valueOf(on), () -> emailProperties.setEnabled(on)));
             }
 
             if (em.get("templateEnabled") instanceof Map<?, ?> flags) {
                 for (Map.Entry<?, ?> e : flags.entrySet()) {
                     String key = String.valueOf(e.getKey());
                     if (!EmailTemplates.isKnown(key)) throw bad("Unknown email template " + key);
-                    emailTemplates.setEnabled(key, Boolean.TRUE.equals(e.getValue()));
+                    boolean on = Boolean.TRUE.equals(e.getValue());
+                    changes.add(new Change("email.templateEnabled." + key, String.valueOf(emailTemplates.isEnabled(key)),
+                        String.valueOf(on), () -> emailTemplates.setEnabled(key, on)));
                 }
             }
 
@@ -218,10 +237,27 @@ public class AdminIntegrationsController {
                         ? emailTemplates.body(key) : String.valueOf(row.get("body"));
                     String problem = EmailTemplates.validate(key, subject, text);
                     if (problem != null) throw bad(problem);
-                    emailTemplates.setSubject(key, subject);
-                    emailTemplates.setBody(key, text);
+                    changes.add(new Change("email.template." + key,
+                        emailTemplates.subject(key) + "\n\n" + emailTemplates.body(key),
+                        subject.trim() + "\n\n" + text.trim(),
+                        () -> {
+                            emailTemplates.setSubject(key, subject);
+                            emailTemplates.setBody(key, text);
+                        }));
                 }
             }
+        }
+
+        // Then written, each with an audit row saying who changed what from
+        // what: the SMS kill switch and the sender decide whether anything
+        // reaches a shopper, and nothing recorded who flipped them.
+        String actor = authentication == null || authentication.getName() == null
+            ? "unknown" : authentication.getName();
+        // All of them land or none (ConfigStore.inOneWrite); audited after.
+        configStore.inOneWrite(() -> changes.forEach(c -> c.apply().run()));
+        for (Change c : changes) {
+            auditLog.save(AuditLog.of(actor, "INTEGRATION_CHANGED", "INTEGRATION", c.key(),
+                c.before() + " -> " + c.after()));
         }
 
         return ResponseEntity.ok(Map.of(

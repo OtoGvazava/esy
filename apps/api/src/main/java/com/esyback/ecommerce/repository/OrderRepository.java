@@ -3,6 +3,7 @@ package com.esyback.ecommerce.repository;
 import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -14,10 +15,43 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    // Store and lines in the same query: the account hub and "my orders" read
+    // both for every order, which was two more queries per order.
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tenant", "items"})
     List<Order> findByUserOrderByCreatedAtDesc(User user);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tenant", "items"})
     List<Order> findByUserAndTenantOrderByCreatedAtDesc(User user, Tenant tenant);
     List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant);
+
+    /**
+     * The store's orders with their lines and store loaded in the same query.
+     * The back-office list counts each order's lines, which otherwise cost
+     * one more SELECT per order (5,000 orders, 5,001 queries) on every load.
+     */
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"items", "tenant"})
+    @Query("select o from Order o where o.tenant = :tenant order by o.createdAt desc")
+    List<Order> findWithItemsByTenant(@Param("tenant") Tenant tenant);
+
+    /** The newest orders of one store, bounded by the page. */
+    List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant, org.springframework.data.domain.Pageable page);
+
+    // Platform-wide reads for the admin store list and billing: one query for
+    // every store instead of two or three per store. The money rules stay in
+    // OrderService's static helpers, applied to these rows.
     long countByTenant(Tenant tenant);
+
+    // The store analytics' reads (StoreStatsService). A window reads only the
+    // orders since its start, and the lines come in the same query rather
+    // than one query per order.
+    @EntityGraph(attributePaths = "items")
+    List<Order> findWithItemsByTenantOrderByCreatedAtDesc(Tenant tenant);
+
+    @EntityGraph(attributePaths = "items")
+    List<Order> findWithItemsByTenantAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(Tenant tenant, java.time.LocalDateTime from);
+
+    List<Order> findByTenantAndCreatedAtGreaterThanEqual(Tenant tenant, java.time.LocalDateTime from);
+
+    boolean existsByTenantAndCreatedAtBefore(Tenant tenant, java.time.LocalDateTime before);
     long countByTenantAndStatus(Tenant tenant, Order.Status status);
 
     // orderNumber is the external_order_id we hand BOG; the callback echoes it.
@@ -129,4 +163,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("select o from Order o join fetch o.tenant where o.paymentStatus = :status and o.createdAt < :before")
     List<Order> findPendingWithTenant(@Param("status") Order.PaymentStatus status,
                                       @Param("before") java.time.LocalDateTime before);
+
+    /** Every order's money columns, for the platform-wide admin figures (see OrderMoney). */
+    @Query("select new com.esyback.ecommerce.repository.OrderMoney(o.tenant.id, o.total, o.deliveryFee, o.serviceFee, o.refundedAmount, o.status, o.paymentStatus) from Order o")
+    List<OrderMoney> findAllMoney();
+
+    @Query("select new com.esyback.ecommerce.repository.OrderMoney(o.tenant.id, o.total, o.deliveryFee, o.serviceFee, o.refundedAmount, o.status, o.paymentStatus) from Order o where o.createdAt >= :from and o.createdAt < :to")
+    List<OrderMoney> findMoneyCreatedBetween(@Param("from") java.time.LocalDateTime from,
+                                             @Param("to") java.time.LocalDateTime to);
 }

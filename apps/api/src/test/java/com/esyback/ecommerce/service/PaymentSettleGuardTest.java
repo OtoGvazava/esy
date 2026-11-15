@@ -118,4 +118,30 @@ class PaymentSettleGuardTest {
         assertThat(after.getPaymentStatus()).isEqualTo(Order.PaymentStatus.PAID);
         assertThat(after.refundableAmount()).isEqualByComparingTo("14.00");
     }
+
+    @Test
+    @Transactional
+    @DisplayName("an order whose card payment is still pending cannot be shipped (it can be cancelled)")
+    void noShippingWhilePending() {
+        Order o = cardOrder();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> orderService.updateStatus(tenant, o.getId(), Order.Status.SHIPPED))
+            .isInstanceOf(com.esyback.ecommerce.web.ApiRefusal.class)
+            .satisfies(e -> assertThat(((com.esyback.ecommerce.web.ApiRefusal) e).getCode()).isEqualTo("PAYMENT_PENDING"));
+        assertThat(orderService.updateStatus(tenant, o.getId(), Order.Status.CANCELLED).getStatus())
+            .isEqualTo(Order.Status.CANCELLED);
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("a courier order with no address is refused instead of being charged for delivery to nowhere")
+    void courierNeedsAnAddress() {
+        CreateOrderRequest req = new CreateOrderRequest();
+        CreateOrderRequest.Item item = new CreateOrderRequest.Item();
+        item.setProductId(mug.getId());
+        item.setQuantity(1);
+        req.setItems(List.of(item));
+        req.setDeliveryRoute("tbilisi");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> orderService.createOrder(null, tenant, req))
+            .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
 }

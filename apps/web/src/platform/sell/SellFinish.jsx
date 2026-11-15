@@ -8,7 +8,7 @@ import StorePreview from '../../components/design/StorePreview';
 import { LOOKS } from '../../core/design/looks';
 import { normalizeDesign } from '../../core/design/normalize';
 import { WAYS_TO_LOOK, groupDigits } from '../../core/design/variety';
-import { FEE_PERCENT } from '../../core/money';
+import useFeePercent from '../../hooks/useFeePercent';
 import { onColor } from '../../core/tokens';
 import { managerUrl } from '../../utils/hosts';
 import { Btn, Ic, SellScreen, Wrap } from './kit';
@@ -28,7 +28,10 @@ export function SellCheck({ dev, top, name, host, group, groupLabel, lookId, des
   const { t } = useTranslation('platform');
   const { t: td } = useTranslation('design');
   const colourText = t(`open.colours.${colourName(colour)}`);
-  const cta = <Btn off={!agreed} onClick={onPublish}>{t('open.check.publish')}</Btn>;
+  // The fee the seller agrees to is the admin's live rate, never a hard-coded
+  // 2%; until it is known there is nothing to agree to yet.
+  const fee = useFeePercent();
+  const cta = <Btn off={!agreed || fee.loading} onClick={fee.loading ? undefined : onPublish}>{t('open.check.publish')}</Btn>;
   const row = (icon, label, value, sub, step) => (
     <div className="sl-li" key={step}>
       {icon}
@@ -84,7 +87,7 @@ export function SellCheck({ dev, top, name, host, group, groupLabel, lookId, des
             <span>
               {t('open.check.termsPre')}
               <a href="/terms" target="_blank" rel="noopener noreferrer" className="sl-link">{t('open.check.termsLink')}</a>
-              {t('open.check.termsPost', { fee: FEE_PERCENT })}
+              {t('open.check.termsPost', { fee: fee.loading ? '…' : fee.percent })}
             </span>
           </label>
 

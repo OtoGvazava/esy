@@ -19,6 +19,9 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
 
     long countByProduct(Product product);
 
+    // No bytes: the serve endpoint's 304 check.
+    boolean existsByIdAndProduct_Id(Long id, Long productId);
+
     // One bulk DELETE: never loads the image bytes just to throw them away.
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from ProductImage i where i.product = :product")

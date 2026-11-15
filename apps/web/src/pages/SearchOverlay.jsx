@@ -14,12 +14,14 @@ const readRecent = () => {
 
 function Row({ T, icon, primary, meta, onClick }) {
   return (
-    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', borderTop: `1px solid ${T.border}`, cursor: 'pointer' }}>
+    // Buttons, not clickable divs, so rows, chips and Cancel work from a
+    // keyboard and a screen reader.
+    <button type="button" onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '11px 0', border: 'none', borderTop: `1px solid ${T.border}`, background: 'transparent', textAlign: 'left', font: 'inherit', color: 'inherit', cursor: 'pointer' }}>
       <span style={{ width: 32, height: 32, borderRadius: 10, background: T.surface, border: `1px solid ${T.border}`, color: T.textDim, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
       <div style={{ flex: 1, font: `500 14px ${T.font}`, color: T.text }}>{primary}</div>
-      <div style={{ font: `500 11.5px ${T.font}`, color: T.textMute }}>{meta}</div>
+      <span style={{ font: `500 11.5px ${T.font}`, color: T.textMute }}>{meta}</span>
       <Icon.arrowR style={{ opacity: 0.4 }} />
-    </div>
+    </button>
   );
 }
 
@@ -64,17 +66,17 @@ export default function SearchOverlay() {
           <div style={{ flex: 1 }}>
             <GlowSearchBar T={T} value={q} onChange={setQ} onSubmit={run} compact autoFocus placeholder={t('search.placeholder')} />
           </div>
-          <span onClick={() => navigate(-1)} style={{ font: `600 14px ${T.font}`, color: T.accentFg, cursor: 'pointer' }}>{t('search.cancel')}</span>
+          <button type="button" onClick={() => navigate(-1)} style={{ padding: 0, border: 'none', background: 'transparent', font: `600 14px ${T.font}`, color: T.accentFg, cursor: 'pointer' }}>{t('search.cancel')}</button>
         </div>
 
         <div style={{ padding: '14px 18px 0' }}>
           <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.12em', marginBottom: 10 }}>{t('search.quickFilters')}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {QUICK.map((s) => (
-              <span key={s.id} onClick={() => go(s.to)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 999, background: T.surface, border: `1px solid ${T.border}`, font: `500 12.5px ${T.font}`, color: T.text, cursor: 'pointer' }}>
+              <button type="button" key={s.id} onClick={() => go(s.to)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 999, background: T.surface, border: `1px solid ${T.border}`, font: `500 12.5px ${T.font}`, color: T.text, cursor: 'pointer' }}>
                 <span style={{ width: 22, height: 22, borderRadius: '50%', background: T.accentBg, color: T.accentFg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `700 11px ${T.font}` }}>{s.icon}</span>
                 {s.label}
-              </span>
+              </button>
             ))}
           </div>
         </div>

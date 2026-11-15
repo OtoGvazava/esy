@@ -132,6 +132,22 @@ public class DeliveryService {
         if (target.getPrice() != null && target.getPrice().signum() < 0) {
             throw bad("A delivery price cannot be negative");
         }
+        // Delivery is the courier's money and esy's fee is on the goods only,
+        // so an unbounded delivery price let a store move a sale into it and
+        // pay no commission (₾1500 "pickup" on a ₾0.01 item). Collecting in
+        // person is free, and a courier price has a ceiling.
+        // Only a price this save sends is judged: a route priced before these
+        // rules must still be switchable and editable without retyping it.
+        boolean priceSent = body.containsKey("price");
+        if (priceSent && DeliveryOption.PICKUP.equals(key) && target.getPrice() != null && target.getPrice().signum() > 0) {
+            throw new com.esyback.ecommerce.web.ApiRefusal(HttpStatus.BAD_REQUEST, "DELIVERY_PICKUP_FREE",
+                "Collection in person is always free");
+        }
+        if (priceSent && target.getPrice() != null && target.getPrice().compareTo(MAX_DELIVERY_PRICE) > 0) {
+            throw new com.esyback.ecommerce.web.ApiRefusal(HttpStatus.BAD_REQUEST, "DELIVERY_PRICE_TOO_HIGH",
+                "A delivery price can be at most " + MAX_DELIVERY_PRICE.toPlainString(),
+                java.util.Map.of("max", MAX_DELIVERY_PRICE));
+        }
 
         return toMap(repository.save(target));
     }
@@ -170,6 +186,8 @@ public class DeliveryService {
         }
 
         BigDecimal price = option.getPrice() == null ? BigDecimal.ZERO : option.getPrice();
+        // Free whatever an older row says (see the save rule above).
+        if (DeliveryOption.PICKUP.equals(key)) price = BigDecimal.ZERO;
         BigDecimal threshold = option.getFreeOverTotal();
         // The threshold frees the ROUTE, not the express upgrade: a shop
         // offering free delivery over 150 is not also giving away same-day.
@@ -233,8 +251,21 @@ public class DeliveryService {
     }
 
     /** Every route for this store, creating any that do not exist yet. */
+    /**
+     * A new store's delivery rows, made with the store. They used to appear
+     * only on its first visit, and two first visits at once inserted them
+     * twice; with one row per route enforced (SchemaMigrations) that race
+     * would now be a 500, so a new store never runs it.
+     */
+    public void seedFor(Tenant tenant) {
+        options(tenant);
+    }
+
     private List<DeliveryOption> options() {
-        Tenant tenant = tenant();
+        return options(tenant());
+    }
+
+    private List<DeliveryOption> options(Tenant tenant) {
         List<DeliveryOption> existing = repository.findByTenant(tenant);
         List<DeliveryOption> result = new ArrayList<>();
         for (String route : DeliveryOption.ROUTES) {
@@ -291,6 +322,9 @@ public class DeliveryService {
         if (o == null) return fallback;
         return Boolean.parseBoolean(String.valueOf(o));
     }
+
+    /** The most a store may charge for a delivery route. */
+    static final BigDecimal MAX_DELIVERY_PRICE = new BigDecimal("300.00");
 
     private static ResponseStatusException bad(String message) {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
