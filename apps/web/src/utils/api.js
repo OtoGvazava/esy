@@ -201,6 +201,8 @@ const toBackendProduct = (form) => ({
   imageUrl: Array.isArray(form.images) ? form.images[0] || '' : form.imageUrl || '',
   price: Number(form.price),
   quantity: Number(form.stock ?? form.quantity ?? 0),
+  // The stock the editor started from; absent = set quantity as sent.
+  quantityWas: form.quantityWas,
   // Left out when the form has none, which the server reads as "unchanged";
   // '' clears it.
   category: form.category,

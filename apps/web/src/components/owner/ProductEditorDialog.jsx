@@ -59,6 +59,9 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
   } : EMPTY), [product, lang]);
 
   const [form, setForm] = useState(initial);
+  // The stock this editor started from, sent as quantityWas so a save applies
+  // only the merchant's change and sales made meanwhile stand (review M17).
+  const stockSeen = useRef(product?.quantity ?? null);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState('');
@@ -86,6 +89,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
     setStaged([]);
     setExisting(product?.imageList || []);
     setCreatedId(null);
+    stockSeen.current = product?.quantity ?? null;
   }, [open, initial, product]);
 
   useEffect(() => () => staged.forEach((s) => URL.revokeObjectURL(s.preview)), [staged]);
@@ -160,6 +164,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
       quantity: hasVariants ? variants.rows.reduce((s, r) => s + (Number(r.stock) || 0), 0) : parseInt(form.quantity, 10),
       // Always sent: '' is how the merchant takes a product out of its category.
       category: form.category.trim(),
+      quantityWas: hasVariants || stockSeen.current == null ? undefined : stockSeen.current,
     };
     // Each step says which one failed, and what already succeeded is not
     // repeated by the next Save: the product is updated, not created again,
@@ -169,6 +174,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
       const id = product?.id ?? createdId;
       const saved = id != null ? await productApi.update(id, payload) : await productApi.create(payload);
       if (id == null) setCreatedId(saved.id);
+      stockSeen.current = saved?.quantity ?? null;
       if (staged.length) {
         step = 'photos';
         const withPhotos = await productApi.uploadImages(saved.id, staged.map((s) => s.file));

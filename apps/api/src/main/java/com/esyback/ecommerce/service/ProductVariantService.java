@@ -73,13 +73,19 @@ public class ProductVariantService {
                 + " axes — a third produces a table nobody fills in");
         }
 
+        // Serialised with stock-taking, which locks the product first (M29).
+        productRepository.lockById(product.getId());
+
         // Keep the stock the merchant already recorded: they are editing a
         // grid, not retyping it, and a save that silently zeroed every count
         // would be indistinguishable from selling out.
-        Map<String, Integer> stockBefore = new LinkedHashMap<>();
+        // The rows that exist now, by combination. A combination that is still
+        // in the grid keeps its row and its id: rebuilding every row gave each
+        // a new id, so every bag holding the product broke and a paid order
+        // found nothing to take stock from (review M30).
+        Map<String, ProductVariant> existingRows = new LinkedHashMap<>();
         for (ProductVariant existing : variantRepository.findByProductOrderByIdAsc(product)) {
-            stockBefore.put(keyOf(existing.getValue1(), existing.getValue2()),
-                existing.getQuantity() == null ? 0 : existing.getQuantity());
+            existingRows.put(keyOf(existing.getValue1(), existing.getValue2()), existing);
         }
 
         List<List<String>> axisValues = new ArrayList<>();
@@ -124,7 +130,16 @@ public class ProductVariantService {
             sent.put(keyOf(key.get(0), key.size() > 1 ? key.get(1) : ""), row);
         }
 
-        variantRepository.deleteByProduct(product);
+        // Only combinations that left the grid are deleted.
+        java.util.Set<String> wanted = new java.util.HashSet<>();
+        for (String v1 : axisValues.get(0)) {
+            for (String v2 : axisValues.size() > 1 ? axisValues.get(1) : List.of("")) {
+                wanted.add(keyOf(v1, v2));
+            }
+        }
+        for (Map.Entry<String, ProductVariant> e : existingRows.entrySet()) {
+            if (!wanted.contains(e.getKey())) variantRepository.delete(e.getValue());
+        }
         variantRepository.flush();
 
         // The grid is generated from the axes rather than trusted from the
@@ -137,14 +152,24 @@ public class ProductVariantService {
             for (String v2 : second) {
                 String key = keyOf(v1, v2);
                 Map<String, Object> row = sent.get(key);
-                ProductVariant variant = new ProductVariant();
+                ProductVariant kept = existingRows.get(key);
+                ProductVariant variant = kept != null ? kept : new ProductVariant();
                 variant.setProduct(product);
                 variant.setValue1(v1);
                 variant.setValue2(v2);
                 variant.setPrice(row == null ? null : money(row.get("price")));
 
                 Integer stock = row == null ? null : intOf(row.get("stock"));
-                if (stock == null) stock = stockBefore.get(key);
+                Integer was = row == null ? null : intOf(row.get("stockWas"));
+                Integer current = kept == null ? null : kept.getQuantity();
+                if (stock == null) {
+                    stock = current;
+                } else if (was != null && current != null) {
+                    // Only the merchant's change: the grid used to send every
+                    // row's stock as it was when the editor opened, writing
+                    // back what had sold since (review M16).
+                    stock = current + (stock - was);
+                }
                 variant.setQuantity(stock == null ? 0 : Math.max(0, stock));
 
                 variantRepository.save(variant);

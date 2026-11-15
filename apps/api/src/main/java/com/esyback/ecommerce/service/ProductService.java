@@ -272,14 +272,15 @@ public class ProductService {
     
     public Optional<ProductDto> updateProduct(Long id, ProductDto productDto) {
         Tenant currentTenant = tenantContextService.getCurrentTenant();
-        return productRepository.findById(id)
+        // Locked like stock-taking (M29), so a sale and this save serialise.
+        return productRepository.lockById(id)
             .filter(product -> product.getTenant().equals(currentTenant))
             .map(existingProduct -> {
                 existingProduct.setTitle(productDto.getTitle());
                 existingProduct.setDescription(productDto.getDescription());
                 // imageUrl intentionally untouched — managed by image upload/delete.
                 existingProduct.setPrice(productDto.getPrice());
-                existingProduct.setQuantity(productDto.getQuantity());
+                existingProduct.setQuantity(stockAfterEdit(existingProduct, productDto));
                 // Absent means untouched and blank means cleared. A client that
                 // predates categories sends no field at all, and a save from it
                 // must not quietly take every product out of its collection.
@@ -292,6 +293,24 @@ public class ProductService {
             });
     }
     
+    /**
+     * The stock a product save leaves (review M17). It used to write back the
+     * number read when the editor opened, so a sale made meanwhile came back
+     * on the shelf. With variants the rows own the stock and the product's
+     * total is their sum, so the save does not touch it. Otherwise, given the
+     * number the editor started from, only the merchant's change is applied
+     * to what is there now.
+     */
+    static Integer stockAfterEdit(Product current, ProductDto sent) {
+        if (current.variantsEnabled()) return current.getQuantity();
+        Integer typed = sent.getQuantity();
+        Integer was = sent.getQuantityWas();
+        Integer now = current.getQuantity();
+        if (typed == null) return now;
+        if (was == null || now == null) return typed;
+        return Math.max(0, now + (typed - was));
+    }
+
     public boolean deleteProduct(Long id) {
         Tenant currentTenant = tenantContextService.getCurrentTenant();
         return productRepository.findById(id)

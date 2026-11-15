@@ -165,10 +165,10 @@ class CancelRestockTest {
         Order order = freeOrder(null, boots, size("38"), 1);
         Long soldFrom = size("38").getId();
 
-        // Saving the grid recreates every row with a new id, keeping the counts.
+        // Saving the grid keeps the rows it still has, ids and counts (M30).
         variantService.replace(productRepository.findById(boots.getId()).orElseThrow(), Map.of(
             "axes", List.of(Map.of("name", "Size", "values", List.of("38", "40")))));
-        assertThat(size("38").getId()).isNotEqualTo(soldFrom);
+        assertThat(size("38").getId()).isEqualTo(soldFrom);
         assertThat(size("38").getQuantity()).isEqualTo(1);
 
         cancel(order);
