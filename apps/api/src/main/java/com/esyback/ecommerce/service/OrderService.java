@@ -764,11 +764,18 @@ public class OrderService {
      * the ship phone meant a pickup buyer heard nothing at any stage, which is
      * exactly the case where "it is ready" is worth the most.
      */
-    private static String recipientPhone(Order order) {
-        String ship = order.getShipPhone();
-        if (ship != null && !ship.isBlank()) return ship;
-        String account = order.getUser() == null ? null : order.getUser().getPhoneNumber();
-        return account == null || account.isBlank() ? null : account;
+    /**
+     * Who gets an order's texts: the account's verified phone, and nobody
+     * else. The delivery phone is typed at checkout and never checked, so
+     * texting it let anyone script orders that sent esy-branded messages to
+     * any number, premium-rate ones included, at esy's cost (review M5).
+     * The courier still gets the delivery phone on the order itself.
+     */
+    static String recipientPhone(Order order) {
+        com.esyback.ecommerce.entity.User u = order.getUser();
+        if (u == null || !Boolean.TRUE.equals(u.getPhoneVerified())) return null;
+        String phone = u.getPhoneNumber();
+        return phone == null || phone.isBlank() ? null : phone;
     }
 
     /** Values the order templates may reference. */
