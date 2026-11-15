@@ -154,10 +154,15 @@ public class BogPaymentService {
 
         Map<String, Object> purchaseUnits = new LinkedHashMap<>();
         purchaseUnits.put("currency", "GEL");
-        // Charged amount is the server-persisted order total (== Σ basket),
-        // never a client-supplied figure.
+        // Charged amount is the server-persisted order total (the basket plus
+        // any delivery below), never a client-supplied figure.
         purchaseUnits.put("total_amount", order.getTotal());
         purchaseUnits.put("basket", basket);
+        // The total includes delivery, so the basket alone did not add up to
+        // it on a courier order. BOG takes the delivery charge separately.
+        if (order.getDeliveryFee() != null && order.getDeliveryFee().signum() > 0) {
+            purchaseUnits.put("delivery", Map.of("amount", order.getDeliveryFee()));
+        }
 
         Map<String, Object> redirectUrls = new LinkedHashMap<>();
         redirectUrls.put("success", successUrl);
@@ -181,6 +186,7 @@ public class BogPaymentService {
             HttpResponse<byte[]> res = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
             String respBody = bodyString(res);
             if (res.statusCode() / 100 != 2) {
+                forgetTokenOn(res.statusCode(), tenant);
                 log.warn("BOG create-order failed ({}): {}", res.statusCode(), respBody);
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "Payment provider rejected the order");
@@ -204,9 +210,34 @@ public class BogPaymentService {
 
     // ---- Token --------------------------------------------------------------
 
+    /**
+     * Which bank session a cached token is. It used to be the client ID alone:
+     * an owner could type another store's client ID with any secret and, while
+     * that store's token was cached, run checkouts and refunds on its BOG
+     * account; and a live/sandbox switch kept serving the other host's token.
+     * Now the store, the host and the stored secret are all part of it.
+     */
+    private String tokenKey(Tenant tenant) {
+        String secret = tenant.getBogClientSecret() == null ? "" : tenant.getBogClientSecret();
+        try {
+            byte[] h = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(secret.getBytes(StandardCharsets.UTF_8));
+            return authUrl() + "|" + tenant.getId() + "|" + tenant.getBogClientId() + "|"
+                + Base64.getEncoder().encodeToString(h);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** BOG refused the token (401/403): drop it so the next call signs in again. */
+    private void forgetTokenOn(int status, Tenant tenant) {
+        if (status == 401 || status == 403) tokenCache.remove(tokenKey(tenant));
+    }
+
     private String accessToken(Tenant tenant) {
         String clientId = tenant.getBogClientId();
-        CachedToken cached = tokenCache.get(clientId);
+        String key = tokenKey(tenant);
+        CachedToken cached = tokenCache.get(key);
         if (cached != null && System.currentTimeMillis() < cached.expiresAtMs()) {
             return cached.token();
         }
@@ -237,7 +268,7 @@ public class BogPaymentService {
             long expiresIn = json.path("expires_in").asLong(3600);
             if (expiresIn > 100_000) expiresIn = expiresIn / 1000;
             long ttlMs = Math.max(60, expiresIn - 60) * 1000L;
-            tokenCache.put(clientId, new CachedToken(token, System.currentTimeMillis() + ttlMs));
+            tokenCache.put(key, new CachedToken(token, System.currentTimeMillis() + ttlMs));
             return token;
         } catch (ResponseStatusException e) {
             throw e;
@@ -327,6 +358,16 @@ public class BogPaymentService {
      * @param amount the partial amount, or null for the full order
      */
     public RefundResult refund(Tenant tenant, String bogOrderId, BigDecimal amount) {
+        return refund(tenant, bogOrderId, amount, UUID.randomUUID().toString());
+    }
+
+    /**
+     * @param idempotencyKey the same for a retry of one refund, different for
+     *                       each refund. A fresh random key per call meant BOG
+     *                       could never recognise a retry; the caller derives
+     *                       it from the refund claim instead.
+     */
+    public RefundResult refund(Tenant tenant, String bogOrderId, BigDecimal amount, String idempotencyKey) {
         if (!isConfigured(tenant)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "This store has no Bank of Georgia connection, so nothing can be refunded through it");
@@ -347,7 +388,7 @@ public class BogPaymentService {
                 .header("Authorization", "Bearer " + accessToken(tenant))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
-                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .header("Idempotency-Key", idempotencyKey)
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
             HttpResponse<byte[]> res = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
@@ -365,6 +406,7 @@ public class BogPaymentService {
                 // the status code decides, and the raw text goes to the log.
             }
             if (res.statusCode() / 100 != 2) {
+                forgetTokenOn(res.statusCode(), tenant);
                 log.warn("BOG refund for {} -> HTTP {}: {}", bogOrderId, res.statusCode(), raw);
                 return new RefundResult(false, key,
                     message != null ? message : "The bank refused the refund (HTTP " + res.statusCode() + ")",
@@ -422,6 +464,7 @@ public class BogPaymentService {
                 .build();
             HttpResponse<byte[]> res = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
             if (res.statusCode() / 100 != 2) {
+                forgetTokenOn(res.statusCode(), tenant);
                 log.debug("BOG receipt {} -> {}", bogOrderId, res.statusCode());
                 return Optional.empty();
             }

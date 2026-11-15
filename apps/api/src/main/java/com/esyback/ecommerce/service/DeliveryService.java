@@ -132,6 +132,19 @@ public class DeliveryService {
         if (target.getPrice() != null && target.getPrice().signum() < 0) {
             throw bad("A delivery price cannot be negative");
         }
+        // Delivery is the courier's money and esy's fee is on the goods only,
+        // so an unbounded delivery price let a store move a sale into it and
+        // pay no commission (₾1500 "pickup" on a ₾0.01 item). Collecting in
+        // person is free, and a courier price has a ceiling.
+        if (DeliveryOption.PICKUP.equals(key) && target.getPrice() != null && target.getPrice().signum() > 0) {
+            throw new com.esyback.ecommerce.web.ApiRefusal(HttpStatus.BAD_REQUEST, "DELIVERY_PICKUP_FREE",
+                "Collection in person is always free");
+        }
+        if (target.getPrice() != null && target.getPrice().compareTo(MAX_DELIVERY_PRICE) > 0) {
+            throw new com.esyback.ecommerce.web.ApiRefusal(HttpStatus.BAD_REQUEST, "DELIVERY_PRICE_TOO_HIGH",
+                "A delivery price can be at most " + MAX_DELIVERY_PRICE.toPlainString(),
+                java.util.Map.of("max", MAX_DELIVERY_PRICE));
+        }
 
         return toMap(repository.save(target));
     }
@@ -170,6 +183,8 @@ public class DeliveryService {
         }
 
         BigDecimal price = option.getPrice() == null ? BigDecimal.ZERO : option.getPrice();
+        // Free whatever an older row says (see the save rule above).
+        if (DeliveryOption.PICKUP.equals(key)) price = BigDecimal.ZERO;
         BigDecimal threshold = option.getFreeOverTotal();
         // The threshold frees the ROUTE, not the express upgrade: a shop
         // offering free delivery over 150 is not also giving away same-day.
@@ -291,6 +306,9 @@ public class DeliveryService {
         if (o == null) return fallback;
         return Boolean.parseBoolean(String.valueOf(o));
     }
+
+    /** The most a store may charge for a delivery route. */
+    static final BigDecimal MAX_DELIVERY_PRICE = new BigDecimal("300.00");
 
     private static ResponseStatusException bad(String message) {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);

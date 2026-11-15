@@ -296,4 +296,18 @@ class DeliveryServiceTest {
         assertThat(DeliveryOption.COURIER_ROUTES).containsExactly("tbilisi", "georgia");
         assertThat(DeliveryOption.ROUTES).containsAll(DeliveryOption.COURIER_ROUTES);
     }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("collection in person is free, and a courier price has a ceiling (review: commission avoided through delivery)")
+    void deliveryPricesAreBounded() {
+        assertThatThrownBy(() -> service.update("pickup", Map.of("price", "1500")))
+            .isInstanceOf(com.esyback.ecommerce.web.ApiRefusal.class)
+            .satisfies(e -> org.assertj.core.api.Assertions.assertThat(((com.esyback.ecommerce.web.ApiRefusal) e).getCode())
+                .isEqualTo("DELIVERY_PICKUP_FREE"));
+        assertThatThrownBy(() -> service.update("tbilisi", Map.of("enabled", true, "price", "301")))
+            .isInstanceOf(com.esyback.ecommerce.web.ApiRefusal.class)
+            .satisfies(e -> org.assertj.core.api.Assertions.assertThat(((com.esyback.ecommerce.web.ApiRefusal) e).getCode())
+                .isEqualTo("DELIVERY_PRICE_TOO_HIGH"));
+        service.update("tbilisi", Map.of("enabled", true, "price", "300"));
+    }
 }

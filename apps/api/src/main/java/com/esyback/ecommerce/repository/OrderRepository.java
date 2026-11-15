@@ -17,6 +17,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserOrderByCreatedAtDesc(User user);
     List<Order> findByUserAndTenantOrderByCreatedAtDesc(User user, Tenant tenant);
     List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant);
+
+    /**
+     * The store's orders with their lines and store loaded in the same query.
+     * The back-office list counts each order's lines, which otherwise cost
+     * one more SELECT per order (5,000 orders, 5,001 queries) on every load.
+     */
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"items", "tenant"})
+    @Query("select o from Order o where o.tenant = :tenant order by o.createdAt desc")
+    List<Order> findWithItemsByTenant(@Param("tenant") Tenant tenant);
     long countByTenant(Tenant tenant);
     long countByTenantAndStatus(Tenant tenant, Order.Status status);
 

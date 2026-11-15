@@ -23,6 +23,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
@@ -66,7 +67,7 @@ class RefundTest {
         });
         orderRepository.deleteAll(orderRepository.findByTenantOrderByCreatedAtDesc(tenant));
         when(tenantContextService.getCurrentTenant()).thenReturn(tenant);
-        when(bogPaymentService.refund(any(), any(), any()))
+        when(bogPaymentService.refund(any(), any(), any(), any()))
             .thenReturn(new BogPaymentService.RefundResult(true, "request_received", "ok", "act-1"));
     }
 
@@ -112,7 +113,7 @@ class RefundTest {
 
         // The amount is omitted for a whole-order refund — that is what BOG
         // documents, and it avoids arguing with the bank over the last tetri.
-        verify(bogPaymentService).refund(any(), eq(order.getBogOrderId()), isNull());
+        verify(bogPaymentService).refund(any(), eq(order.getBogOrderId()), isNull(), anyString());
 
         // REFUND_PENDING, not REFUNDED: BOG has accepted the instruction, not
         // completed it. Saying "refunded" here would tell a shopper they had
@@ -172,7 +173,7 @@ class RefundTest {
             .isInstanceOf(ResponseStatusException.class)
             .hasMessageContaining("nothing to refund");
 
-        verify(bogPaymentService, never()).refund(any(), any(), any());
+        verify(bogPaymentService, never()).refund(any(), any(), any(), any());
     }
 
     @Test
@@ -185,7 +186,7 @@ class RefundTest {
 
         assertThatThrownBy(() -> orderService.requestRefund(tenant, order.getId(), null))
             .isInstanceOf(ResponseStatusException.class);
-        verify(bogPaymentService, never()).refund(any(), any(), any());
+        verify(bogPaymentService, never()).refund(any(), any(), any(), any());
     }
 
     @Test
@@ -198,7 +199,7 @@ class RefundTest {
             .isInstanceOf(ResponseStatusException.class);
         assertThatThrownBy(() -> orderService.requestRefund(tenant, order.getId(), new BigDecimal("-5")))
             .isInstanceOf(ResponseStatusException.class);
-        verify(bogPaymentService, never()).refund(any(), any(), any());
+        verify(bogPaymentService, never()).refund(any(), any(), any(), any());
     }
 
     @Test
@@ -210,7 +211,7 @@ class RefundTest {
     @DisplayName("a bank refusal leaves the order untouched")
     void bankRefusalRollsBack() {
         Order order = paidOrder("100.00");
-        when(bogPaymentService.refund(any(), any(), any()))
+        when(bogPaymentService.refund(any(), any(), any(), any()))
             .thenReturn(new BogPaymentService.RefundResult(false, "error", "Card not refundable", null));
 
         assertThatThrownBy(() -> orderService.requestRefund(tenant, order.getId(), null))
@@ -241,7 +242,7 @@ class RefundTest {
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND));
-        verify(bogPaymentService, never()).refund(any(), any(), any());
+        verify(bogPaymentService, never()).refund(any(), any(), any(), any());
     }
 
     // NOT @Transactional: inside a test transaction a rollback can never be
@@ -251,7 +252,7 @@ class RefundTest {
     @DisplayName("the bank going silent keeps the claim rather than inviting a second attempt")
     void unreachableBankKeepsTheClaim() {
         Order order = paidOrder("100.00");
-        when(bogPaymentService.refund(any(), any(), any()))
+        when(bogPaymentService.refund(any(), any(), any(), any()))
             .thenThrow(new BogPaymentService.BogUnreachableException("no answer"));
 
         assertThatThrownBy(() -> orderService.requestRefund(tenant, order.getId(), new BigDecimal("40.00")))
@@ -269,7 +270,7 @@ class RefundTest {
     @DisplayName("an explicit refusal from the bank really rolls the claim back")
     void refusalRollsBackForReal() {
         Order order = paidOrder("100.00");
-        when(bogPaymentService.refund(any(), any(), any()))
+        when(bogPaymentService.refund(any(), any(), any(), any()))
             .thenReturn(new BogPaymentService.RefundResult(false, "error", "Card not refundable", null));
 
         assertThatThrownBy(() -> orderService.requestRefund(tenant, order.getId(), null))
@@ -278,5 +279,21 @@ class RefundTest {
         Order after = orderRepository.findById(order.getId()).orElseThrow();
         assertThat(after.getPaymentStatus()).isEqualTo(Order.PaymentStatus.PAID);
         assertThat(after.refundedOrZero()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("each refund has its own idempotency key, the same one if that refund is retried")
+    void refundKeysFollowTheClaim() {
+        Order order = paidOrder("100.00");
+        orderService.requestRefund(tenant, order.getId(), new BigDecimal("10.00"));
+        orderService.requestRefund(tenant, order.getId(), new BigDecimal("10.00"));
+        org.mockito.ArgumentCaptor<String> keys = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(bogPaymentService, org.mockito.Mockito.times(2)).refund(any(), any(), any(), keys.capture());
+        assertThat(keys.getAllValues().get(0)).isNotEqualTo(keys.getAllValues().get(1));
+        // The same claim (order, refunded total it brings) gives the same key.
+        String again = java.util.UUID.nameUUIDFromBytes(
+            (order.getBogOrderId() + ":10.00").getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+        assertThat(keys.getAllValues().get(0)).isEqualTo(again);
     }
 }

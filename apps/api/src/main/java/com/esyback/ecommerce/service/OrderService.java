@@ -240,6 +240,10 @@ public class OrderService {
      * (so the next checkout can reuse it), then frozen. The frozen copy is
      * plain columns — later edits to the address book never rewrite an order.
      */
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
+    }
+
     private void applyDeliveryAddress(Order order, User user, CreateOrderRequest req) {
         Address chosen = null;
         if (req.getAddressId() != null && user != null) {
@@ -247,8 +251,8 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown address"));
         } else if (req.getAddress() != null) {
             CreateOrderRequest.InlineAddress in = req.getAddress();
-            if (in.getRecipient() == null || in.getPhone() == null
-                || in.getLine() == null || in.getCity() == null) {
+            if (isBlank(in.getRecipient()) || isBlank(in.getPhone())
+                || isBlank(in.getLine()) || isBlank(in.getCity())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Delivery address needs recipient, phone, line and city");
             }
@@ -268,14 +272,18 @@ public class OrderService {
                 chosen = a; // guest checkout: freeze without saving a book entry
             }
         }
-        if (chosen != null) {
-            order.setShipRecipient(chosen.getRecipient());
-            order.setShipPhone(chosen.getPhone());
-            order.setShipLine(chosen.getLine());
-            order.setShipCity(chosen.getCity());
-            order.setShipPostalCode(chosen.getPostalCode());
-            order.setShipCountry(chosen.getCountry());
+        // A courier route charges delivery, so it must have somewhere to go:
+        // orders used to be accepted, and charged, with no address at all.
+        if (chosen == null) {
+            throw new ApiRefusal(HttpStatus.BAD_REQUEST, "DELIVERY_ADDRESS_REQUIRED",
+                "A courier delivery needs an address");
         }
+        order.setShipRecipient(chosen.getRecipient());
+        order.setShipPhone(chosen.getPhone());
+        order.setShipLine(chosen.getLine());
+        order.setShipCity(chosen.getCity());
+        order.setShipPostalCode(chosen.getPostalCode());
+        order.setShipCountry(chosen.getCountry());
     }
 
     /**
@@ -569,8 +577,14 @@ public class OrderService {
         // avoids a rounding argument with the bank over the final lari.
         boolean whole = asked.compareTo(order.getTotal() == null ? asked : order.getTotal()) == 0
             && order.refundedOrZero().signum() == 0;
+        // One key per claim: the order and the refunded total this claim
+        // brings it to. A retry of this refund repeats it; the next refund,
+        // even of the same amount, does not.
+        String refundKey = java.util.UUID.nameUUIDFromBytes(
+            (order.getBogOrderId() + ":" + order.refundedOrZero().add(asked).toPlainString())
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
         BogPaymentService.RefundResult result =
-            bogPaymentService.refund(tenant, order.getBogOrderId(), whole ? null : asked);
+            bogPaymentService.refund(tenant, order.getBogOrderId(), whole ? null : asked, refundKey);
 
         if (!result.accepted()) {
             // An explicit refusal is safe to undo: no money moved.
@@ -619,6 +633,12 @@ public class OrderService {
         if (!isLegalTransition(from, next)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Illegal transition " + from + " -> " + next);
+        }
+        // Goods leave only once a card payment has gone through: shipping an
+        // order the bank has not confirmed sends out what may never be paid.
+        if (next != Order.Status.CANCELLED && order.getPaymentStatus() == Order.PaymentStatus.PENDING) {
+            throw new ApiRefusal(HttpStatus.CONFLICT, "PAYMENT_PENDING",
+                "This order's card payment is not confirmed yet");
         }
         if (orderRepository.claimStatus(orderId, from, next) != 1) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -863,7 +883,7 @@ public class OrderService {
     }
 
     public List<Order> ordersForTenant(Tenant tenant) {
-        return orderRepository.findByTenantOrderByCreatedAtDesc(tenant);
+        return orderRepository.findWithItemsByTenant(tenant);
     }
 
     /**
