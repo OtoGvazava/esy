@@ -23,6 +23,7 @@
   "addToBag": "კალათაში დამატება · {{price}}",
   "youMayAlsoLike": "შესაძლოა ესეც მოგეწონოს",
   "addNamed": "{{name}} — კალათაში დამატება",
+  "soldOutNamed": "{{name}} ამოიწურა",
   "tagBest": "საუკეთესო",
   "tagLow": "მცირე მარაგი",
   "tagNew": "ახალი",

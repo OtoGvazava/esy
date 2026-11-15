@@ -94,6 +94,8 @@ function ProductView({ id }) {
       thumbnail: product.thumbnail,
       variantId: pickedRow?.id,
       variantLabel: pickedRow?.label,
+      // The bag caps the line at this (CartContext).
+      stock: pickedStock,
     });
     navigate('/cart');
   };

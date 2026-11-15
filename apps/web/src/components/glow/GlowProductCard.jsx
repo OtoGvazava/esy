@@ -25,6 +25,7 @@ import { addedRecently } from '../../core/design/show';
 import NewBadge from '../store/NewBadge';
 import { useDataSaver } from '../../contexts/DisplayPrefsContext';
 import { markIfComplete, markLoaded } from '../../core/imgFade';
+import { soldOutOnCard } from '../../hooks/useQuickAdd';
 
 const tagBg = (tag, T) =>
   tag === 'new' ? T.accent : tag === 'sale' ? T.danger : tag === 'low' ? T.warn : T.text;
@@ -97,15 +98,20 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
     </div>
   );
 
+  // A plain product the shop holds none of keeps its button in place, dimmed
+  // and inert, so the row does not shift and a screen reader hears why.
+  const soldOut = soldOutOnCard(p);
   const add = showAdd && (
     <button
       type="button"
-      aria-label={t('addNamed', { name: p.title })}
-      onClick={(e) => { e.stopPropagation(); onAdd?.(p); }}
+      aria-label={soldOut ? t('soldOutNamed', { name: p.title }) : t('addNamed', { name: p.title })}
+      aria-disabled={soldOut || undefined}
+      onClick={(e) => { e.stopPropagation(); if (!soldOut) onAdd?.(p); }}
       style={{
         width: 40, height: 40, flex: 'none', borderRadius: 'var(--k-r-ibtn)', border: 'none',
         background: 'var(--k-ink)', color: 'var(--k-on-ink)',
-        display: 'grid', placeItems: 'center', cursor: 'pointer',
+        display: 'grid', placeItems: 'center', cursor: soldOut ? 'default' : 'pointer',
+        opacity: soldOut ? 0.35 : 1,
       }}
     ><Icon.plus width="18" height="18" /></button>
   );
