@@ -52,10 +52,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: esy
       JPA_DDL_AUTO: update
       # Real Gmail sign-in: `cp .env.example .env`, fill it, `docker compose up`
-      # (Compose auto-reads .env). Or export in the shell. Unset → Gmail inert;
-      # email dev-login still works. No secrets in the repo (.env is gitignored).
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # (Compose auto-reads .env). Or export in the shell. Unset → Gmail inert,
+      # but the app still starts. No secrets in the repo (.env is gitignored).
+      # The placeholder fallbacks matter: an EMPTY client id is refused by
+      # Spring's OAuth validation and the app never boots (review M7) — and
+      # ":-" turns a blank line in .env into exactly that empty string.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-your-google-client-id}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-your-google-client-secret}
       # Canonical OAuth host. Unset = bare localhost dev (no funnel).
       # lvh.me dev: http://lvh.me:8092 | prod: https://www.esy.ge
       APP_OAUTH2_CANONICAL_ORIGIN: ${APP_OAUTH2_CANONICAL_ORIGIN:-}
