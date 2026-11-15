@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     static boolean needsIdentity(String path) {
         return path.startsWith("/api/")
             || path.equals("/docs") || path.equals("/swagger")
-            || path.equals("/v3/api-docs") || path.startsWith("/v3/api-docs/");
+            || path.startsWith("/v3/api-docs");
     }
 
     @Override

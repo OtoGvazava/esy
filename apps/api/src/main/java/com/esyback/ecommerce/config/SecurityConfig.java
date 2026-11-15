@@ -64,6 +64,11 @@ public class SecurityConfig {
                 .requestMatchers("/login/oauth2/**").permitAll()
                 .requestMatchers("/oauth2/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
+                // The API reference and its spec are for platform admins: the
+                // page runs a CDN script on the session origin, and the spec
+                // maps every endpoint (ScalarDocsController).
+                .requestMatchers("/docs", "/swagger", "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml")
+                    .hasRole("ADMIN")
                 .requestMatchers("/error").permitAll()
                 // Actuator: only health is exposed, and it's public (probes).
                 .requestMatchers("/actuator/health").permitAll()
