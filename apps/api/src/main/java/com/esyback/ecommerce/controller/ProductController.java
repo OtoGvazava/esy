@@ -19,7 +19,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -282,7 +281,16 @@ public class ProductController {
     // ETag (image ids are immutable — a new upload is a new id).
     @GetMapping("/{id}/images/{imageId}")
     public ResponseEntity<byte[]> serveImage(@PathVariable Long id,
-                                             @PathVariable Long imageId) {
+                                             @PathVariable Long imageId,
+                                             @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
+        // A browser revalidating the copy it holds is answered before the
+        // bytes are read: the ETag is the id, which never changes its bytes.
+        if (matchesEtag(ifNoneMatch, imageId) && productImageService.exists(id, imageId)) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
+                .eTag(String.valueOf(imageId))
+                .build();
+        }
         ProductImage img = productImageService.getForServing(id, imageId);
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(img.getContentType()))
@@ -291,16 +299,25 @@ public class ProductController {
             .body(img.getData());
     }
 
+    /** True when If-None-Match names this image's ETag (quoted, weak or not). */
+    static boolean matchesEtag(String ifNoneMatch, Long imageId) {
+        if (ifNoneMatch == null || imageId == null) return false;
+        String want = "\"" + imageId + "\"";
+        for (String tag : ifNoneMatch.split(",")) {
+            String t = tag.trim();
+            if (t.startsWith("W/")) t = t.substring(2);
+            if (t.equals(want)) return true;
+        }
+        return false;
+    }
+
     // No local ResponseStatusException handler: ApiErrorAdvice writes the same
     // {error} plus message, status and, for an ApiRefusal, its code and details.
     // The copy that sat here won over the advice and dropped the code, so the
     // import's file-level refusals reached the screen only as English prose.
 
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException ex) {
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-            .body(Map.of("error", "Image too large (max 5MB each, 25MB per upload)"));
-    }
+    // An upload over the size limits is ApiErrorAdvice's (FILE_TOO_LARGE): it
+    // is raised before any controller is chosen, so a handler here never ran.
 
     // ─── Variants (D11) ─────────────────────────────────────────────────────
     // Read is public: a shopper must see the sizes before choosing one. Write

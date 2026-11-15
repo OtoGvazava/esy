@@ -5,6 +5,7 @@ import com.esyback.ecommerce.entity.ProductImage;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.ProductImageRepository;
 import com.esyback.ecommerce.repository.ProductRepository;
+import com.esyback.ecommerce.web.ApiRefusal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,12 @@ public class ProductImageService {
     private final ProductImageRepository imageRepository;
     private final TenantContextService tenantContextService;
 
+    /**
+     * Photos one product may hold. They live in the database, so without a
+     * cap one product could take any amount of it, five megabytes at a time.
+     */
+    public static final int MAX_PHOTOS = 12;
+
     public static String imageUrl(Long productId, Long imageId) {
         return "/api/products/" + productId + "/images/" + imageId;
     }
@@ -46,6 +53,11 @@ public class ProductImageService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No files");
         }
         int position = (int) imageRepository.countByProduct(product);
+        if (position + files.size() > MAX_PHOTOS) {
+            throw new ApiRefusal(HttpStatus.BAD_REQUEST, "PHOTO_LIMIT",
+                "A product can have at most " + MAX_PHOTOS + " photos",
+                java.util.Map.of("max", MAX_PHOTOS, "has", position));
+        }
         Long firstSavedId = null;
         for (MultipartFile file : files) {
             byte[] bytes = ImageUpload.read(file);
@@ -92,6 +104,15 @@ public class ProductImageService {
      * platform's store directory. Store logos and covers are served the same
      * way. Writes stay scoped to the store (addImages, deleteImage).
      */
+    /**
+     * Whether the product has this photo, without loading its bytes: a
+     * browser revalidating a photo it holds is answered 304 from this alone.
+     */
+    @Transactional(readOnly = true)
+    public boolean exists(Long productId, Long imageId) {
+        return imageRepository.existsByIdAndProduct_Id(imageId, productId);
+    }
+
     @Transactional(readOnly = true)
     public ProductImage getForServing(Long productId, Long imageId) {
         return imageRepository.findByIdAndProduct_Id(imageId, productId)

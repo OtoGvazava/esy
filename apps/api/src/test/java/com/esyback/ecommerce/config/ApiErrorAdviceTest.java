@@ -92,4 +92,16 @@ class ApiErrorAdviceTest {
         assertEquals(3, body.get("attemptsLeft"));
         assertEquals("Incorrect code — 3 tries left", body.get("error"));
     }
+
+    @Test
+    @DisplayName("an upload over the size limit is a 413 with a code, worded for any file")
+    void uploadTooLarge() {
+        ResponseEntity<Map<String, Object>> res = advice.tooLarge(
+            new org.springframework.web.multipart.MaxUploadSizeExceededException(5L * 1024 * 1024));
+
+        assertEquals(413, res.getStatusCode().value());
+        Map<String, Object> body = res.getBody();
+        assertEquals(ApiErrorAdvice.FILE_TOO_LARGE, body.get("code"));
+        assertEquals("File too large", body.get("error"));
+    }
 }
