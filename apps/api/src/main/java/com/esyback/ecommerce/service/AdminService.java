@@ -397,7 +397,14 @@ public class AdminService {
         if (platformAdminRepository.existsByEmailIgnoreCase(normalized)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, normalized + " is already an admin");
         }
-        PlatformAdmin saved = platformAdminRepository.save(PlatformAdmin.of(normalized, actorEmail));
+        // Flushed here so two admins granting the same address at once meet
+        // the unique index now, as a 409, rather than at commit as a 500.
+        PlatformAdmin saved;
+        try {
+            saved = platformAdminRepository.saveAndFlush(PlatformAdmin.of(normalized, actorEmail));
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, normalized + " is already an admin");
+        }
         audit(actorEmail, ACTION_ADMIN_GRANTED, TARGET_ADMIN, normalized, null);
         return adminMap(saved.getEmail(), SOURCE_DB, saved.getGrantedAt(), saved.getGrantedBy());
     }

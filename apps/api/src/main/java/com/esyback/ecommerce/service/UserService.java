@@ -36,7 +36,7 @@ public class UserService {
                                  String firstName, String lastName, String profileImageUrl) {
 
         User user = userRepository.findByOauthProviderAndOauthProviderId(oauthProvider, oauthProviderId)
-            .or(() -> userRepository.findByEmail(email))
+            .or(() -> email == null ? Optional.empty() : userRepository.findFirstByEmailIgnoreCaseOrderByIdAsc(email.trim()))
             .map(existing -> {
                 existing.setOauthProvider(oauthProvider);
                 existing.setOauthProviderId(oauthProviderId);
@@ -45,8 +45,11 @@ public class UserService {
             })
             .orElseGet(() -> {
                 User u = new User();
-                u.setUsername(email); // email is the stable global handle
-                u.setEmail(email);
+                // Stored lowercased, so every exact-match lookup elsewhere
+                // (team, invitations, admin checks) agrees with this row.
+                String stored = email == null ? null : email.trim().toLowerCase();
+                u.setUsername(stored); // email is the stable global handle
+                u.setEmail(stored);
                 u.setFirstName(firstName);
                 u.setLastName(lastName);
                 u.setProfileImageUrl(profileImageUrl);
@@ -81,8 +84,10 @@ public class UserService {
         return userRepository.findByUsername(username);
     }
 
+    /** Case-insensitive: stored addresses keep whatever case they were created with. */
     public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
+        if (email == null) return Optional.empty();
+        return userRepository.findFirstByEmailIgnoreCaseOrderByIdAsc(email.trim());
     }
 
     public User save(User user) {
@@ -151,14 +156,19 @@ public class UserService {
      */
     public boolean revokeAdminRole(String email) {
         if (email == null) return false;
-        User user = userRepository.findByEmail(email.trim().toLowerCase()).orElse(null);
-        if (user == null) return false;
-        Role adminRole = user.getRoles().stream()
-            .filter(r -> "ADMIN".equals(r.getName())).findFirst().orElse(null);
-        if (adminRole == null) return false;
-        user.removeRole(adminRole);
-        userRepository.save(user);
-        return true;
+        // Case-insensitive: an account created as "Ann@Example.com" must lose
+        // the role when "ann@example.com" is revoked. An exact match used to
+        // report success and leave ADMIN in place until the next sign-in.
+        boolean stripped = false;
+        for (User user : userRepository.findAllByEmailIgnoreCase(email.trim())) {
+            Role adminRole = user.getRoles().stream()
+                .filter(r -> "ADMIN".equals(r.getName())).findFirst().orElse(null);
+            if (adminRole == null) continue;
+            user.removeRole(adminRole);
+            userRepository.save(user);
+            stripped = true;
+        }
+        return stripped;
     }
 
 }

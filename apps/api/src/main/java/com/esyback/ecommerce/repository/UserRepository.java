@@ -19,6 +19,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
+    /**
+     * Email lookups that do not depend on how the address was capitalised when
+     * the account was created: the unique index on users.email is
+     * case-sensitive, and older rows keep Google's spelling. Oldest first, so
+     * the pick is stable if two rows ever differ only by case.
+     */
+    Optional<User> findFirstByEmailIgnoreCaseOrderByIdAsc(String email);
+
+    List<User> findAllByEmailIgnoreCase(String email);
+
     Optional<User> findByOauthProviderAndOauthProviderId(String oauthProvider, String oauthProviderId);
 
     /** Whether another account already holds this verified number. */
