@@ -29,6 +29,8 @@ import {
 const EMPTY = { title: '', description: '', price: '', quantity: '', category: '' };
 const NEW_DAYS = 14;
 const LARI = '₾';
+/** The server's per-photo limit (spring.servlet.multipart.max-file-size). */
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 /** "95.5" → "95,50" in Georgian, "95.50" in English: how the field shows a price. */
 const showPrice = (v, lang) => {
@@ -66,6 +68,10 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
   const [variants, setVariants] = useState(null);
   const [variantsDirty, setVariantsDirty] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // The id a create in this session answered with. A later step can fail
+  // (a photo, the variants); the next Save then updates this product rather
+  // than creating a second one.
+  const [createdId, setCreatedId] = useState(null);
   const fileRef = useRef(null);
   const saveVariants = useRef(null);
   const [priceFocus, priceRing] = useFocusRing();
@@ -79,6 +85,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
     setApiError('');
     setStaged([]);
     setExisting(product?.imageList || []);
+    setCreatedId(null);
   }, [open, initial, product]);
 
   useEffect(() => () => staged.forEach((s) => URL.revokeObjectURL(s.preview)), [staged]);
@@ -97,7 +104,12 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
 
   const pickFiles = (e) => {
     const chosen = Array.from(e.target.files || []);
-    setStaged((prev) => [...prev, ...chosen.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
+    // The server refuses a photo over 5 MB, and with it the whole upload;
+    // better to say so now than after the product is saved.
+    const tooBig = chosen.filter((f) => f.size > MAX_PHOTO_BYTES);
+    const fits = chosen.filter((f) => f.size <= MAX_PHOTO_BYTES);
+    setApiError(tooBig.length ? t('editor.photoTooLarge', { names: tooBig.map((f) => f.name).join(', ') }) : '');
+    setStaged((prev) => [...prev, ...fits.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
     e.target.value = '';
   };
   const unstage = (idx) => {
@@ -108,11 +120,12 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
     });
   };
   const removeExisting = async (imageId) => {
-    if (imgBusy || !product) return;
+    const id = product?.id ?? createdId;
+    if (imgBusy || id == null) return;
     setImgBusy(true);
     setApiError('');
     try {
-      const updated = await productApi.deleteImage(product.id, imageId);
+      const updated = await productApi.deleteImage(id, imageId);
       setExisting(updated.imageList || []);
     } catch (err) {
       setApiError(handleApiError(err, t('imageDeleteFailed')));
@@ -148,13 +161,30 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
       // Always sent: '' is how the merchant takes a product out of its category.
       category: form.category.trim(),
     };
+    // Each step says which one failed, and what already succeeded is not
+    // repeated by the next Save: the product is updated, not created again,
+    // and photos that uploaded are no longer staged.
+    let step = 'product';
     try {
-      const saved = isEdit ? await productApi.update(product.id, payload) : await productApi.create(payload);
-      if (staged.length) await productApi.uploadImages(saved.id, staged.map((s) => s.file));
-      if (saveVariants.current) await saveVariants.current();
+      const id = product?.id ?? createdId;
+      const saved = id != null ? await productApi.update(id, payload) : await productApi.create(payload);
+      if (id == null) setCreatedId(saved.id);
+      if (staged.length) {
+        step = 'photos';
+        const withPhotos = await productApi.uploadImages(saved.id, staged.map((s) => s.file));
+        setStaged([]);
+        if (withPhotos?.imageList) setExisting(withPhotos.imageList);
+      }
+      if (saveVariants.current) {
+        step = 'variants';
+        await saveVariants.current();
+      }
       onSaved?.(saved);
     } catch (err) {
-      setApiError(handleApiError(err, t('saveFailed')));
+      const reason = handleApiError(err, t('saveFailed'));
+      setApiError(step === 'photos' ? t('editor.failedPhotos', { reason })
+        : step === 'variants' ? t('editor.failedVariants', { reason })
+          : reason);
     } finally {
       setSaving(false);
     }
