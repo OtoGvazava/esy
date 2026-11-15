@@ -250,7 +250,7 @@ const Header = ({
         anchorEl={accountMenuAnchor}
         open={Boolean(accountMenuAnchor)}
         onClose={handleAccountMenuClose}
-        PaperProps={{
+        slotProps={{ paper: {
           sx: {
             mt: 1,
             borderRadius: 2,
@@ -260,7 +260,7 @@ const Header = ({
             border: '1px solid rgba(255,255,255,0.1)',
             boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
           },
-        }}
+        } }}
       >
         <MenuItem onClick={handleMyAccount} sx={{ py: 1.5 }}>
           <AccountCircleOutlinedIcon sx={{ mr: 2 }} />

@@ -24,7 +24,7 @@ const AuthModal = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 3 } }}
+      slotProps={{ paper: { sx: { borderRadius: 3 } } }}
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 3 }}>
         <Typography variant="h5" fontWeight={700} color="inherit">Sign in</Typography>
