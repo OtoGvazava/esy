@@ -113,4 +113,29 @@ class CsvTest {
         org.assertj.core.api.Assertions.assertThat(Csv.delimiterOf("title,description,price\nA,\"x; y; z\",1"))
             .isEqualTo(',');
     }
+
+    @Test
+    @DisplayName("a quote inside an unquoted cell is a character, and the rows after it stay rows")
+    void strayQuoteMidField() {
+        List<List<String>> rows = Csv.parse("title,price\n5\" pot,24\nPlate,30\n");
+        assertEquals(3, rows.size());
+        assertEquals(List.of("5\" pot", "24"), rows.get(1));
+        assertEquals(List.of("Plate", "30"), rows.get(2));
+    }
+
+    @Test
+    @DisplayName("a quote that never closes is refused with the line it opened on")
+    void unclosedQuote() {
+        Csv.UnclosedQuote e = org.junit.jupiter.api.Assertions.assertThrows(Csv.UnclosedQuote.class,
+            () -> Csv.parse("title,price\nMug,24\n\"Plate,30\nBowl,12\n"));
+        assertEquals(3, e.line());
+    }
+
+    @Test
+    @DisplayName("old Mac line endings (a lone CR) still break rows")
+    void loneCarriageReturn() {
+        List<List<String>> rows = Csv.parse("title,price\rMug,24\rPlate,30\r");
+        assertEquals(3, rows.size());
+        assertEquals(List.of("Plate", "30"), rows.get(2));
+    }
 }

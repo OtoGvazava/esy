@@ -69,7 +69,7 @@ export default function ImportProductsDialog({ onClose, onImported }) {
     if (err?.code && i18n.exists(`owner:import.file.${err.code}`)) {
       const d = err.details || {};
       return t(`import.file.${err.code}`, {
-        columns: COLUMNS, column: d.column, rows: d.rows, max: d.max ?? MAX_ROWS,
+        columns: COLUMNS, column: d.column, rows: d.rows, max: d.max ?? MAX_ROWS, line: d.line,
         field: d.column ? t(`import.field.${d.column}`, { defaultValue: d.column }) : '',
       });
     }

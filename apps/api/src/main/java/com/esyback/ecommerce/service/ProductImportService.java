@@ -105,6 +105,7 @@ public class ProductImportService {
     public static final String FILE_TOO_MANY_ROWS = "IMPORT_TOO_MANY_ROWS";
     public static final String FILE_MISSING = "IMPORT_NO_FILE";
     public static final String FILE_UNREADABLE = "IMPORT_UNREADABLE";
+    public static final String FILE_OPEN_QUOTE = "IMPORT_OPEN_QUOTE";
 
     /** How many rows the report carries back for the screen to show. */
     public static final int PREVIEW_ROWS = 50;
@@ -167,7 +168,14 @@ public class ProductImportService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No store in context");
         }
 
-        List<List<String>> rows = Csv.parse(csv);
+        List<List<String>> rows;
+        try {
+            rows = Csv.parse(csv);
+        } catch (Csv.UnclosedQuote e) {
+            throw new ApiRefusal(HttpStatus.BAD_REQUEST, FILE_OPEN_QUOTE,
+                "A quoted cell that starts on line " + e.line() + " never closes. Check that line for a stray \" mark.",
+                Map.of("line", e.line()));
+        }
         if (rows.isEmpty()) {
             throw new ApiRefusal(HttpStatus.BAD_REQUEST, FILE_EMPTY,
                 "That file is empty. The first line must name the columns: " + String.join(", ", COLUMNS));
