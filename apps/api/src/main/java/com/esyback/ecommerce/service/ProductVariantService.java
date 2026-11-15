@@ -267,7 +267,11 @@ public class ProductVariantService {
 
     private static String str(Object o) {
         if (o == null) return null;
-        String s = String.valueOf(o).trim();
+        // An axis's values are stored one per line (valuesText), so a value
+        // holding a line break read back as two values and the product's
+        // grid no longer matched its rows: unbuyable. Line breaks become
+        // spaces, in names, values and row keys alike, so they still match.
+        String s = String.valueOf(o).replaceAll("[\\r\\n]+", " ").trim();
         return s.isEmpty() ? null : s;
     }
 

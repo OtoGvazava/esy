@@ -161,11 +161,23 @@ public class ProductService {
             .orElse(null);
     }
 
+    /** The most products one list page holds. */
+    public static final int MAX_PAGE_SIZE = 100;
+
+    /** The fields a product list may be sorted by. */
+    static final Set<String> SORTABLE = Set.of("id", "title", "price", "quantity", "createdAt");
+
     public PagedResponse<ProductListDto> getProducts(int page, int size, String sortBy, String sortDir,
                                                      ProductFilter filter) {
 
         Tenant currentTenant = tenantContextService.getCurrentTenant();
-        Sort.Direction direction = sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
+        // Public parameters, bounded: a negative page or size was a 500, any
+        // size read the whole catalogue in one go, and an unknown sort field
+        // failed in the query. The largest page any screen asks for is 100.
+        page = Math.max(0, page);
+        size = Math.min(Math.max(1, size), MAX_PAGE_SIZE);
+        if (sortBy == null || !SORTABLE.contains(sortBy)) sortBy = "id";
+        Sort.Direction direction = "desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Sort sort = Sort.by(direction, sortBy);
         // Ties broken by id, so products of one price keep one order from page
         // to page; without it the database may shuffle them between requests
@@ -335,6 +347,12 @@ public class ProductService {
      */
     public static java.math.BigDecimal checkedPrice(java.math.BigDecimal price) {
         if (price == null) return null;
+        // The variant grid's prices come through here alone (the product form
+        // also has @DecimalMin), and a negative one made a negative order total.
+        if (price.signum() <= 0) {
+            throw new com.esyback.ecommerce.web.ApiRefusal(org.springframework.http.HttpStatus.BAD_REQUEST,
+                "PRICE_INVALID", "A price must be greater than 0");
+        }
         if (price.precision() - price.scale() > 8 || price.stripTrailingZeros().scale() > 2) {
             throw new com.esyback.ecommerce.web.ApiRefusal(org.springframework.http.HttpStatus.BAD_REQUEST,
                 "PRICE_INVALID", "A price can have at most 8 digits before the point and 2 after");

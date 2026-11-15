@@ -255,4 +255,35 @@ class ProductVariantServiceTest {
         assertThat(row("L").getQuantity()).isEqualTo(8);
         assertThat(row("S").getQuantity()).isEqualTo(5);
     }
+
+    @Test
+    @Transactional
+    void aLineBreakInAValueStaysOneValue() {
+        // Values are stored one per line; a break inside one used to read back
+        // as two values, and the grid no longer matched its rows.
+        Map<String, Object> doc = service.replace(product, Map.of(
+            "axes", List.of(axis("Size", "Extra\nLarge", "S")),
+            "rows", List.of(row(List.of("Extra\r\nLarge"), null, 4))));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> axes = (List<Map<String, Object>>) doc.get("axes");
+        assertThat(axes.get(0).get("values")).isEqualTo(List.of("Extra Large", "S"));
+        assertThat(rowsOf(doc)).hasSize(2);
+        assertThat(rowsOf(doc).get(0).get("key")).isEqualTo(List.of("Extra Large"));
+        assertThat(rowsOf(doc).get(0).get("stock")).isEqualTo(4);
+        // Read again from the stored text: still two values, still two rows.
+        assertThat(service.read(product).get("rows")).asList().hasSize(2);
+    }
+
+    @Test
+    @Transactional
+    void aVariantPriceOfZeroOrLessIsRefused() {
+        for (String bad : List.of("-5.00", "0")) {
+            assertThatThrownBy(() -> service.replace(product, Map.of(
+                "axes", List.of(axis("Size", "S")),
+                "rows", List.of(row(List.of("S"), bad, 1)))))
+                .as(bad)
+                .isInstanceOf(com.esyback.ecommerce.web.ApiRefusal.class);
+        }
+    }
 }

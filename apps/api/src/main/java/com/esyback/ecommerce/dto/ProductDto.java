@@ -5,6 +5,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -15,6 +16,9 @@ public class ProductDto {
     private Long id;
     
     @NotBlank(message = "Title is required")
+    // The column's width: longer reached the database and came back as a 500.
+    // The CSV import refuses the same length per row.
+    @Size(max = 255, message = "Title is longer than 255 characters")
     private String title;
     
     private String description;
