@@ -334,14 +334,9 @@
     "popularMeta": "popular",
     "placeholder": "try \"olive oil 1L\" or \"ceramic\"…",
     "qUnder50": "Under 50 ₾",
-    "qFreeShip": "Free shipping",
-    "qNew": "New this week",
-    "qSale": "On sale",
+    "qNew": "New arrivals",
     "qInStock": "In stock",
-    "qGift": "Gift ideas",
-    "tNewWeek": "new this week",
-    "tOnSale": "on sale",
-    "tBestSellers": "best sellers",
+    "tNewWeek": "newest first",
     "tUnder30": "under 30 ₾"
   },
   "searchBar": {

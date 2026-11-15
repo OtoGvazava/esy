@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { handleApiError } from '../utils/api';
 import { productsInfinite } from '../core/query/queries';
-import { SORTS, homeListArgs, sortIdOf } from './shopQuery';
+import { SORTS, homeListArgs, isCollection, sortIdOf } from './shopQuery';
 import { Sk, Skeleton, SkProductGrid } from '../components/skeleton/Skeleton';
 import useQuickAdd from '../hooks/useQuickAdd';
 import { useDevice } from '../contexts/DeviceContext';
@@ -432,5 +432,5 @@ function ShopHome() {
 // to a filtered collection opens with the same filters.
 export default function Home() {
   const [params] = useSearchParams();
-  return params.get('category') ? <Collection /> : <ShopHome />;
+  return isCollection(params) ? <Collection /> : <ShopHome />;
 }

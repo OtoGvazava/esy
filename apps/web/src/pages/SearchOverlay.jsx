@@ -30,20 +30,21 @@ export default function SearchOverlay() {
   const [q, setQ] = useState('');
   const recent = readRecent();
 
+  // Each shortcut opens the list it names (a collection filter or the newest
+  // first), not a text search for its own label. Sale, free shipping, gifts and
+  // best sellers are not in the data, so they are not offered.
   const QUICK = [
-    { id: 'p50', label: t('search.qUnder50'), icon: '₾' },
-    { id: 'ship', label: t('search.qFreeShip'), icon: '↑' },
-    { id: 'new', label: t('search.qNew'), icon: '✦' },
-    { id: 'sale', label: t('search.qSale'), icon: '%' },
-    { id: 'stock', label: t('search.qInStock'), icon: '●' },
-    { id: 'gift', label: t('search.qGift'), icon: '♥' },
+    { id: 'p50', label: t('search.qUnder50'), icon: '₾', to: '/?max=50' },
+    { id: 'new', label: t('search.qNew'), icon: '✦', to: '/' },
+    { id: 'stock', label: t('search.qInStock'), icon: '●', to: '/?stock=1' },
   ];
   const TRENDING = [
-    { id: 'newWeek', label: t('search.tNewWeek') },
-    { id: 'onSale', label: t('search.tOnSale') },
-    { id: 'bestSellers', label: t('search.tBestSellers') },
-    { id: 'under30', label: t('search.tUnder30') },
+    { id: 'newWeek', label: t('search.tNewWeek'), to: '/' },
+    { id: 'under30', label: t('search.tUnder30'), to: '/?max=30' },
   ];
+
+  // A shortcut is not something the shopper typed, so it is not a recent search.
+  const go = (to) => navigate(to);
 
   const run = (term) => {
     const t = (term || '').trim();
@@ -70,7 +71,7 @@ export default function SearchOverlay() {
           <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.12em', marginBottom: 10 }}>{t('search.quickFilters')}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {QUICK.map((s) => (
-              <span key={s.id} onClick={() => run(s.label)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 999, background: T.surface, border: `1px solid ${T.border}`, font: `500 12.5px ${T.font}`, color: T.text, cursor: 'pointer' }}>
+              <span key={s.id} onClick={() => go(s.to)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 999, background: T.surface, border: `1px solid ${T.border}`, font: `500 12.5px ${T.font}`, color: T.text, cursor: 'pointer' }}>
                 <span style={{ width: 22, height: 22, borderRadius: '50%', background: T.accentBg, color: T.accentFg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', font: `700 11px ${T.font}` }}>{s.icon}</span>
                 {s.label}
               </span>
@@ -87,7 +88,7 @@ export default function SearchOverlay() {
 
         <div style={{ padding: '20px 18px 0' }}>
           <div style={{ font: `600 11px ${T.font}`, color: T.textMute, letterSpacing: '0.12em', marginBottom: 10 }}>{t('search.trending', { name: tenant.name })}</div>
-          {TRENDING.map((r) => <Row key={r.id} T={T} icon={<Icon.spark />} primary={r.label} meta={t('search.popularMeta')} onClick={() => run(r.label)} />)}
+          {TRENDING.map((r) => <Row key={r.id} T={T} icon={<Icon.spark />} primary={r.label} meta={t('search.popularMeta')} onClick={() => go(r.to)} />)}
         </div>
       </div>
     </GlowScreen>
