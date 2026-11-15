@@ -1,7 +1,6 @@
 package com.esyback.ecommerce.web;
 
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -120,11 +119,8 @@ public final class DesignValidator {
 
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
 
-    // Trailing tokens are refused: without the flag, "{} junk" parses as {}.
-    // Jackson 3 mappers are immutable: configured through their builder.
-    private static final ObjectMapper MAPPER = tools.jackson.databind.json.JsonMapper.builder()
-        .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
-        .build();
+    // Trailing content refused ("{} junk" is an error): see StrictJson.
+    private static final ObjectMapper MAPPER = StrictJson.MAPPER;
 
     // ---- Entry points -------------------------------------------------------
 

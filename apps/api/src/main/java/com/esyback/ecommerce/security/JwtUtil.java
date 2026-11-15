@@ -40,6 +40,17 @@ public class JwtUtil {
     // Derived once: the secret does not change while the app runs, and the
     // filter needs the key on every authenticated request.
     private volatile SecretKey signingKey;
+    // Immutable and thread-safe: built once, not on every request.
+    private volatile JwtParser parser;
+
+    private JwtParser parser() {
+        JwtParser p = parser;
+        if (p == null) {
+            p = Jwts.parser().verifyWith(getSigningKey()).build();
+            parser = p;
+        }
+        return p;
+    }
 
     private SecretKey getSigningKey() {
         SecretKey k = signingKey;
@@ -111,11 +122,7 @@ public class JwtUtil {
     }
     
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        return parser().parseSignedClaims(token).getPayload();
     }
     
     private Boolean isTokenExpired(String token) {
@@ -128,14 +135,6 @@ public class JwtUtil {
     }
     
     public Boolean validateToken(String token) {
-        try {
-            Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
+        return verifiedSubject(token) != null;
     }
 }

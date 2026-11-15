@@ -1,5 +1,6 @@
 package com.esyback.ecommerce.controller;
 
+import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
 import com.esyback.ecommerce.config.DesignProperties;
 import com.esyback.ecommerce.entity.Product;
 import com.esyback.ecommerce.entity.StoreMembership;
@@ -127,7 +128,7 @@ class TenantCoverControllerTest {
     }
 
     // Generic: in Spring 7 the multipart builder is a sibling of the plain one, not a subtype.
-    private <B extends org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder<B>> B as(
+    private <B extends AbstractMockHttpServletRequestBuilder<B>> B as(
             String email, B request) {
         return request.header("Host", STORE).header("Authorization", "Bearer " + jwtUtil.generateToken(email));
     }

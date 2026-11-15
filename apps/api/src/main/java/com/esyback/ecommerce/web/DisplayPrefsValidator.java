@@ -1,7 +1,6 @@
 package com.esyback.ecommerce.web;
 
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -9,7 +8,6 @@ import tools.jackson.databind.node.ObjectNode;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,11 +75,8 @@ public final class DisplayPrefsValidator {
 
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
 
-    // Trailing tokens are refused: without the flag, "{} junk" parses as {}.
-    // Jackson 3 mappers are immutable: configured through their builder.
-    private static final ObjectMapper MAPPER = tools.jackson.databind.json.JsonMapper.builder()
-        .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
-        .build();
+    // Trailing content refused ("{} junk" is an error): see StrictJson.
+    private static final ObjectMapper MAPPER = StrictJson.MAPPER;
 
     /**
      * Settings sent as JSON text (a request body): refused when over
@@ -159,9 +154,7 @@ public final class DisplayPrefsValidator {
                 if (strict) throw new Rejected(INVALID, "\"views\" must be an object keyed by store subdomain");
             } else {
                 ObjectNode kept = NODES.objectNode();
-                Iterator<Map.Entry<String, JsonNode>> it = views.properties().iterator();
-                while (it.hasNext()) {
-                    Map.Entry<String, JsonNode> e = it.next();
+                for (Map.Entry<String, JsonNode> e : views.properties()) {
                     JsonNode v = e.getValue();
                     if (v == null || v.isNull()) continue;
                     boolean ok = STORE.matcher(e.getKey()).matches()
@@ -176,9 +169,8 @@ public final class DisplayPrefsValidator {
                     if (strict) throw new Rejected(TOO_LARGE, "Views are kept for at most " + MAX_VIEWS + " stores");
                     // A stored row past the cap keeps its first entries.
                     ObjectNode first = NODES.objectNode();
-                    Iterator<Map.Entry<String, JsonNode>> k = kept.properties().iterator();
-                    while (k.hasNext() && first.size() < MAX_VIEWS) {
-                        Map.Entry<String, JsonNode> e = k.next();
+                    for (Map.Entry<String, JsonNode> e : kept.properties()) {
+                        if (first.size() >= MAX_VIEWS) break;
                         first.set(e.getKey(), e.getValue());
                     }
                     kept = first;

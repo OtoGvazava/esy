@@ -1,5 +1,6 @@
 package com.esyback.ecommerce.controller;
 
+import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
 import com.esyback.ecommerce.entity.AuditLog;
 import com.esyback.ecommerce.entity.Role;
 import com.esyback.ecommerce.entity.Tenant;
@@ -114,7 +115,7 @@ class AdminVerifyTest {
         });
     }
 
-    private MockHttpServletRequestBuilder as(String email, MockHttpServletRequestBuilder request) {
+    private <B extends AbstractMockHttpServletRequestBuilder<B>> B as(String email, B request) {
         return request.header("Host", "admin.lvh.me")
             .header("Authorization", "Bearer " + jwtUtil.generateToken(email));
     }

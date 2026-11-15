@@ -1,5 +1,6 @@
 package com.esyback.ecommerce.controller;
 
+import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
@@ -74,7 +75,7 @@ class StoreStatsControllerTest {
         });
     }
 
-    private MockHttpServletRequestBuilder as(String email, MockHttpServletRequestBuilder request) {
+    private <B extends AbstractMockHttpServletRequestBuilder<B>> B as(String email, B request) {
         return request.header("Host", STORE).header("Authorization", "Bearer " + jwtUtil.generateToken(email));
     }
 

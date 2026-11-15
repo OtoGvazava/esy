@@ -1,5 +1,6 @@
 package com.esyback.ecommerce.controller;
 
+import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
 import com.esyback.ecommerce.config.DesignProperties;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
@@ -106,11 +107,11 @@ class TenantDesignControllerTest {
         });
     }
 
-    private MockHttpServletRequestBuilder as(String email, String host, MockHttpServletRequestBuilder request) {
+    private <B extends AbstractMockHttpServletRequestBuilder<B>> B as(String email, String host, B request) {
         return request.header("Host", host).header("Authorization", "Bearer " + jwtUtil.generateToken(email));
     }
 
-    private MockHttpServletRequestBuilder as(String email, MockHttpServletRequestBuilder request) {
+    private <B extends AbstractMockHttpServletRequestBuilder<B>> B as(String email, B request) {
         return as(email, STORE, request);
     }
 
