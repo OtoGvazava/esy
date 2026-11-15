@@ -47,7 +47,8 @@
     "PENDING": "Pending",
     "PAID": "Paid",
     "FAILED": "Failed",
-    "REFUNDED": "Refunded"
+    "REFUNDED": "Refunded",
+    "REFUND_PENDING": "Refund pending"
   },
   "stores": {
     "title": "Stores",

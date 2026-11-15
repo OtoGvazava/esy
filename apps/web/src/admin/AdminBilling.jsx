@@ -36,9 +36,15 @@ function percent(rate, lang) {
   return `${String(lang || '').startsWith('ka') ? text.replace('.', ',') : text}%`;
 }
 
-/** A CSV cell: quoted when it must be, so a store called "A, B" stays one cell. */
+/**
+ * A CSV cell: quoted when it must be, so a store called "A, B" stays one cell.
+ * A text cell a spreadsheet would read as a formula (a store named
+ * "=HYPERLINK(...)") gets a leading apostrophe, so it opens as text.
+ */
 const cell = (v) => {
-  const s = v == null ? '' : String(v);
+  let s = v == null ? '' : String(v);
+  // A plain number ("-12.00") is left alone: it is data, not a formula.
+  if (/^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 const plain = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? '' : Number(v).toFixed(2));

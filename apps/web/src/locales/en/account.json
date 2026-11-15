@@ -95,6 +95,7 @@
     "close": "Close",
     "saveError": "Could not save the address. Try again.",
     "deleteError": "Could not delete the address. Try again.",
+    "defaultError": "Could not make this the default address. Try again.",
     "deleteTitle": "Delete this address?",
     "deleteBody": "Orders you already placed keep the address they were sent to.",
     "phoneNeeded": "Verify your phone number first:",

@@ -212,7 +212,9 @@ export default function AccountBody({
     );
   }
 
-  if (error || !data) {
+  // Only with nothing to show: a failed background refetch keeps the page it
+  // already has rather than replacing it with an error.
+  if (!data) {
     return (
       <div role="alert" style={{ textAlign: 'center', padding: '100px 22px', color: T.danger, font: `500 13px ${T.font}` }}>
         {handleApiError(error, t('gate.loadError'))}

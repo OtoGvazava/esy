@@ -448,6 +448,7 @@
     "wrong_other": "That code is wrong. {{count}} tries left.",
     "takenSub": "One number belongs to one account.",
     "taken": "This number is already on another esy account. Sign in with that account, or enter another number.",
+    "takenHelp": "Sign out and sign in with the account that has this number, or enter another number.",
     "otherGoogle": "Sign in with another <nc>Google</nc> account",
     "lockedTitle": "Wait a moment",
     "lockedBody": "Too many wrong codes. To protect your account, entering codes is paused for a while.",
