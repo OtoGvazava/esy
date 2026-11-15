@@ -193,6 +193,36 @@ class ProductCatalogTest {
     }
 
     @Test
+    @DisplayName("page, size and sort are bounded: no 500 and no whole-catalogue page")
+    void listParametersBounded() {
+        for (int i = 0; i < 3; i++) product(store, "P" + i, null, "10.00", 1);
+        entityManager.flush();
+        ProductFilter all = category(null, false);
+
+        // A negative page was a 500; it reads as the first.
+        assertThat(productService.getProducts(-4, 10, "id", "asc", all).getContent()).hasSize(3);
+        // A size of 0 or below reads one; above the cap reads the cap.
+        assertThat(productService.getProducts(0, 0, "id", "asc", all).getContent()).hasSize(1);
+        assertThat(productService.getProducts(0, 100_000, "id", "asc", all).getSize())
+            .isEqualTo(ProductService.MAX_PAGE_SIZE);
+        // A field that is no sort falls back to newest-by-id, not a query error.
+        assertThat(productService.getProducts(0, 10, "tenant.bogClientSecret", "desc", all).getContent())
+            .extracting(ProductListDto::getTitle).containsExactly("P2", "P1", "P0");
+    }
+
+    @Test
+    @DisplayName("a title longer than the column is refused by validation")
+    void overlongTitle() {
+        ProductDto d = dto("x".repeat(256), null);
+        try (var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            assertThat(factory.getValidator().validate(d))
+                .extracting(v -> v.getPropertyPath().toString()).contains("title");
+            d.setTitle("x".repeat(255));
+            assertThat(factory.getValidator().validate(d)).isEmpty();
+        }
+    }
+
+    @Test
     @DisplayName("a title search treats % and _ as characters, not wildcards")
     void titleSearchEscapesWildcards() {
         product(store, "100% linen", null, "50.00", 1);

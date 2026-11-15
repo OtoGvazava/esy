@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashMap;
@@ -66,5 +67,20 @@ public class ApiErrorAdvice {
         // Headers the thrower attached are part of the refusal (Retry-After,
         // WWW-Authenticate) and are lost if this handler drops them.
         return ResponseEntity.status(status).headers(e.getHeaders()).body(body);
+    }
+
+    /** The refusal for an upload over the multipart limits. */
+    public static final String FILE_TOO_LARGE = "FILE_TOO_LARGE";
+
+    /**
+     * An upload over {@code spring.servlet.multipart} limits. It is raised
+     * while the request is parsed, before any controller is chosen, so a
+     * controller's own handler never sees it; ProductController's and
+     * TenantController's copies were dead, and the one that would have run
+     * called a CSV an image. Here it answers every upload, worded for any file.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> tooLarge(MaxUploadSizeExceededException e) {
+        return handle(new ApiRefusal(HttpStatus.PAYLOAD_TOO_LARGE, FILE_TOO_LARGE, "File too large"));
     }
 }

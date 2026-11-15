@@ -137,7 +137,7 @@ public class MembershipService {
                 Map.of("email", normalized, "role", target.name()));
         }
         // Demoting the last owner leaves a shop nobody can configure.
-        if (was == StoreMembership.Role.OWNER && ownerCount(tenant) <= 1) {
+        if (was == StoreMembership.Role.OWNER && lockedOwnerCount(tenant) <= 1) {
             throw bad(TEAM_LAST_OWNER,
                 "This is the store's only owner — give someone else OWNER before changing this one", Map.of());
         }
@@ -174,7 +174,7 @@ public class MembershipService {
                 normalized + " is a customer of this store, not staff — there is no role to remove",
                 Map.of("email", normalized));
         }
-        if (existing.getRole() == StoreMembership.Role.OWNER && ownerCount(tenant) <= 1) {
+        if (existing.getRole() == StoreMembership.Role.OWNER && lockedOwnerCount(tenant) <= 1) {
             throw bad(TEAM_LAST_OWNER,
                 "This is the store's only owner — a store cannot be left with nobody who can run it", Map.of());
         }
@@ -221,7 +221,7 @@ public class MembershipService {
                     Map.of("email", normalized, "role", target.name()));
             }
             if (target == StoreMembership.Role.MANAGER) {
-                if (ownerCount(tenant) <= 1) {
+                if (lockedOwnerCount(tenant) <= 1) {
                     throw bad(TEAM_LAST_OWNER,
                         "This is the store's only owner — give someone else OWNER before changing this one", Map.of());
                 }
@@ -366,6 +366,16 @@ public class MembershipService {
         return membershipRepository
             .findByTenantAndRoleIn(tenant, java.util.List.of(StoreMembership.Role.OWNER))
             .size();
+    }
+
+    /**
+     * {@link #ownerCount}, for the last-owner rule: the owner rows are locked
+     * until the change commits, so two owners demoting or removing each other
+     * at once cannot both see "there is another owner" and leave none.
+     */
+    private long lockedOwnerCount(Tenant tenant) {
+        if (tenant == null) return 0;
+        return membershipRepository.lockByTenantAndRole(tenant, StoreMembership.Role.OWNER).size();
     }
 
     private static int rank(StoreMembership.Role r) {

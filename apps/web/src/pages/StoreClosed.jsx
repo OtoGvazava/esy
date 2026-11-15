@@ -66,8 +66,9 @@ export default function StoreClosed() {
       <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px 72px' }}>
         <div className="empty" style={{ maxWidth: 460, gap: 16 }}>
           <span className="empty-ic" style={{ background: 'var(--k-mute-bg)', color: 'var(--k-mute)' }}><G name="store" /></span>
-          <h1 className="h1">{t('closed.title')}</h1>
-          <p className="dim">{t('closed.body', { domain })}</p>
+          {/* missing: the address names no store at all (TenantViewService.missing) */}
+          <h1 className="h1">{t(tenant?.missing ? 'closed.missingTitle' : 'closed.title')}</h1>
+          <p className="dim">{t(tenant?.missing ? 'closed.missingBody' : 'closed.body', { domain })}</p>
           <div className="stk" style={{ gap: 10, width: '100%' }}>
             <a href={platformUrl('/account/orders')} className="btn btn-p btn-lg btn-b">{t('closed.myOrders')}</a>
             <a href={platformUrl('/stores')} className="btn btn-g btn-b">{t('closed.otherStores')}</a>

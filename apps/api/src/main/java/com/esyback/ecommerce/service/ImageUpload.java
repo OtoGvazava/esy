@@ -38,14 +38,12 @@ public final class ImageUpload {
         }
     }
 
-    // Trust the sniffed signature over the client-sent content type.
+    // The sniffed signature alone decides. The client-sent content type used
+    // to be the fallback, so any file declared image/png was stored and then
+    // served from the platform's own domain under that type.
     public static String resolveType(MultipartFile file, byte[] bytes) {
         String sniffed = sniff(bytes);
-        if (sniffed != null) return sniffed;
-        String declared = file.getContentType();
-        if (declared != null && ALLOWED.contains(declared.toLowerCase())) {
-            return declared.toLowerCase();
-        }
+        if (sniffed != null && ALLOWED.contains(sniffed)) return sniffed;
         throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
             "Only JPEG, PNG, WEBP or GIF images are allowed");
     }

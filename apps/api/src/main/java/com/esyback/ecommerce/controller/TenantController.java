@@ -32,7 +32,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -464,10 +463,5 @@ public class TenantController {
     // copy that used to sit here won over the advice and dropped the code,
     // which the design endpoints' refusals need so the web can show them in
     // Georgian too.
-
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException ex) {
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-            .body(Map.of("error", "Logo too large (max 5MB)"));
-    }
+    // An upload over the size limits is ApiErrorAdvice's (FILE_TOO_LARGE).
 }

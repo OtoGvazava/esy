@@ -3,6 +3,7 @@ package com.esyback.ecommerce.repository;
 import com.esyback.ecommerce.entity.Order;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -27,6 +28,19 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("select o from Order o where o.tenant = :tenant order by o.createdAt desc")
     List<Order> findWithItemsByTenant(@Param("tenant") Tenant tenant);
     long countByTenant(Tenant tenant);
+
+    // The store analytics' reads (StoreStatsService). A window reads only the
+    // orders since its start, and the lines come in the same query rather
+    // than one query per order.
+    @EntityGraph(attributePaths = "items")
+    List<Order> findWithItemsByTenantOrderByCreatedAtDesc(Tenant tenant);
+
+    @EntityGraph(attributePaths = "items")
+    List<Order> findWithItemsByTenantAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(Tenant tenant, java.time.LocalDateTime from);
+
+    List<Order> findByTenantAndCreatedAtGreaterThanEqual(Tenant tenant, java.time.LocalDateTime from);
+
+    boolean existsByTenantAndCreatedAtBefore(Tenant tenant, java.time.LocalDateTime before);
     long countByTenantAndStatus(Tenant tenant, Order.Status status);
 
     // orderNumber is the external_order_id we hand BOG; the callback echoes it.
