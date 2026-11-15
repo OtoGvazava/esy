@@ -7,6 +7,7 @@ import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.TenantLogo;
 import com.esyback.ecommerce.entity.TenantCover;
+import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.service.MembershipService;
 import com.esyback.ecommerce.service.OrderService;
@@ -29,6 +30,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
@@ -99,15 +101,24 @@ public class TenantController {
             "available", "available".equals(status)));
     }
 
+    // Signed-in accounts only: /api/tenant/** is permitAll for the public
+    // reads above, so without this an anonymous POST created a live, listed,
+    // ownerless store that squatted its subdomain for good. The account is
+    // resolved BEFORE anything is saved, and the store and its OWNER
+    // membership commit together, so a store can never exist without an owner.
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
     public ResponseEntity<Map<String, Object>> createTenant(@RequestBody CreateTenantRequest request,
                                                             Authentication authentication) {
+        User owner = authentication == null ? null
+            : userService.findByUsername(authentication.getName()).orElse(null);
+        if (owner == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to open a store");
+        }
         Tenant created = tenantService.createTenant(request);
         // The signed-in account that created it owns it (one account, many stores).
-        if (authentication != null && authentication.isAuthenticated()) {
-            userService.findByUsername(authentication.getName())
-                .ifPresent(u -> membershipService.ensure(u, created, StoreMembership.Role.OWNER));
-        }
+        membershipService.ensure(owner, created, StoreMembership.Role.OWNER);
         Map<String, Object> body = TenantMapper.toMap(created);
         // What quick setup published, as GET /current will serve it.
         body.put("design", tenantDesignService.storefrontDesign(created));
