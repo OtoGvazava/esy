@@ -15,6 +15,7 @@ import com.esyback.ecommerce.repository.AddressRepository;
 import com.esyback.ecommerce.repository.OrderRepository;
 import com.esyback.ecommerce.repository.ProductRepository;
 import com.esyback.ecommerce.repository.ProductVariantRepository;
+import com.esyback.ecommerce.web.ApiRefusal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -63,6 +64,17 @@ public class OrderService {
     private final BogPaymentService bogPaymentService;
 
     public Order createOrder(User user, Tenant tenant, CreateOrderRequest req) {
+        // Enforced here, where both checkouts (pay later and card) create the
+        // order: a store the platform suspended or the owner switched off takes
+        // no orders, whatever a stale tab or a direct API call sends.
+        if (tenant == null || tenant.getSuspendedAt() != null) {
+            throw new ApiRefusal(HttpStatus.FORBIDDEN, "STORE_SUSPENDED",
+                "This store is not taking orders right now");
+        }
+        if (!Boolean.TRUE.equals(tenant.getIsActive())) {
+            throw new ApiRefusal(HttpStatus.FORBIDDEN, "STORE_CLOSED",
+                "This store is not taking orders right now");
+        }
         if (req.getItems() == null || req.getItems().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order has no items");
         }
