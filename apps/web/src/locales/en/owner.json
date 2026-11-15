@@ -252,6 +252,7 @@
       "notNumber": "“{{value}}” is not a number",
       "notPositive": "The price must be more than 0",
       "tooPrecise": "“{{value}}” has more than 2 decimal places",
+      "tooBig": "“{{value}}” is too large for a price",
       "notWhole": "“{{value}}” is not a whole number",
       "negative": "Stock can't be negative"
     },
