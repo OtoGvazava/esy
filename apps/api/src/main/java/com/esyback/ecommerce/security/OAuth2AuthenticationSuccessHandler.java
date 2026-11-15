@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -14,11 +15,16 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
+
+    /** Where a refused or failed sign-in lands, under the origin it started on. */
+    static final String FAILURE_PATH = "/signin?error=oauth";
 
     private final UserService userService;
     private final JwtUtil jwtUtil;
@@ -42,13 +48,29 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 : "google";
 
         // OIDC subject is "sub"; fall back to "id" for non-OIDC userinfo.
-        String providerId = (String) attributes.getOrDefault("sub", attributes.get("id"));
+        Object subject = attributes.getOrDefault("sub", attributes.get("id"));
+        String providerId = subject == null ? null : String.valueOf(subject);
         String email = (String) attributes.get("email");
         String firstName = (String) attributes.get("given_name");
         String lastName = (String) attributes.get("family_name");
         String profileImageUrl = (String) attributes.get("picture");
 
-        User user = userService.findOrCreateUser(provider, providerId, email, firstName, lastName, profileImageUrl);
+        // Send the browser back to the tenant store it started on (falls back
+        // to redirectBase: same origin in prod, the Vite origin in local dev).
+        String tenantOrigin = HttpCookieOAuth2AuthorizationRequestRepository.readTenantOrigin(request);
+        String base = tenantOrigin != null ? tenantOrigin : redirectBase;
+
+        User user;
+        try {
+            user = userService.findOrCreateUser(provider, providerId, email,
+                emailVerified(attributes.get("email_verified")), firstName, lastName, profileImageUrl,
+                storeSubdomain(tenantOrigin));
+        } catch (UserService.SignInRefused e) {
+            // No session: the same landing as any other failed sign-in.
+            log.warn("Sign-in refused for {} subject {}: {}", provider, providerId, e.getMessage());
+            response.sendRedirect(base + FAILURE_PATH);
+            return;
+        }
         String token = jwtUtil.generateToken(user.getUsername());
 
         // The handshake runs on the canonical host (the funnel); set the JWT as
@@ -57,13 +79,25 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         // and stays valid on every other *.esy.ge store (single sign-on).
         AuthCookie.add(request, response, token, jwtUtil.getExpirationSeconds());
 
-        // Send the browser back to the tenant store it started on (falls back
-        // to redirectBase: same origin in prod, the Vite origin in local dev).
         // No token in the URL — the cookie carries it (no leak via history /
         // Referer / server logs).
-        String tenantOrigin = HttpCookieOAuth2AuthorizationRequestRepository.readTenantOrigin(request);
-        String base = tenantOrigin != null ? tenantOrigin : redirectBase;
-
         response.sendRedirect(base + "/auth/callback");
+    }
+
+    /** OIDC sends a boolean; some providers send the string "true". Null when absent. */
+    static Boolean emailVerified(Object claim) {
+        if (claim == null) return null;
+        if (claim instanceof Boolean b) return b;
+        return Boolean.parseBoolean(String.valueOf(claim).trim());
+    }
+
+    /** The store subdomain an allowlisted tenant origin names, or null for a platform origin. */
+    static String storeSubdomain(String tenantOrigin) {
+        if (tenantOrigin == null) return null;
+        try {
+            return PlatformHosts.storefrontSubdomain(URI.create(tenantOrigin).getHost());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

@@ -6,6 +6,7 @@ import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.entity.User;
 import com.esyback.ecommerce.repository.PlatformAdminRepository;
 import com.esyback.ecommerce.repository.RoleRepository;
+import com.esyback.ecommerce.repository.TenantRepository;
 import com.esyback.ecommerce.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,19 +32,71 @@ public class UserService {
     private final MembershipService membershipService;
     private final ConfigStore configStore;
     private final PlatformAdminRepository platformAdminRepository;
+    private final TenantRepository tenantRepository;
 
+    /**
+     * A sign-in the account rules refuse. The success handler turns it into the
+     * same "sign-in failed" page an OAuth error lands on, with no session.
+     */
+    public static class SignInRefused extends RuntimeException {
+        public SignInRefused(String message) {
+            super(message);
+        }
+    }
+
+    /**
+     * The account for a completed OAuth sign-in.
+     *
+     * <p><b>The identity is (provider, subject)</b>, not the email address. An
+     * address can be reassigned or lapse and be registered again by someone
+     * else, so the email only links a sign-in to an existing account when the
+     * provider vouches for it ({@code email_verified}) and the account has no
+     * provider identity yet. An account already bound to a different identity
+     * is never re-bound: that sign-in is refused, rather than silently handing
+     * the account to whoever now holds the address.
+     *
+     * @param emailVerified the provider's {@code email_verified} claim; null
+     *                      when it sent none
+     * @param storeSubdomain the store the sign-in started on (the funnel's
+     *                       {@code tenant_origin}), or null; the callback itself
+     *                       always runs on the platform host
+     * @throws SignInRefused when the account rules refuse the sign-in
+     */
     public User findOrCreateUser(String oauthProvider, String oauthProviderId, String email,
-                                 String firstName, String lastName, String profileImageUrl) {
+                                 Boolean emailVerified, String firstName, String lastName,
+                                 String profileImageUrl, String storeSubdomain) {
+        if (oauthProviderId == null || oauthProviderId.isBlank()) {
+            throw new SignInRefused("The provider sent no account identifier");
+        }
 
         User user = userRepository.findByOauthProviderAndOauthProviderId(oauthProvider, oauthProviderId)
-            .or(() -> email == null ? Optional.empty() : userRepository.findFirstByEmailIgnoreCaseOrderByIdAsc(email.trim()))
             .map(existing -> {
-                existing.setOauthProvider(oauthProvider);
-                existing.setOauthProviderId(oauthProviderId);
                 if (profileImageUrl != null) existing.setProfileImageUrl(profileImageUrl);
                 return userRepository.save(existing);
             })
+            .or(() -> email == null || email.isBlank() ? Optional.empty()
+                : userRepository.findFirstByEmailIgnoreCaseOrderByIdAsc(email.trim())
+                    .map(existing -> {
+                        if (existing.getOauthProviderId() != null && !existing.getOauthProviderId().isBlank()) {
+                            throw new SignInRefused("That address belongs to an account bound to another sign-in");
+                        }
+                        if (!Boolean.TRUE.equals(emailVerified)) {
+                            throw new SignInRefused("An unverified address cannot be linked to an existing account");
+                        }
+                        existing.setOauthProvider(oauthProvider);
+                        existing.setOauthProviderId(oauthProviderId);
+                        if (profileImageUrl != null) existing.setProfileImageUrl(profileImageUrl);
+                        return userRepository.save(existing);
+                    }))
             .orElseGet(() -> {
+                if (email == null || email.isBlank()) {
+                    throw new SignInRefused("The provider sent no email address");
+                }
+                if (Boolean.FALSE.equals(emailVerified)) {
+                    // Creating it would let an unverified sign-in claim the
+                    // address before its real owner ever arrives.
+                    throw new SignInRefused("The provider has not verified this email address");
+                }
                 User u = new User();
                 // Stored lowercased, so every exact-match lookup elsewhere
                 // (team, invitations, admin checks) agrees with this row.
@@ -67,15 +120,28 @@ public class UserService {
                 return userRepository.save(u);
             });
 
+        // A deactivated account does not get a new session. (The JWT filter
+        // refuses the sessions it already has.)
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            throw new SignInRefused("This account is deactivated");
+        }
+
         // Reconcile ADMIN against the allowlist on every sign-in. This is the
         // only place the role is assigned or removed.
         syncAdminRole(user);
 
-        // Signing in on an actual storefront makes you a CUSTOMER of it.
-        if (!tenantContextService.isPlatformHost()) {
-            Tenant tenant = tenantContextService.getCurrentTenant();
-            if (user.getTenant() == null) user.setTenant(tenant); // home pointer
-            membershipService.ensure(user, tenant, StoreMembership.Role.CUSTOMER);
+        // Signing in on an actual storefront makes you a CUSTOMER of it. The
+        // callback runs on the platform host, so the store is the one the
+        // sign-in started on; a callback served on the store's own host (no
+        // funnel) still counts.
+        Tenant store = storeSubdomain == null ? null
+            : tenantRepository.findBySubdomain(storeSubdomain.toLowerCase()).orElse(null);
+        if (store == null && !tenantContextService.isPlatformHost()) {
+            store = tenantContextService.getCurrentTenant();
+        }
+        if (store != null) {
+            if (user.getTenant() == null) user.setTenant(store); // home pointer
+            membershipService.ensure(user, store, StoreMembership.Role.CUSTOMER);
         }
         return user;
     }

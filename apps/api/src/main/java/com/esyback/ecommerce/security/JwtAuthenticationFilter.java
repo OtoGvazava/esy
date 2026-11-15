@@ -55,7 +55,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-                if (jwtUtil.validateToken(jwt, userDetails)) {
+                // A deactivated account keeps no access, whatever its cookie
+                // says: it proceeds as anonymous.
+                if (userDetails.isEnabled() && userDetails.isAccountNonLocked()
+                        && jwtUtil.validateToken(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
