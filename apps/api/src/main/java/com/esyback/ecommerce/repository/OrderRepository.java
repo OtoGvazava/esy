@@ -15,6 +15,9 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    // Store and lines in the same query: the account hub and "my orders" read
+    // both for every order, which was two more queries per order.
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tenant", "items"})
     List<Order> findByUserOrderByCreatedAtDesc(User user);
     List<Order> findByUserAndTenantOrderByCreatedAtDesc(User user, Tenant tenant);
     List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant);
@@ -27,6 +30,19 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"items", "tenant"})
     @Query("select o from Order o where o.tenant = :tenant order by o.createdAt desc")
     List<Order> findWithItemsByTenant(@Param("tenant") Tenant tenant);
+
+    /** The newest orders of one store, bounded by the page. */
+    List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant, org.springframework.data.domain.Pageable page);
+
+    // Platform-wide reads for the admin store list and billing: one query for
+    // every store instead of two or three per store. The money rules stay in
+    // OrderService's static helpers, applied to these rows.
+    @Query("select o from Order o join fetch o.tenant")
+    List<Order> findAllWithTenant();
+
+    @Query("select o from Order o join fetch o.tenant where o.createdAt >= :from and o.createdAt < :to")
+    List<Order> findCreatedBetweenWithTenant(@Param("from") java.time.LocalDateTime from,
+                                             @Param("to") java.time.LocalDateTime to);
     long countByTenant(Tenant tenant);
 
     // The store analytics' reads (StoreStatsService). A window reads only the

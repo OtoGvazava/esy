@@ -37,16 +37,36 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
     
+    // Derived once: the secret does not change while the app runs, and the
+    // filter needs the key on every authenticated request.
+    private volatile SecretKey signingKey;
+
     private SecretKey getSigningKey() {
+        SecretKey k = signingKey;
+        if (k != null) return k;
         // Derive a fixed 64-byte key from the configured secret so HS512 works
         // regardless of the secret's length (Render's generated JWT_SECRET, a
         // short dev value, etc. would otherwise trip Keys.hmacShaKeyFor).
         try {
             byte[] key = MessageDigest.getInstance("SHA-512")
                 .digest(secret.getBytes(StandardCharsets.UTF_8));
-            return Keys.hmacShaKeyFor(key);
+            k = Keys.hmacShaKeyFor(key);
+            signingKey = k;
+            return k;
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-512 unavailable", e);
+        }
+    }
+
+    /**
+     * The token's subject after one signature check (which also refuses an
+     * expired token), or null when the token is invalid or expired.
+     */
+    public String verifiedSubject(String token) {
+        try {
+            return extractAllClaims(token).getSubject();
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
         }
     }
     

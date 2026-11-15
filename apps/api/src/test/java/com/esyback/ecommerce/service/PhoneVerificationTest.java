@@ -227,6 +227,47 @@ class PhoneVerificationTest {
     }
 
     @Test
+    @DisplayName("inside the cooldown a taken number gets the same 429 as a free one: no membership oracle")
+    void takenIsAnsweredAfterTheThrottle() {
+        service.sendCode(user);
+        when(repo.existsByVerifiedPhoneAndIdNot(eq("995555999999"), anyLong())).thenReturn(true);
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+            () -> service.sendCode(user, "+995 555 99 99 99"));
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, e.getStatusCode());
+        assertEquals("PHONE_COOLDOWN", codeOf(e));
+    }
+
+    @Test
+    @DisplayName("each 'taken' answer costs one of the account's daily sends, so probing is bounded")
+    void takenAnswersAreCounted() {
+        when(repo.existsByVerifiedPhoneAndIdNot(org.mockito.ArgumentMatchers.anyString(), anyLong())).thenReturn(true);
+        for (int i = 0; i < PhoneVerificationService.MAX_SENDS_PER_ACCOUNT_PER_DAY; i++) {
+            String n = "+995 555 30 00 " + String.format("%02d", i);
+            assertEquals("PHONE_TAKEN", codeOf(assertThrows(ResponseStatusException.class,
+                () -> service.sendCode(user, n))));
+        }
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+            () -> service.sendCode(user, "+995 555 30 00 99"));
+        assertEquals("PHONE_DAILY_LIMIT", codeOf(e));
+    }
+
+    @Test
+    @DisplayName("expired codes, cooldowns and day counters are evicted, not kept forever")
+    void stateIsEvicted() {
+        String code = service.sendCode(user);
+        String wrong = code.equals("0000") ? "1111" : "0000";
+        assertThrows(ResponseStatusException.class, () -> service.verify(user, wrong));
+
+        // Within the hour everything is still live and kept.
+        service.evictExpired(java.time.Instant.now().plusSeconds(30));
+        assertTrue(service.trackedEntries() >= 5);
+
+        // A day later nothing is left to remember.
+        service.evictExpired(java.time.Instant.now().plus(java.time.Duration.ofHours(25)));
+        assertEquals(0, service.trackedEntries());
+    }
+
+    @Test
     @DisplayName("a number taken between send and verify is refused on verify")
     void takenNumberIsRefusedAtVerify() {
         String code = service.sendCode(user);

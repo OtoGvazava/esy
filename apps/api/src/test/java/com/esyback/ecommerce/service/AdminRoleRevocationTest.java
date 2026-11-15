@@ -121,4 +121,40 @@ class AdminRoleRevocationTest {
         platformAdminRepository.save(PlatformAdmin.of("  UPPER@Example.COM ", ACTOR));
         assertThat(platformAdminRepository.existsByEmailIgnoreCase("upper@example.com")).isTrue();
     }
+
+    @Test
+    @Transactional
+    void revokingStripsTheRoleFromAnAccountStoredInMixedCase() {
+        // Older accounts kept Google's spelling of the address; the revoke is
+        // always for the lowercased form.
+        User u = userWithAdminRole();
+        u.setEmail("Revoke-Me@Example.com");
+        userRepository.save(u);
+        adminService.grantAdmin(TARGET, ACTOR);
+
+        adminService.revokeAdmin(TARGET, ACTOR);
+
+        assertThat(userRepository.findById(u.getId()).orElseThrow().getRoles())
+            .noneMatch(r -> "ADMIN".equals(r.getName()));
+        assertThat(userService.findByEmail(TARGET)).map(User::getId).contains(u.getId());
+    }
+
+    @Test
+    void aGrantThatLosesTheRaceIsAConflictNotAServerError() {
+        // Two admins granting the same address at once: both pass the exists
+        // check, and the second insert meets the unique index.
+        PlatformAdminRepository admins = org.mockito.Mockito.mock(PlatformAdminRepository.class);
+        ConfigStore config = org.mockito.Mockito.mock(ConfigStore.class);
+        org.mockito.Mockito.when(config.get(org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.anyString())).thenReturn("");
+        org.mockito.Mockito.when(admins.saveAndFlush(org.mockito.ArgumentMatchers.any()))
+            .thenThrow(new org.springframework.dao.DataIntegrityViolationException("platform_admins_email_key"));
+        AdminService service = new AdminService(null, null, null,
+            org.mockito.Mockito.mock(com.esyback.ecommerce.repository.AuditLogRepository.class),
+            admins, null, null, config, null, null);
+
+        assertThatThrownBy(() -> service.grantAdmin("race@example.com", ACTOR))
+            .isInstanceOfSatisfying(org.springframework.web.server.ResponseStatusException.class,
+                e -> assertThat(e.getStatusCode().value()).isEqualTo(409));
+    }
 }

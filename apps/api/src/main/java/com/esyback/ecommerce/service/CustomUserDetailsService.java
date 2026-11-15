@@ -34,9 +34,12 @@ public class CustomUserDetailsService implements UserDetailsService {
             .password("") // OAuth users don't have passwords
             .authorities(getAuthorities(user))
             .accountExpired(false)
-            .accountLocked(!user.getIsActive())
+            // Only an explicit false deactivates: a legacy NULL row is a live
+            // account (it used to throw here instead). JwtAuthenticationFilter
+            // refuses a session for a disabled or locked account.
+            .accountLocked(Boolean.FALSE.equals(user.getIsActive()))
             .credentialsExpired(false)
-            .disabled(!user.getIsActive())
+            .disabled(Boolean.FALSE.equals(user.getIsActive()))
             .build();
     }
 
