@@ -9,12 +9,19 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 
+// @DynamicUpdate: a save writes only the columns that changed. The row is
+// written from many places (design draft and publish, branding, the admin's
+// suspend and verify, BOG credentials), and a full-row save from a request
+// that loaded the store a moment earlier wrote every other column back as it
+// was then: a draft save could undo a publish, or lift a suspension.
 @Entity
 @Table(name = "tenants")
+@DynamicUpdate
 @Getter
 @Setter
 @NoArgsConstructor

@@ -5,18 +5,19 @@ import com.esyback.ecommerce.dto.UpdateStoreRequest;
 import com.esyback.ecommerce.entity.Tenant;
 import com.esyback.ecommerce.repository.TenantRepository;
 import com.esyback.ecommerce.security.SecretCipher;
+import com.esyback.ecommerce.web.ApiRefusal;
 import com.esyback.ecommerce.web.DesignValidator;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Self-serve tenant (store) creation. Subdomain rules are stricter than the
@@ -86,11 +87,26 @@ public class TenantService {
 
     /** Public store directory — active stores only, newest first. */
     public List<Tenant> listActiveStores() {
-        return tenantRepository.findAll().stream()
-            .filter(t -> Boolean.TRUE.equals(t.getIsActive()))
-            .sorted(Comparator.comparing(Tenant::getCreatedAt,
-                Comparator.nullsLast(Comparator.reverseOrder())))
-            .collect(Collectors.toList());
+        return tenantRepository.findActiveNewestFirst();
+    }
+
+    /** The width of the store's varchar columns (name, display name, address…). */
+    public static final int FIELD_MAX = 255;
+
+    /**
+     * A text field longer than its column used to reach the database and come
+     * back as a 500. Refused with the field named instead.
+     */
+    static void checkLengths(String... namesAndValues) {
+        for (int i = 0; i + 1 < namesAndValues.length; i += 2) {
+            String value = namesAndValues[i + 1];
+            if (value != null && value.trim().length() > FIELD_MAX) {
+                String field = namesAndValues[i];
+                throw new ApiRefusal(HttpStatus.BAD_REQUEST, "STORE_FIELD_TOO_LONG",
+                    field + " is longer than " + FIELD_MAX + " characters",
+                    Map.of("field", field, "max", FIELD_MAX));
+            }
+        }
     }
 
     public Tenant createTenant(CreateTenantRequest req) {
@@ -98,6 +114,9 @@ public class TenantService {
         if (name.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Store name is required");
         }
+        checkLengths("name", name, "displayName", req.getDisplayName(), "logoUrl", req.getLogoUrl(),
+            "addressStreet", req.getAddressStreet(), "addressCity", req.getAddressCity(),
+            "addressCountry", req.getAddressCountry(), "addressPostalCode", req.getAddressPostalCode());
 
         String subdomain = req.getSubdomain() == null ? "" : req.getSubdomain().trim().toLowerCase();
         if (!SUBDOMAIN.matcher(subdomain).matches()) {
@@ -141,7 +160,14 @@ public class TenantService {
         tenant.setAddressPostalCode(blankToNull(req.getAddressPostalCode()));
         tenant.setEstablishedYear(parseYear(req.getEstablishedYear()));
         tenant.setIsActive(true);
-        return tenantRepository.save(tenant);
+        try {
+            return tenantRepository.saveAndFlush(tenant);
+        } catch (DataIntegrityViolationException e) {
+            // Two sign-ups for the same name or subdomain both pass the checks
+            // above; the unique constraint lets one in, and the other is told
+            // what the checks would have told it, not a 500.
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "That subdomain or store name is already taken");
+        }
     }
 
     /**
@@ -153,6 +179,10 @@ public class TenantService {
         if (tenant == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No store in context");
         }
+        checkLengths("displayName", req.getDisplayName(), "logoUrl", req.getLogoUrl(),
+            "addressStreet", req.getAddressStreet(), "addressCity", req.getAddressCity(),
+            "addressCountry", req.getAddressCountry(), "addressPostalCode", req.getAddressPostalCode(),
+            "bogClientId", req.getBogClientId());
         String displayName = blankToNull(req.getDisplayName());
         tenant.setDisplayName(displayName == null ? tenant.getName() : displayName);
         tenant.setDescription(blankToNull(req.getDescription()));
