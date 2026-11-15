@@ -1,0 +1,14 @@
+# The image builds the web app and the jar itself. Host build output and
+# dependencies must not overlay what the image installs, or a local build
+# differs from Render's; secrets have no business in the build context.
+**/node_modules
+**/dist
+**/target
+.git
+.env
+.env.*
+!.env.example
+.claude
+.idea
+.design-sync
+.ds-sync

@@ -127,6 +127,23 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!-- Tests run against nothing real: no Redis config store (a local
+                 fee-rate override broke fee assertions) and no provider keys
+                 (an exported SMS key sent real texts from the test suite). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <SPRING_DATA_REDIS_URL>redis://127.0.0.1:1</SPRING_DATA_REDIS_URL>
+                        <APP_SMS_KEY></APP_SMS_KEY>
+                        <APP_EMAIL_KEY></APP_EMAIL_KEY>
+                        <BOG_PUBLIC_KEY></BOG_PUBLIC_KEY>
+                        <APP_SECRET_ENC_KEY></APP_SECRET_ENC_KEY>
+                        <ADMIN_EMAILS></ADMIN_EMAILS>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

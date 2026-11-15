@@ -21,6 +21,18 @@ public class JwtUtil {
     
     @Value("${jwt.secret}")
     private String secret;
+
+    /**
+     * A blank secret is refused at startup. It would sign every session with
+     * a key derived from the empty string, which anyone can reproduce; the
+     * compose file used to pass exactly that when JWT_SECRET was unset.
+     */
+    @jakarta.annotation.PostConstruct
+    void requireSecret() {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("jwt.secret (JWT_SECRET) must not be blank");
+        }
+    }
     
     @Value("${jwt.expiration}")
     private Long expiration;

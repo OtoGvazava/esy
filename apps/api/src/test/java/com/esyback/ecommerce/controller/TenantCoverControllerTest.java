@@ -279,4 +279,39 @@ class TenantCoverControllerTest {
         String createdAt = objectMapper.readTree(body).path("content").get(0).path("createdAt").asText();
         assertThat(LocalDateTime.parse(createdAt)).isBeforeOrEqualTo(LocalDateTime.now());
     }
+
+    // ---- one store's staff on another store (review: no cross-store guard test) ----
+
+    @Test
+    @DisplayName("an owner of one store cannot change another store, by its host or by the back office's ?tenant=")
+    void ownerOfOneStoreCannotTouchAnother() throws Exception {
+        String bearer = "Bearer " + jwtUtil.generateToken(OWNER);
+        org.springframework.mock.web.MockMultipartFile file =
+            new org.springframework.mock.web.MockMultipartFile("file", "c.png", "image/png", PNG);
+
+        mvc.perform(multipart(COVER).file(file).header("Host", OTHER).header("Authorization", bearer))
+            .andExpect(status().isForbidden());
+        mvc.perform(multipart(COVER).file(file).param("tenant", OTHER_SUB)
+                .header("Host", "manager.lvh.me").header("Authorization", bearer))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("a platform admin with no role in a store gets no store powers there")
+    void adminWithoutMembershipIsRefused() throws Exception {
+        String admin = "admin-cover@esy.test";
+        User a = account(admin);
+        a.addRole(roleRepository.findByName("ADMIN").orElseGet(() -> {
+            com.esyback.ecommerce.entity.Role r = new com.esyback.ecommerce.entity.Role();
+            r.setName("ADMIN");
+            return roleRepository.save(r);
+        }));
+        userRepository.save(a);
+        org.springframework.mock.web.MockMultipartFile file =
+            new org.springframework.mock.web.MockMultipartFile("file", "c.png", "image/png", PNG);
+
+        mvc.perform(multipart(COVER).file(file).header("Host", OTHER)
+                .header("Authorization", "Bearer " + jwtUtil.generateToken(admin)))
+            .andExpect(status().isForbidden());
+    }
 }

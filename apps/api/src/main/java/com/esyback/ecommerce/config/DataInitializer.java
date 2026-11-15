@@ -19,18 +19,25 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final ProductRepository productRepository;
     private final TenantRepository tenantRepository;
+
+    // The demo stores and sample products. Production used to get sixteen
+    // ownerless, orderable stores squatting their names and subdomains;
+    // render.yaml turns this off. Roles and the "main" store are always made.
+    @org.springframework.beans.factory.annotation.Value("${app.seed-demo:true}")
+    private boolean seedDemo;
     
     @Override
     public void run(String... args) throws Exception {
         initializeTenants();
         initializeRoles();
-        initializeSampleProducts();
+        if (seedDemo) initializeSampleProducts();
     }
     
     private void initializeTenants() {
         // Dev storefronts (reachable locally via ?tenant=<sub>).
         seedStore("main", "esy.ge", "esy.ge",
             "esy.ge", null, "#007bff", "#6c757d");
+        if (!seedDemo) return;
         seedStore("electronics", "Electronics Store", "Electronics & Gadgets",
             "Specialized electronics and gadgets store", "electronics", "#28a745", "#17a2b8");
         seedStore("fashion", "Fashion Store", "Fashion & Style",

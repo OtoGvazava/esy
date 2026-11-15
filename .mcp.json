@@ -9,7 +9,7 @@
     "context7": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
+      "args": ["-y", "@upstash/context7-mcp@4.4.4"],
       "env": {}
     },
     "render": {
@@ -21,7 +21,7 @@
     },
     "browsermcp": {
       "command": "npx",
-      "args": ["@browsermcp/mcp@latest"]
+      "args": ["@browsermcp/mcp@2.3.0"]
     }
   }
 }
