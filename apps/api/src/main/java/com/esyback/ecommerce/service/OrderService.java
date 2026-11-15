@@ -63,6 +63,12 @@ public class OrderService {
     // No cycle: BogPaymentService depends only on config, the cipher and an
     // HTTP client — it does not reach back into orders.
     private final BogPaymentService bogPaymentService;
+    // Where messages are sent from, after commit (see afterCommit). Spring
+    // Boot's own pool; field-injected because @EnableScheduling adds a second
+    // executor and the qualifier must not be lost by the generated constructor.
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.beans.factory.annotation.Qualifier("applicationTaskExecutor")
+    private org.springframework.core.task.TaskExecutor notifyExecutor;
 
     // Crockford-style: no 0/O, 1/I/L or U, so a number read out over the
     // phone or copied by hand survives. 30^8 ≈ 6.6e11 values.
@@ -703,11 +709,9 @@ public class OrderService {
         if (phone == null) return;
         // A shop watching its SMS bill can switch any of these off in admin.
         if (!smsTemplates.isEnabled(template)) return;
-        try {
-            sms.send(phone, smsTemplates.render(template, orderTokens(order)));
-        } catch (RuntimeException e) {
-            log.warn("Order SMS not sent for order {}: {}", order.getId(), e.getClass().getSimpleName());
-        }
+        String text = smsTemplates.render(template, orderTokens(order));
+        Long id = order.getId();
+        afterCommit(() -> sms.send(phone, text), "SMS", id);
     }
 
     /**
@@ -726,14 +730,46 @@ public class OrderService {
         String to = recipientEmail(order);
         if (to == null) return;
         if (!emailTemplates.isEnabled(template)) return;
-        try {
-            Map<String, String> tokens = new java.util.HashMap<>(orderTokens(order));
-            tokens.putAll(extra);
-            email.send(to,
-                emailTemplates.renderSubject(template, tokens),
-                emailTemplates.renderBody(template, tokens));
-        } catch (RuntimeException e) {
-            log.warn("Order email not sent for order {}: {}", order.getId(), e.getClass().getSimpleName());
+        Map<String, String> tokens = new java.util.HashMap<>(orderTokens(order));
+        tokens.putAll(extra);
+        String subject = emailTemplates.renderSubject(template, tokens);
+        String body = emailTemplates.renderBody(template, tokens);
+        Long id = order.getId();
+        afterCommit(() -> email.send(to, subject, body), "email", id);
+    }
+
+    /**
+     * Sends a message once the change it reports has committed, off the
+     * request thread.
+     *
+     * <p>Messages used to go out inside the transaction, holding a pooled
+     * connection and, after a status claim, the order's row lock for as long
+     * as the provider took (time-outs of 10 + 10 s for SMS, 15 + 15 s for
+     * email). A slow provider and ten concurrent changes took every connection
+     * in the pool, and the health check failed (review M1). Now the message is
+     * rendered here, while the order is loaded, and only the send waits for
+     * the commit, on the task executor. A rolled-back change sends nothing.
+     * Failures are still only logged: the status is the fact, the message a
+     * remark about it.
+     */
+    private void afterCommit(Runnable send, String channel, Long orderId) {
+        Runnable safe = () -> {
+            try {
+                send.run();
+            } catch (RuntimeException e) {
+                log.warn("Order {} not sent for order {}: {}", channel, orderId, e.getClass().getSimpleName());
+            }
+        };
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        notifyExecutor.execute(safe);
+                    }
+                });
+        } else {
+            notifyExecutor.execute(safe);
         }
     }
 
