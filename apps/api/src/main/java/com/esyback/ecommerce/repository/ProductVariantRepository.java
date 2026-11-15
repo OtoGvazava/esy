@@ -3,6 +3,8 @@ package com.esyback.ecommerce.repository;
 import com.esyback.ecommerce.entity.Product;
 import com.esyback.ecommerce.entity.ProductVariant;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.Modifying;
@@ -26,4 +28,9 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from ProductVariant x where x.product = :product")
     int deleteAllOfProduct(@Param("product") Product product);
+
+    /** The row, locked until the transaction ends (see ProductRepository.lockById). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select v from ProductVariant v where v.id = :id and v.product = :product")
+    Optional<ProductVariant> lockByIdAndProduct(@Param("id") Long id, @Param("product") Product product);
 }

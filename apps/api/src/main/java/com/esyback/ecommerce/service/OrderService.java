@@ -280,51 +280,14 @@ public class OrderService {
      *
      * <p>One conditional UPDATE decides, so a retried payment callback cannot
      * take the stock twice, and a payment that lands after the store cancelled
-     * the order takes none: a cancelled order holds no stock. Each line then
-     * records what it actually took, because commitStock floors a row at zero
-     * on an oversell and a cancellation must put back only what was taken.
+     * the order takes none: a cancelled order holds no stock. commitStock
+     * records on each line what it actually took, from the same locked read it
+     * takes it with, because it floors a row at zero on an oversell and a
+     * cancellation must put back only what was taken.
      */
     private void commitStockOnce(Long orderId) {
         if (orderId == null || orderRepository.markStockCommitted(orderId) != 1) return;
-        orderRepository.findById(orderId).ifPresent(order -> {
-            recordStockTaken(order);
-            productService.commitStock(order);
-        });
-    }
-
-    /**
-     * What each line will take, worked out the way ProductService.commitStock
-     * takes it: from the variant row when the product has variants, from the
-     * product otherwise, floored at zero, with two lines on the same row
-     * sharing what is there.
-     */
-    private void recordStockTaken(Order order) {
-        Map<String, Integer> left = new HashMap<>();
-        for (OrderItem item : order.getItems()) {
-            if (item.getProductId() == null) continue;
-            Product p = productRepository.findById(item.getProductId()).orElse(null);
-            if (p == null) {
-                item.setStockTaken(0);
-                continue;
-            }
-            int want = item.getQuantity() == null ? 1 : item.getQuantity();
-            String key;
-            int have;
-            if (p.variantsEnabled() && item.getVariantId() != null) {
-                ProductVariant v = variantRepository.findByIdAndProduct(item.getVariantId(), p).orElse(null);
-                if (v == null) {
-                    item.setStockTaken(0);
-                    continue;
-                }
-                key = "variant:" + v.getId();
-                have = left.getOrDefault(key, v.getQuantity() == null ? 0 : v.getQuantity());
-            } else {
-                key = "product:" + p.getId();
-                have = left.getOrDefault(key, p.getQuantity() == null ? 0 : p.getQuantity());
-            }
-            item.setStockTaken(Math.max(0, Math.min(want, have)));
-            left.put(key, Math.max(0, have - want));
-        }
+        orderRepository.findById(orderId).ifPresent(productService::commitStock);
     }
 
     /**
@@ -359,13 +322,13 @@ public class OrderService {
             int back = item.getStockTaken() != null ? item.getStockTaken()
                 : (item.getQuantity() == null ? 1 : item.getQuantity());
             if (back <= 0) continue;
-            Product p = productRepository.findById(item.getProductId()).orElse(null);
+            // Locked like commitStock (review M29): a cancellation and a sale of
+            // the same item at once must not overwrite one another.
+            Product p = productRepository.lockById(item.getProductId()).orElse(null);
             if (p == null) continue;
 
             if (p.variantsEnabled() && item.getVariantId() != null) {
-                ProductVariant v = variantRepository.findByIdAndProduct(item.getVariantId(), p)
-                    .or(() -> sameCombination(p, item.getVariantLabel()))
-                    .orElse(null);
+                ProductVariant v = productService.lockVariant(p, item.getVariantId(), item.getVariantLabel());
                 if (v == null) {
                     log.warn("Cancelled order {}: {} × \"{}\" not restocked, that combination of product {} no longer exists",
                         order.getOrderNumber(), back, item.getVariantLabel(), p.getId());
@@ -381,13 +344,6 @@ public class OrderService {
             p.setQuantity((p.getQuantity() == null ? 0 : p.getQuantity()) + back);
             productRepository.save(p);
         }
-    }
-
-    private Optional<ProductVariant> sameCombination(Product p, String label) {
-        if (label == null || label.isBlank()) return Optional.empty();
-        return variantRepository.findByProductOrderByIdAsc(p).stream()
-            .filter(v -> label.equals(v.label()))
-            .findFirst();
     }
 
     /** Mark a freshly created order as awaiting BOG payment + record BOG's id. */

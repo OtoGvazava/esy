@@ -68,42 +68,81 @@ public class ProductService {
             .filter(p -> p.getTenant() != null && p.getTenant().getId().equals(tenant.getId()));
     }
 
+    /**
+     * Takes an order's goods off the shelf and records on each line what it
+     * actually took (what a cancellation later puts back).
+     *
+     * <p>Every row is read with a write lock held to the end of the
+     * transaction, so two orders taking the same item each see the other's
+     * decrement instead of both reading the same quantity and one sale
+     * vanishing (review M29). What a line took comes from that same locked
+     * read, floored at zero on an oversell, and two lines on one row share
+     * what is there because they read the same managed entity.
+     *
+     * <p>A variant row that a grid save has since recreated is found by its
+     * combination, as a cancellation already finds it; a combination that no
+     * longer exists takes nothing and says so in the log (review M30).
+     */
     public void commitStock(com.esyback.ecommerce.entity.Order order) {
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ProductService.class);
         for (com.esyback.ecommerce.entity.OrderItem item : order.getItems()) {
             if (item.getProductId() == null) continue;
-            productRepository.findById(item.getProductId()).ifPresent(p -> {
-                int take = item.getQuantity() == null ? 1 : item.getQuantity();
+            Product p = productRepository.lockById(item.getProductId()).orElse(null);
+            if (p == null) {
+                item.setStockTaken(0);
+                continue;
+            }
+            int take = item.getQuantity() == null ? 1 : item.getQuantity();
 
-                // With variants, stock lives on the combination (D11). Taking
-                // it off the product instead would decrement a cached sum and
-                // leave the row the shopper actually bought untouched — the
-                // size would stay "in stock" forever.
-                if (p.variantsEnabled() && item.getVariantId() != null) {
-                    variantRepository.findByIdAndProduct(item.getVariantId(), p).ifPresent(v -> {
-                        int have = v.getQuantity() == null ? 0 : v.getQuantity();
-                        if (take > have) {
-                            org.slf4j.LoggerFactory.getLogger(ProductService.class).warn(
-                                "OVERSELL order={} product={} variant={} wanted={} had={} — floored at 0, resolve manually",
-                                order.getOrderNumber(), p.getId(), v.getId(), take, have);
-                        }
-                        v.setQuantity(Math.max(0, have - take));
-                        variantRepository.save(v);
-                    });
-                    // Keep the product's cached total honest against its rows.
-                    productVariantService.syncStock(p);
-                    return;
+            // With variants, stock lives on the combination (D11). Taking
+            // it off the product instead would decrement a cached sum and
+            // leave the row the shopper actually bought untouched — the
+            // size would stay "in stock" forever.
+            if (p.variantsEnabled() && item.getVariantId() != null) {
+                com.esyback.ecommerce.entity.ProductVariant v = lockVariant(p, item.getVariantId(), item.getVariantLabel());
+                if (v == null) {
+                    log.warn("OVERSELL? order={} product={} combination \"{}\" no longer exists — nothing taken, resolve manually",
+                        order.getOrderNumber(), p.getId(), item.getVariantLabel());
+                    item.setStockTaken(0);
+                    continue;
                 }
-
-                int have = p.getQuantity() == null ? 0 : p.getQuantity();
+                int have = v.getQuantity() == null ? 0 : v.getQuantity();
                 if (take > have) {
-                    org.slf4j.LoggerFactory.getLogger(ProductService.class).warn(
-                        "OVERSELL order={} product={} wanted={} had={} — stock floored at 0, resolve manually",
-                        order.getOrderNumber(), p.getId(), take, have);
+                    log.warn("OVERSELL order={} product={} variant={} wanted={} had={} — floored at 0, resolve manually",
+                        order.getOrderNumber(), p.getId(), v.getId(), take, have);
                 }
-                p.setQuantity(Math.max(0, have - take));
-                productRepository.save(p);
-            });
+                item.setStockTaken(Math.max(0, Math.min(take, have)));
+                v.setQuantity(Math.max(0, have - take));
+                variantRepository.save(v);
+                // Keep the product's cached total honest against its rows.
+                productVariantService.syncStock(p);
+                continue;
+            }
+
+            int have = p.getQuantity() == null ? 0 : p.getQuantity();
+            if (take > have) {
+                log.warn("OVERSELL order={} product={} wanted={} had={} — stock floored at 0, resolve manually",
+                    order.getOrderNumber(), p.getId(), take, have);
+            }
+            item.setStockTaken(Math.max(0, Math.min(take, have)));
+            p.setQuantity(Math.max(0, have - take));
+            productRepository.save(p);
         }
+    }
+
+    /**
+     * A product's variant row, locked: by id, or by its combination when a
+     * grid save has recreated the rows since the order was placed.
+     */
+    public com.esyback.ecommerce.entity.ProductVariant lockVariant(Product p, Long variantId, String label) {
+        java.util.Optional<com.esyback.ecommerce.entity.ProductVariant> byId =
+            variantRepository.lockByIdAndProduct(variantId, p);
+        if (byId.isPresent() || label == null || label.isBlank()) return byId.orElse(null);
+        return variantRepository.findByProductOrderByIdAsc(p).stream()
+            .filter(v -> label.equals(v.label()))
+            .findFirst()
+            .flatMap(v -> variantRepository.lockByIdAndProduct(v.getId(), p))
+            .orElse(null);
     }
 
     public PagedResponse<ProductListDto> getProducts(int page, int size, String sortBy, String sortDir,
