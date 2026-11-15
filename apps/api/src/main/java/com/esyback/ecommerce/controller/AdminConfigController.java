@@ -95,6 +95,10 @@ public class AdminConfigController {
     public ResponseEntity<Map<String, Object>> update(@RequestBody Map<String, String> body,
                                                       Authentication authentication) {
         String actor = authentication == null ? null : authentication.getName();
+        // Every value is validated before any is written: validating as it
+        // went, a body whose last field was bad answered 422 with the fee rate
+        // before it already live.
+        Map<String, String> writes = new LinkedHashMap<>();
         if (body.containsKey("serviceFeeRate")) {
             BigDecimal rate;
             try {
@@ -105,34 +109,26 @@ public class AdminConfigController {
             if (rate.signum() < 0 || rate.compareTo(BigDecimal.ONE) > 0) {
                 throw bad("serviceFeeRate must be between 0 and 1 (0.02 = 2%)");
             }
-            store.set("app.platform.service-fee-rate", rate.toPlainString());
-            audit(actor, "serviceFeeRate", rate.toPlainString());
+            writes.put("serviceFeeRate", rate.toPlainString());
         }
         if (body.containsKey("bogEnv")) {
             String env = body.get("bogEnv") == null ? "" : body.get("bogEnv").trim().toLowerCase();
             if (!env.equals("live") && !env.equals("sandbox")) {
                 throw bad("bogEnv must be 'live' or 'sandbox'");
             }
-            store.set("app.bog.env", env);
-            audit(actor, "bogEnv", env);
+            writes.put("bogEnv", env);
         }
         // Every merchant's decrypted BOG secret is POSTed to the auth URL, and
         // shoppers are sent to pay at the base URL, so both may only point at
         // BOG itself, over https (review M26).
         if (body.containsKey("bogAuthUrl")) {
-            String url = validBogUrlOrBlank(body.get("bogAuthUrl"));
-            store.set("app.bog.auth-url", url);
-            audit(actor, "bogAuthUrl", url);
+            writes.put("bogAuthUrl", validBogUrlOrBlank(body.get("bogAuthUrl")));
         }
         if (body.containsKey("bogBaseUrl")) {
-            String url = validBogUrlOrBlank(body.get("bogBaseUrl"));
-            store.set("app.bog.base-url", url);
-            audit(actor, "bogBaseUrl", url);
+            writes.put("bogBaseUrl", validBogUrlOrBlank(body.get("bogBaseUrl")));
         }
         if (body.containsKey("publicBaseUrl")) {
-            String url = validUrlOrBlank(body.get("publicBaseUrl"));
-            store.set("app.public-base-url", url);
-            audit(actor, "publicBaseUrl", url);
+            writes.put("publicBaseUrl", validUrlOrBlank(body.get("publicBaseUrl")));
         }
         // Off: storefronts draw today's chrome, registration keeps today's
         // brand step and nothing can be published (see DesignProperties).
@@ -142,9 +138,16 @@ public class AdminConfigController {
             if (!on.equals("true") && !on.equals("false")) {
                 throw bad("designEnabled must be true or false");
             }
-            design.setEnabled(on.equals("true"));
-            audit(actor, "designEnabled", on);
+            writes.put("designEnabled", on);
         }
+
+        // Then written, each with an audit row saying who changed it from what.
+        writes.forEach((field, value) -> {
+            String before = effectiveValue(field);
+            if (field.equals("designEnabled")) design.setEnabled(value.equals("true"));
+            else store.set(FIELD_KEYS.get(field), value);
+            audit(actor, field, before + " -> " + value);
+        });
         return ResponseEntity.ok(Map.of(
             "ok", true,
             "note", "Written to the config store; the change applies within a few seconds."));
@@ -166,6 +169,20 @@ public class AdminConfigController {
             throw bad("A Bank of Georgia URL must be https:// on bog.ge (or be blank to use the default)");
         }
         return s;
+    }
+
+    /** The value in effect for a field before a write, for the audit trail. */
+    private String effectiveValue(String field) {
+        Object v = switch (field) {
+            case "serviceFeeRate" -> platform.getServiceFeeRate();
+            case "bogEnv" -> bog.getEnv();
+            case "bogAuthUrl" -> bog.getAuthUrl();
+            case "bogBaseUrl" -> bog.getBaseUrl();
+            case "publicBaseUrl" -> app.getPublicBaseUrl();
+            case "designEnabled" -> design.isEnabled();
+            default -> null;
+        };
+        return v == null ? "" : (v instanceof BigDecimal d ? d.toPlainString() : String.valueOf(v));
     }
 
     private void audit(String actor, String key, String value) {

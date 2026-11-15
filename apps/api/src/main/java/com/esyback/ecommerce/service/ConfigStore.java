@@ -39,9 +39,13 @@ public class ConfigStore {
     public static final String SOURCE_OVERRIDE = "override";
     public static final String SOURCE_ENV = "env";
 
-    private record Cached(String value, long expiresAt) {}
+    /** {@code read}: the value came from an answer by Redis, not from a failed call. */
+    private record Cached(String value, long expiresAt, boolean read) {}
 
     private final Map<String, Cached> cache = new ConcurrentHashMap<>();
+
+    /** The clock the cache reads; replaceable in tests. */
+    java.util.function.LongSupplier clock = System::currentTimeMillis;
 
     /** Effective value: Redis override (cached) → env/yaml → {@code def}. */
     public String get(String key, String def) {
@@ -54,18 +58,31 @@ public class ConfigStore {
     }
 
     private String cachedRedisGet(String key) {
-        long now = System.currentTimeMillis();
+        long now = clock.getAsLong();
         Cached c = cache.get(key);
         if (c != null && now < c.expiresAt()) {
             return c.value();
         }
-        String v = null;
+        String v;
         try {
             v = redis.opsForValue().get(PREFIX + key);
         } catch (Exception e) {
+            if (c != null && c.read()) {
+                // A blip, not an absent store: keep serving what Redis last
+                // said. Caching the failure as "no override" used to drop the
+                // fee rate, the SMS switch or the BOG environment back to the
+                // env values for a whole TTL, and orders froze the wrong fee.
+                log.warn("Redis config read failed for {} ({}) — keeping the last value read", key, e.getMessage());
+                cache.put(key, new Cached(c.value(), now + TTL_MS, true));
+                return c.value();
+            }
+            // Never read: the store is absent or has been down since startup,
+            // so the environment is the truth (see the class note).
             log.debug("Redis config read failed for {} ({}) — using env fallback", key, e.getMessage());
+            cache.put(key, new Cached(null, now + TTL_MS, false));
+            return null;
         }
-        cache.put(key, new Cached(v, now + TTL_MS));
+        cache.put(key, new Cached(v, now + TTL_MS, true));
         return v;
     }
 
@@ -77,7 +94,10 @@ public class ConfigStore {
             } else {
                 redis.opsForValue().set(PREFIX + key, value);
             }
-            cache.remove(key);
+            // What was just written is what Redis holds now: cache it as read,
+            // so a blip right after a save keeps the new value too.
+            cache.put(key, new Cached(value == null || value.isEmpty() ? null : value,
+                clock.getAsLong() + TTL_MS, true));
         } catch (Exception e) {
             log.error("Redis config write failed for {}", key, e);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
