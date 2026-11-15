@@ -848,18 +848,52 @@ public class OrderService {
     public static BigDecimal revenueOf(Collection<Order> orders) {
         return orders.stream()
             .filter(OrderService::countsAsRevenue)
-            .map(OrderService::goodsTotal)
+            .map(o -> goodsTotal(o).multiply(keptShare(o)).setScale(2, RoundingMode.HALF_UP))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /**
-     * Whether an order's goods are in {@link #revenueOf}: not cancelled and
-     * not refunded. The store's analytics divide revenue by the orders this
-     * admits, so the average and the total can never be counted two ways.
+     * Whether an order's goods are in {@link #revenueOf}: money was taken for
+     * it and some of it was kept. The store's analytics divide revenue by the
+     * orders this admits, so the average and the total can never be counted
+     * two ways.
+     *
+     * <p>It used to be "not cancelled and not refunded", which counted an
+     * abandoned card checkout (PENDING) as a sale (review M3) and dropped a
+     * paid order a manager marked cancelled without refunding it, though the
+     * store kept the money (review M4).
      */
     static boolean countsAsRevenue(Order o) {
-        return o.getStatus() != Order.Status.CANCELLED
-            && o.getPaymentStatus() != Order.PaymentStatus.REFUNDED;
+        return tookMoney(o) && keptShare(o).signum() > 0;
+    }
+
+    /**
+     * Money was taken for this order: a card payment that went through (and
+     * may since be partly or wholly returned), or a pay-later order that was
+     * not cancelled. A pending or failed card payment took nothing.
+     */
+    static boolean tookMoney(Order o) {
+        Order.PaymentStatus ps = o.getPaymentStatus() == null ? Order.PaymentStatus.NONE : o.getPaymentStatus();
+        if (ps == Order.PaymentStatus.NONE) return o.getStatus() != Order.Status.CANCELLED;
+        return ps == Order.PaymentStatus.PAID || isBeingRefunded(o);
+    }
+
+    /**
+     * The share of what was charged that the store keeps: (total − refunded)
+     * / total, between 0 and 1. A REFUNDED order kept nothing, even one
+     * refunded outside esy with nothing on its ledger.
+     */
+    static BigDecimal keptShare(Order o) {
+        if (o.getPaymentStatus() == Order.PaymentStatus.REFUNDED) return BigDecimal.ZERO;
+        // A refund in flight with no amount on the ledger (from before the
+        // ledger existed) is read as the whole order, as it always was.
+        if (o.getPaymentStatus() == Order.PaymentStatus.REFUND_PENDING && o.refundedOrZero().signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = o.getTotal() == null ? BigDecimal.ZERO : o.getTotal();
+        if (total.signum() <= 0) return BigDecimal.ONE;
+        BigDecimal kept = total.subtract(o.refundedOrZero()).max(BigDecimal.ZERO);
+        return kept.divide(total, 6, RoundingMode.HALF_UP).min(BigDecimal.ONE);
     }
 
     /**
@@ -874,11 +908,13 @@ public class OrderService {
     }
 
     /**
-     * Platform service fees this store owes (for periodic out-of-band billing).
-     * Counts only revenue-bearing orders: not cancelled, and either a paid BOG
-     * order or a free-flow order (paymentStatus NONE). Pending/failed/refunded
-     * BOG orders are excluded so a store is never billed for money it didn't
-     * collect.
+     * Platform service fees this store owes (for periodic out-of-band billing):
+     * each order's frozen fee times the share of its money the store kept.
+     * Pending and failed card orders took nothing and owe nothing. A paid
+     * order cancelled without a refund still owes its fee — cancelling used
+     * to wipe it while the store kept the money (review M4) — and a partial
+     * refund writes off only its share, where a ₾0.01 refund used to write off
+     * the whole fee (review M33).
      */
     public BigDecimal serviceFeesOwed(Tenant tenant) {
         return feesOwedOf(orderRepository.findByTenantOrderByCreatedAtDesc(tenant));
@@ -887,10 +923,8 @@ public class OrderService {
     /** {@link #serviceFeesOwed(Tenant)} over a given set of orders. */
     public static BigDecimal feesOwedOf(Collection<Order> orders) {
         return orders.stream()
-            .filter(o -> o.getStatus() != Order.Status.CANCELLED)
-            .filter(o -> o.getPaymentStatus() == Order.PaymentStatus.PAID
-                || o.getPaymentStatus() == Order.PaymentStatus.NONE)
-            .map(OrderService::feeOrZero)
+            .filter(OrderService::tookMoney)
+            .map(o -> feeOrZero(o).multiply(keptShare(o)).setScale(2, RoundingMode.HALF_UP))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -900,14 +934,12 @@ public class OrderService {
      * <p>The screen reads the fee in three steps, and each step is a fact the
      * orders hold rather than a figure worked out in the browser:
      * <ul>
-     *   <li><b>sales / feesAccrued</b> — every order that took money (PAID), or
-     *       took none online (NONE, the free-order flow), or took it and is
-     *       giving it back (REFUND_PENDING, REFUNDED). Cancelled orders never
-     *       count. This is "before refunds".</li>
-     *   <li><b>feesWrittenOff / refundCount</b> — the part of that whose money
-     *       is being or has been returned. A partial refund writes off the
-     *       whole order's fee, because {@link #serviceFeesOwed} has always
-     *       dropped a refunded order entirely.</li>
+     *   <li><b>sales / feesAccrued</b> — every order that took money
+     *       ({@link #tookMoney}): paid by card, refunded or not, cancelled or
+     *       not, and pay-later orders that were not cancelled. This is
+     *       "before refunds".</li>
+     *   <li><b>feesWrittenOff / refundCount</b> — the share of those fees
+     *       whose money went back, and how many orders returned any.</li>
      *   <li><b>feesOwed</b> — {@link #feesOwedOf}, the merchant's own figure,
      *       computed by the same method rather than as a subtraction, so the
      *       two screens cannot disagree. By construction it equals
@@ -929,21 +961,36 @@ public class OrderService {
             revenueOf(orders),
             billable.stream().map(OrderService::goodsTotal).reduce(BigDecimal.ZERO, BigDecimal::add),
             billable.stream().map(OrderService::feeOrZero).reduce(BigDecimal.ZERO, BigDecimal::add),
-            refunded.stream().map(OrderService::feeOrZero).reduce(BigDecimal.ZERO, BigDecimal::add),
+            billable.stream().map(OrderService::feeOrZero).reduce(BigDecimal.ZERO, BigDecimal::add)
+                .subtract(feesOwedOf(orders)),
             refunded.size(),
             feesOwedOf(orders));
     }
 
-    /** Took money, or the free-order flow, or money being returned — and not cancelled. */
-    static boolean isBillable(Order o) {
-        if (o.getStatus() == Order.Status.CANCELLED) return false;
-        Order.PaymentStatus ps = o.getPaymentStatus();
-        return ps == Order.PaymentStatus.PAID || ps == Order.PaymentStatus.NONE || isBeingRefunded(o);
+    /**
+     * What the store is left with from an order: what was charged, less what
+     * went back, less esy's fee on the share kept. Null when no money was
+     * taken. The back office used to work this out with a hard-coded 2% of
+     * the whole total (review M20); the fee is the one frozen on the order.
+     */
+    public static BigDecimal payoutOf(Order o) {
+        if (!tookMoney(o)) return null;
+        BigDecimal total = o.getTotal() == null ? BigDecimal.ZERO : o.getTotal();
+        BigDecimal fee = feeOrZero(o).multiply(keptShare(o)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal kept = keptShare(o).signum() == 0 ? BigDecimal.ZERO : total.subtract(o.refundedOrZero());
+        return kept.subtract(fee).max(BigDecimal.ZERO);
     }
 
+    /** An order the platform's fee applies to before refunds: one that took money. */
+    static boolean isBillable(Order o) {
+        return tookMoney(o);
+    }
+
+    /** Money is being or has been returned on it, in whole or in part. */
     static boolean isBeingRefunded(Order o) {
         return o.getPaymentStatus() == Order.PaymentStatus.REFUND_PENDING
-            || o.getPaymentStatus() == Order.PaymentStatus.REFUNDED;
+            || o.getPaymentStatus() == Order.PaymentStatus.REFUNDED
+            || o.refundedOrZero().signum() > 0;
     }
 
     private static BigDecimal feeOrZero(Order o) {

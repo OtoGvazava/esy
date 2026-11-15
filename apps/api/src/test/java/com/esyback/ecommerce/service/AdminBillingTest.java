@@ -105,8 +105,10 @@ class AdminBillingTest {
         order(small, "20.00", null, "0.40", Order.Status.SHIPPED, Order.PaymentStatus.REFUND_PENDING, LAST_MOMENT);
         // Delivery is the courier's money: 5 of the 105 charged is not a sale.
         order(small, "105.00", "5.00", "2.00", Order.Status.PLACED, Order.PaymentStatus.PAID, IN_MONTH);
-        // Never billable: cancelled (even though paid), and still at the bank.
+        // Cancelled but paid and not refunded: the store kept the money, so it
+        // is a sale and owes its fee (review M4).
         order(small, "40.00", null, "0.80", Order.Status.CANCELLED, Order.PaymentStatus.PAID, IN_MONTH);
+        // Never billable: still at the bank.
         order(small, "10.00", null, "0.20", Order.Status.PLACED, Order.PaymentStatus.PENDING, IN_MONTH);
     }
 
@@ -120,11 +122,11 @@ class AdminBillingTest {
 
         assertThat(r).isNotNull();
         assertThat(r.get("orderCount")).isEqualTo(7L);
-        assertThat(money(r, "sales")).isEqualByComparingTo("300.00");
-        assertThat(money(r, "feesAccrued")).isEqualByComparingTo("6.00");
+        assertThat(money(r, "sales")).isEqualByComparingTo("340.00");
+        assertThat(money(r, "feesAccrued")).isEqualByComparingTo("6.80");
         assertThat(money(r, "feesWrittenOff")).isEqualByComparingTo("1.00");
         assertThat(r.get("refundCount")).isEqualTo(2L);
-        assertThat(money(r, "feesOwed")).isEqualByComparingTo("5.00");
+        assertThat(money(r, "feesOwed")).isEqualByComparingTo("5.80");
         // What is owed is what accrued less what refunds wrote off — computed
         // independently, so this is a check and not a tautology.
         assertThat(money(r, "feesOwed"))
@@ -151,13 +153,13 @@ class AdminBillingTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> totals = (Map<String, Object>) body.get("totals");
         assertThat(totals.get("storeCount")).isEqualTo(2);
-        assertThat(money(totals, "sales")).isEqualByComparingTo("800.00");
-        assertThat(money(totals, "feesAccrued")).isEqualByComparingTo("16.00");
+        assertThat(money(totals, "sales")).isEqualByComparingTo("840.00");
+        assertThat(money(totals, "feesAccrued")).isEqualByComparingTo("16.80");
         assertThat(money(totals, "feesWrittenOff")).isEqualByComparingTo("1.00");
         assertThat(totals.get("refundCount")).isEqualTo(2L);
-        assertThat(money(totals, "feesOwed")).isEqualByComparingTo("15.00");
+        assertThat(money(totals, "feesOwed")).isEqualByComparingTo("15.80");
         // The original field keeps its meaning: owed after refunds.
-        assertThat(money(body, "totalAccrued")).isEqualByComparingTo("15.00");
+        assertThat(money(body, "totalAccrued")).isEqualByComparingTo("15.80");
         assertThat(money(body, "serviceFeeRate")).isNotNull();
     }
 
@@ -173,7 +175,7 @@ class AdminBillingTest {
         assertThat(money(r, "feesOwed")).isEqualByComparingTo(orderService.serviceFeesOwed(small));
         assertThat(money(r, "revenue")).isEqualByComparingTo(orderService.revenue(small));
         assertThat(r.get("orderCount")).isEqualTo(orderService.orderCount(small));
-        assertThat(money(r, "sales")).isEqualByComparingTo("380.00");
+        assertThat(money(r, "sales")).isEqualByComparingTo("420.00");
     }
 
     @Test
@@ -182,5 +184,21 @@ class AdminBillingTest {
         assertThatThrownBy(() -> adminService.billing("October"))
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    @DisplayName("a partial refund writes off only its share of the fee, and pending card orders are no sale (M33, M3)")
+    void partialRefundIsProRated() {
+        Order o = order(small, "100.00", null, "2.00", Order.Status.DELIVERED, Order.PaymentStatus.PAID, IN_MONTH);
+        o.setRefundedAmount(new BigDecimal("0.01"));
+        orderRepository.save(o);
+        order(small, "300.00", null, "6.00", Order.Status.PLACED, Order.PaymentStatus.PENDING, IN_MONTH);
+
+        Map<String, Object> r = row(adminService.billing(MONTH), "billing-small");
+
+        // 2.00 × 99.99% = 2.00: a ₾0.01 refund no longer writes off the fee.
+        assertThat(money(r, "feesOwed")).isEqualByComparingTo("2.00");
+        assertThat(money(r, "sales")).isEqualByComparingTo("100.00");
+        assertThat(money(r, "revenue")).isEqualByComparingTo("99.99");
     }
 }

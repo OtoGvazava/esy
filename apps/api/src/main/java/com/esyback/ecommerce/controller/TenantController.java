@@ -263,8 +263,19 @@ public class TenantController {
     public ResponseEntity<List<Map<String, Object>>> currentStoreOrders() {
         Tenant tenant = tenantContextService.getCurrentTenant();
         return ResponseEntity.ok(orderService.ordersForTenant(tenant).stream()
-            .map(OrderController::toMap)
+            .map(TenantController::officeRow)
             .collect(Collectors.toList()));
+    }
+
+    /**
+     * An order as the store's own screens see it: the shopper's view plus
+     * what the store is paid out. Never in the shopper's view, which must not
+     * carry esy's fee.
+     */
+    private static Map<String, Object> officeRow(Order order) {
+        Map<String, Object> m = new java.util.HashMap<>(OrderController.toMap(order));
+        m.put("payout", OrderService.payoutOf(order));
+        return m;
     }
 
     /**
@@ -281,7 +292,7 @@ public class TenantController {
         Tenant tenant = tenantContextService.getCurrentTenant();
         return orderService.orderForTenant(tenant, orderId)
             .map(order -> {
-                Map<String, Object> m = new java.util.HashMap<>(OrderController.toMap(order));
+                Map<String, Object> m = officeRow(order);
                 // Each line's product photo, as the product has it now, so the
                 // lines read as the things they are. One query for all of
                 // them; a product deleted since has none, and the line keeps
