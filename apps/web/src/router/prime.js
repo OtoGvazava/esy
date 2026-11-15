@@ -53,15 +53,25 @@ export function prime(load) {
  * export is the screen. Static loaders stay on the route, so the screen's code
  * and its data are fetched side by side.
  */
-export const lazyScreen = (load) => () => load().then((m) => {
-  fresh();
-  return { Component: m.default };
-}, stale);
+export const lazyScreen = (load) => {
+  const lazy = () => load().then((m) => {
+    fresh();
+    return { Component: m.default };
+  }, stale);
+  // Prefetch (hover, focus, idle warm-up) fetches the chunk without the
+  // reload recovery: a failed warm-up must never reload the page under the
+  // shopper's hand and lose their bag or a half-filled form. The navigation
+  // itself, if it happens, still recovers.
+  lazy.prefetch = () => load().then(() => {}, () => {});
+  return lazy;
+};
 
 // A screen's chunk that cannot be fetched is, nearly always, one a deploy has
 // replaced while this tab was open: the page is reloaded once to pick up the
-// new build, rather than the router showing an error. The same failure again
-// straight after that reload is a real one, and is left to surface.
+// new build, rather than the router showing an error. The same chunk failing
+// again after that reload is a real failure, and is left to surface. Without
+// sessionStorage there is no way to tell a second failure from a first, so
+// there is no reload at all rather than a loop.
 const RELOADED = 'esy-chunk-reload';
 
 function fresh() {
@@ -69,10 +79,16 @@ function fresh() {
 }
 
 function stale(error) {
-  let again = false;
-  try { again = sessionStorage.getItem(RELOADED) === window.location.href; } catch { again = false; }
-  if (again) throw error;
-  try { sessionStorage.setItem(RELOADED, window.location.href); } catch { /* storage blocked: reload anyway */ }
+  // The message names the chunk's URL in every browser that reports one.
+  const chunk = String(error?.message || '') || window.location.href;
+  let tried;
+  try {
+    tried = sessionStorage.getItem(RELOADED) === chunk;
+    sessionStorage.setItem(RELOADED, chunk);
+  } catch {
+    throw error;
+  }
+  if (tried) throw error;
   window.location.reload();
   return new Promise(() => {});
 }
@@ -131,7 +147,10 @@ export function prefetchRoute(href, { data = true } = {}) {
   recent.set(key, now);
   const matches = matchRoutes(table, url.pathname) || [];
   matches.forEach(({ route, params }) => {
-    if (typeof route.lazy === 'function') route.lazy().catch(() => {});
+    // A screen's own prefetch never reloads the page on failure (lazyScreen).
+    if (typeof route.lazy === 'function') {
+      Promise.resolve().then(route.lazy.prefetch || route.lazy).catch(() => {});
+    }
     if (data && route.loader?.prefetch) route.loader.prefetch(params, url);
   });
 }

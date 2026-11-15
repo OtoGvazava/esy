@@ -17,6 +17,7 @@
 // shows what it showed before.
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Icon, Placeholder } from './GlowPrimitives';
 import { money } from './GlowChrome';
 import { useDesign } from '../../core/design/useDesign';
@@ -24,6 +25,7 @@ import { addedRecently } from '../../core/design/show';
 import NewBadge from '../store/NewBadge';
 import { useDataSaver } from '../../contexts/DisplayPrefsContext';
 import { markIfComplete, markLoaded } from '../../core/imgFade';
+import { soldOutOnCard } from '../../hooks/useQuickAdd';
 
 const tagBg = (tag, T) =>
   tag === 'new' ? T.accent : tag === 'sale' ? T.danger : tag === 'low' ? T.warn : T.text;
@@ -96,17 +98,40 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
     </div>
   );
 
+  // A plain product the shop holds none of keeps its button in place, dimmed
+  // and inert, so the row does not shift and a screen reader hears why.
+  const soldOut = soldOutOnCard(p);
   const add = showAdd && (
     <button
-      aria-label={t('add')}
-      onClick={(e) => { e.stopPropagation(); onAdd?.(p); }}
+      type="button"
+      aria-label={soldOut ? t('soldOutNamed', { name: p.title }) : t('addNamed', { name: p.title })}
+      aria-disabled={soldOut || undefined}
+      onClick={(e) => { e.stopPropagation(); if (!soldOut) onAdd?.(p); }}
       style={{
         width: 40, height: 40, flex: 'none', borderRadius: 'var(--k-r-ibtn)', border: 'none',
         background: 'var(--k-ink)', color: 'var(--k-on-ink)',
-        display: 'grid', placeItems: 'center', cursor: 'pointer',
+        display: 'grid', placeItems: 'center', cursor: soldOut ? 'default' : 'pointer',
+        opacity: soldOut ? 0.35 : 1,
       }}
     ><Icon.plus width="18" height="18" /></button>
   );
+
+  // The photo is a real link to the product, so a keyboard or screen reader
+  // can open the card (every layout has a photo, grid3 nothing else). A plain
+  // click is left to bubble to the card's onOpen, so there is one way in;
+  // a modified click (new tab) is the browser's. The design preview passes
+  // no onOpen and gets no link.
+  const photoLink = onOpen ? (
+    <Link
+      to={`/product/${p.id}`}
+      aria-label={p.title}
+      onClick={(e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) e.stopPropagation();
+        else e.preventDefault();
+      }}
+      style={{ display: 'block', flex: 'none', color: 'inherit', borderRadius: photoGrid ? 4 : 'var(--k-r-img)' }}
+    >{photo}</Link>
+  ) : photo;
 
   // The design's card: the theme decides its ground, padding and corners
   // (Liquid Glass draws a bare photo, Soft a white tile), the photo carries
@@ -126,7 +151,7 @@ export default function GlowProductCard({ T, p, hue = 240, compact = false, onOp
         gap: list ? 12 : 8, cursor: 'pointer', minWidth: 0,
       }}
     >
-      {photo}
+      {photoLink}
       {!photoGrid && (
         <div style={{ display: 'flex', alignItems: list ? 'center' : 'flex-end', justifyContent: 'space-between', gap: 8, padding: list ? '0 4px 0 0' : '0 4px', flex: list ? 1 : undefined, minWidth: 0 }}>
           <div style={{ minWidth: 0, flex: 1 }}>

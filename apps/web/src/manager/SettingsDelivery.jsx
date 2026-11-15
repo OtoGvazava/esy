@@ -125,12 +125,16 @@ export default function DeliveryTab() {
     setBusy(true);
     setSaveError('');
     setSaved(false);
-    // Switched on first, switched off last; field edits in between.
+    // Switched on first, switched off last; field edits in between. Express
+    // needs a courier on, so among switch-ons the couriers go before express,
+    // and among switch-offs express goes before the couriers; otherwise the
+    // server refuses the same step on every retry.
+    const courier = (route) => route === 'tbilisi' || route === 'georgia';
     const rank = (route) => {
       const c = changes(route);
-      if (c.enabled === true) return 0;
-      if (c.enabled === false) return 2;
-      return 1;
+      if (c.enabled === true) return courier(route) ? 0 : 1;
+      if (c.enabled === false) return route === 'express' ? 3 : 4;
+      return 2;
     };
     const order = [...changed].sort((a, b) => rank(a) - rank(b));
     let written = [];

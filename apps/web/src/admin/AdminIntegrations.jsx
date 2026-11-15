@@ -17,7 +17,7 @@
 //   and take effect within seconds.
 //
 // The SMS editor counts characters and billed units as the message will be
-// sent: {order} is counted at the longest number (#99999) and {code} at four
+// sent: {order} is counted as a full order number (ESY-XXXX-XXXX) and {code} at four
 // digits. Georgian is Unicode, so 70 characters is one unit and 71 is two —
 // an admin editing copy has no other way to see they just doubled the bill.
 //
@@ -42,7 +42,8 @@ import { IntegrationsSkeleton } from './AdminSkeletons';
 const ROWS = ['otp', 'orderPlaced', 'orderShipped', 'orderOut', 'orderDelivered', 'orderCancelled', 'orderRefunded'];
 
 // What a token is counted as: its longest real value.
-const COUNT_AS = { order: '#99999', code: '1234' };
+// {order} is ESY-XXXX-XXXX (OrderService.newOrderNumber), always 13 characters.
+const COUNT_AS = { order: 'ESY-XXXX-XXXX', code: '1234' };
 const smsLength = (text) => [...String(text || '').replace(/\{(order|code)\}/g, (_, k) => COUNT_AS[k])].length;
 const smsUnits = (len) => (len === 0 ? 0 : len <= 70 ? 1 : Math.ceil(len / 67));
 
@@ -153,7 +154,7 @@ function Editor({ T, t, phone, kind, row, name, channels, onChannel, canWrite, b
               <><Trans t={t} i18nKey="integrations.requiredToken" values={{ token: `{${row.requiredToken}}` }} components={{ mono }} />{' '}</>
             )}
             {(row.tokens || []).includes('order') && (
-              <><Trans t={t} i18nKey="integrations.orderCounted" components={{ mono }} />{' '}</>
+              <><Trans t={t} i18nKey="integrations.orderCounted" values={{ sample: COUNT_AS.order }} components={{ mono }} />{' '}</>
             )}
             {t('integrations.unicode')}
             {extra && <>{' '}<Trans t={t} i18nKey="integrations.notCounted" components={{ mono }} /></>}

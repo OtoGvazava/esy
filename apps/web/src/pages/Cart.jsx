@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useCart, lineKey } from '../contexts/CartContext';
+import { useCart, lineKey, atStock } from '../contexts/CartContext';
 import { useGlow } from '../styles/glow';
 import { Placeholder } from '../components/glow/GlowPrimitives';
 import { GlowScreen, GlowTopNav, GlowStickyCTA, money } from '../components/glow/GlowChrome';
@@ -66,7 +66,8 @@ export default function Cart() {
                   <div style={{ display: 'inline-flex', alignItems: 'center', border: `1px solid ${T.border}`, borderRadius: 999, height: 30, overflow: 'hidden' }}>
                     <button onClick={() => updateQuantity(lineKey(it), it.quantity - 1)} style={{ width: 30, height: 30, border: 'none', background: 'transparent', color: T.text, font: `600 16px ${T.font}`, cursor: 'pointer' }}>−</button>
                     <span style={{ width: 26, textAlign: 'center', font: `600 13px ${T.font}`, color: T.text }}>{it.quantity}</span>
-                    <button onClick={() => updateQuantity(lineKey(it), it.quantity + 1)} style={{ width: 30, height: 30, border: 'none', background: 'transparent', color: T.text, font: `600 16px ${T.font}`, cursor: 'pointer' }}>+</button>
+                    {/* Stops at the stock the shop had when it was added. */}
+                    <button disabled={atStock(it)} onClick={() => updateQuantity(lineKey(it), it.quantity + 1)} style={{ width: 30, height: 30, border: 'none', background: 'transparent', color: T.text, font: `600 16px ${T.font}`, cursor: atStock(it) ? 'default' : 'pointer', opacity: atStock(it) ? 0.35 : 1 }}>+</button>
                   </div>
                   <div style={{ font: `700 14px ${T.font}`, color: T.text, letterSpacing: '-0.015em' }}>{money(it.price * it.quantity)}</div>
                 </div>

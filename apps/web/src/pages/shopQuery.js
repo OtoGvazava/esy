@@ -53,6 +53,16 @@ export function readFilters(params) {
   };
 }
 
+/**
+ * Whether the URL asks for a collection rather than the home list: a category,
+ * or a filter on its own (the search screen's "under 50 ₾", "in stock"), which
+ * is then the whole store narrowed the same way.
+ */
+export function isCollection(params) {
+  const f = readFilters(params);
+  return !!(f.category || f.min != null || f.max != null || f.stock || Object.keys(f.opts).length);
+}
+
 /** `prev` with a collection's keys replaced by `f`, in one fixed order. */
 export function writeFilters(prev, f) {
   const next = new URLSearchParams(prev);

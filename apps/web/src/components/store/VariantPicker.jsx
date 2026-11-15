@@ -9,7 +9,8 @@
 // made this"; striking it says "this exists and may come back", which is true
 // and is what brings a shopper back. The note underneath names what it is
 // unavailable *with*, because otherwise a struck-through size looks like the
-// shop is out of that size entirely.
+// shop is out of that size entirely. A struck value that has stock with some
+// other choice can still be picked, and moves that other choice to match.
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Chip } from '../../core/primitives';
@@ -31,27 +32,40 @@ export default function VariantPicker({ T, variants, basePrice, onChange }) {
 
   const [picked, setPicked] = useState(initial);
 
+  // A refetch (any write invalidates every query) brings a new `variants`.
+  // The shopper's choice is kept while it still names a row; only a choice
+  // the new rows no longer hold falls back to the opening one.
+  const [seen, setSeen] = useState(variants);
+  if (seen !== variants) {
+    setSeen(variants);
+    if (!picked || !rowFor(variants, picked)) setPicked(initial);
+  }
+
   const row = picked ? rowFor(variants, picked) : null;
   const stock = row ? Number(row.stock) || 0 : 0;
 
-  // Report the selection upward whenever it settles on a different row.
+  // A value buyable with some other choice is still selectable: picking it
+  // moves the other axis to a combination that has stock, so no in-stock
+  // combination is ever out of reach.
   const choose = (axisIndex, value) => {
     const next = [...picked];
     next[axisIndex] = value;
+    const exact = rowFor(variants, next);
+    if (!exact || !(Number(exact.stock) > 0)) {
+      const buyable = variants.rows.find((r) => r.key[axisIndex] === value && Number(r.stock) > 0);
+      if (buyable) { setPicked(buyable.key); return; }
+    }
     setPicked(next);
-    const chosen = rowFor(variants, next);
-    if (onChange) onChange(chosen || null);
   };
 
-  // The opening selection has to be reported too, or the page would start
-  // with a chosen row the parent does not know about and an Add button that
-  // sends no variant.
+  // Report the row the buttons show, from the opening selection on and after
+  // every change or refetch, so the bag gets exactly the combination on screen.
   useEffect(() => {
-    if (onChange) onChange(initial ? rowFor(variants, initial) : null);
+    if (onChange) onChange(picked ? rowFor(variants, picked) : null);
     // onChange is intentionally excluded: callers pass an inline function, and
     // depending on it would re-fire this on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial, variants]);
+  }, [picked, variants]);
 
   if (!variants?.axes?.length || !picked) return null;
 
@@ -59,6 +73,7 @@ export default function VariantPicker({ T, variants, basePrice, onChange }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {variants.axes.map((axis, ai) => {
         const avail = axisAvailability(variants, ai, picked);
+        const buyableAtAll = axisAvailability(variants, ai, null);
         const anyUnavailable = axis.values.some((v) => !avail[v]);
         const otherChosen = picked.filter((_, i) => i !== ai).join(' · ');
 
@@ -73,19 +88,20 @@ export default function VariantPicker({ T, variants, basePrice, onChange }) {
               {axis.values.map((val) => {
                 const on = picked[ai] === val;
                 const has = !!avail[val];
+                const can = !!buyableAtAll[val];
                 return (
                   <button
                     key={val}
                     type="button"
-                    // An unavailable value is still readable and still says
-                    // what it is; it just cannot be selected.
-                    disabled={!has}
+                    // Struck through when not available with the other axis's
+                    // choice; disabled only when no combination has it in stock.
+                    disabled={!can}
                     aria-pressed={on}
                     onClick={() => choose(ai, val)}
                     style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       minWidth: 48, height: 44, padding: '0 15px', borderRadius: 13,
-                      cursor: has ? 'pointer' : 'default',
+                      cursor: can ? 'pointer' : 'default',
                       background: on ? T.text : 'transparent',
                       color: on ? T.bg : has ? T.text : T.textMute,
                       border: `1.5px solid ${on ? T.text : T.border}`,

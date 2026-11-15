@@ -293,6 +293,9 @@
   },
   "editor": {
     "back": "Back",
+    "photoTooLarge": "Not added, over 5 MB: {{names}}",
+    "failedPhotos": "The product is saved, but its new photos are not ({{reason}}). Save again to retry the photos.",
+    "failedVariants": "The product is saved, but the variant stock is not ({{reason}}). Save again to retry.",
     "titleNew": "New product",
     "subEdit": "Editing a product",
     "subAdd": "Adding a product",

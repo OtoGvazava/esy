@@ -55,7 +55,9 @@ export default function Collection() {
   const f = useMemo(() => readFilters(params), [params]);
   const { categories } = useStoreCategories();
   // The URL may spell it in another case; the store's own spelling is the title.
-  const name = categories.find((c) => c.name.toLowerCase() === f.category.toLowerCase())?.name || f.category;
+  // With no category (a filter alone, from the search screen) it is the whole store.
+  const name = !f.category ? t('collection.allProducts')
+    : categories.find((c) => c.name.toLowerCase() === f.category.toLowerCase())?.name || f.category;
 
   const [sheet, setSheet] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -94,11 +96,12 @@ export default function Collection() {
   }, [hasMore, isFetching, fetchNextPage]);
 
   // What the category offers to filter by: its variant options, and the span
-  // of its prices for the slider (its cheapest and its dearest product).
-  const facetRows = useQuery({ ...facetsQuery(f.category), enabled: !!f.category });
-  const boundsRow = useQuery({ ...priceBoundsQuery(f.category), enabled: !!f.category });
-  const facets = (f.category && facetRows.data) || NO_FACETS;
-  const bounds = (f.category && boundsRow.data) || null;
+  // of its prices for the slider (its cheapest and its dearest product). No
+  // category asks both of the whole store.
+  const facetRows = useQuery(facetsQuery(f.category));
+  const boundsRow = useQuery(priceBoundsQuery(f.category));
+  const facets = facetRows.data || NO_FACETS;
+  const bounds = boundsRow.data || null;
 
   // A filter is a change within this page: it keeps the scroll where it is.
   const apply = useCallback((patch) => {
