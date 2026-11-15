@@ -360,6 +360,22 @@ public class OrderService {
         }
         return findByOrderNumber(orderNumber).map(order -> {
             if (order.getPaymentStatus() == outcome) return order;
+            // Only transitions that make sense from where the order is: a
+            // payment can fail only while it is still pending, and a refund
+            // can only land on money that was taken. A late or replayed
+            // "rejected" must never cancel a paid or delivered order.
+            Order.PaymentStatus current = order.getPaymentStatus();
+            boolean allowed = switch (outcome) {
+                case FAILED -> current == Order.PaymentStatus.PENDING;
+                case REFUNDED -> current == Order.PaymentStatus.PAID
+                    || current == Order.PaymentStatus.REFUND_PENDING;
+                default -> false;
+            };
+            if (!allowed) {
+                log.warn("Ignored payment outcome {} for order {} in payment state {}",
+                    outcome, orderNumber, current);
+                return order;
+            }
             order.setPaymentStatus(outcome);
             if (outcome == Order.PaymentStatus.FAILED) {
                 // Cancelled by a failed or abandoned payment, and deliberately

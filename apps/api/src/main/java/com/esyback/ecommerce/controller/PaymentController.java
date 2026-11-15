@@ -85,8 +85,13 @@ public class PaymentController {
 
     /**
      * BOG async webhook. Verifies the RSA signature over the raw body, then
-     * settles the order by external_order_id. Always 200 once authentic so
-     * BOG stops retrying; 401 only when the signature is invalid.
+     * settles the order by external_order_id — but only when the callback's
+     * BOG {@code order_id} is the one BOG issued for THIS order at checkout
+     * (under the store's own credentials). One public key signs callbacks for
+     * every BOG merchant, so a genuinely signed callback about some other
+     * merchant's payment must not settle our order just because it names our
+     * order number. Always 200 once authentic so BOG stops retrying; 401 only
+     * when the signature is invalid.
      */
     @PostMapping("/callback")
     public ResponseEntity<String> callback(@RequestBody(required = false) byte[] rawBody,
@@ -101,8 +106,16 @@ public class PaymentController {
             JsonNode root = objectMapper.readTree(rawBody);
             JsonNode body = root.path("body");
             String externalId = body.path("external_order_id").asText(null);
+            String bogOrderId = body.path("order_id").asText(null);
             String statusKey = body.path("order_status").path("key").asText(null);
             Order.PaymentStatus mapped = bogPaymentService.mapStatus(statusKey);
+            Order order = orderService.findByOrderNumber(externalId).orElse(null);
+            if (order == null || order.getBogOrderId() == null || bogOrderId == null
+                    || !order.getBogOrderId().equals(bogOrderId)) {
+                log.warn("Ignored BOG callback: order={} bogOrderId={} does not match the payment issued for it",
+                    externalId, bogOrderId);
+                return ResponseEntity.ok("ok");
+            }
             log.info("BOG callback: order={} status={} -> {}", externalId, statusKey, mapped);
             orderService.settlePayment(externalId, mapped);
         } catch (Exception e) {
