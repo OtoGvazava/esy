@@ -22,7 +22,7 @@ import com.esyback.ecommerce.service.UserService;
 import com.esyback.ecommerce.service.BogPaymentService;
 import com.esyback.ecommerce.web.ApiRefusal;
 import com.esyback.ecommerce.web.TenantMapper;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;

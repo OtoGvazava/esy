@@ -1,11 +1,11 @@
 package com.esyback.ecommerce.web;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -78,8 +78,10 @@ public final class DisplayPrefsValidator {
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
 
     // Trailing tokens are refused: without the flag, "{} junk" parses as {}.
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-        .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+    // Jackson 3 mappers are immutable: configured through their builder.
+    private static final ObjectMapper MAPPER = tools.jackson.databind.json.JsonMapper.builder()
+        .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+        .build();
 
     /**
      * Settings sent as JSON text (a request body): refused when over
@@ -96,7 +98,7 @@ public final class DisplayPrefsValidator {
         JsonNode node;
         try {
             node = MAPPER.readTree(raw);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new Rejected(INVALID, "Those display settings are not valid JSON");
         }
         if (node == null || !node.isObject()) throw new Rejected(INVALID, "Display settings must be a JSON object");
@@ -114,7 +116,7 @@ public final class DisplayPrefsValidator {
         try {
             JsonNode node = MAPPER.readTree(json);
             return node != null && node.isObject() ? normalize(node, false) : null;
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             return null;
         }
     }
@@ -122,7 +124,7 @@ public final class DisplayPrefsValidator {
     public static String toJson(JsonNode prefs) {
         try {
             return MAPPER.writeValueAsString(prefs);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Display settings could not be written as JSON", e);
         }
     }
@@ -157,7 +159,7 @@ public final class DisplayPrefsValidator {
                 if (strict) throw new Rejected(INVALID, "\"views\" must be an object keyed by store subdomain");
             } else {
                 ObjectNode kept = NODES.objectNode();
-                Iterator<Map.Entry<String, JsonNode>> it = views.fields();
+                Iterator<Map.Entry<String, JsonNode>> it = views.properties().iterator();
                 while (it.hasNext()) {
                     Map.Entry<String, JsonNode> e = it.next();
                     JsonNode v = e.getValue();
@@ -174,7 +176,7 @@ public final class DisplayPrefsValidator {
                     if (strict) throw new Rejected(TOO_LARGE, "Views are kept for at most " + MAX_VIEWS + " stores");
                     // A stored row past the cap keeps its first entries.
                     ObjectNode first = NODES.objectNode();
-                    Iterator<Map.Entry<String, JsonNode>> k = kept.fields();
+                    Iterator<Map.Entry<String, JsonNode>> k = kept.properties().iterator();
                     while (k.hasNext() && first.size() < MAX_VIEWS) {
                         Map.Entry<String, JsonNode> e = k.next();
                         first.set(e.getKey(), e.getValue());

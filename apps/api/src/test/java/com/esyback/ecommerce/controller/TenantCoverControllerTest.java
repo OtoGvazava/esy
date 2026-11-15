@@ -12,16 +12,16 @@ import com.esyback.ecommerce.repository.TenantRepository;
 import com.esyback.ecommerce.repository.UserRepository;
 import com.esyback.ecommerce.security.JwtUtil;
 import com.esyback.ecommerce.service.MembershipService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -73,7 +73,7 @@ class TenantCoverControllerTest {
     @Autowired EntityManager entityManager;
     @Autowired ObjectMapper objectMapper;
 
-    @MockBean DesignProperties designProperties;
+    @MockitoBean DesignProperties designProperties;
 
     private static final String SUB = "cover-test-store";
     private static final String STORE = SUB + ".lvh.me";
@@ -126,7 +126,9 @@ class TenantCoverControllerTest {
         });
     }
 
-    private MockHttpServletRequestBuilder as(String email, MockHttpServletRequestBuilder request) {
+    // Generic: in Spring 7 the multipart builder is a sibling of the plain one, not a subtype.
+    private <B extends org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder<B>> B as(
+            String email, B request) {
         return request.header("Host", STORE).header("Authorization", "Bearer " + jwtUtil.generateToken(email));
     }
 

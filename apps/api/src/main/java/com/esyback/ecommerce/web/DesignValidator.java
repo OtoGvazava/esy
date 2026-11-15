@@ -1,11 +1,11 @@
 package com.esyback.ecommerce.web;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -121,8 +121,10 @@ public final class DesignValidator {
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
 
     // Trailing tokens are refused: without the flag, "{} junk" parses as {}.
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-        .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+    // Jackson 3 mappers are immutable: configured through their builder.
+    private static final ObjectMapper MAPPER = tools.jackson.databind.json.JsonMapper.builder()
+        .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+        .build();
 
     // ---- Entry points -------------------------------------------------------
 
@@ -141,7 +143,7 @@ public final class DesignValidator {
         JsonNode node;
         try {
             node = MAPPER.readTree(raw);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new Rejected(INVALID, "That design is not valid JSON");
         }
         if (node == null || !node.isObject()) throw new Rejected(INVALID, "A design must be a JSON object");
@@ -168,7 +170,7 @@ public final class DesignValidator {
         try {
             JsonNode node = MAPPER.readTree(json);
             return node != null && node.isObject() ? normalize(node) : null;
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             return null;
         }
     }
@@ -176,7 +178,7 @@ public final class DesignValidator {
     public static String toJson(JsonNode design) {
         try {
             return MAPPER.writeValueAsString(design);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("A design could not be written as JSON", e);
         }
     }
@@ -326,7 +328,7 @@ public final class DesignValidator {
     private static int serialisedSize(JsonNode node) {
         try {
             return MAPPER.writeValueAsBytes(node).length;
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new Rejected(INVALID, "A design must be a JSON object");
         }
     }

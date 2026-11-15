@@ -8,7 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -33,7 +33,7 @@ class ContactChannelServiceTest {
     @Autowired ContactChannelRepository repository;
     @Autowired TenantRepository tenantRepository;
 
-    @MockBean TenantContextService tenantContextService;
+    @MockitoBean TenantContextService tenantContextService;
 
     private static final String SUB = "contact-test-store";
 
