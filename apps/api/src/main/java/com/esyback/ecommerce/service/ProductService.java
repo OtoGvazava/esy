@@ -258,7 +258,15 @@ public class ProductService {
         return productRepository.findById(id)
             .filter(product -> product.getTenant().equals(currentTenant))
             .map(product -> {
-                productRepository.delete(product);
+                // Photos, variants and options each hold a NOT NULL foreign key
+                // to the product with no cascade, so deleting the product alone
+                // failed with a 500 the moment it had a photo (review H8).
+                // Children go first, in this same transaction. Orders are
+                // untouched: their lines keep a plain product id and a snapshot.
+                variantRepository.deleteByProduct(product);
+                optionRepository.deleteByProduct(product);
+                productImageRepository.deleteAllOfProduct(product);
+                productRepository.delete(productRepository.findById(id).orElseThrow());
                 return true;
             })
             .orElse(false);
