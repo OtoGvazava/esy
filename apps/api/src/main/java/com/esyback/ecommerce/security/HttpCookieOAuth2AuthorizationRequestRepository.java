@@ -39,7 +39,10 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
     // Where to send the browser (with the JWT) once auth completes on the
     // canonical host — see OAuthCanonicalHostRedirectFilter.
     private static final String TENANT_ORIGIN_COOKIE = "ESY_TENANT_ORIGIN";
-    private static final int MAX_AGE_SECONDS = 180;
+    // Long enough for a real sign-in: choosing an account, a second factor or
+    // a password reset at Google easily takes more than the three minutes this
+    // used to be, and the callback then failed with nothing to verify against.
+    static final int MAX_AGE_SECONDS = 600;
     private static final String HMAC = "HmacSHA256";
     private static final ObjectInputFilter FILTER = ObjectInputFilter.Config.createFilter(
             "maxdepth=20;maxrefs=1000;maxbytes=16384;maxarray=256;"
@@ -101,7 +104,30 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
               .append("; HttpOnly; SameSite=Lax");
             if (request.isSecure()) ts.append("; Secure");
             response.addHeader("Set-Cookie", ts.toString());
+        } else {
+            // A sign-in started on the platform itself. Any origin left over
+            // from an abandoned store sign-in must not send this one there.
+            response.addHeader("Set-Cookie", expiredTenantOrigin(request));
         }
+    }
+
+    /**
+     * Drops both cookies of an in-flight sign-in. For the failure handler,
+     * where Spring may not have removed the request (it had none to load).
+     */
+    public static void expireAll(HttpServletRequest request, HttpServletResponse response) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(COOKIE).append("=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
+        if (request.isSecure()) sb.append("; Secure");
+        response.addHeader("Set-Cookie", sb.toString());
+        response.addHeader("Set-Cookie", expiredTenantOrigin(request));
+    }
+
+    private static String expiredTenantOrigin(HttpServletRequest request) {
+        StringBuilder ts = new StringBuilder();
+        ts.append(TENANT_ORIGIN_COOKIE).append("=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
+        if (request.isSecure()) ts.append("; Secure");
+        return ts.toString();
     }
 
     @Override
@@ -113,15 +139,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
     }
 
     private void expire(HttpServletResponse response, HttpServletRequest request) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(COOKIE).append("=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
-        if (request.isSecure()) sb.append("; Secure");
-        response.addHeader("Set-Cookie", sb.toString());
-
-        StringBuilder ts = new StringBuilder();
-        ts.append(TENANT_ORIGIN_COOKIE).append("=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
-        if (request.isSecure()) ts.append("; Secure");
-        response.addHeader("Set-Cookie", ts.toString());
+        expireAll(request, response);
     }
 
     private Cookie read(HttpServletRequest request) {

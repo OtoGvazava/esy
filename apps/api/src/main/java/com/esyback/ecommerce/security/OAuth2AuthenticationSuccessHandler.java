@@ -23,9 +23,6 @@ import java.util.Map;
 @Slf4j
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
-    /** Where a refused or failed sign-in lands, under the origin it started on. */
-    static final String FAILURE_PATH = "/signin?error=oauth";
-
     private final UserService userService;
     private final JwtUtil jwtUtil;
 
@@ -68,7 +65,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         } catch (UserService.SignInRefused e) {
             // No session: the same landing as any other failed sign-in.
             log.warn("Sign-in refused for {} subject {}: {}", provider, providerId, e.getMessage());
-            response.sendRedirect(base + FAILURE_PATH);
+            response.sendRedirect(base + OAuth2AuthenticationFailureHandler.FAILURE_PATH);
             return;
         }
         String token = jwtUtil.generateToken(user.getUsername());

@@ -2,12 +2,12 @@ package com.esyback.ecommerce.config;
 
 import com.esyback.ecommerce.security.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.esyback.ecommerce.security.JwtAuthenticationFilter;
+import com.esyback.ecommerce.security.OAuth2AuthenticationFailureHandler;
 import com.esyback.ecommerce.security.OAuth2AuthenticationSuccessHandler;
 import com.esyback.ecommerce.security.OAuthCanonicalHostRedirectFilter;
 import com.esyback.ecommerce.security.PhoneRequiredFilter;
 import com.esyback.ecommerce.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -31,13 +31,11 @@ public class SecurityConfig {
     
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final OAuth2AuthenticationSuccessHandler oauth2SuccessHandler;
+    private final OAuth2AuthenticationFailureHandler oauth2FailureHandler;
     private final HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository;
     private final OAuthCanonicalHostRedirectFilter oauthCanonicalHostRedirectFilter;
     private final UserRepository userRepository;
 
-    @Value("${app.oauth2.redirect-base:}")
-    private String redirectBase;
-    
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -79,8 +77,8 @@ public class SecurityConfig {
                 .authorizationEndpoint(ae -> ae
                     .authorizationRequestRepository(cookieAuthorizationRequestRepository))
                 .successHandler(oauth2SuccessHandler)
-                .failureHandler((req, res, ex) ->
-                    res.sendRedirect(redirectBase + "/signin?error=oauth"))
+                // Back to the store the sign-in started on, not the platform.
+                .failureHandler(oauth2FailureHandler)
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             // After the JWT filter, so it sees who is signed in: an account
