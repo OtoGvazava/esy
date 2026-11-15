@@ -62,6 +62,15 @@ Notes: the JWT, cookie-based OAuth state (works under stateless sessions), and
 `{baseUrl}` redirect resolution behind Render's TLS proxy are all handled in
 code and verified. iCloud stays a dev stand-in (Apple OAuth not configured).
 
+## Card payments (BOG)
+
+Set **`BOG_PUBLIC_KEY`** (Render → Environment) to BOG's callback-signing
+public key, the PEM from BOG's payments docs, pasted on one line. Without it
+every payment callback is **refused**: the callback endpoint is public and
+settles orders, so an unsigned callback could mark any order PAID. Payments
+then settle only when the receipt is polled. `render.yaml` declares the key
+(`sync: false`), so a blueprint sync prompts for it.
+
 ## Redeploy
 
 `autoDeploy: true` — every push to `main` rebuilds and redeploys automatically.

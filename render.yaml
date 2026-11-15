@@ -43,6 +43,11 @@ services:
       # nothing fails. A secret, so it never lives in the blueprint.
       - key: APP_EMAIL_KEY
         sync: false
+      # BOG's callback-signing public key (the PEM from BOG's payments docs).
+      # Unset = every payment callback is refused, because an unsigned callback
+      # could mark any order PAID; payments then settle only via receipt polling.
+      - key: BOG_PUBLIC_KEY
+        sync: false
 
   # Live config: the service-fee rate, the SMS sender and the message
   # templates. Small and write-rarely — the app re-reads through an 8s cache

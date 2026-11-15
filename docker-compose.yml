@@ -83,7 +83,7 @@ services:
       # Payments (Bank of Georgia). Per-store creds are entered in Store
       # Settings; these are platform knobs. All optional locally — unset
       # APP_SECRET_ENC_KEY falls back to a dev key, unset BOG_PUBLIC_KEY
-      # skips callback signature checks (BOG can't reach lvh.me anyway).
+      # refuses every callback (BOG can't reach lvh.me anyway; payments settle by polling).
       APP_SECRET_ENC_KEY: ${APP_SECRET_ENC_KEY:-}
       APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-}
       # BOG environment: live (default) or sandbox — flips both hosts at once.
