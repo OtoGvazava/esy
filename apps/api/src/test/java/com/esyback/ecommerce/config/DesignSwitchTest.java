@@ -55,21 +55,22 @@ class DesignSwitchTest {
     void adminConfigCarriesIt() {
         DesignProperties switchBean = mock(DesignProperties.class);
         AdminConfigController admin = new AdminConfigController(mock(BogProperties.class),
-            mock(PlatformProperties.class), mock(AppProperties.class), store, switchBean);
+            mock(PlatformProperties.class), mock(AppProperties.class), store, switchBean,
+            mock(com.esyback.ecommerce.repository.AuditLogRepository.class));
 
         when(switchBean.isEnabled()).thenReturn(false);
         assertEquals(false, admin.current().get("designEnabled"));
 
         // The screen saves every row as a string; a JSON boolean binds to the same.
-        admin.update(Map.of("designEnabled", " FALSE "));
+        admin.update(Map.of("designEnabled", " FALSE "), null);
         verify(switchBean).setEnabled(false);
 
         ResponseStatusException refused = assertThrows(ResponseStatusException.class,
-            () -> admin.update(Map.of("designEnabled", "maybe")));
+            () -> admin.update(Map.of("designEnabled", "maybe"), null));
         assertEquals(422, refused.getStatusCode().value());
 
         // Neither the refused value nor a save of another row touched it again.
-        admin.update(Map.of("bogEnv", "sandbox"));
+        admin.update(Map.of("bogEnv", "sandbox"), null);
         verify(switchBean, times(1)).setEnabled(anyBoolean());
     }
 }
