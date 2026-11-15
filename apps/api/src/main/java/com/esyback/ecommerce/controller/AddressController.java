@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 /**
  * The signed-in user's address book (decision D4). Platform-level, like the
  * account itself: an address saved while buying at one store is offered at
- * checkout on every *.esy.ge store. Orders never reference these rows — the
+ * checkout on every *.esy.ge store. Orders never reference these rows â€” the
  * chosen address is frozen onto the order at checkout.
  */
 @RestController
@@ -44,14 +44,11 @@ public class AddressController {
     @Transactional
     public ResponseEntity<Map<String, Object>> create(@RequestBody Map<String, String> body,
                                                       Authentication authentication) {
-        User user = currentUser(authentication);
+        User user = lockedUser(authentication);
         Address a = new Address();
         a.setUser(user);
         apply(a, body);
-        if (a.getRecipient() == null || a.getPhone() == null || a.getLine() == null || a.getCity() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "recipient, phone, line and city are required");
-        }
+        requireComplete(a);
         // First address becomes the default automatically; an explicit
         // isDefault=true steals the flag from the previous default.
         boolean first = addressRepository.findByUserOrderByIsDefaultDescCreatedAtDesc(user).isEmpty();
@@ -68,9 +65,12 @@ public class AddressController {
     public ResponseEntity<Map<String, Object>> update(@PathVariable Long id,
                                                       @RequestBody Map<String, String> body,
                                                       Authentication authentication) {
-        User user = currentUser(authentication);
+        User user = lockedUser(authentication);
         Address a = owned(id, user);
         apply(a, body);
+        // apply() writes a blank as null, so an edit can empty a required
+        // field; refuse it here rather than at the NOT NULL column as a 500.
+        requireComplete(a);
         if (Boolean.parseBoolean(body.getOrDefault("isDefault", "false")) && !Boolean.TRUE.equals(a.getIsDefault())) {
             clearDefault(user);
             a.setIsDefault(true);
@@ -81,7 +81,7 @@ public class AddressController {
     @DeleteMapping("/{id}")
     @Transactional
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
-        User user = currentUser(authentication);
+        User user = lockedUser(authentication);
         Address a = owned(id, user);
         addressRepository.delete(a);
         // Deleting the default promotes the newest remaining address so
@@ -94,6 +94,25 @@ public class AddressController {
                 });
         }
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * The signed-in user, with their row locked for this transaction. Every
+     * write here reads "who is the default" and then changes it; two writes
+     * at once (a double submit) both read the old answer and left two
+     * defaults. Holding the user row serialises one person's address writes.
+     */
+    private User lockedUser(Authentication authentication) {
+        User user = currentUser(authentication);
+        userService.lockForUpdate(user);
+        return user;
+    }
+
+    private static void requireComplete(Address a) {
+        if (a.getRecipient() == null || a.getPhone() == null || a.getLine() == null || a.getCity() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "recipient, phone, line and city are required");
+        }
     }
 
     private void clearDefault(User user) {

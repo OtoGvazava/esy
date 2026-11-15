@@ -156,6 +156,15 @@ public class UserService {
         return userRepository.findFirstByEmailIgnoreCaseOrderByIdAsc(email.trim());
     }
 
+    /**
+     * Locks the account's row until the caller's transaction ends, so writes
+     * that read-then-change something one per account (the default address)
+     * cannot interleave. Must be called inside the caller's transaction.
+     */
+    public void lockForUpdate(User user) {
+        userRepository.lockById(user.getId());
+    }
+
     public User save(User user) {
         return userRepository.save(user);
     }

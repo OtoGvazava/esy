@@ -29,6 +29,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findAllByEmailIgnoreCase(String email);
 
+    /** Takes the user row's write lock for the current transaction. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.id = :id")
+    Optional<User> lockById(@Param("id") Long id);
+
     Optional<User> findByOauthProviderAndOauthProviderId(String oauthProvider, String oauthProviderId);
 
     /** Whether another account already holds this verified number. */

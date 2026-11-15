@@ -14,6 +14,9 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    // Store and lines in the same query: the account hub and "my orders" read
+    // both for every order, which was two more queries per order.
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"tenant", "items"})
     List<Order> findByUserOrderByCreatedAtDesc(User user);
     List<Order> findByUserAndTenantOrderByCreatedAtDesc(User user, Tenant tenant);
     List<Order> findByTenantOrderByCreatedAtDesc(Tenant tenant);
