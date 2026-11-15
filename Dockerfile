@@ -11,7 +11,7 @@ COPY apps/web/ ./
 RUN npm run build
 
 # 2) Build the Spring Boot fat jar with the SPA on its classpath
-FROM maven:3.9-eclipse-temurin-17 AS api
+FROM maven:3.9-eclipse-temurin-25 AS api
 WORKDIR /api
 COPY apps/api/pom.xml ./
 RUN mvn -q -B dependency:go-offline
@@ -21,11 +21,13 @@ COPY --from=web /web/dist ./src/main/resources/static
 RUN mvn -q -B -DskipTests clean package
 
 # 3) Minimal runtime
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 COPY --from=api /api/target/ecommerce-platform-0.0.1-SNAPSHOT.jar app.jar
 # Fit the free 512MB instance; bind to the platform-provided $PORT.
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC"
+# Compact object headers (JDK 25, JEP 519): smaller objects, so the same
+# heap holds more on the 512MB instance.
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:+UseCompactObjectHeaders"
 ENV JPA_DDL_AUTO=create-drop
 EXPOSE 8080
 USER 1000

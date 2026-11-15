@@ -14,7 +14,7 @@
     <name>ecommerce-platform</name>
     <description>Ecommerce platform with OAuth2 authentication</description>
     <properties>
-        <java.version>17</java.version>
+        <java.version>25</java.version>
     </properties>
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -130,10 +130,40 @@
             <!-- Tests run against nothing real: no Redis config store (a local
                  fee-rate override broke fee assertions) and no provider keys
                  (an exported SMS key sent real texts from the test suite). -->
+            <!-- Lombok named as the annotation processor: since JDK 23 javac no
+                 longer runs processors it merely finds on the classpath. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <!-- Sets ${org.mockito:mockito-core:jar} for the agent below. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <!-- Mockito as a Java agent: recent JDKs warn about (and future ones
+                         refuse) a library attaching an agent to itself at runtime. -->
+                    <argLine>-javaagent:${org.mockito:mockito-core:jar}</argLine>
                     <environmentVariables>
                         <SPRING_DATA_REDIS_URL>redis://127.0.0.1:1</SPRING_DATA_REDIS_URL>
                         <APP_SMS_KEY></APP_SMS_KEY>

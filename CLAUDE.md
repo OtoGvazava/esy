@@ -2,7 +2,7 @@
 
 Multi-tenant storefront ("Glow" design). Monorepo:
 
-- `apps/api` — Spring Boot 3.2, **Java 17**, OAuth2 + JWT, H2, multi-tenant.
+- `apps/api` — Spring Boot 4.1, **Java 25**, OAuth2 + JWT, H2, multi-tenant.
 - `apps/web` — React 19 + Vite + MUI, the Glow design system, i18n (en/ka).
 - `deploy/` + root `Dockerfile` + `render.yaml` — Render deployment.
 
@@ -193,10 +193,14 @@ Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
 
 ## Gotchas (these cost real time — heed them)
 
-- **JDK 17 only.** Machine default is JDK 25; Spring Boot 3.2 will not compile
-  on it. Always set `JAVA_HOME` for any `mvn` — on this machine that is
-  `C:\Program Files\Microsoft\jdk-17.0.20.8-hotspot` (there is no `mvnw`
+- **JDK 25.** The build targets Java 25 (`java.version` in the pom) and the
+  machine's default `java` is still JDK 17, so always set `JAVA_HOME` for any
+  `mvn` — on this machine that is
+  `C:\Program Files\Microsoft\jdk-25.0.5.21-hotspot` (there is no `mvnw`
   wrapper; `mvn` lives in `%LOCALAPPDATA%\Programs\apache-maven-3.9.9\bin`).
+  Spring Boot 4 (Framework 7, Security 7, Hibernate 7) uses Jackson 3: JSON
+  types are in `tools.jackson.*`, not `com.fasterxml.jackson.*`; tests mock
+  with `@MockitoBean`, not `@MockBean`.
 - **Vite dev server needs Node 18–22.** Node 25 crashes `vite`/`vite preview`
   silently (the Docker build pins Node 20). `vite build` works on Node 25.
 - **Prod runs on Render PostgreSQL** (`SPRING_DATASOURCE_*` +
