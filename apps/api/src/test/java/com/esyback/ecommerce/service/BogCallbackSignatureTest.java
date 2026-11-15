@@ -2,7 +2,7 @@ package com.esyback.ecommerce.service;
 
 import com.esyback.ecommerce.config.BogProperties;
 import com.esyback.ecommerce.security.SecretCipher;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

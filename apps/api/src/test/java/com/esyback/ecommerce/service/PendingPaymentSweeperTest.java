@@ -12,7 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -34,8 +34,8 @@ class PendingPaymentSweeperTest {
     @Autowired ProductRepository productRepository;
     @Autowired TenantRepository tenantRepository;
 
-    @MockBean BogPaymentService bog;
-    @MockBean TenantContextService tenantContextService;
+    @MockitoBean BogPaymentService bog;
+    @MockitoBean TenantContextService tenantContextService;
 
     private Tenant tenant;
     private Product mug;

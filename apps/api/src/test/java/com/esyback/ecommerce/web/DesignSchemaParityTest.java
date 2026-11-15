@@ -1,8 +1,8 @@
 package com.esyback.ecommerce.web;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +53,7 @@ class DesignSchemaParityTest {
 
     private static Set<String> names(JsonNode object) {
         Set<String> out = new LinkedHashSet<>();
-        object.fieldNames().forEachRemaining(out::add);
+        object.propertyNames().forEach(out::add);
         return out;
     }
 
@@ -66,10 +66,10 @@ class DesignSchemaParityTest {
     /** schema.json's defaults, flattened to the server's "style.btn" keys. */
     private static Map<String, String> flatDefaults() {
         Map<String, String> flat = new HashMap<>();
-        schema.path("defaults").fields().forEachRemaining(e -> {
+        schema.path("defaults").properties().forEach(e -> {
             if (e.getKey().equals("show")) return;
             if (e.getValue().isObject()) {
-                e.getValue().fields().forEachRemaining(s ->
+                e.getValue().properties().forEach(s ->
                     flat.put(e.getKey() + "." + s.getKey(), s.getValue().asText()));
             } else {
                 flat.put(e.getKey(), e.getValue().asText());
@@ -92,7 +92,7 @@ class DesignSchemaParityTest {
         assertEquals(DesignValidator.MAX_BYTES, schema.path("maxBytes").asInt(-1), "maxBytes");
 
         Map<String, Integer> limits = new HashMap<>();
-        schema.path("limits").fields().forEachRemaining(e -> limits.put(e.getKey(), e.getValue().asInt(-1)));
+        schema.path("limits").properties().forEach(e -> limits.put(e.getKey(), e.getValue().asInt(-1)));
         assertEquals(Map.of(
             "bannerTitle", DesignValidator.BANNER_TITLE_MAX,
             "bannerSubtitle", DesignValidator.BANNER_SUBTITLE_MAX), limits, "limits");
@@ -120,8 +120,8 @@ class DesignSchemaParityTest {
         assertEquals(DesignValidator.DEFAULTS, flatDefaults(), "defaults");
 
         Map<String, Boolean> show = new HashMap<>();
-        schema.path("defaults").path("show").fields()
-            .forEachRemaining(e -> show.put(e.getKey(), e.getValue().asBoolean()));
+        schema.path("defaults").path("show").properties()
+            .forEach(e -> show.put(e.getKey(), e.getValue().asBoolean()));
         assertEquals(DesignValidator.SHOW, show, "defaults.show");
     }
 

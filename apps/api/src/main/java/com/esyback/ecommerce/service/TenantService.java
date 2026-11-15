@@ -7,7 +7,7 @@ import com.esyback.ecommerce.repository.TenantRepository;
 import com.esyback.ecommerce.security.SecretCipher;
 import com.esyback.ecommerce.web.ApiRefusal;
 import com.esyback.ecommerce.web.DesignValidator;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;

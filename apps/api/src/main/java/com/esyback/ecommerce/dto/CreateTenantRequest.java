@@ -1,6 +1,6 @@
 package com.esyback.ecommerce.dto;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 /**
  * Self-serve store signup payload. Only name + subdomain are required; the

@@ -4,7 +4,7 @@ Monorepo for the esy multi-tenant ecommerce platform.
 
 ```
 apps/
-  api/   Spring Boot 3.2 backend (Java 17, OAuth2 + JWT, multi-tenant)
+  api/   Spring Boot 4.1 backend (Java 25, OAuth2 + JWT, multi-tenant)
   web/   React 19 + Vite frontend (MUI, i18n)
 ```
 

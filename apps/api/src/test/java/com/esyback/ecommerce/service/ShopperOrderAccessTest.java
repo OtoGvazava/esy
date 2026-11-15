@@ -14,7 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -44,7 +44,7 @@ class ShopperOrderAccessTest {
     @Autowired UserRepository userRepository;
     @Autowired ProductRepository productRepository;
 
-    @MockBean TenantContextService tenantContextService;
+    @MockitoBean TenantContextService tenantContextService;
 
     private static final String SUB = "shopper-access-store";
     private Tenant tenant;

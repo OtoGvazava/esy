@@ -1,5 +1,6 @@
 package com.esyback.ecommerce.controller;
 
+import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
 import com.esyback.ecommerce.config.DesignProperties;
 import com.esyback.ecommerce.entity.StoreMembership;
 import com.esyback.ecommerce.entity.Tenant;
@@ -14,9 +15,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -58,7 +59,7 @@ class TenantDesignControllerTest {
     @Autowired MembershipService membershipService;
     @Autowired EntityManager entityManager;
 
-    @MockBean DesignProperties designProperties;
+    @MockitoBean DesignProperties designProperties;
 
     private static final String SUB = "design-test-store";
     private static final String STORE = SUB + ".lvh.me";
@@ -106,11 +107,11 @@ class TenantDesignControllerTest {
         });
     }
 
-    private MockHttpServletRequestBuilder as(String email, String host, MockHttpServletRequestBuilder request) {
+    private <B extends AbstractMockHttpServletRequestBuilder<B>> B as(String email, String host, B request) {
         return request.header("Host", host).header("Authorization", "Bearer " + jwtUtil.generateToken(email));
     }
 
-    private MockHttpServletRequestBuilder as(String email, MockHttpServletRequestBuilder request) {
+    private <B extends AbstractMockHttpServletRequestBuilder<B>> B as(String email, B request) {
         return as(email, STORE, request);
     }
 

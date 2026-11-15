@@ -1,8 +1,8 @@
 package com.esyback.ecommerce.web;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +31,7 @@ class DesignValidatorTest {
 
     private static List<String> keys(JsonNode node) {
         List<String> out = new ArrayList<>();
-        node.fieldNames().forEachRemaining(out::add);
+        node.propertyNames().forEach(out::add);
         return out;
     }
 

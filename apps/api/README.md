@@ -52,7 +52,7 @@ Each tenant has:
 ## Setup Instructions
 
 ### 1. Prerequisites
-- Java 17 or higher
+- Java 25
 - Maven 3.6 or higher
 
 ### 2. Environment Variables
@@ -152,7 +152,7 @@ src/main/java/com/esyback/ecommerce/
 
 ## Technologies Used
 
-- **Spring Boot 3.2.0**
+- **Spring Boot 4.1**
 - **Spring Security** - Authentication and authorization
 - **Spring Data JPA** - Database operations
 - **OAuth2 Client** - Google and Apple authentication

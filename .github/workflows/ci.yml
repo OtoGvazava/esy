@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '25'
           cache: maven
       # The design-schema parity test reads apps/web/src/core/design/schema.json,
       # which the full checkout provides.

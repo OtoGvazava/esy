@@ -40,6 +40,17 @@ public class JwtUtil {
     // Derived once: the secret does not change while the app runs, and the
     // filter needs the key on every authenticated request.
     private volatile SecretKey signingKey;
+    // Immutable and thread-safe: built once, not on every request.
+    private volatile JwtParser parser;
+
+    private JwtParser parser() {
+        JwtParser p = parser;
+        if (p == null) {
+            p = Jwts.parser().verifyWith(getSigningKey()).build();
+            parser = p;
+        }
+        return p;
+    }
 
     private SecretKey getSigningKey() {
         SecretKey k = signingKey;
@@ -86,12 +97,14 @@ public class JwtUtil {
     }
     
     private String createToken(Map<String, Object> claims, String subject) {
+        // jjwt 0.12+ API; the same HS512 and the same derived key as before,
+        // so sessions signed before the upgrade still validate.
         return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(subject)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .claims(claims)
+                .subject(subject)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSigningKey(), Jwts.SIG.HS512)
                 .compact();
     }
     
@@ -109,11 +122,7 @@ public class JwtUtil {
     }
     
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        return parser().parseSignedClaims(token).getPayload();
     }
     
     private Boolean isTokenExpired(String token) {
@@ -126,14 +135,6 @@ public class JwtUtil {
     }
     
     public Boolean validateToken(String token) {
-        try {
-            Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
+        return verifiedSubject(token) != null;
     }
 }

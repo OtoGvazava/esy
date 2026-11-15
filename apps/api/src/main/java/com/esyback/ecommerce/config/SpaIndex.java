@@ -3,7 +3,7 @@ package com.esyback.ecommerce.config;
 import com.esyback.ecommerce.service.ContactChannelService;
 import com.esyback.ecommerce.service.ProductService;
 import com.esyback.ecommerce.service.TenantViewService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -57,7 +57,7 @@ public class SpaIndex {
         String json = null;
         try {
             json = objectMapper.writeValueAsString(boot());
-        } catch (RuntimeException | IOException e) {
+        } catch (RuntimeException e) { // Jackson 3 failures are unchecked
             // No store to inline: the app asks /api/tenant/current itself, as before.
             log.debug("index.html without the store: {}", e.toString());
         }

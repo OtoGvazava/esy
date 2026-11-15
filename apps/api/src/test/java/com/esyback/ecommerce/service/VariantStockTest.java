@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -42,7 +42,7 @@ class VariantStockTest {
     @Autowired TenantRepository tenantRepository;
     @Autowired OrderRepository orderRepository;
 
-    @MockBean TenantContextService tenantContextService;
+    @MockitoBean TenantContextService tenantContextService;
 
     private static final String SUB = "variant-stock-store";
     private Tenant tenant;
