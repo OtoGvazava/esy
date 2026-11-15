@@ -58,7 +58,10 @@ function ProductView({ id }) {
   const product = productRead.data || null;
   const variants = variantsRead.data ?? null;
   const loading = productRead.isPending || variantsRead.isPending;
-  const error = productRead.error ? handleApiError(productRead.error, t('productNotFound')) : '';
+  // A failed variants read is the page's error too: without the document the
+  // page cannot tell a variant product from a plain one.
+  const readError = productRead.error || variantsRead.error;
+  const error = readError ? handleApiError(readError, t('productNotFound')) : '';
   const related = useMemo(
     () => (relatedRead.data?.products || []).filter((p) => String(p.id) !== String(id)),
     [relatedRead.data, id],
@@ -179,7 +182,7 @@ function ProductView({ id }) {
           <button
             key={`${src}-${i}`}
             onClick={() => { setImgIdx(i); setImgFailed(false); }}
-            aria-label={t('viewImage', { defaultValue: 'View image' })}
+            aria-label={t('viewImage', { n: i + 1 })}
             style={{
               flex: '0 0 auto', width: 64, height: 64, padding: 0, borderRadius: 10,
               overflow: 'hidden', cursor: 'pointer', background: T.surface,
@@ -246,8 +249,10 @@ function ProductView({ id }) {
       )}
       <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 16, background: T.surface, border: `1px solid ${T.border}`, overflow: 'hidden', marginBottom: 24 }}>
         {[
-          { id: 'price', k: t('rowPrice'), v: money(product.price) },
-          { id: 'availability', k: t('rowAvailability'), v: inStock ? t('availabilityInStock', { count: product.quantity ?? product.stock }) : t('outOfStock') },
+          // The chosen combination's price and stock, as the headline shows, not
+          // the base price and the total across every variant.
+          { id: 'price', k: t('rowPrice'), v: money(shownPrice) },
+          { id: 'availability', k: t('rowAvailability'), v: inStock ? t('availabilityInStock', { count: pickedStock }) : t('outOfStock') },
           { id: 'ships', k: t('shipsFrom'), v: tenant.location },
         // A store that hasn't given its city has nothing to say here, and an
         // empty row reads as a broken page.

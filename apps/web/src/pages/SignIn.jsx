@@ -34,15 +34,16 @@ export default function SignIn() {
   const close = () => (key === 'default' ? navigate('/') : navigate(-1));
 
   // A modal: the page under it holds still, Escape closes it, and focus
-  // starts inside it.
+  // starts inside it. The lock goes on <html>, the page's scroller (locking
+  // <body> left the page scrolling under the modal).
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
     box.current?.focus({ preventScroll: true });
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     window.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = prev;
+      document.documentElement.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
     // close reads the location key, which cannot change while this is open

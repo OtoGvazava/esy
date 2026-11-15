@@ -116,7 +116,10 @@
 .sk .spin { width: 44px; height: 44px; border-radius: 50%; border: 4px solid var(--k-sf2); border-top-color: var(--k-pri); flex: none; animation: sk-spin .9s linear infinite; }
 @keyframes sk-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .sk .spin { animation-duration: 2.4s; } }
-html[data-motion="reduce"] .sk .spin { animation-duration: 2.4s; }
+/* The blanket reduce-motion rule (display.css) runs every animation once in
+   0.01ms with !important, which froze the spinner; a loading spinner must keep
+   turning, only slower, so this wins on specificity. */
+html[data-motion="reduce"] .sk .spin { animation-duration: 2.4s !important; animation-iteration-count: infinite !important; }
 
 /* ---------- surfaces ---------- */
 .sk .card { background: var(--k-sf); border: var(--k-card-bd); box-shadow: var(--k-card-sh); border-radius: var(--k-r-card); }

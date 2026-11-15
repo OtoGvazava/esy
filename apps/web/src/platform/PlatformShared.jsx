@@ -242,7 +242,10 @@ export function PTopBar({ current = 'none', cta = true, below = null }) {
   // Land on #how, #pricing or #contact wherever the page carries that section.
   useEffect(() => {
     if (!hash) return undefined;
-    const id = decodeURIComponent(hash.slice(1));
+    // A malformed escape (a pasted "#%E0%A4%A") throws; it must not take the
+    // whole page down, so it is read as written.
+    let id = hash.slice(1);
+    try { id = decodeURIComponent(id); } catch { /* keep the raw hash */ }
     const timer = setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }), 60);
     return () => clearTimeout(timer);
   }, [hash, pathname]);
