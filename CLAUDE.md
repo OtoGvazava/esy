@@ -205,8 +205,9 @@ Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
   (lint-staged 17 in the pre-commit hook is the strictest; `engines` in
   `package.json`). Node 25 crashes `vite`/`vite preview`
   silently (the Docker build and CI use Node 22). `vite build` works on Node 25.
-  Vite 8 bundles with Rolldown: chunking lives in `build.rolldownOptions` and
-  `manualChunks` must be a function. `esbuild` is a dev dependency because the
+  Vite 8 bundles with Rolldown: chunking is
+  `build.rolldownOptions.output.codeSplitting.groups` (Rolldown deprecates
+  `manualChunks`). `esbuild` is a dev dependency because the
   config still minifies the inline paint script with `transformWithEsbuild`.
 - **Windows Application Control may block Rolldown's native binary** on this
   machine (`ERR_DLOPEN_FAILED` from `rollup.win32-x64-msvc.node` or rolldown's).
