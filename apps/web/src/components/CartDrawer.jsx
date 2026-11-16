@@ -143,7 +143,7 @@ export default function CartDrawer({ open, onClose }) {
               <ShoppingBagIcon />
             </Avatar>
             <Box>
-              <Typography variant="h5" component="h2" sx={{ fontWeight: 700, 
+              <Typography variant="h5" component="h2" sx={{ fontWeight: 700,
                 background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
@@ -279,7 +279,7 @@ export default function CartDrawer({ open, onClose }) {
                             <Box sx={{ flex: 1, minWidth: 0 }}>
                               <Typography 
                                 variant="subtitle1"
-                                sx={{ fontWeight: 600, 
+                                sx={{ fontWeight: 600,
                                   mb: 0.5,
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',

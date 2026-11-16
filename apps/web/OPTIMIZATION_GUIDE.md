@@ -1,5 +1,8 @@
 # 🚀 **Project Optimization Guide**
 
+> **Historical.** Written before the Glow redesign; many of the files and
+> imports below no longer exist. Read the code, not this, for current structure.
+
 ## 📋 **Implementation Priority**
 
 ### **Phase 1: Core Infrastructure (High Priority)**
@@ -166,7 +169,6 @@ import { useTheme } from '../hooks/useTheme';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import { useDebounce } from '../hooks/useDebounce';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 ```
 
 ### **Context Provider Updates**
