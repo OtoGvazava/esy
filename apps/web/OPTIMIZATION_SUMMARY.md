@@ -1,5 +1,8 @@
 # Project Optimization Summary
 
+> **Historical.** Written before the Glow redesign; many of the files and
+> imports below no longer exist. Read the code, not this, for current structure.
+
 ## Overview
 This document summarizes the comprehensive optimization and refactoring performed on the React e-commerce application to improve code quality, maintainability, performance, and developer experience.
 
@@ -48,7 +51,6 @@ src/
 │   └── index.js          # Centralized constants
 ├── hooks/
 │   ├── useAppTheme.js    # Theme management hook
-│   ├── useMobileSearch.js # Mobile search logic
 │   └── useTheme.js       # Theme utilities
 ├── providers/
 │   └── AppProviders.jsx  # Provider consolidation
@@ -113,10 +115,8 @@ import ProductCard from './components/ProductCard';
 ### Using Custom Hooks:
 ```jsx
 import { useAppTheme } from './hooks/useAppTheme';
-import { useMobileSearch } from './hooks/useMobileSearch';
 
 const { mode, theme, toggleTheme } = useAppTheme();
-const { mobileSearchEnabled, handleMobileSearchToggle } = useMobileSearch();
 ```
 
 ### Using Constants:

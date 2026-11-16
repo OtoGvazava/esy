@@ -27,14 +27,14 @@ const AuthModal = ({ open, onClose }) => {
       slotProps={{ paper: { sx: { borderRadius: 3 } } }}
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 3 }}>
-        <Typography variant="h5" fontWeight={700} color="inherit">Sign in</Typography>
+        <Typography variant="h5" sx={{ fontWeight: 700 }} color="inherit">Sign in</Typography>
         <IconButton onClick={onClose} size="small" sx={{ color: 'inherit' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, py: 2 }}>
-        <Typography variant="body1" color="text.secondary" textAlign="center" mb={3} sx={{ fontSize: 16 }}>
+        <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', mb: 3, fontSize: 16 }}>
           One esy account for buying and selling. Continue with Google.
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
