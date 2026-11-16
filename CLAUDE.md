@@ -201,7 +201,9 @@ Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
   Spring Boot 4 (Framework 7, Security 7, Hibernate 7) uses Jackson 3: JSON
   types are in `tools.jackson.*`, not `com.fasterxml.jackson.*`; tests mock
   with `@MockitoBean`, not `@MockBean`.
-- **Vite dev server needs Node 18–22.** Node 25 crashes `vite`/`vite preview`
+- **Node 22.22.1+ (and below 25) for `apps/web`.** The toolchain needs it
+  (lint-staged 17 in the pre-commit hook is the strictest; `engines` in
+  `package.json`). Node 25 crashes `vite`/`vite preview`
   silently (the Docker build and CI use Node 22). `vite build` works on Node 25.
   Vite 8 bundles with Rolldown: chunking lives in `build.rolldownOptions` and
   `manualChunks` must be a function. `esbuild` is a dev dependency because the

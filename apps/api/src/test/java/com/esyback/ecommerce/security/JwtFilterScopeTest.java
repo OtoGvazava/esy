@@ -29,6 +29,7 @@ class JwtFilterScopeTest {
         JwtUtil u = new JwtUtil();
         ReflectionTestUtils.setField(u, "secret", "a-test-secret");
         ReflectionTestUtils.setField(u, "expiration", expirationMs);
+        u.init(); // what Spring runs after injection
         return u;
     }
 
