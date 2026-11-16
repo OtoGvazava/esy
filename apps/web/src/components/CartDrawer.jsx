@@ -130,7 +130,7 @@ export default function CartDrawer({ open, onClose }) {
             },
           })}
         >
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack direction="row" sx={{ alignItems: 'center' }} spacing={2}>
             <Avatar
               sx={{
                 bgcolor: 'rgba(99, 102, 241, 0.2)',
@@ -143,7 +143,7 @@ export default function CartDrawer({ open, onClose }) {
               <ShoppingBagIcon />
             </Avatar>
             <Box>
-              <Typography variant="h5" component="h2" fontWeight={700} sx={{ 
+              <Typography variant="h5" component="h2" sx={{ fontWeight: 700, 
                 background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
@@ -218,7 +218,7 @@ export default function CartDrawer({ open, onClose }) {
               >
                 <ShoppingBagIcon sx={{ fontSize: 40 }} />
               </Avatar>
-              <Typography variant="h6" fontWeight={600} color="text.primary" sx={{ mb: 1 }}>
+              <Typography variant="h6" color="text.primary" sx={{ fontWeight: 600, mb: 1 }}>
                 {t('empty')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 280 }}>
@@ -253,7 +253,7 @@ export default function CartDrawer({ open, onClose }) {
                         })}
                       >
                         <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
-                          <Stack direction="row" spacing={2} alignItems="center">
+                          <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
                             {/* Product Image */}
                             <Box
                               sx={(theme) => ({
@@ -278,9 +278,8 @@ export default function CartDrawer({ open, onClose }) {
                             {/* Product Info */}
                             <Box sx={{ flex: 1, minWidth: 0 }}>
                               <Typography 
-                                variant="subtitle1" 
-                                fontWeight={600}
-                                sx={{ 
+                                variant="subtitle1"
+                                sx={{ fontWeight: 600, 
                                   mb: 0.5,
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
@@ -291,15 +290,14 @@ export default function CartDrawer({ open, onClose }) {
                               </Typography>
                               <Typography 
                                 variant="h6" 
-                                color="primary" 
-                                fontWeight={700}
-                                sx={{ mb: 1 }}
+                                color="primary"
+                                sx={{ fontWeight: 700, mb: 1 }}
                               >
                                 {formatPrice(item.price)}
                               </Typography>
                               
                               {/* Quantity Controls */}
-                              <Stack direction="row" alignItems="center" spacing={1}>
+                              <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
                                 <IconButton
                                   size="small"
                                   onClick={() => handleQuantityChange(lineKey(item), item.quantity - 1)}
@@ -334,7 +332,7 @@ export default function CartDrawer({ open, onClose }) {
                                       : '1px solid rgba(0, 0, 0, 0.1)',
                                   })}
                                 >
-                                  <Typography variant="body2" fontWeight={600}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                     {item.quantity}
                                   </Typography>
                                 </Box>
@@ -415,14 +413,13 @@ export default function CartDrawer({ open, onClose }) {
                   })}
                 >
                   <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="h6" fontWeight={600}>
+                    <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
                         {t('total')}
                       </Typography>
                       <Typography 
-                        variant="h4" 
-                        fontWeight={700}
-                        sx={{
+                        variant="h4"
+                        sx={{ fontWeight: 700,
                           background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                           backgroundClip: 'text',
                           WebkitBackgroundClip: 'text',
