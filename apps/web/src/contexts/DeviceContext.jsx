@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
 
 // Device mode constants
@@ -47,12 +47,8 @@ export const DeviceProvider = ({ children }) => {
     return DEVICE_MODES.DESKTOP; // fallback
   };
 
-  const [deviceMode, setDeviceMode] = useState(getDeviceMode());
-
-  // Update device mode when breakpoints change
-  useEffect(() => {
-    setDeviceMode(getDeviceMode());
-  }, [isMobile, isTablet, isDesktop]);
+  // Follows the breakpoints as they change.
+  const deviceMode = getDeviceMode();
 
   // Device-specific configurations
   const deviceConfig = {

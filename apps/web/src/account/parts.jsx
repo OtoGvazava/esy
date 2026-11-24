@@ -269,12 +269,15 @@ export function Head({ T, desk, title, sub, action }) {
  * It is drawn on <body>, over every app's own bars: a store's dock (1200)
  * would otherwise cover a sheet's lower half and its button.
  */
+/* eslint-disable react-hooks/refs -- the closing dialog keeps what it showed while open; a ref, so open renders stay single */
 export function Dialog({ T, phone, title, closeLabel, onClose, busy, open = true, children }) {
   const titleId = useId();
   const { mounted, state } = usePresence(open);
-  const shown = useRef(null);
   const box = useRef(null);
+  // What it showed while open, kept for its way out.
+  const shown = useRef(null);
   if (open || !shown.current) shown.current = { title, children };
+  const view = shown.current;
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
@@ -328,7 +331,7 @@ export function Dialog({ T, phone, title, closeLabel, onClose, busy, open = true
           <span aria-hidden="true" style={{ width: 42, height: 5, borderRadius: 3, background: T.border, alignSelf: 'center' }} />
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <b id={titleId} style={{ font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em' }}>{shown.current.title}</b>
+          <b id={titleId} style={{ font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em' }}>{view.title}</b>
           <button
             type="button"
             onClick={onClose}
@@ -342,9 +345,10 @@ export function Dialog({ T, phone, title, closeLabel, onClose, busy, open = true
             <Glyph name="close" />
           </button>
         </div>
-        {shown.current.children}
+        {view.children}
       </section>
     </div>,
     document.body,
   );
 }
+/* eslint-enable react-hooks/refs */

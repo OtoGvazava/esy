@@ -137,6 +137,7 @@ export default function VariantEditor({ T, productId, basePrice, onChanged, onDi
     if (!productId || adopted.current === productId) return;
     if (read.isSuccess) {
       adopted.current = productId;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- adopts the cached read once per product, before paint
       setError('');
       adopt(read.data);
     } else if (read.isError) {

@@ -250,7 +250,8 @@ export function PTopBar({ current = 'none', cta = true, below = null }) {
     return () => clearTimeout(timer);
   }, [hash, pathname]);
 
-  useEffect(() => { setMenu(false); }, [pathname, hash]);
+  const [menuAt, setMenuAt] = useState(pathname + hash);
+  if (menuAt !== pathname + hash) { setMenuAt(pathname + hash); setMenu(false); }
   useEffect(() => {
     if (!menu) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') setMenu(false); };

@@ -45,6 +45,7 @@ export function useIndicator(box, active, watch) {
       : null;
     if (!el) {
       placed.current = false;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- measured from the DOM, before paint
       setRect(null);
       return undefined;
     }

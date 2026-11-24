@@ -17,9 +17,10 @@ function QuickMenu({ label, open, onOpen, onClose, children }) {
   const pill = useRef(null);
   const pop = useRef(null);
   const [pos, setPos] = useState(null);
+  if (!open && pos) setPos(null);
 
   useLayoutEffect(() => {
-    if (!open) { setPos(null); return undefined; }
+    if (!open) return undefined;
     const place = () => {
       const r = pill.current.getBoundingClientRect();
       const w = pop.current?.offsetWidth || 220;

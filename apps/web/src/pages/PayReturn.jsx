@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import { useCart } from '../contexts/CartContext';
@@ -48,8 +48,11 @@ export default function PayReturn() {
   const [total, setTotal] = useState(null);
   const [restored, setRestored] = useState(false);
   const done = useRef(false);
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
+  // Read from the poll below as they are when it runs, without restarting it
+  // on every bag change.
+  const bagHasItems = useEffectEvent(() => items.length > 0);
+  const emptyBag = useEffectEvent(() => clearCart());
+  const putInBag = useEffectEvent((line) => addToCart(line));
   const { whatsapp, phone } = useStoreChannels(phase !== 'checking');
 
   useEffect(() => {
@@ -60,19 +63,19 @@ export default function PayReturn() {
     const paid = (amount) => {
       if (done.current) return;
       done.current = true;
-      clearCart();
+      emptyBag();
       navigate('/success', { replace: true, state: { orderId: orderNumber, total: amount } });
     };
 
     // The bag went with the page to the bank; put the order's lines back into
     // it, once, unless the shopper has already started a new one.
     const restore = async () => {
-      if (itemsRef.current.length > 0) { setRestored(true); return; }
+      if (bagHasItems()) { setRestored(true); return; }
       try {
         const order = await orderApi.get(orderNumber);
         const lines = (order?.lines || []).filter((l) => l.productId);
         if (!alive || lines.length === 0) return;
-        lines.forEach((l) => addToCart({
+        lines.forEach((l) => putInBag({
           id: l.productId,
           variantId: l.variantId ?? undefined,
           variantLabel: l.variant || undefined,
@@ -109,9 +112,6 @@ export default function PayReturn() {
 
     poll();
     return () => { alive = false; };
-    // addToCart and clearCart are new functions every render; the poll must
-    // start once per order, not again on every bag change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderNumber, navigate]);
 
   const bagSaved = restored || items.length > 0;

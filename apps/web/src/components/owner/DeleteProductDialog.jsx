@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGlow } from '../../styles/glow';
 import { productApi, handleApiError } from '../../utils/api';
@@ -15,7 +15,9 @@ export default function DeleteProductDialog({ open, product, onClose, onDeleted 
   const [named, setNamed] = useState(product);
   if (product && product !== named) setNamed(product);
 
-  useEffect(() => { if (open) setApiError(''); }, [open]);
+  // Each time it opens, it opens without the last attempt's error.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) { setWasOpen(open); if (open) setApiError(''); }
 
   const confirm = async () => {
     if (busy || !product) return;

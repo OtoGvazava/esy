@@ -91,6 +91,7 @@ export default function ProductEditorDialog({ open, product, onClose, onSaved })
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a fresh form each time it opens, with the stock it opened on kept in a ref
     setForm(initial);
     setErrors({});
     setApiError('');

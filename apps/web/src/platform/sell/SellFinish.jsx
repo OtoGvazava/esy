@@ -119,7 +119,7 @@ const REEL_MS = 1900;
 function useCountUp(to, still) {
   const [n, setN] = useState(still ? to : 0);
   useEffect(() => {
-    if (still) { setN(to); return undefined; }
+    if (still) return undefined;
     let raf = 0;
     const t0 = performance.now();
     const step = (now) => {
@@ -130,7 +130,8 @@ function useCountUp(to, still) {
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [to, still]);
-  return n;
+  if (still && n !== to) setN(to);
+  return still ? to : n;
 }
 
 /**

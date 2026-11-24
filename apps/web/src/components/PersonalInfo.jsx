@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { usePhoneVerify } from '../hooks/usePhoneVerify';
@@ -34,14 +34,10 @@ export default function PersonalInfo() {
   const [number, setNumber] = useState('');
   const verify = usePhoneVerify();
 
-  useEffect(() => {
-    if (changing && user?.phoneVerified && user.phoneNumber !== phoneAtStart) {
-      setChanging(false);
-      verify.reset();
-    }
-    // verify.reset is a new function every render; only the account matters here
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [changing, phoneAtStart, user?.phoneNumber, user?.phoneVerified]);
+  if (changing && user?.phoneVerified && user.phoneNumber !== phoneAtStart) {
+    setChanging(false);
+    verify.reset();
+  }
 
   if (!user) return null;
 

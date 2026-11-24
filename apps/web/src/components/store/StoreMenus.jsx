@@ -389,7 +389,8 @@ export function MenuButton({ plain = false }) {
   const button = useRef(null);
   const id = useId();
   // A page change (a menu link, or the browser's back) closes it.
-  useEffect(() => { setOpen(false); }, [pathname]);
+  const [openPath, setOpenPath] = useState(pathname);
+  if (openPath !== pathname) { setOpenPath(pathname); setOpen(false); }
   return (
     <>
       <HeadButton
@@ -419,7 +420,8 @@ export function ActionButton() {
   const id = useId();
   const still = useMediaQuery(REDUCED);
   useModal(open, box, first, fab, close);
-  useEffect(() => { setOpen(false); }, [pathname]);
+  const [openPath, setOpenPath] = useState(pathname);
+  if (openPath !== pathname) { setOpenPath(pathname); setOpen(false); }
 
   const ms = still ? 0 : 180;
   const label = open ? t('menu.close') : count ? t('menu.openCount', { count }) : t('menu.open');

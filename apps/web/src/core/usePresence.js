@@ -9,15 +9,10 @@ import { motionAllowed } from './motion';
 
 export function usePresence(open, ms = 240) {
   const [mounted, setMounted] = useState(open);
+  if (open && !mounted) setMounted(true);
+  if (!open && mounted && !motionAllowed()) setMounted(false);
   useEffect(() => {
-    if (open) {
-      setMounted(true);
-      return undefined;
-    }
-    if (!motionAllowed()) {
-      setMounted(false);
-      return undefined;
-    }
+    if (open || !motionAllowed()) return undefined;
     const id = setTimeout(() => setMounted(false), ms);
     return () => clearTimeout(id);
   }, [open, ms]);

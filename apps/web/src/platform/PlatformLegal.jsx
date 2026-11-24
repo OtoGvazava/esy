@@ -39,11 +39,12 @@ export default function PlatformLegal({ kind = 'terms' }) {
   const sections = useMemo(() => (keys ? keys.split('|') : []), [keys]);
   const idOf = (key) => `${kind}-${key}`;
   const [current, setCurrent] = useState(sections[0]);
+  // Another document starts at its top, with the contents closed.
+  const [docAt, setDocAt] = useState(kind + keys);
+  if (docAt !== kind + keys) { setDocAt(kind + keys); setCurrent(sections[0]); setTocOpen(false); }
 
   // The contents mark the section at the top of the window.
   useEffect(() => {
-    setCurrent(sections[0]);
-    setTocOpen(false);
     if (typeof IntersectionObserver === 'undefined') return undefined;
     const els = sections.map((k) => document.getElementById(`${kind}-${k}`)).filter(Boolean);
     const seen = new Map();
