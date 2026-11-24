@@ -130,6 +130,7 @@ function useCountUp(to, still) {
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [to, still]);
+  if (still && n !== to) setN(to);
   return still ? to : n;
 }
 

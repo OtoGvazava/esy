@@ -208,7 +208,11 @@ export default function PlatformRegistration() {
   // name or link, or verifying the phone it asked for, clears it.
   const [errorStep, setErrorStep] = useState(step);
   if (errorStep !== step) { setErrorStep(step); if (step !== 'check') setError(null); }
-  if (error?.kind === 'phone' && user?.phoneVerified) setError(null);
+  const [verifiedSeen, setVerifiedSeen] = useState(Boolean(user?.phoneVerified));
+  if (verifiedSeen !== Boolean(user?.phoneVerified)) {
+    setVerifiedSeen(Boolean(user?.phoneVerified));
+    if (user?.phoneVerified && error?.kind === 'phone') setError(null);
+  }
 
   // Whether this visit asked for the profile, so the progress card can say so.
   const [askedProfile, setAskedProfile] = useState(false);

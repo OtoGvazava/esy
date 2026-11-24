@@ -4,7 +4,7 @@
 // shared icon set lacks. Inline styles from the admin token object, like every
 // other admin screen; no copy lives here — every label arrives from t().
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { alpha } from '../core/tokens';
 import { usePresence } from '../core/usePresence';
@@ -279,13 +279,15 @@ export function Switch({ T, on, onChange, disabled, label, dim }) {
  * caller would put in it. Without `open` it is open for as long as it is
  * mounted, as it always was.
  */
+/* eslint-disable react-hooks/refs -- the closing dialog keeps what it showed while open; a ref, so open renders stay single */
 export function Dialog({ T, phone, title, onClose, busy, open = true, children }) {
   const { t } = useTranslation('admin');
   const titleId = useId();
   const { mounted, state } = usePresence(open);
-  const [last, setLast] = useState({ title, children });
-  if (open && (last.title !== title || last.children !== children)) setLast({ title, children });
-  const shown = open ? { title, children } : last;
+  // What it showed while open, kept for its way out.
+  const shown = useRef(null);
+  if (open || !shown.current) shown.current = { title, children };
+  const view = shown.current;
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
@@ -328,7 +330,7 @@ export function Dialog({ T, phone, title, onClose, busy, open = true, children }
           <span aria-hidden="true" style={{ width: 42, height: 5, borderRadius: 3, background: T.border, alignSelf: 'center' }} />
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <b id={titleId} style={{ font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em' }}>{shown.title}</b>
+          <b id={titleId} style={{ font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em' }}>{view.title}</b>
           <button
             type="button"
             onClick={onClose}
@@ -342,11 +344,12 @@ export function Dialog({ T, phone, title, onClose, busy, open = true, children }
             <Glyph name="close" />
           </button>
         </div>
-        {shown.children}
+        {view.children}
       </section>
     </div>
   );
 }
+/* eslint-enable react-hooks/refs */
 
 /** A row of a dialog's consequence list (inside a List): icon square and one sentence. */
 export function DialogPoint({ T, icon, tone, first, children }) {
