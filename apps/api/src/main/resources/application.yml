@@ -91,7 +91,12 @@ spring:
           google:
             authorization-uri: https://accounts.google.com/o/oauth2/auth
             token-uri: https://oauth2.googleapis.com/token
-            user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
+            # The OIDC userinfo endpoint (v3), which answers with "sub". The
+            # older /oauth2/v2/userinfo answers with "id" and no "sub"; Spring
+            # Security 7 reads this endpoint on every Google sign-in (6 skipped
+            # it for Google's scopes), so v2 here fails the callback with a 500:
+            # "Attribute value for 'sub' cannot be null". GoogleUserInfoTest.
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
             # With the openid scope Spring treats Google as OIDC; the subject
             # claim is "sub" (there is no "id"), so this must be "sub" or
             # DefaultOidcUser construction throws "Missing attribute 'id'".
