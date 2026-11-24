@@ -200,7 +200,10 @@ Sign-in is Google OAuth only — there is **no** `/api/auth/dev-login` endpoint
   wrapper; `mvn` lives in `%LOCALAPPDATA%\Programs\apache-maven-3.9.9\bin`).
   Spring Boot 4 (Framework 7, Security 7, Hibernate 7) uses Jackson 3: JSON
   types are in `tools.jackson.*`, not `com.fasterxml.jackson.*`; tests mock
-  with `@MockitoBean`, not `@MockBean`.
+  with `@MockitoBean`, not `@MockBean`. The API's JSON keeps Jackson 2's wire
+  format (declared field order, lenient request bodies) through the
+  feature-by-feature `JsonMapperBuilderCustomizer` in `config/JacksonConfig`,
+  not `spring.jackson.use-jackson2-defaults`; `JsonContractTest` pins it.
 - **Node 22.22.1+ (and below 25) for `apps/web`.** The toolchain needs it
   (lint-staged 17 in the pre-commit hook is the strictest; `engines` in
   `package.json`). Node 25 crashes `vite`/`vite preview`

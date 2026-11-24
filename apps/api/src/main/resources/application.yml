@@ -2,14 +2,6 @@ spring:
   application:
     name: ecommerce-platform
 
-  # Spring Boot 4 serves JSON with Jackson 3, whose defaults differ: fields
-  # come out alphabetically, null for a primitive is a 400, trailing content
-  # is refused, and product lists lose their hasVariants field (which the
-  # storefront's quick-add needs). The API's wire format stays what the web
-  # app was built against; JsonContractTest pins it.
-  jackson:
-    use-jackson2-defaults: true
-
   # ── Live config store (Redis / Valkey — Render Key Value) ────────────────
   # The admin UI writes overrides here; the config beans read Redis → env/yaml →
   # default at call time (see ConfigStore). Blank/absent = ConfigStore just uses

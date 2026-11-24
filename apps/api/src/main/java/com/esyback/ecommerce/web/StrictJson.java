@@ -8,8 +8,8 @@ import tools.jackson.databind.json.JsonMapper;
  * The one JSON reader the stored-document validators (store design, display
  * settings) parse with. Trailing content is refused, so "{} junk" is an
  * error rather than {}. Jackson 3 already does that by default, but the HTTP
- * mapper is kept on Jackson 2's defaults (spring.jackson.use-jackson2-
- * defaults), so the rule is stated here rather than assumed.
+ * mapper ignores trailing content as Jackson 2 did (JacksonConfig), so the
+ * rule is stated here rather than assumed.
  */
 public final class StrictJson {
 
