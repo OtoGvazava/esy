@@ -25,6 +25,11 @@ import tools.jackson.databind.cfg.JsonNodeFeature;
  *
  * <p>It runs before Boot's own customizer (order 0), so a
  * {@code spring.jackson.*} property still has the last word.
+ *
+ * <p>Scope: the JSON mapper only (the app has no CBOR, XML or Smile), and only
+ * where this configuration is loaded: a test slice such as {@code @WebMvcTest}
+ * or {@code @JsonTest} does not scan it and would see Jackson 3's defaults
+ * unless it imports JacksonConfig.
  */
 @Configuration
 public class JacksonConfig {

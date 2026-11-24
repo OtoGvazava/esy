@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.core.env.Environment;
+import org.springframework.boot.jackson.autoconfigure.JacksonProperties;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,7 +47,7 @@ class JsonContractTest {
 
     @Autowired MockMvc mvc;
     @Autowired JsonMapper jsonMapper;
-    @Autowired Environment environment;
+    @Autowired JacksonProperties jacksonProperties;
     @Autowired JwtUtil jwtUtil;
     @Autowired TenantRepository tenantRepository;
     @Autowired UserRepository userRepository;
@@ -62,7 +62,8 @@ class JsonContractTest {
     @Test
     @DisplayName("the wire format does not lean on Boot's transitional Jackson 2 switch")
     void noJackson2Switch() {
-        assertThat(environment.getProperty("spring.jackson.use-jackson2-defaults")).isNull();
+        // The bound value, so any spelling Boot accepts (camelCase, an env var) counts.
+        assertThat(jacksonProperties.isUseJackson2Defaults()).isFalse();
     }
 
     @Test
@@ -85,15 +86,31 @@ class JsonContractTest {
         assertThat(jsonMapper.readTree(body).get("content").get(0).get("hasVariants").isBoolean()).isTrue();
     }
 
+    /** An enum whose toString() is not its name: the API must still use the name. */
+    enum Shade {
+        LIGHT;
+        @Override public String toString() { return "a light shade"; }
+    }
+
     @Test
-    @DisplayName("dates are ISO-8601 strings, enums their names")
-    void datesAndEnums() throws Exception {
+    @DisplayName("enums are written and read by name, never toString()")
+    void enumsByName() {
+        assertThat(jsonMapper.writeValueAsString(Shade.LIGHT)).isEqualTo("\"LIGHT\"");
+        assertThat(jsonMapper.readValue("\"LIGHT\"", Shade.class)).isEqualTo(Shade.LIGHT);
+    }
+
+    @Test
+    @DisplayName("dates are ISO-8601 strings; a java.util.Date in UTC carries +00:00, as under Jackson 2")
+    void dates() throws Exception {
         mvc.perform(get("/api/products"))
             .andExpect(jsonPath("$.content[0].createdAt")
                 .value(org.hamcrest.Matchers.matchesPattern("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?$")));
         assertThat(jsonMapper.writeValueAsString(Order.Status.OUT_FOR_DELIVERY)).isEqualTo("\"OUT_FOR_DELIVERY\"");
         assertThat(jsonMapper.writeValueAsString(java.time.Instant.parse("2026-10-31T12:34:56.789Z")))
             .isEqualTo("\"2026-10-31T12:34:56.789Z\"");
+        // WRITE_UTC_AS_OFFSET reaches java.util.Date / Calendar only.
+        assertThat(jsonMapper.writeValueAsString(new java.util.Date(0)))
+            .isEqualTo("\"1970-01-01T00:00:00.000+00:00\"");
     }
 
     @Test
