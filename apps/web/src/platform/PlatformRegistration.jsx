@@ -76,6 +76,7 @@ export default function PlatformRegistration() {
     // still in flight for a longer link cannot land after it and call the
     // short one "available".
     const seq = ++checkSeq.current;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- each change first invalidates the check in flight
     if (!subdomain || subdomain.length < 3) { setSubState('invalid'); return undefined; }
     setSubState('checking');
     const id = setTimeout(() => {
@@ -205,12 +206,13 @@ export default function PlatformRegistration() {
 
   // A refusal belongs to the review it was shown on: leaving it to fix the
   // name or link, or verifying the phone it asked for, clears it.
-  useEffect(() => { if (step !== 'check') setError(null); }, [step]);
-  useEffect(() => { if (error?.kind === 'phone' && user?.phoneVerified) setError(null); }, [error, user]);
+  const [errorStep, setErrorStep] = useState(step);
+  if (errorStep !== step) { setErrorStep(step); if (step !== 'check') setError(null); }
+  if (error?.kind === 'phone' && user?.phoneVerified) setError(null);
 
   // Whether this visit asked for the profile, so the progress card can say so.
   const [askedProfile, setAskedProfile] = useState(false);
-  useEffect(() => { if (user && !user.profileComplete) setAskedProfile(true); }, [user]);
+  if (!askedProfile && user && !user.profileComplete) setAskedProfile(true);
 
   const host = `${subdomain || '…'}.esy.ge`;
   const own = { name: name.trim() || t('open.name.yourStore'), initials: initialsOf(name), logo: logo?.url };

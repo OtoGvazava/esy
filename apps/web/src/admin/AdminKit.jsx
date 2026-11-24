@@ -4,7 +4,7 @@
 // shared icon set lacks. Inline styles from the admin token object, like every
 // other admin screen; no copy lives here — every label arrives from t().
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { alpha } from '../core/tokens';
 import { usePresence } from '../core/usePresence';
@@ -283,8 +283,9 @@ export function Dialog({ T, phone, title, onClose, busy, open = true, children }
   const { t } = useTranslation('admin');
   const titleId = useId();
   const { mounted, state } = usePresence(open);
-  const shown = useRef(null);
-  if (open || !shown.current) shown.current = { title, children };
+  const [last, setLast] = useState({ title, children });
+  if (open && (last.title !== title || last.children !== children)) setLast({ title, children });
+  const shown = open ? { title, children } : last;
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
@@ -327,7 +328,7 @@ export function Dialog({ T, phone, title, onClose, busy, open = true, children }
           <span aria-hidden="true" style={{ width: 42, height: 5, borderRadius: 3, background: T.border, alignSelf: 'center' }} />
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <b id={titleId} style={{ font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em' }}>{shown.current.title}</b>
+          <b id={titleId} style={{ font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em' }}>{shown.title}</b>
           <button
             type="button"
             onClick={onClose}
@@ -341,7 +342,7 @@ export function Dialog({ T, phone, title, onClose, busy, open = true, children }
             <Glyph name="close" />
           </button>
         </div>
-        {shown.current.children}
+        {shown.children}
       </section>
     </div>
   );

@@ -81,6 +81,7 @@ const GoogleStyleSearch = ({
 
   // Show dropdown when focused and has query
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- also closed imperatively by blur, Escape and picks
     setShowDropdown(isFocused && searchQuery && searchQuery.length > 0 && showSuggestions);
   }, [isFocused, searchQuery, showSuggestions]);
 
@@ -287,6 +288,7 @@ const GoogleStyleSearch = ({
           {filteredSuggestions.length > 0 ? filteredSuggestions.map((suggestion, index) => (
             <Box
               key={index}
+              // eslint-disable-next-line react-hooks/refs -- read when clicked, not during render
               onClick={() => handleSuggestionClick(suggestion)}
               sx={{
                 display: 'flex',

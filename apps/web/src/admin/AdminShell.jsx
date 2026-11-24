@@ -21,7 +21,7 @@
 // place being opened the moment it is tapped, with one marker that slides
 // from entry to entry (core/useIndicator.js), while the router is still
 // fetching the next screen.
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -337,7 +337,9 @@ export default function AdminShell() {
   const [more, setMore] = useState(false);
   const setHead = useCallback((h) => setHeadState(h || {}), []);
 
-  useEffect(() => { setMore(false); }, [pathname]);
+  // A page change closes the more menu.
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) { setMenuPath(pathname); setMore(false); }
 
   // Sign-in and its callback are routes of their own beside this one
   // (router/admin.jsx), so the OAuth round-trip completes before any gate.

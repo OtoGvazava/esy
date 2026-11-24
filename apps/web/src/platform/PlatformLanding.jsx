@@ -106,6 +106,7 @@ function Discover({ T, t, stores, dev }) {
   // Nothing to discover (no stores yet, or the directory did not load): no section.
   if (stores && !ranked.length) return null;
 
+  // eslint-disable-next-line react-hooks/refs -- read when clicked, not during render
   const step = (dir) => () => rail.current?.scrollBy({ left: dir * rail.current.clientWidth, behavior: 'smooth' });
   const card = {
     flex: 'none', scrollSnapAlign: 'start', boxSizing: 'border-box',

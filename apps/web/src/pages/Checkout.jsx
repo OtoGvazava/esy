@@ -327,14 +327,13 @@ export default function Checkout() {
   }, [qc]);
 
   // Signed out, there is no address book to wait for.
-  useEffect(() => {
-    if (!user && !authLoading) setBookReady(true);
-  }, [user, authLoading]);
+  if (!user && !authLoading && !bookReady) setBookReady(true);
 
   useEffect(() => {
     if (!user) return;
     // Not ready until the book answers: step 3 waits for it before deciding
     // the address is missing.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- not ready until the address book answers
     setBookReady(false);
     if (!recipient) setRecipient([user.firstName, user.lastName].filter(Boolean).join(' '));
     if (!phone && user.phoneNumber) setPhone(user.phoneNumber);
@@ -633,6 +632,7 @@ export default function Checkout() {
   })();
 
   const err = (k) => (touched && missing[k] ? t('checkout.flow.required') : undefined);
+  // eslint-disable-next-line react-hooks/refs -- a ref callback, run on attach
   const ref = (k) => (el) => { fieldRefs.current[k] = el?.querySelector?.('input') || null; };
 
   // ── Step 2 · Delivery ─────────────────────────────────────────────────────
@@ -887,6 +887,7 @@ export default function Checkout() {
       </div>
       {review && <div style={{ height: 1, background: T.border }} />}
       <Kv T={T} strong label={t('checkout.total')} value={money(total)} valueStyle={review ? { fontSize: 20 } : undefined} />
+      {/* eslint-disable-next-line react-hooks/refs -- read when clicked, not during render */}
       {ctaButton(true)}
       {review && (
         <span style={{ textAlign: 'center', font: `400 12px/1.5 ${T.font}`, color: T.textDim }}>{agree}</span>
@@ -907,6 +908,7 @@ export default function Checkout() {
         <span style={{ font: `500 12px ${T.font}`, opacity: 0.75 }}>{t('checkout.total')}</span>
         <b style={{ font: `700 16px ${T.font}`, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{money(total)}</b>
       </div>
+      {/* eslint-disable-next-line react-hooks/refs -- read when clicked, not during render */}
       {ctaButton(false)}
     </div>
   );

@@ -148,7 +148,8 @@ export function DeskTitle({ title, back, onBack }) {
 /** A product's photo, or the theme's tile with a bag when it has none (or it fails). */
 export function Thumb({ src, i = 0, size = 52, radius = 12, alt = '' }) {
   const [ok, setOk] = useState(Boolean(src));
-  useEffect(() => { setOk(Boolean(src)); }, [src]);
+  const [okFor, setOkFor] = useState(src);
+  if (okFor !== src) { setOkFor(src); setOk(Boolean(src)); }
   return (
     <span className={`ph t${(i % 4) + 1}`} style={{ width: size, borderRadius: radius }}>
       {ok ? (

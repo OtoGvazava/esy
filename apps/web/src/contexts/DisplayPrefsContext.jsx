@@ -123,6 +123,7 @@ export function DisplayPrefsProvider({ children }) {
   useEffect(() => {
     sent.current = null;
     pending.current = null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a new account starts unsynced before its settings are read
     setSynced(null);
     if (!userId) return undefined;
     let alive = true;
@@ -196,6 +197,7 @@ export function DisplayPrefsProvider({ children }) {
 
   useEffect(() => {
     account.current = null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a new account starts unsynced before its settings are read
     setPlatformSynced(null);
     if (!platformUser) return undefined;
     let alive = true;

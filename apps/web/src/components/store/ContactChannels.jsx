@@ -105,6 +105,7 @@ export function ContactChannelsEditor({ T, devTenant = devTenantParam() }) {
     }
   }, [devTenant, t]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- loads the list
   useEffect(() => { load(); }, [load]);
 
   const run = async (fn, fallbackKey) => {

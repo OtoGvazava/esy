@@ -253,6 +253,7 @@ export function PriceFilter({ T, bounds, min, max, labels, onCommit }) {
   // The URL is the truth: back, forward and a chip's × all arrive through it.
   useEffect(() => {
     pair.current = { a: min, b: max };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- follows the URL without overwriting the field being typed in (a ref)
     setA(min);
     setB(max);
     if (editing.current !== 'a') setTextA(min == null ? '' : String(min));
@@ -389,8 +390,10 @@ export function PriceFilter({ T, bounds, min, max, labels, onCommit }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* eslint-disable-next-line react-hooks/refs -- read when clicked, not during render */}
         {field('a', textA, setTextA, labels.min, () => commit(toNumber(textA), pair.current.b), ranged ? String(lo) : '')}
         <span aria-hidden="true" style={{ color: T.textDim }}>–</span>
+        {/* eslint-disable-next-line react-hooks/refs -- read when clicked, not during render */}
         {field('b', textB, setTextB, labels.max, () => commit(pair.current.a, toNumber(textB)), ranged ? String(hi) : '')}
       </div>
       {ranged && (

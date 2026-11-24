@@ -8,7 +8,7 @@
 // another section goes through `link`, a page that only esy.ge has through
 // `away`, and anything that leaves the app opens in a new tab.
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -272,9 +272,10 @@ export function Head({ T, desk, title, sub, action }) {
 export function Dialog({ T, phone, title, closeLabel, onClose, busy, open = true, children }) {
   const titleId = useId();
   const { mounted, state } = usePresence(open);
-  const shown = useRef(null);
   const box = useRef(null);
-  if (open || !shown.current) shown.current = { title, children };
+  const [last, setLast] = useState({ title, children });
+  if (open && (last.title !== title || last.children !== children)) setLast({ title, children });
+  const shown = open ? { title, children } : last;
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
@@ -328,7 +329,7 @@ export function Dialog({ T, phone, title, closeLabel, onClose, busy, open = true
           <span aria-hidden="true" style={{ width: 42, height: 5, borderRadius: 3, background: T.border, alignSelf: 'center' }} />
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <b id={titleId} style={{ font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em' }}>{shown.current.title}</b>
+          <b id={titleId} style={{ font: `700 20px/1.22 ${T.font}`, letterSpacing: '-0.015em' }}>{shown.title}</b>
           <button
             type="button"
             onClick={onClose}
@@ -342,7 +343,7 @@ export function Dialog({ T, phone, title, closeLabel, onClose, busy, open = true
             <Glyph name="close" />
           </button>
         </div>
-        {shown.current.children}
+        {shown.children}
       </section>
     </div>,
     document.body,
